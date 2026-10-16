@@ -7,10 +7,14 @@ Detecta automáticamente el sistema operativo (Windows, macOS, Linux) y ejecuta:
   - Frontend (Angular 21 en puerto 4200)
 
 Uso:
-  python dev.py         -> Inicia todo el entorno
-  python dev.py start   -> Inicia todo el entorno
-  python dev.py stop    -> Detiene backend, frontend e infraestructura
-  python dev.py status  -> Muestra el estado de los servicios
+  python dev.py               -> Inicia todo el entorno
+  python dev.py start         -> Inicia todo el entorno
+  python dev.py start front   -> Inicia solo frontend
+  python dev.py start back    -> Inicia solo backend
+  python dev.py stop          -> Detiene backend, frontend e infraestructura
+  python dev.py stop front    -> Detiene solo frontend (ng serve)
+  python dev.py stop back     -> Detiene solo backend
+  python dev.py status        -> Muestra el estado de los servicios
 """
 
 import os
@@ -52,14 +56,16 @@ def ensure_env_file(directory: Path, filename: str = ".env") -> None:
         print_colored(f"  -> Creado {target.relative_to(ROOT_DIR)} desde {example.name}", GREEN)
 
 
-def is_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
+def is_port_in_use(port: int, host: str = "localhost") -> bool:
     """Comprueba si un puerto TCP está abierto y escuchando."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(0.5)
-        return s.connect_ex((host, port)) == 0
+    try:
+        with socket.create_connection((host, port), timeout=0.5):
+            return True
+    except OSError:
+        return False
 
 
-def wait_for_port(port: int, host: str = "127.0.0.1", timeout_seconds: int = 15) -> bool:
+def wait_for_port(port: int, host: str = "localhost", timeout_seconds: int = 15) -> bool:
     """Espera activamente a que un puerto esté abierto."""
     start = time.time()
     while time.time() - start < timeout_seconds:
@@ -165,14 +171,11 @@ def print_banner() -> None:
 
 def kill_process_on_port(port: int) -> None:
     """Detiene cualquier proceso que esté escuchando en un puerto específico."""
-    if not is_port_in_use(port):
-        return
-
     try:
         if OS_NAME == "Windows":
             ps_cmd = (
                 f"Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue | "
-                f"ForEach-Object {{ Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }}"
+                f"ForEach-Object {{ cmd.exe /c taskkill /PID $_.OwningProcess /T /F *>$null }}"
             )
             subprocess.run(["powershell", "-Command", ps_cmd], check=False)
         else:  # macOS / Linux
@@ -186,14 +189,38 @@ def kill_process_on_port(port: int) -> None:
         print_colored(f"  [!] No se pudo detener el proceso en el puerto {port}: {e}", YELLOW)
 
 
+def stop_frontend() -> None:
+    """Detiene ng serve / Frontend (cierra la terminal y finaliza los procesos asociados)."""
+    try:
+        if OS_NAME == "Windows":
+            # 1. Matar la ventana de PowerShell del Frontend y su árbol de procesos (pnpm, ng, node, esbuild)
+            # 2. Matar cualquier proceso escuchando en el puerto 4200
+            ps_cmd = (
+                "$curr = $PID; "
+                "Get-CimInstance Win32_Process | "
+                "Where-Object { $_.ProcessId -ne $curr -and ($_.CommandLine -like '*Frontend*4200*' -or $_.CommandLine -like '*ng*serve*') } | "
+                "ForEach-Object { cmd.exe /c taskkill /PID $_.ProcessId /T /F *>$null }; "
+                "Get-NetTCPConnection -LocalPort 4200 -ErrorAction SilentlyContinue | "
+                "ForEach-Object { cmd.exe /c taskkill /PID $_.OwningProcess /T /F *>$null }"
+            )
+            subprocess.run(["powershell", "-Command", ps_cmd], check=False)
+        else:  # macOS / Linux
+            subprocess.run("lsof -ti:4200 | xargs kill -9 2>/dev/null || true", shell=True, check=False)
+            subprocess.run("pkill -9 -f 'ng serve' 2>/dev/null || true", shell=True, check=False)
+            subprocess.run("pkill -9 -f 'pnpm start' 2>/dev/null || true", shell=True, check=False)
+        print_colored("  -> Frontend (ng serve) detenido.", GREEN)
+    except Exception as e:
+        print_colored(f"  [!] No se pudo detener el Frontend: {e}", YELLOW)
+
+
 def stop_all() -> None:
     """Detiene backend, frontend y la infraestructura."""
     print_colored("\n========================================================================", YELLOW)
     print_colored("  Deteniendo Entorno de Desarrollo — Sistema de Acreditación UNdeC      ", YELLOW)
     print_colored("========================================================================", YELLOW)
 
-    print_colored("[1/3] Deteniendo Frontend (puerto 4200)...", YELLOW)
-    kill_process_on_port(4200)
+    print_colored("[1/3] Deteniendo Frontend (puerto 4200 / ng serve)...", YELLOW)
+    stop_frontend()
 
     print_colored("[2/3] Deteniendo Backend (puerto 8080)...", YELLOW)
     kill_process_on_port(8080)
@@ -223,15 +250,41 @@ def show_status() -> None:
 
 def main() -> None:
     action = sys.argv[1].lower() if len(sys.argv) > 1 else "start"
+    target = sys.argv[2].lower() if len(sys.argv) > 2 else "all"
 
     if action in ("start", "up", "run"):
-        print_colored("\nIniciando entorno en " + OS_NAME + "...", CYAN)
-        start_infra()
-        start_backend()
-        start_frontend()
-        print_banner()
+        if target in ("all", ""):
+            print_colored("\nIniciando entorno en " + OS_NAME + "...", CYAN)
+            start_infra()
+            start_backend()
+            start_frontend()
+            print_banner()
+        elif target in ("front", "frontend"):
+            start_frontend()
+        elif target in ("back", "backend"):
+            start_backend()
+        elif target in ("infra", "docker", "db"):
+            start_infra()
+        else:
+            print_colored(f"Servicio desconocido para iniciar: '{target}'. Usá: front, back o infra.", RED)
+            sys.exit(1)
     elif action in ("stop", "down"):
-        stop_all()
+        if target in ("all", ""):
+            stop_all()
+        elif target in ("front", "frontend"):
+            stop_frontend()
+        elif target in ("back", "backend"):
+            kill_process_on_port(8080)
+        elif target in ("infra", "docker", "db"):
+            compose_file = str(INFRA_DIR / "docker-compose.yml")
+            try:
+                subprocess.run(["docker", "compose", "-f", compose_file, "stop"], check=False)
+                print_colored("  -> Contenedores detenidos con éxito.", GREEN)
+            except Exception as e:
+                print_colored(f"  [!] Error al detener Docker: {e}", YELLOW)
+        else:
+            print_colored(f"Servicio desconocido para detener: '{target}'. Usá: front, back o infra.", RED)
+            sys.exit(1)
     elif action in ("status", "ps"):
         show_status()
     else:

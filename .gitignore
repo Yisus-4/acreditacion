@@ -19,6 +19,7 @@ frontend/agents/
 
 # Logs
 *.log
+.dev_pids.json
 
 # Environment
 .env

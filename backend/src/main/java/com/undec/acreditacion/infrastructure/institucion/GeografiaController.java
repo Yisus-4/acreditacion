@@ -15,7 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/geografia")
-@PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+@PreAuthorize("isAuthenticated()")
 public class GeografiaController {
 
     private final ConsultarGeografiaUseCase consultarGeografiaUseCase;

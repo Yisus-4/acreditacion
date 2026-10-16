@@ -1,0 +1,221 @@
+<div class="detalle-container">
+  <nav class="breadcrumb">
+    <a routerLink="/dashboard">Inicio</a>
+    <span class="separator">/</span>
+    <a routerLink="/acreditacion/convocatorias">Convocatorias</a>
+    <span class="separator">/</span>
+    <span class="current">{{ convocatoria()?.codigo || 'Detalle' }}</span>
+  </nav>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <span class="spinner"></span>
+      <p>Cargando información del proceso y plan de trabajo...</p>
+    </div>
+  } @else if (error()) {
+    <div class="alert-error" role="alert">
+      {{ error() }}
+    </div>
+  } @else if (convocatoria()) {
+    @let c = convocatoria()!;
+
+    <!-- Header de la Convocatoria -->
+    <div class="header-card">
+      <div class="header-main">
+        <span class="badge-code">{{ c.codigo }}</span>
+        <h1 class="header-title">{{ c.titulo }}</h1>
+        <div class="header-meta">
+          <span><strong>Carrera:</strong> {{ c.carreraNombre }} ({{ c.carreraSigla || 'S/S' }})</span>
+          <span class="meta-dot">&bull;</span>
+          <span><strong>Nivel:</strong> <span class="badge-nivel">{{ c.nivel }}</span></span>
+          <span class="meta-dot">&bull;</span>
+          <span><strong>Tipo:</strong> {{ c.tipoProceso === 'EN_FUNCIONAMIENTO' ? 'En Funcionamiento' : 'Nueva' }}</span>
+        </div>
+      </div>
+      <div class="header-status">
+        <span
+          class="badge-estado"
+          [class.badge-iniciado]="c.estado === 'INICIADO'"
+          [class.badge-autoevaluacion]="c.estado === 'EN_AUTOEVALUACION'"
+          [class.badge-finalizado]="c.estado === 'FINALIZADO'"
+        >
+          {{ c.estado }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Grilla de Información RG-001 y Plan -->
+    <div class="info-grid">
+      <!-- Ficha CONEAU RG-001 -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Metadatos CONEAU (RG-001)</h2>
+        </div>
+        <div class="card-body">
+          @if (c.registroConvocatoria) {
+            @let r = c.registroConvocatoria;
+            <div class="detail-row">
+              <span class="detail-label">Resolución CONEAU:</span>
+              <span class="detail-value font-mono">{{ r.nroResolucionConeau }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Fecha de Apertura:</span>
+              <span class="detail-value">{{ r.fechaInicio }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Fecha de Cierre Oficial:</span>
+              <span class="detail-value">{{ r.fechaCierre }}</span>
+            </div>
+            @if (r.observaciones) {
+              <div class="detail-row full-width">
+                <span class="detail-label">Observaciones:</span>
+                <p class="detail-text">{{ r.observaciones }}</p>
+              </div>
+            }
+          } @else {
+            <p class="empty-text">Sin registro RG-001 asociado.</p>
+          }
+        </div>
+      </div>
+
+      <!-- Ficha de Resumen del Plan de Trabajo -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Plan de Trabajo Incremental</h2>
+        </div>
+        <div class="card-body">
+          @if (planTrabajo()) {
+            @let p = planTrabajo()!;
+            <div class="detail-row">
+              <span class="detail-label">Código del Plan:</span>
+              <span class="detail-value font-mono">{{ p.codigo }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Tipo:</span>
+              <span class="detail-value">{{ p.tipo }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Estado del Plan:</span>
+              <span class="badge-plan-activo">{{ p.estado }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Actividades Registradas:</span>
+              <span class="detail-value">{{ p.actividades.length }}</span>
+            </div>
+          } @else {
+            <p class="empty-text">Cargando datos del plan...</p>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección de Actividades del Plan de Trabajo -->
+    <div class="plan-section">
+      <div class="section-header">
+        <h2 class="section-title">Actividades del Plan de Trabajo</h2>
+        <p class="section-subtitle">
+          Estructura secuencial e incremental del proceso de acreditación. La compleción de actividades no cierra el proceso, habilitando los bloques subsiguientes.
+        </p>
+      </div>
+
+      @if (planTrabajo()?.actividades?.length) {
+        <div class="actividades-list">
+          @for (act of planTrabajo()!.actividades; track act.id) {
+            <div class="actividad-card" [class.actividad-completada]="act.estado === 'COMPLETADA'">
+              <div class="actividad-header">
+                <div class="actividad-title-group">
+                  <span class="orden-badge">Hito #{{ act.numeroOrden }}</span>
+                  <h3 class="actividad-nombre">{{ act.nombre }}</h3>
+                  <code class="codigo-actividad">{{ act.codigoActividad }}</code>
+                </div>
+
+                <div class="actividad-status-group">
+                  <span
+                    class="badge-actividad"
+                    [class.badge-pendiente]="act.estado === 'PENDIENTE'"
+                    [class.badge-completada]="act.estado === 'COMPLETADA'"
+                  >
+                    {{ act.estado }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="actividad-content">
+                @if (act.estado === 'PENDIENTE') {
+                  <div class="actividad-pendiente-box">
+                    <p class="box-desc">
+                      Esta actividad inicial contempla la reunión formal de coordinación entre el Área de Evaluación y Acreditación (AEA) y la Dirección de Carrera para informar sobre el cronograma y requerimientos CONEAU.
+                    </p>
+                    @if (canManage()) {
+                      <button type="button" class="btn-completar" (click)="abrirModalCompletar(act)">
+                        &check; Registrar Reunión y Documentación Probatoria
+                      </button>
+                    }
+                  </div>
+                } @else if (act.estado === 'COMPLETADA') {
+                  <div class="actividad-completada-box">
+                    <div class="meta-grid">
+                      <div class="meta-item">
+                        <span class="meta-label">Fecha de la Reunión:</span>
+                        <span class="meta-val">{{ act.fechaReunionCoordinacion ? (act.fechaReunionCoordinacion | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
+                      </div>
+                      <div class="meta-item">
+                        <span class="meta-label">Registrado por:</span>
+                        <span class="meta-val">{{ act.completadaPorNombre || 'Área AEA' }}</span>
+                      </div>
+                      <div class="meta-item">
+                        <span class="meta-label">Concluido en:</span>
+                        <span class="meta-val">{{ act.completadaEn ? (act.completadaEn | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
+                      </div>
+                    </div>
+
+                    <div class="sintesis-container">
+                      <span class="sintesis-label">Síntesis de Acuerdos y Compromisos:</span>
+                      <p class="sintesis-text">{{ act.sintesisAcuerdos }}</p>
+                    </div>
+
+                    <!-- Documentos probatorios subidos a MinIO -->
+                    @if (act.documentos && act.documentos.length > 0) {
+                      <div class="documentos-container">
+                        <span class="documentos-label">Documentación Probatoria Oficial (MinIO):</span>
+                        <div class="doc-list">
+                          @for (doc of act.documentos; track doc.id) {
+                            <div class="doc-item">
+                              <span class="doc-icon">&mapstodown;</span>
+                              <div class="doc-info">
+                                <span class="doc-name">{{ doc.nombreOriginal }}</span>
+                                <span class="doc-meta">
+                                  {{ doc.tipoDocumento }} &bull; {{ (doc.tamanioBytes / 1024 / 1024).toFixed(2) }} MB
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                class="btn-download"
+                                (click)="descargar(doc.id, doc.nombreOriginal)"
+                              >
+                                Descargar PDF &darr;
+                              </button>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Modal para completar Actividad 1 -->
+  @if (actividadSeleccionada()) {
+    <app-completar-actividad-modal
+      [actividadId]="actividadSeleccionada()!.id"
+      [actividadNombre]="actividadSeleccionada()!.nombre"
+      (cerrado)="cerrarModal($event)"
+    ></app-completar-actividad-modal>
+  }
+</div>

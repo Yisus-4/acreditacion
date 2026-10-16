@@ -1,0 +1,68 @@
+<div class="panel-layout">
+  <header class="panel-header">
+    <div class="panel-header__content">
+      <div class="panel-header__left">
+        <a class="back-link" routerLink="/dashboard">Volver al Panel Principal</a>
+        <h1 class="panel-header__title">Administración Institucional y Académica</h1>
+      </div>
+    </div>
+  </header>
+
+  <main class="panel-container">
+    <div class="panel-surface">
+      <!-- Institución -->
+      <section class="admin-section">
+        <h2 class="section-heading">Institución</h2>
+        <div class="section-content">
+          <div class="section-item">
+            <p class="section-desc">
+              Gestione la información general de su institución universitaria, ubicación de la sede central y autoridades.
+            </p>
+            <a class="btn btn--primary" routerLink="/admin/instituciones">
+              Administrar institución
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Unidades académicas, sedes y localizaciones -->
+      <section class="admin-section">
+        <h2 class="section-heading">Unidades académicas, sedes y localizaciones</h2>
+        <div class="section-content">
+          <div class="section-item">
+            <p class="section-desc">
+              Gestione las unidades académicas que dependen de la institución.
+            </p>
+            <a class="btn btn--primary" routerLink="/admin/unidades-academicas">
+              Administrar unidades académicas
+            </a>
+          </div>
+
+          <div class="section-item">
+            <p class="section-desc">
+              Gestione las sedes y localizaciones relacionadas con la institución.
+            </p>
+            <a class="btn btn--primary" routerLink="/admin/sedes">
+              Administrar sedes y localizaciones
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Carreras -->
+      <section class="admin-section">
+        <h2 class="section-heading">Carreras</h2>
+        <div class="section-content">
+          <div class="section-item">
+            <p class="section-desc">
+              Gestione las carreras que dependen de cada unidad académica de la institución.
+            </p>
+            <a class="btn btn--primary" routerLink="/admin/carreras">
+              Administrar carreras
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>

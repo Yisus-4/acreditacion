@@ -1,0 +1,85 @@
+<div class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 class="modal-title">Registrar Reunión y Concluir Actividad</h3>
+      <button type="button" class="btn-close" (click)="cancelar()" aria-label="Cerrar">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-subtitle">
+        Actividad: <strong>{{ actividadNombre }}</strong>
+      </p>
+
+      @if (generalError()) {
+        <div class="alert-error" role="alert">
+          {{ generalError() }}
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label for="fechaReunion">Fecha y Hora de la Reunión de Coordinación <span class="required">*</span></label>
+          <input id="fechaReunion" type="datetime-local" formControlName="fechaReunion" />
+          @if (form.get('fechaReunion')?.touched && form.get('fechaReunion')?.hasError('required')) {
+            <span class="form-error">La fecha de reunión es obligatoria.</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="tipoDocumento">Tipo de Documento Probatorio <span class="required">*</span></label>
+          <select id="tipoDocumento" formControlName="tipoDocumento">
+            <option value="ACTA_REUNION_COORDINACION">Acta de Reunión de Coordinación (AEA - Dirección)</option>
+            <option value="NORMATIVA_CONVOCATORIA">Normativa / Resolución Institucional de Apertura</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="archivo">Documento PDF Firmado (Máx. 20 MB) <span class="required">*</span></label>
+          <input
+            id="archivo"
+            type="file"
+            accept=".pdf,application/pdf"
+            (change)="onFileChange($event)"
+          />
+          @if (selectedFile) {
+            <span class="file-info">
+              Archivo seleccionado: {{ selectedFile.name }} ({{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB)
+            </span>
+          }
+          @if (fileError()) {
+            <span class="form-error">{{ fileError() }}</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="sintesisAcuerdos">Síntesis de Acuerdos y Compromisos <span class="required">*</span></label>
+          <textarea
+            id="sintesisAcuerdos"
+            rows="4"
+            placeholder="Documente los acuerdos alcanzados con la Dirección de Carrera (mínimo 10 caracteres)..."
+            formControlName="sintesisAcuerdos"
+          ></textarea>
+          @if (form.get('sintesisAcuerdos')?.touched && form.get('sintesisAcuerdos')?.hasError('required')) {
+            <span class="form-error">La síntesis de acuerdos es obligatoria.</span>
+          }
+          @if (form.get('sintesisAcuerdos')?.touched && form.get('sintesisAcuerdos')?.hasError('minlength')) {
+            <span class="form-error">La síntesis debe contener al menos 10 caracteres explicativos.</span>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="cancelar()" [disabled]="submitting()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-submit" [disabled]="submitting()">
+            @if (submitting()) {
+              <span>Guardando en MinIO y BD...</span>
+            } @else {
+              <span>Completar Actividad &check;</span>
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

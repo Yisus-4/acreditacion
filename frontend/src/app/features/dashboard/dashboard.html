@@ -66,9 +66,9 @@
         </a>
       }
 
-      <!-- Módulo Gestión Institucional (ADMINISTRATOR o AEA) -->
+      <!-- Módulo Gestión Institucional y Académica (ADMINISTRATOR o AEA) -->
       @if (canManageInstitutions) {
-        <a class="module-card module-card--active" routerLink="/admin/instituciones">
+        <a class="module-card module-card--active" routerLink="/admin/estructura">
           <div class="module-card__icon">
             <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 21h18" />
@@ -80,22 +80,22 @@
           </div>
           <div class="module-card__body">
             <div class="module-card__header">
-              <h3 class="module-card__title">Gestión Institucional</h3>
+              <h3 class="module-card__title">Gestión Institucional y Académica</h3>
               <span class="status-chip status-chip--enabled">Disponible</span>
             </div>
             <p class="module-card__desc">
-              Administración de instituciones universitarias, sedes centrales y autoridades académicas.
+              Administración de instituciones universitarias, sedes, unidades académicas y carreras de grado.
             </p>
           </div>
           <div class="module-card__action">
-            <span>Acceder al módulo &rarr;</span>
+            <span>Acceder al panel &rarr;</span>
           </div>
         </a>
       }
 
-      <!-- Módulos Futuros (Placeholders) -->
-      <div class="module-card module-card--disabled">
-        <div class="module-card__icon module-card__icon--muted">
+      <!-- Módulo Procesos de Acreditación y Convocatorias (Disponible) -->
+      <a class="module-card module-card--active" routerLink="/acreditacion/convocatorias">
+        <div class="module-card__icon">
           <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <polyline points="14 2 14 8 20 8" />
@@ -106,14 +106,17 @@
         </div>
         <div class="module-card__body">
           <div class="module-card__header">
-            <h3 class="module-card__title">Procesos de Acreditación</h3>
-            <span class="status-chip status-chip--upcoming">Próximamente</span>
+            <h3 class="module-card__title">Convocatorias y Plan de Trabajo</h3>
+            <span class="status-chip status-chip--enabled">Disponible</span>
           </div>
           <p class="module-card__desc">
-            Seguimiento de convocatorias, etapas y cronogramas CONEAU / ARCU-SUR.
+            Apertura formal de convocatorias CONEAU (RG-001) y gestión incremental del Plan de Trabajo (AEA).
           </p>
         </div>
-      </div>
+        <div class="module-card__action">
+          <span>Acceder a Convocatorias &rarr;</span>
+        </div>
+      </a>
 
       <div class="module-card module-card--disabled">
         <div class="module-card__icon module-card__icon--muted">

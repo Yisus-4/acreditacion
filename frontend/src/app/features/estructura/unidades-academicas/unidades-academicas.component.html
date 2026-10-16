@@ -1,0 +1,180 @@
+<div class="page-layout">
+  <header class="page-header">
+    <div class="page-header__content">
+      <div class="page-header__left">
+        <a class="back-link" routerLink="/admin/estructura">Volver a Administración Institucional</a>
+        <h1 class="page-header__title">Unidades Académicas</h1>
+        <p class="page-header__desc">
+          Gestión de escuelas, departamentos y facultades dependientes de la institución.
+        </p>
+      </div>
+      <div class="page-header__actions">
+        <button class="btn btn--primary" type="button" (click)="toggleForm()">
+          @if (showForm()) {
+            Cancelar
+          } @else {
+            Registrar unidad académica
+          }
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-container">
+    @if (errorMessage()) {
+      <div class="alert alert--danger">
+        <span>{{ errorMessage() }}</span>
+      </div>
+    }
+
+    @if (successMessage()) {
+      <div class="alert alert--success">
+        <span>{{ successMessage() }}</span>
+      </div>
+    }
+
+    @if (showForm()) {
+      <section class="form-panel">
+        <h2 class="form-panel__title">
+          {{ editingId() ? 'Editar unidad académica' : 'Nueva unidad académica' }}
+        </h2>
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="institucionId" class="form-label">Institución *</label>
+              <select id="institucionId" class="form-control" formControlName="institucionId">
+                @for (inst of instituciones(); track inst.id) {
+                  <option [value]="inst.id">{{ inst.nombre }} ({{ inst.sigla }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="sigla" class="form-label">Sigla</label>
+              <input
+                id="sigla"
+                type="text"
+                class="form-control"
+                placeholder="Ej. EI, ECS"
+                formControlName="sigla"
+              />
+            </div>
+
+            <div class="form-group form-group--full">
+              <label for="nombre" class="form-label">Nombre de la unidad académica *</label>
+              <input
+                id="nombre"
+                type="text"
+                class="form-control"
+                [class.form-control--invalid]="isFieldInvalid(form.controls.nombre)"
+                placeholder="Ej. Escuela de Ingeniería"
+                formControlName="nombre"
+              />
+              @if (isFieldInvalid(form.controls.nombre)) {
+                <span class="field-error">El nombre es obligatorio.</span>
+              }
+            </div>
+
+            <div class="form-group form-group--full">
+              <label for="descripcion" class="form-label">Descripción</label>
+              <textarea
+                id="descripcion"
+                class="form-control"
+                rows="2"
+                placeholder="Descripción institucional..."
+                formControlName="descripcion"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn--secondary" type="button" (click)="cancelarFormulario()">
+              Cancelar
+            </button>
+            <button class="btn btn--primary" type="submit" [disabled]="submitting()">
+              @if (editingId()) {
+                {{ submitting() ? 'Guardando cambios...' : 'Guardar cambios' }}
+              } @else {
+                {{ submitting() ? 'Guardando...' : 'Guardar unidad académica' }}
+              }
+            </button>
+          </div>
+        </form>
+      </section>
+    }
+
+    <div class="table-toolbar">
+      <div class="search-box">
+        <input
+          type="text"
+          placeholder="Filtrar por nombre, sigla o descripción..."
+          [value]="searchQuery()"
+          (input)="onSearch($event)"
+        />
+      </div>
+      <div class="table-stats">
+        Total: <strong>{{ filteredUnidades().length }}</strong> registros
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="state-box">Cargando unidades académicas...</div>
+    } @else if (filteredUnidades().length === 0) {
+      <div class="state-box">No se encontraron unidades académicas registradas.</div>
+    } @else {
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Sigla</th>
+              <th>Descripción</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (ua of filteredUnidades(); track ua.id) {
+              <tr>
+                <td class="font-medium">{{ ua.nombre }}</td>
+                <td>{{ ua.sigla || '-' }}</td>
+                <td class="text-muted">{{ ua.descripcion || '-' }}</td>
+                <td>
+                  <span class="badge" [class.badge--success]="ua.activo" [class.badge--neutral]="!ua.activo">
+                    {{ ua.activo ? 'Activa' : 'Inactiva' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="table-actions">
+                    <a
+                      class="table-link"
+                      [routerLink]="['/admin/carreras']"
+                      [queryParams]="{ unidadAcademicaId: ua.id }"
+                    >
+                      Ver carreras
+                    </a>
+                    <button class="btn btn--sm btn--secondary" type="button" (click)="iniciarEdicion(ua)">
+                      Editar
+                    </button>
+                    <button
+                      class="btn btn--sm"
+                      [class.btn--warning]="ua.activo"
+                      [class.btn--outline]="!ua.activo"
+                      type="button"
+                      (click)="cambiarEstado(ua)"
+                    >
+                      {{ ua.activo ? 'Desactivar' : 'Activar' }}
+                    </button>
+                    <button class="btn btn--sm btn--danger-outline" type="button" (click)="eliminar(ua)">
+                      Eliminar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </main>
+</div>

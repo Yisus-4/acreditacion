@@ -26,8 +26,26 @@ import com.undec.acreditacion.application.usecase.RegistrarInstitucionService;
 import com.undec.acreditacion.domain.ports.DocumentStoragePort;
 import com.undec.acreditacion.domain.ports.GeografiaRepositoryPort;
 import com.undec.acreditacion.domain.ports.InstitucionRepositoryPort;
+import com.undec.acreditacion.application.input.IniciarConvocatoriaUseCase;
+import com.undec.acreditacion.application.input.ConsultarConvocatoriaUseCase;
+import com.undec.acreditacion.application.input.ListarConvocatoriasUseCase;
+import com.undec.acreditacion.application.input.ConsultarPlanTrabajoUseCase;
+import com.undec.acreditacion.application.input.CompletarActividadInformarProcesoUseCase;
+import com.undec.acreditacion.application.input.DescargarDocumentoUseCase;
+import com.undec.acreditacion.application.usecase.IniciarConvocatoriaService;
+import com.undec.acreditacion.application.usecase.ConsultarConvocatoriaService;
+import com.undec.acreditacion.application.usecase.ListarConvocatoriasService;
+import com.undec.acreditacion.application.usecase.ConsultarPlanTrabajoService;
+import com.undec.acreditacion.application.usecase.CompletarActividadInformarProcesoService;
+import com.undec.acreditacion.application.usecase.DescargarDocumentoService;
+import com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort;
+import com.undec.acreditacion.domain.ports.RegistroConvocatoriaRepositoryPort;
+import com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort;
+import com.undec.acreditacion.domain.ports.DocumentoAcreditacionRepositoryPort;
+import com.undec.acreditacion.domain.ports.CarreraRepositoryPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Wires pure (framework-agnostic) application services to their input ports.
@@ -92,5 +110,143 @@ public class UseCaseConfiguration {
     @Bean
     public ConsultarGeografiaUseCase consultarGeografiaUseCase(GeografiaRepositoryPort geografiaRepository) {
         return new ConsultarGeografiaService(geografiaRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.RegistrarUnidadAcademicaUseCase registrarUnidadAcademicaUseCase(
+            com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort unidadAcademicaRepository,
+            InstitucionRepositoryPort institucionRepository) {
+        return new com.undec.acreditacion.application.usecase.RegistrarUnidadAcademicaService(unidadAcademicaRepository, institucionRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.ListarUnidadesAcademicasUseCase listarUnidadesAcademicasUseCase(
+            com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort unidadAcademicaRepository) {
+        return new com.undec.acreditacion.application.usecase.ListarUnidadesAcademicasService(unidadAcademicaRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.RegistrarSedeLocalizacionUseCase registrarSedeLocalizacionUseCase(
+            com.undec.acreditacion.domain.ports.SedeLocalizacionRepositoryPort sedeLocalizacionRepository,
+            InstitucionRepositoryPort institucionRepository) {
+        return new com.undec.acreditacion.application.usecase.RegistrarSedeLocalizacionService(sedeLocalizacionRepository, institucionRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.ListarSedesLocalizacionesUseCase listarSedesLocalizacionesUseCase(
+            com.undec.acreditacion.domain.ports.SedeLocalizacionRepositoryPort sedeLocalizacionRepository) {
+        return new com.undec.acreditacion.application.usecase.ListarSedesLocalizacionesService(sedeLocalizacionRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.RegistrarCarreraUseCase registrarCarreraUseCase(
+            com.undec.acreditacion.domain.ports.CarreraRepositoryPort carreraRepository,
+            com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort unidadAcademicaRepository,
+            com.undec.acreditacion.domain.ports.SedeLocalizacionRepositoryPort sedeLocalizacionRepository) {
+        return new com.undec.acreditacion.application.usecase.RegistrarCarreraService(carreraRepository, unidadAcademicaRepository, sedeLocalizacionRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.ListarCarrerasUseCase listarCarrerasUseCase(
+            com.undec.acreditacion.domain.ports.CarreraRepositoryPort carreraRepository) {
+        return new com.undec.acreditacion.application.usecase.ListarCarrerasService(carreraRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.ActualizarUnidadAcademicaUseCase actualizarUnidadAcademicaUseCase(
+            com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort unidadAcademicaRepository) {
+        return new com.undec.acreditacion.application.usecase.ActualizarUnidadAcademicaService(unidadAcademicaRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.CambiarEstadoUnidadAcademicaUseCase cambiarEstadoUnidadAcademicaUseCase(
+            com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort unidadAcademicaRepository) {
+        return new com.undec.acreditacion.application.usecase.CambiarEstadoUnidadAcademicaService(unidadAcademicaRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.EliminarUnidadAcademicaUseCase eliminarUnidadAcademicaUseCase(
+            com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort unidadAcademicaRepository,
+            com.undec.acreditacion.domain.ports.CarreraRepositoryPort carreraRepository) {
+        return new com.undec.acreditacion.application.usecase.EliminarUnidadAcademicaService(unidadAcademicaRepository, carreraRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.ActualizarSedeLocalizacionUseCase actualizarSedeLocalizacionUseCase(
+            com.undec.acreditacion.domain.ports.SedeLocalizacionRepositoryPort sedeLocalizacionRepository) {
+        return new com.undec.acreditacion.application.usecase.ActualizarSedeLocalizacionService(sedeLocalizacionRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.CambiarEstadoSedeLocalizacionUseCase cambiarEstadoSedeLocalizacionUseCase(
+            com.undec.acreditacion.domain.ports.SedeLocalizacionRepositoryPort sedeLocalizacionRepository) {
+        return new com.undec.acreditacion.application.usecase.CambiarEstadoSedeLocalizacionService(sedeLocalizacionRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.EliminarSedeLocalizacionUseCase eliminarSedeLocalizacionUseCase(
+            com.undec.acreditacion.domain.ports.SedeLocalizacionRepositoryPort sedeLocalizacionRepository,
+            com.undec.acreditacion.domain.ports.CarreraRepositoryPort carreraRepository) {
+        return new com.undec.acreditacion.application.usecase.EliminarSedeLocalizacionService(sedeLocalizacionRepository, carreraRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.ActualizarCarreraUseCase actualizarCarreraUseCase(
+            com.undec.acreditacion.domain.ports.CarreraRepositoryPort carreraRepository,
+            com.undec.acreditacion.domain.ports.SedeLocalizacionRepositoryPort sedeLocalizacionRepository) {
+        return new com.undec.acreditacion.application.usecase.ActualizarCarreraService(carreraRepository, sedeLocalizacionRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.CambiarEstadoCarreraUseCase cambiarEstadoCarreraUseCase(
+            com.undec.acreditacion.domain.ports.CarreraRepositoryPort carreraRepository) {
+        return new com.undec.acreditacion.application.usecase.CambiarEstadoCarreraService(carreraRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.EliminarCarreraUseCase eliminarCarreraUseCase(
+            com.undec.acreditacion.domain.ports.CarreraRepositoryPort carreraRepository) {
+        return new com.undec.acreditacion.application.usecase.EliminarCarreraService(carreraRepository);
+    }
+
+    @Bean
+    @Transactional
+    public IniciarConvocatoriaUseCase iniciarConvocatoriaUseCase(
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            RegistroConvocatoriaRepositoryPort registroRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            CarreraRepositoryPort carreraRepository) {
+        return new IniciarConvocatoriaService(procesoRepository, registroRepository, planTrabajoRepository, carreraRepository);
+    }
+
+    @Bean
+    @Transactional
+    public CompletarActividadInformarProcesoUseCase completarActividadInformarProcesoUseCase(
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            DocumentoAcreditacionRepositoryPort documentoRepository,
+            DocumentStoragePort documentStoragePort) {
+        return new CompletarActividadInformarProcesoService(planTrabajoRepository, documentoRepository, documentStoragePort);
+    }
+
+    @Bean
+    public ConsultarConvocatoriaUseCase consultarConvocatoriaUseCase(ProcesoAcreditacionRepositoryPort procesoRepository) {
+        return new ConsultarConvocatoriaService(procesoRepository);
+    }
+
+    @Bean
+    public ListarConvocatoriasUseCase listarConvocatoriasUseCase(ProcesoAcreditacionRepositoryPort procesoRepository) {
+        return new ListarConvocatoriasService(procesoRepository);
+    }
+
+    @Bean
+    public ConsultarPlanTrabajoUseCase consultarPlanTrabajoUseCase(PlanTrabajoRepositoryPort planTrabajoRepository) {
+        return new ConsultarPlanTrabajoService(planTrabajoRepository);
+    }
+
+    @Bean
+    public DescargarDocumentoUseCase descargarDocumentoUseCase(
+            DocumentoAcreditacionRepositoryPort documentoRepository,
+            DocumentStoragePort documentStoragePort) {
+        return new DescargarDocumentoService(documentoRepository, documentStoragePort);
     }
 }

@@ -91,7 +91,7 @@ public final class Institucion {
         if (autoridades != null) {
             this.autoridades.addAll(autoridades);
         }
-        this.sedeCentral = Objects.requireNonNull(sedeCentral, "La sede central es obligatoria");
+        this.sedeCentral = sedeCentral;
     }
 
     public UUID getId() {

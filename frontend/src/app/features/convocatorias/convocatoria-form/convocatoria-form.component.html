@@ -1,0 +1,120 @@
+<div class="form-container">
+  <nav class="breadcrumb">
+    <a routerLink="/dashboard">Inicio</a>
+    <span class="separator">/</span>
+    <a routerLink="/acreditacion/convocatorias">Convocatorias</a>
+    <span class="separator">/</span>
+    <span class="current">Iniciar Convocatoria</span>
+  </nav>
+
+  <div class="form-header">
+    <h1 class="page-title">Apertura Formal de Convocatoria CONEAU</h1>
+    <p class="page-subtitle">
+      Registro oficial de procedimiento RG-001 y generación automática del Plan de Trabajo para la carrera de grado.
+    </p>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="alert-error" role="alert">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-card">
+    <div class="section-title">
+      <h3>1. Carrera Universitaria</h3>
+      <p>Seleccione la carrera de grado sobre la cual se iniciará el proceso de acreditación.</p>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group full-width">
+        <label for="carreraId">Carrera de Grado <span class="required">*</span></label>
+        @if (loadingCarreras()) {
+          <p class="loading-inline">Cargando carreras disponibles...</p>
+        } @else {
+          <select id="carreraId" formControlName="carreraId">
+            <option value="" disabled>Seleccione una carrera de grado...</option>
+            @for (c of carreras(); track c.id) {
+              <option [value]="c.id">{{ c.nombre }} ({{ c.sigla || 'S/S' }}) — Nivel: GRADO</option>
+            }
+          </select>
+        }
+        @if (form.get('carreraId')?.touched && form.get('carreraId')?.hasError('required')) {
+          <span class="form-error">Debe seleccionar una carrera de grado activa.</span>
+        }
+      </div>
+    </div>
+
+    <div class="section-title">
+      <h3>2. Metadatos de la Convocatoria CONEAU (RG-001)</h3>
+      <p>Información administrativa de la resolución y plazos fijados por la Comisión Nacional.</p>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="nroResolucionConeau">N° de Resolución CONEAU <span class="required">*</span></label>
+        <input
+          id="nroResolucionConeau"
+          type="text"
+          placeholder="Ej: RESFC-2026-145-APN-CONEAU#ME"
+          formControlName="nroResolucionConeau"
+        />
+        @if (form.get('nroResolucionConeau')?.touched && form.get('nroResolucionConeau')?.invalid) {
+          <span class="form-error">El número de resolución es obligatorio.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="tipoProceso">Tipo de Convocatoria <span class="required">*</span></label>
+        <select id="tipoProceso" formControlName="tipoProceso">
+          <option value="EN_FUNCIONAMIENTO">Carrera en Funcionamiento</option>
+          <option value="NUEVA">Carrera Nueva</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="fechaInicio">Fecha de Inicio de Convocatoria <span class="required">*</span></label>
+        <input id="fechaInicio" type="date" formControlName="fechaInicio" />
+        @if (form.get('fechaInicio')?.touched && form.get('fechaInicio')?.hasError('required')) {
+          <span class="form-error">La fecha de inicio es requerida.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="fechaCierre">Fecha de Cierre Formal <span class="required">*</span></label>
+        <input id="fechaCierre" type="date" formControlName="fechaCierre" />
+        @if (form.get('fechaCierre')?.touched && form.get('fechaCierre')?.hasError('required')) {
+          <span class="form-error">La fecha de cierre es requerida.</span>
+        }
+        @if (form.hasError('fechaCierreAnterior') && (form.get('fechaCierre')?.touched || form.get('fechaInicio')?.touched)) {
+          <span class="form-error">La fecha de cierre no puede ser anterior a la fecha de inicio.</span>
+        }
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group full-width">
+        <label for="observaciones">Observaciones o Notas del Expediente</label>
+        <textarea
+          id="observaciones"
+          rows="3"
+          placeholder="Detalles complementarios de la convocatoria, expediente o notas institucionales..."
+          formControlName="observaciones"
+        ></textarea>
+      </div>
+    </div>
+
+    <div class="form-footer">
+      <a routerLink="/acreditacion/convocatorias" class="btn-cancel">Cancelar</a>
+      <button type="submit" class="btn-submit" [disabled]="submitting()">
+        @if (submitting()) {
+          <span>Iniciando Convocatoria...</span>
+        } @else {
+          <span>Confirmar e Iniciar Convocatoria &rarr;</span>
+        }
+      </button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,234 @@
+<div class="page-layout">
+  <header class="page-header">
+    <div class="page-header__content">
+      <div class="page-header__left">
+        <a class="back-link" routerLink="/admin/estructura">Volver a Administración Institucional</a>
+        <h1 class="page-header__title">Sedes y Localizaciones</h1>
+        <p class="page-header__desc">
+          Gestión de campus, sedes académicas y localizaciones territoriales de la institución.
+        </p>
+      </div>
+      <div class="page-header__actions">
+        <button class="btn btn--primary" type="button" (click)="toggleForm()">
+          @if (showForm()) {
+            Cancelar
+          } @else {
+            Registrar sede
+          }
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-container">
+    @if (errorMessage()) {
+      <div class="alert alert--danger">
+        <span>{{ errorMessage() }}</span>
+      </div>
+    }
+
+    @if (successMessage()) {
+      <div class="alert alert--success">
+        <span>{{ successMessage() }}</span>
+      </div>
+    }
+
+    @if (showForm()) {
+      <section class="form-panel">
+        <h2 class="form-panel__title">
+          {{ editingId() ? 'Editar sede o localización' : 'Nueva sede o localización' }}
+        </h2>
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="institucionId" class="form-label">Institución *</label>
+              <select id="institucionId" class="form-control" formControlName="institucionId">
+                @for (inst of instituciones(); track inst.id) {
+                  <option [value]="inst.id">{{ inst.nombre }} ({{ inst.sigla }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="nombre" class="form-label">Nombre de la sede / campus *</label>
+              <input
+                id="nombre"
+                type="text"
+                class="form-control"
+                [class.form-control--invalid]="isFieldInvalid(form.controls.nombre)"
+                placeholder="Ej. Campus Los Sarmientos, Sede Centro"
+                formControlName="nombre"
+              />
+              @if (isFieldInvalid(form.controls.nombre)) {
+                <span class="field-error">El nombre es obligatorio.</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="calle" class="form-label">Calle / Ruta *</label>
+              <input
+                id="calle"
+                type="text"
+                class="form-control"
+                [class.form-control--invalid]="isFieldInvalid(form.controls.calle)"
+                placeholder="Ej. Ruta Los Peregrinos, 9 de Julio"
+                formControlName="calle"
+              />
+              @if (isFieldInvalid(form.controls.calle)) {
+                <span class="field-error">La calle es obligatoria.</span>
+              }
+            </div>
+
+            <div class="form-group form-group--triple">
+              <div class="sub-field">
+                <label for="numero" class="form-label">Número *</label>
+                <input
+                  id="numero"
+                  type="text"
+                  class="form-control"
+                  [class.form-control--invalid]="isFieldInvalid(form.controls.numero)"
+                  placeholder="s/n, 22"
+                  formControlName="numero"
+                />
+              </div>
+              <div class="sub-field">
+                <label for="piso" class="form-label">Piso</label>
+                <input id="piso" type="text" class="form-control" placeholder="1, PB" formControlName="piso" />
+              </div>
+              <div class="sub-field">
+                <label for="codigoPostal" class="form-label">C.P. *</label>
+                <input
+                  id="codigoPostal"
+                  type="text"
+                  class="form-control"
+                  [class.form-control--invalid]="isFieldInvalid(form.controls.codigoPostal)"
+                  placeholder="5360"
+                  formControlName="codigoPostal"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="provinciaId" class="form-label">Provincia *</label>
+              <select id="provinciaId" class="form-control" formControlName="provinciaId">
+                <option [ngValue]="null">Seleccione una provincia...</option>
+                @for (p of provincias(); track p.id) {
+                  <option [ngValue]="p.id">{{ p.nombre }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="departamentoId" class="form-label">Departamento *</label>
+              <select id="departamentoId" class="form-control" formControlName="departamentoId">
+                <option [ngValue]="null">Seleccione un departamento...</option>
+                @for (d of departamentos(); track d.id) {
+                  <option [ngValue]="d.id">{{ d.nombre }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="localidadId" class="form-label">Localidad *</label>
+              <select id="localidadId" class="form-control" formControlName="localidadId">
+                <option [ngValue]="null">Seleccione una localidad...</option>
+                @for (l of localidades(); track l.id) {
+                  <option [ngValue]="l.id">{{ l.nombre }} (CP {{ l.codigoPostal }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group form-group--checkbox">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="esPropia" />
+                <span>Inmueble de propiedad institucional</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn--secondary" type="button" (click)="cancelarFormulario()">
+              Cancelar
+            </button>
+            <button class="btn btn--primary" type="submit" [disabled]="submitting()">
+              @if (editingId()) {
+                {{ submitting() ? 'Guardando cambios...' : 'Guardar cambios' }}
+              } @else {
+                {{ submitting() ? 'Guardando...' : 'Guardar sede' }}
+              }
+            </button>
+          </div>
+        </form>
+      </section>
+    }
+
+    <div class="table-toolbar">
+      <div class="search-box">
+        <input
+          type="text"
+          placeholder="Filtrar por nombre, dirección o código postal..."
+          [value]="searchQuery()"
+          (input)="onSearch($event)"
+        />
+      </div>
+      <div class="table-stats">
+        Total: <strong>{{ filteredSedes().length }}</strong> registros
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="state-box">Cargando sedes y localizaciones...</div>
+    } @else if (filteredSedes().length === 0) {
+      <div class="state-box">No se encontraron sedes registradas.</div>
+    } @else {
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Dirección</th>
+              <th>Código Postal</th>
+              <th>Condición</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (sede of filteredSedes(); track sede.id) {
+              <tr>
+                <td class="font-medium">{{ sede.nombre }}</td>
+                <td>{{ sede.direccionCompleta }}</td>
+                <td>{{ sede.codigoPostal }}</td>
+                <td>{{ sede.esPropia ? 'Propia' : 'Convenio / Alquiler' }}</td>
+                <td>
+                  <span class="badge" [class.badge--success]="sede.activo" [class.badge--neutral]="!sede.activo">
+                    {{ sede.activo ? 'Activa' : 'Inactiva' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="table-actions">
+                    <button class="btn btn--sm btn--secondary" type="button" (click)="iniciarEdicion(sede)">
+                      Editar
+                    </button>
+                    <button
+                      class="btn btn--sm"
+                      [class.btn--warning]="sede.activo"
+                      [class.btn--outline]="!sede.activo"
+                      type="button"
+                      (click)="cambiarEstado(sede)"
+                    >
+                      {{ sede.activo ? 'Desactivar' : 'Activar' }}
+                    </button>
+                    <button class="btn btn--sm btn--danger-outline" type="button" (click)="eliminar(sede)">
+                      Eliminar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </main>
+</div>

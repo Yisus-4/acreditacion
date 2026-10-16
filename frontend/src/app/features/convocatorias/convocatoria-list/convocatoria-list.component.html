@@ -1,0 +1,154 @@
+<div class="convocatorias-container">
+  <div class="header-section">
+    <div>
+      <nav class="breadcrumb">
+        <a routerLink="/dashboard">Inicio</a>
+        <span class="separator">/</span>
+        <span class="current">Convocatorias de Acreditación</span>
+      </nav>
+      <h1 class="page-title">Convocatorias de Acreditación CONEAU</h1>
+      <p class="page-subtitle">
+        Gestión institucional de procesos de acreditación de carreras de grado y seguimiento del Plan de Trabajo (Área de Evaluación y Acreditación — AEA).
+      </p>
+    </div>
+
+    @if (canCreate()) {
+      <div class="header-actions">
+        <a routerLink="/acreditacion/convocatorias/nueva" class="btn-primary">
+          <span class="icon">+</span> Iniciar Convocatoria
+        </a>
+      </div>
+    }
+  </div>
+
+  <!-- Barra de Filtros -->
+  <div class="filter-card">
+    <div class="filter-group">
+      <label for="filtroCarrera">Carrera de Grado</label>
+      <select
+        id="filtroCarrera"
+        [ngModel]="filtroCarreraId()"
+        (ngModelChange)="filtroCarreraId.set($event); cargarConvocatorias()"
+      >
+        <option value="">Todas las carreras</option>
+        @for (carrera of carreras(); track carrera.id) {
+          <option [value]="carrera.id">{{ carrera.nombre }} ({{ carrera.sigla || 'S/S' }})</option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label for="filtroEstado">Estado del Proceso</label>
+      <select
+        id="filtroEstado"
+        [ngModel]="filtroEstado()"
+        (ngModelChange)="filtroEstado.set($event); cargarConvocatorias()"
+      >
+        <option value="">Todos los estados</option>
+        <option value="INICIADO">INICIADO</option>
+        <option value="EN_AUTOEVALUACION">EN AUTOEVALUACIÓN</option>
+        <option value="FINALIZADO">FINALIZADO</option>
+        <option value="CANCELADO">CANCELADO</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label for="filtroAnio">Año</label>
+      <input
+        id="filtroAnio"
+        type="number"
+        placeholder="Ej: 2026"
+        [ngModel]="filtroAnio()"
+        (ngModelChange)="filtroAnio.set($event); cargarConvocatorias()"
+      />
+    </div>
+
+    <div class="filter-actions">
+      <button type="button" class="btn-secondary" (click)="limpiarFiltros()">Limpiar Filtros</button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="alert-error" role="alert">
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Tabla de Convocatorias -->
+  <div class="table-card">
+    @if (loading()) {
+      <div class="loading-state">
+        <span class="spinner"></span>
+        <p>Cargando convocatorias...</p>
+      </div>
+    } @else if (convocatorias().length === 0) {
+      <div class="empty-state">
+        <p class="empty-title">No se encontraron convocatorias</p>
+        <p class="empty-subtitle">
+          No hay procesos de acreditación registrados con los filtros seleccionados.
+        </p>
+        @if (canCreate()) {
+          <a routerLink="/acreditacion/convocatorias/nueva" class="btn-primary">
+            + Iniciar Nueva Convocatoria
+          </a>
+        }
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table class="table-institucional">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Carrera</th>
+              <th>Resolución CONEAU</th>
+              <th>Tipo</th>
+              <th>Plazo Oficial</th>
+              <th>Plan de Trabajo</th>
+              <th>Estado</th>
+              <th class="text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of convocatorias(); track c.id) {
+              <tr>
+                <td class="font-bold">{{ c.codigo }}</td>
+                <td>
+                  <span class="carrera-nombre">{{ c.carreraNombre }}</span>
+                  <span class="badge-nivel">{{ c.nivel }}</span>
+                </td>
+                <td>{{ c.nroResolucionConeau || '—' }}</td>
+                <td>
+                  <span class="tipo-tag">{{ c.tipoProceso === 'EN_FUNCIONAMIENTO' ? 'En Funcionamiento' : 'Nueva' }}</span>
+                </td>
+                <td>
+                  <span class="fechas-rango">
+                    {{ c.fechaInicio }} &rarr; {{ c.fechaCierre }}
+                  </span>
+                </td>
+                <td>
+                  <code>{{ c.planTrabajoCodigo || '—' }}</code>
+                </td>
+                <td>
+                  <span
+                    class="badge-estado"
+                    [class.badge-iniciado]="c.estado === 'INICIADO'"
+                    [class.badge-autoevaluacion]="c.estado === 'EN_AUTOEVALUACION'"
+                    [class.badge-finalizado]="c.estado === 'FINALIZADO'"
+                    [class.badge-cancelado]="c.estado === 'CANCELADO'"
+                  >
+                    {{ c.estado }}
+                  </span>
+                </td>
+                <td class="text-right">
+                  <a [routerLink]="['/acreditacion/convocatorias', c.id]" class="btn-table">
+                    Ver Plan y Detalle &rarr;
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

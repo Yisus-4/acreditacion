@@ -1,0 +1,272 @@
+<div class="page-layout">
+  <header class="page-header">
+    <div class="page-header__content">
+      <div class="page-header__left">
+        <a class="back-link" routerLink="/admin/estructura">Volver a Administración Institucional</a>
+        <h1 class="page-header__title">Carreras de Grado</h1>
+        <p class="page-header__desc">
+          Gestión de la oferta académica de nivel Grado por unidad académica y sede de dictado.
+        </p>
+      </div>
+      <div class="page-header__actions">
+        <button class="btn btn--primary" type="button" (click)="toggleForm()">
+          @if (showForm()) {
+            Cancelar
+          } @else {
+            Registrar carrera
+          }
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-container">
+    @if (errorMessage()) {
+      <div class="alert alert--danger">
+        <span>{{ errorMessage() }}</span>
+      </div>
+    }
+
+    @if (successMessage()) {
+      <div class="alert alert--success">
+        <span>{{ successMessage() }}</span>
+      </div>
+    }
+
+    @if (showForm()) {
+      <section class="form-panel">
+        <h2 class="form-panel__title">
+          {{ editingId() ? 'Editar carrera de grado' : 'Nueva carrera de grado' }}
+        </h2>
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="unidadAcademicaId" class="form-label">Unidad académica *</label>
+              <select id="unidadAcademicaId" class="form-control" formControlName="unidadAcademicaId">
+                @for (ua of unidades(); track ua.id) {
+                  <option [value]="ua.id">{{ ua.nombre }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="sigla" class="form-label">Sigla / Código</label>
+              <input id="sigla" type="text" class="form-control" placeholder="Ej. ISI, LSI" formControlName="sigla" />
+            </div>
+
+            <div class="form-group form-group--full">
+              <label for="nombre" class="form-label">Nombre de la carrera *</label>
+              <input
+                id="nombre"
+                type="text"
+                class="form-control"
+                [class.form-control--invalid]="isFieldInvalid(form.controls.nombre)"
+                placeholder="Ej. Ingeniería en Sistemas de Información"
+                formControlName="nombre"
+              />
+              @if (isFieldInvalid(form.controls.nombre)) {
+                <span class="field-error">El nombre de la carrera es obligatorio.</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="areaDisciplinaria" class="form-label">Área disciplinaria *</label>
+              <input
+                id="areaDisciplinaria"
+                type="text"
+                class="form-control"
+                [class.form-control--invalid]="isFieldInvalid(form.controls.areaDisciplinaria)"
+                placeholder="Ej. Ciencias Aplicadas"
+                formControlName="areaDisciplinaria"
+              />
+              @if (isFieldInvalid(form.controls.areaDisciplinaria)) {
+                <span class="field-error">El área disciplinaria es obligatoria.</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="tituloOtorgado" class="form-label">Título otorgado</label>
+              <input
+                id="tituloOtorgado"
+                type="text"
+                class="form-control"
+                placeholder="Ej. Ingeniero/a en Sistemas"
+                formControlName="tituloOtorgado"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="modalidad" class="form-label">Modalidad *</label>
+              <select id="modalidad" class="form-control" formControlName="modalidad">
+                <option value="PRESENCIAL">Presencial</option>
+                <option value="DISTANCIA">A Distancia</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="estado" class="form-label">Estado *</label>
+              <select id="estado" class="form-control" formControlName="estado">
+                <option value="EN_FUNCIONAMIENTO">En funcionamiento</option>
+                <option value="NUEVA">Nueva</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="duracionAnios" class="form-label">Duración (años)</label>
+              <input
+                id="duracionAnios"
+                type="number"
+                min="1"
+                max="10"
+                class="form-control"
+                formControlName="duracionAnios"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Nivel</label>
+              <input type="text" class="form-control" value="GRADO" disabled />
+            </div>
+
+            <div class="form-group form-group--full">
+              <label for="descripcion" class="form-label">Descripción</label>
+              <textarea
+                id="descripcion"
+                class="form-control"
+                rows="2"
+                placeholder="Descripción de la carrera..."
+                formControlName="descripcion"
+              ></textarea>
+            </div>
+
+            <div class="form-group form-group--full switch-group">
+              <label class="switch-control">
+                <input type="checkbox" formControlName="activo" />
+                <span class="switch-slider"></span>
+                <span class="switch-label">Carrera activa</span>
+              </label>
+            </div>
+
+            <div class="form-group form-group--full">
+              <label class="form-label">Sedes de dictado</label>
+              <div class="sedes-list">
+                @for (sede of sedes(); track sede.id) {
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      [checked]="isSedeSelected(sede.id)"
+                      (change)="onSedeCheckboxChange($event, sede.id)"
+                    />
+                    <span>{{ sede.nombre }} ({{ sede.direccionCompleta }})</span>
+                  </label>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn--secondary" type="button" (click)="cancelarFormulario()">
+              Cancelar
+            </button>
+            <button class="btn btn--primary" type="submit" [disabled]="submitting()">
+              @if (editingId()) {
+                {{ submitting() ? 'Guardando cambios...' : 'Guardar cambios' }}
+              } @else {
+                {{ submitting() ? 'Guardando...' : 'Guardar carrera' }}
+              }
+            </button>
+          </div>
+        </form>
+      </section>
+    }
+
+    <div class="table-toolbar">
+      <div class="toolbar-filters">
+        <div class="search-box">
+          <input
+            type="text"
+            placeholder="Filtrar por nombre, sigla o título..."
+            [value]="searchQuery()"
+            (input)="onSearch($event)"
+          />
+        </div>
+        <select class="form-control filter-select" (change)="onFilterUaChange($event)" [value]="selectedUaFilter()">
+          <option value="">Todas las unidades académicas</option>
+          @for (ua of unidades(); track ua.id) {
+            <option [value]="ua.id">{{ ua.nombre }}</option>
+          }
+        </select>
+      </div>
+      <div class="table-stats">
+        Total: <strong>{{ filteredCarreras().length }}</strong> registros
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="state-box">Cargando carreras de grado...</div>
+    } @else if (filteredCarreras().length === 0) {
+      <div class="state-box">No se encontraron carreras de grado registradas.</div>
+    } @else {
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Carrera</th>
+              <th>Unidad Académica</th>
+              <th>Área Disciplinaria</th>
+              <th>Modalidad</th>
+              <th>Duración</th>
+              <th>Sedes</th>
+              <th>Estado Carrera</th>
+              <th>Activa/Inactiva</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (carrera of filteredCarreras(); track carrera.id) {
+              <tr>
+                <td>
+                  <div class="font-medium">{{ carrera.nombre }}</div>
+                  @if (carrera.tituloOtorgado || carrera.sigla) {
+                    <div class="text-sub">
+                      {{ carrera.sigla ? carrera.sigla + ' — ' : '' }}{{ carrera.tituloOtorgado || '' }}
+                    </div>
+                  }
+                </td>
+                <td>{{ getNombreUnidad(carrera.unidadAcademicaId) }}</td>
+                <td>{{ carrera.areaDisciplinaria }}</td>
+                <td>{{ carrera.modalidad === 'PRESENCIAL' ? 'Presencial' : 'Distancia' }}</td>
+                <td>{{ carrera.duracionAnios ? carrera.duracionAnios + ' años' : '-' }}</td>
+                <td>
+                  @for (sedeId of carrera.sedesIds; track sedeId; let last = $last) {
+                    <span>{{ getNombreSede(sedeId) }}{{ !last ? ', ' : '' }}</span>
+                  }
+                  @if (carrera.sedesIds.length === 0) {
+                    <span class="text-sub">Sin asignar</span>
+                  }
+                </td>
+                <td>{{ carrera.estado === 'EN_FUNCIONAMIENTO' ? 'En funcionamiento' : 'Nueva' }}</td>
+                <td>
+                  <span class="badge" [class.badge--success]="carrera.activo" [class.badge--neutral]="!carrera.activo">
+                    {{ carrera.activo ? 'Activa' : 'Inactiva' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="table-actions">
+                    <button class="btn btn--sm btn--secondary" type="button" (click)="iniciarEdicion(carrera)">
+                      Editar
+                    </button>
+                    <button class="btn btn--sm btn--danger-outline" type="button" (click)="eliminar(carrera)">
+                      Eliminar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </main>
+</div>
