@@ -4,8 +4,11 @@ import com.undec.acreditacion.application.input.ConvocatoriaFiltro;
 import com.undec.acreditacion.domain.entities.EstadoProcesoAcreditacion;
 import com.undec.acreditacion.domain.entities.ProcesoAcreditacion;
 import com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -49,15 +52,39 @@ public class PostgresProcesoAcreditacionRepositoryAdapter implements ProcesoAcre
 
     @Override
     public List<ProcesoAcreditacion> findAllByFiltro(ConvocatoriaFiltro filtro) {
-        UUID carreraId = filtro != null ? filtro.carreraId() : null;
-        String estado = (filtro != null && filtro.estado() != null) ? filtro.estado().name() : null;
-        String tipoProceso = (filtro != null && filtro.tipoProceso() != null) ? filtro.tipoProceso().name() : null;
-        Integer anio = filtro != null ? filtro.anio() : null;
+        if (filtro == null || esFiltroVacio(filtro)) {
+            return springDataRepository.findAllByOrderByCreadoEnDesc()
+                    .stream()
+                    .map(mapper::toDomain)
+                    .collect(Collectors.toList());
+        }
 
-        return springDataRepository.findAllByFiltro(carreraId, estado, tipoProceso, anio)
+        Specification<ProcesoAcreditacionJpaEntity> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (filtro.carreraId() != null) {
+                predicates.add(cb.equal(root.get("carreraId"), filtro.carreraId()));
+            }
+            if (filtro.estado() != null) {
+                predicates.add(cb.equal(root.get("estado"), filtro.estado().name()));
+            }
+            if (filtro.tipoProceso() != null) {
+                predicates.add(cb.equal(root.get("tipoProceso"), filtro.tipoProceso().name()));
+            }
+            if (filtro.anio() != null) {
+                predicates.add(cb.like(root.get("codigo"), "CONV-" + filtro.anio() + "-%"));
+            }
+            query.orderBy(cb.desc(root.get("creadoEn")));
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return springDataRepository.findAll(spec)
                 .stream()
                 .map(mapper::toDomain)
                 .collect(Collectors.toList());
+    }
+
+    private boolean esFiltroVacio(ConvocatoriaFiltro f) {
+        return f.carreraId() == null && f.estado() == null && f.tipoProceso() == null && f.anio() == null;
     }
 
     @Override
