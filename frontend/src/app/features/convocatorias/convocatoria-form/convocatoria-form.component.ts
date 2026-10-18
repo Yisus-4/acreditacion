@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ConvocatoriaService } from '../../../core/convocatorias/convocatoria.service';
 import { EstructuraService, CarreraResponse } from '../../../core/estructura/estructura.service';
@@ -19,6 +19,8 @@ export class ConvocatoriaFormComponent implements OnInit {
   private readonly estructuraService = inject(EstructuraService);
   private readonly router = inject(Router);
 
+  readonly today = new Date().toISOString().split('T')[0];
+
   form!: FormGroup;
   readonly carreras = signal<CarreraResponse[]>([]);
   readonly loadingCarreras = signal<boolean>(false);
@@ -35,8 +37,19 @@ export class ConvocatoriaFormComponent implements OnInit {
       {
         carreraId: ['', Validators.required],
         nroResolucionConeau: ['', [Validators.required, Validators.pattern(/.*\S.*/)]],
-        fechaInicio: ['', Validators.required],
-        fechaCierre: ['', Validators.required],
+        fechaInicio: [this.today, Validators.required],
+        fechaCierre: [
+          '',
+          [
+            Validators.required,
+            (control: AbstractControl): ValidationErrors | null => {
+              if (!control.value) {
+                return null;
+              }
+              return control.value < this.today ? { fechaCierreAnteriorAHoy: true } : null;
+            },
+          ],
+        ],
         tipoProceso: ['EN_FUNCIONAMIENTO' as TipoProceso, Validators.required],
         observaciones: [''],
       },

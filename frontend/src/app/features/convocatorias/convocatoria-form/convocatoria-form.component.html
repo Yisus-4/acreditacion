@@ -76,7 +76,8 @@
     <div class="form-row">
       <div class="form-group">
         <label for="fechaInicio">Fecha de Inicio de Convocatoria <span class="required">*</span></label>
-        <input id="fechaInicio" type="date" formControlName="fechaInicio" />
+        <input id="fechaInicio" type="date" formControlName="fechaInicio" readonly />
+        <small class="form-hint">Fecha actual asignada automáticamente por el sistema institucional.</small>
         @if (form.get('fechaInicio')?.touched && form.get('fechaInicio')?.hasError('required')) {
           <span class="form-error">La fecha de inicio es requerida.</span>
         }
@@ -84,9 +85,12 @@
 
       <div class="form-group">
         <label for="fechaCierre">Fecha de Cierre Formal <span class="required">*</span></label>
-        <input id="fechaCierre" type="date" formControlName="fechaCierre" />
+        <input id="fechaCierre" type="date" formControlName="fechaCierre" [min]="today" />
         @if (form.get('fechaCierre')?.touched && form.get('fechaCierre')?.hasError('required')) {
           <span class="form-error">La fecha de cierre es requerida.</span>
+        }
+        @if (form.get('fechaCierre')?.touched && form.get('fechaCierre')?.hasError('fechaCierreAnteriorAHoy')) {
+          <span class="form-error">La fecha de cierre no puede ser anterior a la fecha actual.</span>
         }
         @if (form.hasError('fechaCierreAnterior') && (form.get('fechaCierre')?.touched || form.get('fechaInicio')?.touched)) {
           <span class="form-error">La fecha de cierre no puede ser anterior a la fecha de inicio.</span>

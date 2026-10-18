@@ -74,7 +74,7 @@ public final class RegistroConvocatoria {
             throw new DomainValidationException("El número de resolución CONEAU es obligatorio");
         }
         if (fechaInicio == null) {
-            throw new DomainValidationException("La fecha de inicio de la convocatoria es obligatoria");
+            fechaInicio = LocalDate.now();
         }
         if (fechaCierre == null) {
             throw new DomainValidationException("La fecha de cierre de la convocatoria es obligatoria");

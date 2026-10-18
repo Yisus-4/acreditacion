@@ -84,7 +84,7 @@ class ConvocatoriaControllerIntegrationTest {
                 TipoProcesoAcreditacion.EN_FUNCIONAMIENTO, UUID.randomUUID()
         );
         RegistroConvocatoria reg = RegistroConvocatoria.crear(
-                proceso.getId(), "RESFC-2026-145", LocalDate.of(2026, 3, 1), LocalDate.of(2026, 11, 30), "Obs"
+                proceso.getId(), "RESFC-2026-145", LocalDate.now(), LocalDate.now().plusMonths(6), "Obs"
         );
         PlanTrabajo plan = PlanTrabajo.inicializar(proceso.getId(), "PT-001-ISI-2026", TipoPlanTrabajo.PT_001_ACREDITACION);
 
@@ -102,8 +102,8 @@ class ConvocatoriaControllerIntegrationTest {
         IniciarConvocatoriaRequest request = new IniciarConvocatoriaRequest(
                 carreraId,
                 "RESFC-2026-145",
-                LocalDate.of(2026, 3, 1),
-                LocalDate.of(2026, 11, 30),
+                LocalDate.now(),
+                LocalDate.now().plusMonths(6),
                 TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
                 "Obs"
         );

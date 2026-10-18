@@ -70,9 +70,10 @@ class IniciarConvocatoriaServiceTest {
         UUID creadoPor = UUID.randomUUID();
         Carrera carrera = crearCarreraMock(carreraId, "Ingeniería en Sistemas de Información", "ISI", "GRADO", true);
 
+        int anio = LocalDate.now().getYear();
         when(carreraRepository.findById(carreraId)).thenReturn(Optional.of(carrera));
         when(procesoRepository.findActivoByCarreraId(carreraId)).thenReturn(Optional.empty());
-        when(procesoRepository.countByAnio(2026)).thenReturn(0L);
+        when(procesoRepository.countByAnio(anio)).thenReturn(0L);
 
         when(procesoRepository.save(any(ProcesoAcreditacion.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(registroRepository.save(any(RegistroConvocatoria.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -81,8 +82,8 @@ class IniciarConvocatoriaServiceTest {
         IniciarConvocatoriaCommand command = new IniciarConvocatoriaCommand(
                 carreraId,
                 "RESFC-2026-145-APN-CONEAU#ME",
-                LocalDate.of(2026, 3, 1),
-                LocalDate.of(2026, 11, 30),
+                LocalDate.now(),
+                LocalDate.now().plusMonths(6),
                 TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
                 "Observaciones de prueba",
                 creadoPor
@@ -94,7 +95,7 @@ class IniciarConvocatoriaServiceTest {
         assertEquals(carreraId, resultado.getCarreraId());
         assertEquals(EstadoProcesoAcreditacion.INICIADO, resultado.getEstado());
         assertEquals(TipoProcesoAcreditacion.EN_FUNCIONAMIENTO, resultado.getTipoProceso());
-        assertTrue(resultado.getCodigo().startsWith("CONV-2026-ISI-"));
+        assertTrue(resultado.getCodigo().startsWith("CONV-" + anio + "-ISI-"));
 
         // Verificar que se guardó el proceso
         verify(procesoRepository).save(any(ProcesoAcreditacion.class));
@@ -105,8 +106,8 @@ class IniciarConvocatoriaServiceTest {
         RegistroConvocatoria registroGuardado = registroCaptor.getValue();
         assertEquals(resultado.getId(), registroGuardado.getProcesoId());
         assertEquals("RESFC-2026-145-APN-CONEAU#ME", registroGuardado.getNroResolucionConeau());
-        assertEquals(LocalDate.of(2026, 3, 1), registroGuardado.getFechaInicio());
-        assertEquals(LocalDate.of(2026, 11, 30), registroGuardado.getFechaCierre());
+        assertEquals(LocalDate.now(), registroGuardado.getFechaInicio());
+        assertEquals(LocalDate.now().plusMonths(6), registroGuardado.getFechaCierre());
 
         // Verificar que se guardó el Plan de Trabajo con la actividad inicial en PENDIENTE
         ArgumentCaptor<PlanTrabajo> planCaptor = ArgumentCaptor.forClass(PlanTrabajo.class);
@@ -127,8 +128,8 @@ class IniciarConvocatoriaServiceTest {
         IniciarConvocatoriaCommand command = new IniciarConvocatoriaCommand(
                 carreraId,
                 "RESFC-2026-145",
-                LocalDate.of(2026, 3, 1),
-                LocalDate.of(2026, 11, 30),
+                LocalDate.now(),
+                LocalDate.now().plusMonths(6),
                 TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
                 null,
                 UUID.randomUUID()
@@ -147,8 +148,8 @@ class IniciarConvocatoriaServiceTest {
         IniciarConvocatoriaCommand command = new IniciarConvocatoriaCommand(
                 carreraId,
                 "RESFC-2026-145",
-                LocalDate.of(2026, 3, 1),
-                LocalDate.of(2026, 11, 30),
+                LocalDate.now(),
+                LocalDate.now().plusMonths(6),
                 TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
                 null,
                 UUID.randomUUID()
@@ -172,13 +173,86 @@ class IniciarConvocatoriaServiceTest {
         IniciarConvocatoriaCommand command = new IniciarConvocatoriaCommand(
                 carreraId,
                 "RESFC-2026-145",
-                LocalDate.of(2026, 3, 1),
-                LocalDate.of(2026, 11, 30),
+                LocalDate.now(),
+                LocalDate.now().plusMonths(6),
                 TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
                 null,
                 UUID.randomUUID()
         );
 
         assertThrows(BusinessRuleConflictException.class, () -> service.iniciar(command));
+    }
+
+    @Test
+    @DisplayName("Debe rechazar si la fecha de inicio es anterior a la fecha actual")
+    void debeRechazarSiFechaInicioEsAnteriorAHoy() {
+        UUID carreraId = UUID.randomUUID();
+        DomainValidationException ex = assertThrows(DomainValidationException.class, () ->
+                new IniciarConvocatoriaCommand(
+                        carreraId,
+                        "RESFC-2026-145",
+                        LocalDate.now().minusDays(1),
+                        LocalDate.now().plusMonths(6),
+                        TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
+                        null,
+                        UUID.randomUUID()
+                )
+        );
+        assertEquals("La fecha de inicio no puede ser anterior a la fecha actual", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("Debe rechazar si la fecha de cierre es anterior a la fecha actual")
+    void debeRechazarSiFechaCierreEsAnteriorAHoy() {
+        UUID carreraId = UUID.randomUUID();
+        DomainValidationException ex = assertThrows(DomainValidationException.class, () ->
+                new IniciarConvocatoriaCommand(
+                        carreraId,
+                        "RESFC-2026-145",
+                        LocalDate.now(),
+                        LocalDate.now().minusDays(1),
+                        TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
+                        null,
+                        UUID.randomUUID()
+                )
+        );
+        assertEquals("La fecha de cierre no puede ser anterior a la fecha actual", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("Debe asignar automáticamente la fecha actual si la fecha de inicio es nula")
+    void debeAsignarFechaInicioActualSiEsNula() {
+        UUID carreraId = UUID.randomUUID();
+        UUID creadoPor = UUID.randomUUID();
+        Carrera carrera = crearCarreraMock(carreraId, "Ingeniería en Sistemas de Información", "ISI", "GRADO", true);
+        int anio = LocalDate.now().getYear();
+
+        when(carreraRepository.findById(carreraId)).thenReturn(Optional.of(carrera));
+        when(procesoRepository.findActivoByCarreraId(carreraId)).thenReturn(Optional.empty());
+        when(procesoRepository.countByAnio(anio)).thenReturn(0L);
+
+        when(procesoRepository.save(any(ProcesoAcreditacion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(registroRepository.save(any(RegistroConvocatoria.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(planTrabajoRepository.save(any(PlanTrabajo.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        IniciarConvocatoriaCommand command = new IniciarConvocatoriaCommand(
+                carreraId,
+                "RESFC-2026-145-APN-CONEAU#ME",
+                null,
+                LocalDate.now().plusMonths(6),
+                TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
+                "Sin fecha de inicio especificada",
+                creadoPor
+        );
+
+        assertEquals(LocalDate.now(), command.fechaInicio());
+
+        ProcesoAcreditacion resultado = service.iniciar(command);
+        assertNotNull(resultado);
+
+        ArgumentCaptor<RegistroConvocatoria> registroCaptor = ArgumentCaptor.forClass(RegistroConvocatoria.class);
+        verify(registroRepository).save(registroCaptor.capture());
+        RegistroConvocatoria registroGuardado = registroCaptor.getValue();
+        assertEquals(LocalDate.now(), registroGuardado.getFechaInicio());
     }
 }

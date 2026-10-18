@@ -24,10 +24,15 @@ public record IniciarConvocatoriaCommand(
             throw new DomainValidationException("El número de resolución CONEAU es obligatorio");
         }
         if (fechaInicio == null) {
-            throw new DomainValidationException("La fecha de inicio es obligatoria");
+            fechaInicio = LocalDate.now();
+        } else if (fechaInicio.isBefore(LocalDate.now())) {
+            throw new DomainValidationException("La fecha de inicio no puede ser anterior a la fecha actual");
         }
         if (fechaCierre == null) {
             throw new DomainValidationException("La fecha de cierre es obligatoria");
+        }
+        if (fechaCierre.isBefore(LocalDate.now())) {
+            throw new DomainValidationException("La fecha de cierre no puede ser anterior a la fecha actual");
         }
         if (fechaCierre.isBefore(fechaInicio)) {
             throw new DomainValidationException("La fecha de cierre no puede ser anterior a la fecha de inicio");

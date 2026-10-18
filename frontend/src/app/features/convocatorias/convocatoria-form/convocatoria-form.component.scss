@@ -112,11 +112,32 @@
       border-color: var(--color-primary, #826170);
       box-shadow: 0 0 0 2px rgba(130, 97, 112, 0.15);
     }
+
+    &[readonly] {
+      background-color: var(--color-gray-100, #f3f4f6);
+      color: var(--color-gray-600, #4b5563);
+      cursor: not-allowed;
+      border-color: var(--border-color, #e5e7eb);
+      user-select: none;
+
+      &:focus {
+        outline: none;
+        box-shadow: none;
+        border-color: var(--border-color, #e5e7eb);
+      }
+    }
   }
 
   textarea {
     resize: vertical;
   }
+}
+
+.form-hint {
+  font-size: 0.8rem;
+  color: var(--color-gray-500, #6b7280);
+  line-height: 1.35;
+  margin-top: 0.125rem;
 }
 
 .form-error {

@@ -85,4 +85,23 @@ class RegistroConvocatoriaTest {
         assertEquals(fecha, registro.getFechaInicio());
         assertEquals(fecha, registro.getFechaCierre());
     }
+
+    @Test
+    @DisplayName("Debe asignar fecha actual si la fecha de inicio es nula")
+    void debeAsignarFechaActualSiFechaInicioEsNula() {
+        UUID procesoId = UUID.randomUUID();
+        LocalDate cierre = LocalDate.now().plusMonths(6);
+
+        RegistroConvocatoria registro = RegistroConvocatoria.crear(
+                procesoId,
+                "RESFC-2026-145",
+                null,
+                cierre,
+                null
+        );
+
+        assertNotNull(registro);
+        assertEquals(LocalDate.now(), registro.getFechaInicio());
+        assertEquals(cierre, registro.getFechaCierre());
+    }
 }
