@@ -22,12 +22,12 @@ export class Dashboard {
   }
 
   get isAdmin(): boolean {
-    return this.user?.roleCodes.includes('ADMINISTRATOR') ?? false;
+    return this.user?.roleCodes?.includes('ADMINISTRATOR') ?? false;
   }
 
   get canManageInstitutions(): boolean {
     return (
-      this.user?.roleCodes.some(
+      this.user?.roleCodes?.some(
         (role) => role === 'ADMINISTRATOR' || role === 'AEA'
       ) ?? false
     );

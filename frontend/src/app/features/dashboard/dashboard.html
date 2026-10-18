@@ -19,7 +19,7 @@
       <div class="user-info">
         <span class="user-info__name">{{ user?.displayName || user?.email }}</span>
         <div class="user-info__roles">
-          @for (role of user?.roleCodes; track role) {
+          @for (role of user?.roleCodes || []; track role) {
             <span class="role-badge">{{ role }}</span>
           }
         </div>
@@ -34,9 +34,6 @@
   <main class="dashboard-main">
     <section class="dashboard-welcome">
       <h2>Bienvenido, {{ user?.displayName || 'Usuario' }}</h2>
-      <p class="text-muted">
-        Seleccioná uno de los módulos para comenzar a trabajar en los procesos de acreditación universitaria.
-      </p>
     </section>
 
     <div class="modules-grid">
@@ -117,43 +114,6 @@
           <span>Acceder a Convocatorias &rarr;</span>
         </div>
       </a>
-
-      <div class="module-card module-card--disabled">
-        <div class="module-card__icon module-card__icon--muted">
-          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
-        </div>
-        <div class="module-card__body">
-          <div class="module-card__header">
-            <h3 class="module-card__title">Autoevaluación</h3>
-            <span class="status-chip status-chip--upcoming">Próximamente</span>
-          </div>
-          <p class="module-card__desc">
-            Carga y revisión de dimensiones, criterios, indicadores y planes de mejora.
-          </p>
-        </div>
-      </div>
-
-      <div class="module-card module-card--disabled">
-        <div class="module-card__icon module-card__icon--muted">
-          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-            <line x1="12" y1="22.08" x2="12" y2="12" />
-          </svg>
-        </div>
-        <div class="module-card__body">
-          <div class="module-card__header">
-            <h3 class="module-card__title">Evidencias</h3>
-            <span class="status-chip status-chip--upcoming">Próximamente</span>
-          </div>
-          <p class="module-card__desc">
-            Repositorio documental y gestión de archivos probatorios de cumplimiento.
-          </p>
-        </div>
-      </div>
     </div>
   </main>
 </div>

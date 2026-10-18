@@ -72,7 +72,11 @@ export class Login implements OnInit {
     this.auth.signIn({ email, password }).subscribe({
       next: () => {
         this.status.set('success');
-        void this.router.navigate(['/dashboard']);
+        this.router.navigate(['/dashboard']).then((navigated) => {
+          if (!navigated) {
+            void this.router.navigateByUrl('/dashboard');
+          }
+        });
       },
       error: (error: unknown) => {
         if (error instanceof InvalidCredentialsError) {
