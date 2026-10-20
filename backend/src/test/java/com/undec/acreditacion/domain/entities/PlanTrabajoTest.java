@@ -201,4 +201,99 @@ class PlanTrabajoTest {
                 plan.establecerCronogramaTentativo(List.of(actExcedida), fechaLimiteConeau, usuarioAeaId)
         );
     }
+
+    @Test
+    @DisplayName("Debe rechazar cronograma si fecha de inicio estimada de alguna actividad supera la fecha límite CONEAU")
+    void debeRechazarActividadConFechaInicioPosteriorAFechaLimiteConeau() {
+        UUID procesoId = UUID.randomUUID();
+        PlanTrabajo plan = PlanTrabajo.inicializar(procesoId, "PT-001-ISI-2026", TipoPlanTrabajo.PT_001_ACREDITACION);
+        UUID usuarioAeaId = UUID.randomUUID();
+        LocalDate fechaLimiteConeau = LocalDate.of(2026, 11, 30);
+
+        ActividadPlanTrabajo actInicioTardio = ActividadPlanTrabajo.crearActividadCronograma(
+                plan.getId(),
+                3,
+                "ACT-INICIO-TARDIO",
+                "Inicio posterior a la fecha límite",
+                HojaPlanTrabajo.INFO,
+                LocalDate.of(2026, 12, 1), // Posterior al límite
+                LocalDate.of(2026, 12, 10),
+                "Coordinador",
+                PrioridadActividad.MEDIA
+        );
+
+        assertThrows(DomainValidationException.class, () ->
+                plan.establecerCronogramaTentativo(List.of(actInicioTardio), fechaLimiteConeau, usuarioAeaId)
+        );
+    }
+
+    @Test
+    @DisplayName("Debe rechazar establecer cronograma si el plan de trabajo ya se encuentra finalizado")
+    void debeRechazarEstablecerCronogramaSiPlanFinalizado() {
+        UUID procesoId = UUID.randomUUID();
+        PlanTrabajo plan = PlanTrabajo.inicializar(procesoId, "PT-001-ISI-2026", TipoPlanTrabajo.PT_001_ACREDITACION);
+        plan.finalizar();
+        UUID usuarioAeaId = UUID.randomUUID();
+        LocalDate fechaLimiteConeau = LocalDate.of(2026, 11, 30);
+
+        ActividadPlanTrabajo act = ActividadPlanTrabajo.crearActividadCronograma(
+                plan.getId(),
+                3,
+                "ACT-TEST",
+                "Actividad de prueba",
+                HojaPlanTrabajo.INFO,
+                LocalDate.of(2026, 5, 1),
+                LocalDate.of(2026, 6, 1),
+                "AEA",
+                PrioridadActividad.MEDIA
+        );
+
+        assertThrows(DomainValidationException.class, () ->
+                plan.establecerCronogramaTentativo(List.of(act), fechaLimiteConeau, usuarioAeaId)
+        );
+    }
+
+    @Test
+    @DisplayName("Debe reorganizar actividades asegurando orden secuencial sin colisiones")
+    void debeReorganizarActividadesAsegurandoOrdenSecuencialSinColisiones() {
+        UUID procesoId = UUID.randomUUID();
+        PlanTrabajo plan = PlanTrabajo.inicializar(procesoId, "PT-001-ISI-2026", TipoPlanTrabajo.PT_001_ACREDITACION);
+        UUID usuarioAeaId = UUID.randomUUID();
+        LocalDate fechaLimiteConeau = LocalDate.of(2026, 11, 30);
+
+        // Dos actividades con mismo orden sugerido (ej. orden 3 duplicado o colisionando)
+        ActividadPlanTrabajo actA = ActividadPlanTrabajo.crearActividadCronograma(
+                plan.getId(),
+                3,
+                "ACT-A",
+                "Actividad A",
+                HojaPlanTrabajo.INFO,
+                LocalDate.of(2026, 4, 1),
+                LocalDate.of(2026, 4, 30),
+                "AEA",
+                PrioridadActividad.ALTA
+        );
+
+        ActividadPlanTrabajo actB = ActividadPlanTrabajo.crearActividadCronograma(
+                plan.getId(),
+                3, // Mismo orden
+                "ACT-B",
+                "Actividad B",
+                HojaPlanTrabajo.CONEAU,
+                LocalDate.of(2026, 5, 1),
+                LocalDate.of(2026, 5, 30),
+                "Dirección de Carrera",
+                PrioridadActividad.MEDIA
+        );
+
+        plan.establecerCronogramaTentativo(List.of(actA, actB), fechaLimiteConeau, usuarioAeaId);
+
+        List<ActividadPlanTrabajo> acts = plan.getActividades();
+        // Verificar que no hay números de orden duplicados
+        long ordenesDistintos = acts.stream().map(ActividadPlanTrabajo::getNumeroOrden).distinct().count();
+        assertEquals(acts.size(), ordenesDistintos);
+
+        // Verificar que todos los órdenes son >= 1
+        assertTrue(acts.stream().allMatch(a -> a.getNumeroOrden() >= 1));
+    }
 }
