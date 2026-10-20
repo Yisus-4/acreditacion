@@ -64,6 +64,7 @@ export class ConvocatoriaDetalleComponent implements OnInit {
   readonly actividadSeleccionada = signal<ActividadPlanTrabajoDto | null>(null);
   readonly actividadSeleccionadaDrawer = signal<ActividadPlanTrabajoDto | null>(null);
   readonly modalElaborarPlanAbierto = signal<boolean>(false);
+  readonly bannerExitoPlan = signal<string | null>(null);
   readonly filtroHoja = signal<'TODAS' | 'INFO' | 'CONEAU'>('TODAS');
   readonly filtroEstado = signal<string>('TODOS');
   readonly filtroPrioridad = signal<string>('TODAS');
@@ -442,12 +443,16 @@ export class ConvocatoriaDetalleComponent implements OnInit {
   }
 
   abrirModalElaborarPlan(): void {
+    this.bannerExitoPlan.set(null);
     this.modalElaborarPlanAbierto.set(true);
   }
 
   cerrarModalElaborarPlan(guardado: boolean): void {
     this.modalElaborarPlanAbierto.set(false);
     if (guardado) {
+      this.bannerExitoPlan.set(
+        'El Hito 1.2 (Elaborar Plan de Trabajo) fue completado exitosamente y el cronograma tentativo institucional ha quedado establecido formalmente.'
+      );
       const id = this.route.snapshot.paramMap.get('id');
       if (id) {
         this.cargarDatos(id);
