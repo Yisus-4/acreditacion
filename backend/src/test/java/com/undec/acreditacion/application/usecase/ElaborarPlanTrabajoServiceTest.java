@@ -139,4 +139,42 @@ class ElaborarPlanTrabajoServiceTest {
 
         assertThrows(DomainValidationException.class, () -> service.elaborar(command));
     }
+
+    @Test
+    @DisplayName("Debe lanzar ResourceNotFoundException si el registro de convocatoria no existe")
+    void debeLanzarExcepcionSiRegistroConvocatoriaNoExiste() {
+        UUID procesoId = UUID.randomUUID();
+        ProcesoAcreditacion proceso = ProcesoAcreditacion.iniciar(
+                UUID.randomUUID(), "COD", "Titulo", TipoProcesoAcreditacion.EN_FUNCIONAMIENTO, UUID.randomUUID()
+        );
+        when(procesoRepository.findById(procesoId)).thenReturn(Optional.of(proceso));
+        when(registroRepository.findByProcesoId(procesoId)).thenReturn(Optional.empty());
+
+        ElaborarPlanTrabajoCommand command = new ElaborarPlanTrabajoCommand(
+                procesoId, "RM 1254", FaseEvaluacion.PRIMERA_FASE, LocalDate.now().plusMonths(6), List.of(), UUID.randomUUID()
+        );
+
+        assertThrows(ResourceNotFoundException.class, () -> service.elaborar(command));
+    }
+
+    @Test
+    @DisplayName("Debe lanzar ResourceNotFoundException si el plan de trabajo no existe")
+    void debeLanzarExcepcionSiPlanTrabajoNoExiste() {
+        UUID procesoId = UUID.randomUUID();
+        ProcesoAcreditacion proceso = ProcesoAcreditacion.iniciar(
+                UUID.randomUUID(), "COD", "Titulo", TipoProcesoAcreditacion.EN_FUNCIONAMIENTO, UUID.randomUUID()
+        );
+        RegistroConvocatoria registro = RegistroConvocatoria.crear(
+                procesoId, "RESFC-2026-145", LocalDate.of(2026, 3, 1), LocalDate.of(2026, 11, 30), "Obs"
+        );
+        when(procesoRepository.findById(procesoId)).thenReturn(Optional.of(proceso));
+        when(registroRepository.findByProcesoId(procesoId)).thenReturn(Optional.of(registro));
+        when(planTrabajoRepository.findByProcesoId(procesoId)).thenReturn(Optional.empty());
+
+        ElaborarPlanTrabajoCommand command = new ElaborarPlanTrabajoCommand(
+                procesoId, "RM 1254", FaseEvaluacion.PRIMERA_FASE, LocalDate.now().plusMonths(6), List.of(), UUID.randomUUID()
+        );
+
+        assertThrows(ResourceNotFoundException.class, () -> service.elaborar(command));
+    }
 }
