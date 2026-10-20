@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -43,6 +44,21 @@ public class ActividadPlanTrabajoJpaEntity {
 
     @Column(name = "completada_por")
     private UUID completadaPor;
+
+    @Column(name = "hoja", length = 20)
+    private String hoja;
+
+    @Column(name = "fecha_inicio_estimada")
+    private LocalDate fechaInicioEstimada;
+
+    @Column(name = "fecha_fin_estimada")
+    private LocalDate fechaFinEstimada;
+
+    @Column(name = "responsable", length = 150)
+    private String responsable;
+
+    @Column(name = "prioridad", length = 20)
+    private String prioridad;
 
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
@@ -131,6 +147,46 @@ public class ActividadPlanTrabajoJpaEntity {
 
     public void setCompletadaPor(UUID completadaPor) {
         this.completadaPor = completadaPor;
+    }
+
+    public String getHoja() {
+        return hoja;
+    }
+
+    public void setHoja(String hoja) {
+        this.hoja = hoja;
+    }
+
+    public LocalDate getFechaInicioEstimada() {
+        return fechaInicioEstimada;
+    }
+
+    public void setFechaInicioEstimada(LocalDate fechaInicioEstimada) {
+        this.fechaInicioEstimada = fechaInicioEstimada;
+    }
+
+    public LocalDate getFechaFinEstimada() {
+        return fechaFinEstimada;
+    }
+
+    public void setFechaFinEstimada(LocalDate fechaFinEstimada) {
+        this.fechaFinEstimada = fechaFinEstimada;
+    }
+
+    public String getResponsable() {
+        return responsable;
+    }
+
+    public void setResponsable(String responsable) {
+        this.responsable = responsable;
+    }
+
+    public String getPrioridad() {
+        return prioridad;
+    }
+
+    public void setPrioridad(String prioridad) {
+        this.prioridad = prioridad;
     }
 
     public Instant getCreadoEn() {

@@ -1,5 +1,5 @@
 <div class="detalle-container">
-  <nav class="breadcrumb">
+  <nav class="breadcrumb" aria-label="Ruta de navegación">
     <a routerLink="/dashboard">Inicio</a>
     <span class="separator">/</span>
     <a routerLink="/acreditacion/convocatorias">Convocatorias</a>
@@ -10,7 +10,7 @@
   @if (loading()) {
     <div class="loading-state">
       <span class="spinner"></span>
-      <p>Cargando información del proceso y plan de trabajo...</p>
+      <p>Cargando información del proceso y plan de trabajo institucional...</p>
     </div>
   } @else if (error()) {
     <div class="alert-error" role="alert">
@@ -19,203 +19,813 @@
   } @else if (convocatoria()) {
     @let c = convocatoria()!;
 
-    <!-- Header de la Convocatoria -->
-    <div class="header-card">
-      <div class="header-main">
-        <span class="badge-code">{{ c.codigo }}</span>
-        <h1 class="header-title">{{ c.titulo }}</h1>
-        <div class="header-meta">
-          <span><strong>Carrera:</strong> {{ c.carreraNombre }} ({{ c.carreraSigla || 'S/S' }})</span>
-          <span class="meta-dot">&bull;</span>
-          <span><strong>Nivel:</strong> <span class="badge-nivel">{{ c.nivel }}</span></span>
-          <span class="meta-dot">&bull;</span>
-          <span><strong>Tipo:</strong> {{ c.tipoProceso === 'EN_FUNCIONAMIENTO' ? 'En Funcionamiento' : 'Nueva' }}</span>
+    <!-- 1. Encabezado Institucional (DESIGN.md 7.1 y 4) -->
+    <header class="institucional-header">
+      <div class="membrete-container">
+        <div class="membrete-textos">
+          <div class="membrete-superior">Área de Evaluación y Acreditación (AEA)</div>
+          <h1 class="membrete-intermedia">
+            {{ c.carreraNombre }} <span class="separador-codigo">·</span> <span class="codigo-convocatoria">{{ c.codigo }}</span>
+          </h1>
+          <div class="membrete-inferior">UNIVERSIDAD NACIONAL DE CHILECITO</div>
+        </div>
+        @if (canManage()) {
+          <div class="header-acciones">
+            <button
+              type="button"
+              class="btn-reiniciar-convocatoria"
+              (click)="confirmarReinicio()"
+              [disabled]="reiniciando()"
+              title="Reiniciar y borrar datos de prueba para comenzar desde cero"
+            >
+              @if (reiniciando()) {
+                <span class="spinner-sm"></span>
+                <span>Reiniciando...</span>
+              } @else {
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+                <span>Reiniciar Convocatoria</span>
+              }
+            </button>
+          </div>
+        }
+      </div>
+
+      <div class="header-metadatos-bar">
+        <div class="meta-item-box">
+          <span class="meta-rotulo">Nivel:</span>
+          <span class="badge-nivel-grado">GRADO</span>
+        </div>
+        <div class="meta-divisor"></div>
+        <div class="meta-item-box">
+          <span class="meta-rotulo">Tipo de Proceso:</span>
+          <span class="meta-valor">{{ c.tipoProceso === 'EN_FUNCIONAMIENTO' ? 'En Funcionamiento' : 'Nueva' }}</span>
+        </div>
+        <div class="meta-divisor"></div>
+        <div class="meta-item-box">
+          <span class="meta-rotulo">Carrera:</span>
+          <span class="meta-valor">{{ c.carreraNombre }} ({{ c.carreraSigla || 'S/S' }})</span>
+        </div>
+        <div class="meta-divisor"></div>
+        <div class="meta-item-box">
+          <span class="meta-rotulo">Estado del Proceso:</span>
+          <span
+            class="badge-estado-institucional"
+            [class.estado-iniciado]="c.estado === 'INICIADO'"
+            [class.estado-autoevaluacion]="c.estado === 'EN_AUTOEVALUACION'"
+            [class.estado-finalizado]="c.estado === 'FINALIZADO'"
+          >
+            {{ c.estado }}
+          </span>
         </div>
       </div>
-      <div class="header-status">
-        <span
-          class="badge-estado"
-          [class.badge-iniciado]="c.estado === 'INICIADO'"
-          [class.badge-autoevaluacion]="c.estado === 'EN_AUTOEVALUACION'"
-          [class.badge-finalizado]="c.estado === 'FINALIZADO'"
-        >
-          {{ c.estado }}
-        </span>
+    </header>
+
+    <!-- 3. Indicador de Etapas (DESIGN.md 7.3) -->
+    <nav class="indicador-etapas" aria-label="Etapas del proceso de acreditación">
+      <div class="etapas-grid">
+        @for (etapa of etapas(); track etapa.numero) {
+          <div
+            class="etapa-item"
+            [class.etapa-activa]="etapa.estado === 'ACTIVA'"
+            [class.etapa-completada]="etapa.estado === 'COMPLETADA'"
+            [class.etapa-pendiente]="etapa.estado === 'PENDIENTE'"
+          >
+            <div class="etapa-header">
+              <span class="etapa-numero">ETAPA {{ etapa.numero }}</span>
+              @if (etapa.estado === 'COMPLETADA') {
+                <span class="etapa-badge-status completada">
+                  <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Completada
+                </span>
+              } @else if (etapa.estado === 'ACTIVA') {
+                <span class="etapa-badge-status activa">En Curso</span>
+              } @else {
+                <span class="etapa-badge-status pendiente">Pendiente</span>
+              }
+            </div>
+            <div class="etapa-nombre">{{ etapa.nombre }}</div>
+          </div>
+        }
       </div>
+    </nav>
+
+    <!-- 4. Navegación en Pestañas Principal -->
+    <div class="nav-tabs-convocatoria" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        class="tab-nav-btn"
+        [class.active]="tabActiva() === 'ACTIVIDADES'"
+        [attr.aria-selected]="tabActiva() === 'ACTIVIDADES'"
+        (click)="seleccionarTab('ACTIVIDADES')"
+      >
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4" />
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg>
+        <span class="tab-label">Mis Actividades Asignadas</span>
+        @if (conteoActividadesPendientes() > 0) {
+          <span class="tab-badge-pill">{{ conteoActividadesPendientes() }}</span>
+        }
+      </button>
+
+      @if (canManage()) {
+        <button
+          type="button"
+          role="tab"
+          class="tab-nav-btn"
+          [class.active]="tabActiva() === 'SEGUIMIENTO'"
+          [attr.aria-selected]="tabActiva() === 'SEGUIMIENTO'"
+          (click)="seleccionarTab('SEGUIMIENTO')"
+        >
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          <span class="tab-label">Seguimiento del Plan de Trabajo (AEA)</span>
+          <span class="tab-counter-neutral">{{ conteoTotal() }} hitos</span>
+        </button>
+      }
     </div>
 
-    <!-- Grilla de Información RG-001 y Plan -->
-    <div class="info-grid">
-      <!-- Ficha CONEAU RG-001 -->
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title">Metadatos CONEAU (RG-001)</h2>
-        </div>
-        <div class="card-body">
-          @if (c.registroConvocatoria) {
-            @let r = c.registroConvocatoria;
-            <div class="detail-row">
-              <span class="detail-label">Resolución CONEAU:</span>
-              <span class="detail-value font-mono">{{ r.nroResolucionConeau }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Fecha de Apertura:</span>
-              <span class="detail-value">{{ r.fechaInicio }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Fecha de Cierre Oficial:</span>
-              <span class="detail-value">{{ r.fechaCierre }}</span>
-            </div>
-            @if (r.observaciones) {
-              <div class="detail-row full-width">
-                <span class="detail-label">Observaciones:</span>
-                <p class="detail-text">{{ r.observaciones }}</p>
+    <!-- PESTAÑA 1: MIS ACTIVIDADES ASIGNADAS (Vista de Acción por Rol) -->
+    @if (tabActiva() === 'ACTIVIDADES') {
+      <div class="actividades-split-container">
+        <!-- Columna Izquierda: Tarjetas de Actividades con Semáforo Textual -->
+        <aside class="tareas-sidebar" aria-label="Listado de actividades asignadas">
+          <div class="sidebar-header">
+            <h3 class="sidebar-title">Actividades del Rol</h3>
+            <p class="sidebar-sub">Seleccione una actividad para gestionar su documentación y estado.</p>
+          </div>
+
+          <div class="tareas-list">
+            <!-- Hito 1.3: Gestionar normativa -->
+            @if (actividadNormativa(); as actNorm) {
+              @let normDto = normativaDetalle();
+              <div
+                class="tarea-sidebar-card"
+                [class.active]="actividadFoco() === '1.3'"
+                [class.tarea-completada]="actNorm.estado === 'COMPLETADA' || normDto?.estado === 'COMPLETADA'"
+                (click)="seleccionarActividadFoco('1.3')"
+              >
+                <div class="card-top">
+                  <span class="tag-hito">Hito 1.3 · Hoja INFO</span>
+                  <!-- Semáforo textual DESIGN.md 7.6 -->
+                  @if (normDto?.badgePlazo) {
+                    <span class="badge-semaforo-textual" [class]="normDto!.badgePlazo!.cssClass">
+                      {{ normDto!.badgePlazo!.etiqueta }}
+                    </span>
+                  } @else if (actNorm.estado === 'COMPLETADA' || normDto?.estado === 'COMPLETADA') {
+                    <span class="badge-semaforo-textual completada">En término · Completada</span>
+                  } @else {
+                    <span class="badge-semaforo-textual pendiente">Plazo: 5 días hábiles</span>
+                  }
+                </div>
+                <h4 class="tarea-card-title">Gestionar normativa de la carrera</h4>
+                <div class="tarea-card-resp">
+                  <strong>Responsable:</strong> Dirección de Carrera (DC) / AEA
+                </div>
+                <p class="tarea-card-desc">
+                  Presentación de 8 actos administrativos y ordenanzas solicitados formalmente por AEA para su auditoría y dictamen.
+                </p>
+                <div class="card-bottom">
+                  <span class="badge-estado-pills" [class.progreso]="normDto?.estado === 'EN_CARGA_BORRADOR' || normDto?.estado === 'ENVIADA_A_REVISION'" [class.completado]="normDto?.estado === 'COMPLETADA'">
+                    {{ normDto?.estado ? formatearEstadoSolicitud(normDto!.estado) : actNorm.estado }}
+                  </span>
+                  <span class="link-foco">
+                    {{ actividadFoco() === '1.3' ? 'Gestionando →' : 'Gestionar →' }}
+                  </span>
+                </div>
               </div>
             }
-          } @else {
-            <p class="empty-text">Sin registro RG-001 asociado.</p>
+
+            <!-- Hito 1.1: Reunión inicial -->
+            @if (actividadReunion(); as act1) {
+              <div
+                class="tarea-sidebar-card"
+                [class.active]="actividadFoco() === '1.1'"
+                [class.tarea-completada]="act1.estado === 'COMPLETADA'"
+                (click)="seleccionarActividadFoco('1.1')"
+              >
+                <div class="card-top">
+                  <span class="tag-hito">Hito 1.1 · Hoja INFO</span>
+                  <!-- Semáforo textual DESIGN.md 7.6 -->
+                  @if (act1.estado === 'COMPLETADA') {
+                    <span class="badge-semaforo-textual completada">En término · Completada</span>
+                  } @else {
+                    <span class="badge-semaforo-textual pendiente">Plazo estimado: 5 días</span>
+                  }
+                </div>
+                <h4 class="tarea-card-title">Informar sobre el proceso de acreditación</h4>
+                <div class="tarea-card-resp">
+                  <strong>Responsable:</strong> AEA / Dirección de Carrera
+                </div>
+                <p class="tarea-card-desc">
+                  Reunión inicial de coordinación institucional. Registro de acuerdos alcanzados y carga de acta probatoria.
+                </p>
+                <div class="card-bottom">
+                  <span class="badge-estado-pills" [class.completado]="act1.estado === 'COMPLETADA'">
+                    {{ act1.estado }}
+                  </span>
+                  <span class="link-foco">
+                    {{ actividadFoco() === '1.1' ? 'Viendo →' : 'Ver detalle →' }}
+                  </span>
+                </div>
+              </div>
+            }
+
+            <!-- Hito 1.2: Elaborar Plan de Trabajo -->
+            @if (actividadElaborarPlan(); as act2) {
+              <div
+                class="tarea-sidebar-card"
+                [class.active]="actividadFoco() === '1.2'"
+                [class.tarea-completada]="act2.estado === 'COMPLETADA'"
+                (click)="seleccionarActividadFoco('1.2')"
+              >
+                <div class="card-top">
+                  <span class="tag-hito">Hito 1.2 · Hoja INFO</span>
+                  <!-- Semáforo textual DESIGN.md 7.6 -->
+                  @if (act2.estado === 'COMPLETADA') {
+                    <span class="badge-semaforo-textual completada">En término · Completada</span>
+                  } @else {
+                    <span class="badge-semaforo-textual pendiente">Pendiente de formulación</span>
+                  }
+                </div>
+                <h4 class="tarea-card-title">Elaborar plan de trabajo para acreditación</h4>
+                <div class="tarea-card-resp">
+                  <strong>Responsable:</strong> Área de Evaluación y Acreditación (AEA)
+                </div>
+                <p class="tarea-card-desc">
+                  Formular el cronograma tentativo institucional (PT-001) y formalizar los metadatos oficiales en la ficha RG-001.
+                </p>
+                <div class="card-bottom">
+                  <span class="badge-estado-pills" [class.completado]="act2.estado === 'COMPLETADA'">
+                    {{ act2.estado }}
+                  </span>
+                  <span class="link-foco">
+                    {{ actividadFoco() === '1.2' ? 'Viendo →' : 'Ver detalle →' }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        </aside>
+
+        <!-- Columna Derecha: Panel de Trabajo / Ejecución -->
+        <main class="tarea-panel-trabajo" aria-label="Panel de ejecución de la actividad seleccionada">
+          @if (actividadFoco() === '1.3') {
+            <div class="panel-actividad-wrapper">
+              <app-normativa-detalle
+                [procesoId]="c.id"
+                [planTrabajoId]="planTrabajo()?.id || ''"
+                [procesoCodigo]="c.codigo"
+                [carreraNombre]="c.carreraNombre"
+                [embedded]="true"
+              ></app-normativa-detalle>
+            </div>
+          } @else if (actividadFoco() === '1.1') {
+            <div class="panel-actividad-wrapper panel-generico">
+              @let act1 = actividadReunion();
+              <div class="actividad-header-hero">
+                <span class="tag-actividad">Hito 1.1 — Plan de Trabajo Institucional</span>
+                <h2 class="actividad-titulo">Informar sobre el proceso de acreditación de la carrera</h2>
+                <p class="actividad-descripcion">
+                  Reunión inicial de coordinación entre el Área de Evaluación y Acreditación (AEA) y la Dirección de Carrera. Se informa sobre el cronograma, la normativa aplicable y se registran los acuerdos alcanzados junto con el acta probatoria.
+                </p>
+              </div>
+
+              <div class="actividad-cuerpo-info card">
+                <div class="info-row">
+                  <span class="info-label">Estado:</span>
+                  <span class="badge-estado-pills" [class.completado]="act1?.estado === 'COMPLETADA'" [class.pendiente]="act1?.estado === 'PENDIENTE'">
+                    {{ act1?.estado || 'PENDIENTE' }}
+                  </span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Responsable:</span>
+                  <span class="info-val">{{ act1?.responsable || 'AEA / Dirección de Carrera' }}</span>
+                </div>
+                @if (act1?.fechaReunionCoordinacion) {
+                  <div class="info-row">
+                    <span class="info-label">Fecha de Realización:</span>
+                    <span class="info-val">{{ act1?.fechaReunionCoordinacion | date:'dd/MM/yyyy HH:mm' }}</span>
+                  </div>
+                }
+                @if (act1?.sintesisAcuerdos) {
+                  <div class="info-row full">
+                    <span class="info-label">Síntesis y Acuerdos:</span>
+                    <p class="text-acuerdos">{{ act1?.sintesisAcuerdos }}</p>
+                  </div>
+                }
+                @if (act1 && act1.documentos.length > 0) {
+                  @let doc = act1.documentos[0];
+                  <div class="info-row full">
+                    <span class="info-label">Acta Probatoria:</span>
+                    <button type="button" class="btn-descargar-acta" (click)="descargar(doc.id, doc.nombreOriginal || 'Acta-Reunion-1.1.pdf')">
+                      <svg class="icon-svg-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                      </svg>
+                      Descargar {{ doc.nombreOriginal || 'Acta de Reunión (.pdf)' }}
+                    </button>
+                  </div>
+                }
+              </div>
+
+              @if (canManage()) {
+                <div class="actividad-acciones-footer">
+                  <button type="button" class="btn-primario-accion" (click)="abrirModalCompletar(act1!)">
+                    {{ act1?.estado === 'COMPLETADA' ? 'Modificar Acta / Acuerdos' : 'Registrar Reunión y Subir Acta' }}
+                  </button>
+                </div>
+              }
+            </div>
+          } @else if (actividadFoco() === '1.2') {
+            <div class="panel-actividad-wrapper panel-generico">
+              @let act2 = actividadElaborarPlan();
+              <div class="actividad-header-hero">
+                <span class="tag-actividad">Hito 1.2 — Plan de Trabajo Institucional</span>
+                <h2 class="actividad-titulo">Elaborar plan de trabajo para acreditación de carreras</h2>
+                <p class="actividad-descripcion">
+                  Formular el cronograma tentativo institucional de actividades e hitos (PT-001), definir responsables y formalizar los metadatos oficiales en la ficha RG-001 (Resolución CONEAU, fechas oficiales).
+                </p>
+              </div>
+
+              <div class="actividad-cuerpo-info card">
+                <div class="info-row">
+                  <span class="info-label">Estado:</span>
+                  <span class="badge-estado-pills" [class.completado]="act2?.estado === 'COMPLETADA'" [class.pendiente]="act2?.estado === 'PENDIENTE'">
+                    {{ act2?.estado || 'PENDIENTE' }}
+                  </span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Responsable:</span>
+                  <span class="info-val">{{ act2?.responsable || 'Área de Evaluación y Acreditación (AEA)' }}</span>
+                </div>
+                @if (planTrabajo()?.actividades?.length) {
+                  <div class="info-row">
+                    <span class="info-label">Hitos en Cronograma:</span>
+                    <span class="info-val">{{ planTrabajo()!.actividades.length }} actividades programadas</span>
+                  </div>
+                }
+              </div>
+
+              @if (canManage()) {
+                <div class="actividad-acciones-footer">
+                  <button type="button" class="btn-primario-accion" (click)="abrirModalElaborarPlan()">
+                    {{ act2?.estado === 'COMPLETADA' ? 'Ajustar Cronograma y RG-001' : 'Elaborar Cronograma Tentativo y RG-001' }}
+                  </button>
+                </div>
+              }
+            </div>
           }
-        </div>
+        </main>
       </div>
+    }
 
-      <!-- Ficha de Resumen del Plan de Trabajo -->
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title">Plan de Trabajo Incremental</h2>
-        </div>
-        <div class="card-body">
-          @if (planTrabajo()) {
-            @let p = planTrabajo()!;
-            <div class="detail-row">
-              <span class="detail-label">Código del Plan:</span>
-              <span class="detail-value font-mono">{{ p.codigo }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Tipo:</span>
-              <span class="detail-value">{{ p.tipo }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Estado del Plan:</span>
-              <span class="badge-plan-activo">{{ p.estado }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Actividades Registradas:</span>
-              <span class="detail-value">{{ p.actividades.length }}</span>
-            </div>
-          } @else {
-            <p class="empty-text">Cargando datos del plan...</p>
-          }
-        </div>
-      </div>
-    </div>
+    <!-- PESTAÑA 2: SEGUIMIENTO DEL PLAN DE TRABAJO (AEA) CON DRAWER LATERAL SPLIT-VIEW -->
+    @if (tabActiva() === 'SEGUIMIENTO') {
+      <div class="seguimiento-layout" [class.drawer-abierto]="actividadSeleccionadaDrawer() !== null">
+        <!-- Columna Principal: Tabla de Actividades -->
+        <div class="seguimiento-main">
+          <div class="plan-section card">
+            <div class="section-header">
+              <div class="section-header-content">
+                <div class="title-with-pill">
+                  <h2 class="section-title">Tablero de Supervisión del Plan de Trabajo (PT-001)</h2>
+                  <span class="pill-rol">Supervisión AEA</span>
+                </div>
+                <p class="section-subtitle">
+                  Monitoreo general de hitos, estados de ejecución y plazos proyectados para la carrera de grado.
+                </p>
+              </div>
 
-    <!-- Sección de Actividades del Plan de Trabajo -->
-    <div class="plan-section">
-      <div class="section-header">
-        <h2 class="section-title">Actividades del Plan de Trabajo</h2>
-        <p class="section-subtitle">
-          Estructura secuencial e incremental del proceso de acreditación. La compleción de actividades no cierra el proceso, habilitando los bloques subsiguientes.
-        </p>
-      </div>
+              @if (canManage()) {
+                <div class="section-header-actions">
+                  <button
+                    type="button"
+                    class="btn-ajustar-plan"
+                    (click)="abrirModalElaborarPlan()"
+                  >
+                    Ajustar Cronograma y RG-001
+                  </button>
+                </div>
+              }
+            </div>
 
-      @if (planTrabajo()?.actividades?.length) {
-        <div class="actividades-list">
-          @for (act of planTrabajo()!.actividades; track act.id) {
-            <div class="actividad-card" [class.actividad-completada]="act.estado === 'COMPLETADA'">
-              <div class="actividad-header">
-                <div class="actividad-title-group">
-                  <span class="orden-badge">Hito #{{ act.numeroOrden }}</span>
-                  <h3 class="actividad-nombre">{{ act.nombre }}</h3>
-                  <code class="codigo-actividad">{{ act.codigoActividad }}</code>
+            <!-- Barra de Filtros y Búsqueda -->
+            <div class="supervision-toolbar">
+              <div class="tab-filters">
+                <button
+                  type="button"
+                  class="tab-btn"
+                  [class.active]="filtroHoja() === 'TODAS'"
+                  (click)="cambiarFiltroHoja('TODAS')"
+                >
+                  Todas <span class="tab-counter">{{ conteoTotal() }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="tab-btn"
+                  [class.active]="filtroHoja() === 'INFO'"
+                  (click)="cambiarFiltroHoja('INFO')"
+                >
+                  Hoja INFO <span class="tab-counter">{{ conteoInfo() }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="tab-btn"
+                  [class.active]="filtroHoja() === 'CONEAU'"
+                  (click)="cambiarFiltroHoja('CONEAU')"
+                >
+                  Hoja CONEAU <span class="tab-counter">{{ conteoConeau() }}</span>
+                </button>
+              </div>
+
+              <div class="dropdown-filters">
+                <div class="filter-item">
+                  <label for="filtroEstado" class="filter-label">Estado:</label>
+                  <select
+                    id="filtroEstado"
+                    class="filter-select"
+                    [value]="filtroEstado()"
+                    (change)="filtroEstado.set($any($event.target).value)"
+                  >
+                    <option value="TODOS">Todos los estados</option>
+                    <option value="PENDIENTE">Pendientes</option>
+                    <option value="EN_PROGRESO">En Progreso</option>
+                    <option value="COMPLETADA">Completadas</option>
+                  </select>
                 </div>
 
-                <div class="actividad-status-group">
-                  <span
-                    class="badge-actividad"
-                    [class.badge-pendiente]="act.estado === 'PENDIENTE'"
-                    [class.badge-completada]="act.estado === 'COMPLETADA'"
+                <div class="filter-item">
+                  <label for="filtroPrioridad" class="filter-label">Prioridad:</label>
+                  <select
+                    id="filtroPrioridad"
+                    class="filter-select"
+                    [value]="filtroPrioridad()"
+                    (change)="filtroPrioridad.set($any($event.target).value)"
                   >
-                    {{ act.estado }}
+                    <option value="TODAS">Todas las prioridades</option>
+                    <option value="ALTA">Alta</option>
+                    <option value="MEDIA">Media</option>
+                    <option value="BAJA">Baja</option>
+                  </select>
+                </div>
+
+                <div class="filter-search">
+                  <input
+                    type="text"
+                    class="search-input"
+                    placeholder="Buscar por código, actividad o responsable..."
+                    [value]="busquedaTexto()"
+                    (input)="busquedaTexto.set($any($event.target).value)"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabla de Actividades -->
+            @if (actividadesFiltradas().length > 0) {
+              <div class="tabla-responsive">
+                <table class="tabla-plan">
+                  <thead>
+                    <tr>
+                      <th style="width: 75px;">Cód.</th>
+                      <th style="width: 85px;">Hoja</th>
+                      <th>Actividad Plan de Trabajo</th>
+                      <th>Responsable(s)</th>
+                      <th style="width: 170px;">Plazo Estimado</th>
+                      <th style="width: 95px;">Prioridad</th>
+                      <th style="width: 110px;">Estado</th>
+                      <th style="width: 120px; text-align: center;">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (act of actividadesFiltradas(); track act.id) {
+                      <tr
+                        [class.fila-completada]="act.estado === 'COMPLETADA'"
+                        [class.fila-seleccionada]="actividadSeleccionadaDrawer()?.id === act.id"
+                      >
+                        <td class="col-codigo"><code>{{ act.codigoActividad }}</code></td>
+                        <td>
+                          <span class="badge-hoja" [class.badge-hoja-coneau]="act.hoja === 'CONEAU'">
+                            {{ act.hoja || 'INFO' }}
+                          </span>
+                        </td>
+                        <td class="col-nombre">
+                          <span class="nombre-texto">{{ act.nombre }}</span>
+                        </td>
+                        <td class="col-resp">{{ act.responsable || '—' }}</td>
+                        <td class="col-fechas">
+                          @if (act.fechaInicioEstimada || act.fechaFinEstimada) {
+                            <span class="fechas-rango">
+                              {{ act.fechaInicioEstimada ? (act.fechaInicioEstimada | date:'dd/MM/yyyy') : '—' }} al {{ act.fechaFinEstimada ? (act.fechaFinEstimada | date:'dd/MM/yyyy') : '—' }}
+                            </span>
+                          } @else {
+                            <span class="sin-fechas">—</span>
+                          }
+                        </td>
+                        <td>
+                          <span
+                            class="badge-prioridad"
+                            [class.prioridad-alta]="act.prioridad === 'ALTA'"
+                            [class.prioridad-media]="act.prioridad === 'MEDIA'"
+                            [class.prioridad-baja]="act.prioridad === 'BAJA'"
+                          >
+                            {{ act.prioridad || 'MEDIA' }}
+                          </span>
+                        </td>
+                        <td>
+                          <span
+                            class="badge-estado-pills"
+                            [class.pendiente]="act.estado === 'PENDIENTE'"
+                            [class.progreso]="act.estado === 'EN_PROGRESO'"
+                            [class.completado]="act.estado === 'COMPLETADA'"
+                          >
+                            {{ act.estado === 'EN_PROGRESO' ? 'En Progreso' : act.estado }}
+                          </span>
+                        </td>
+                        <td class="col-acciones">
+                          <button
+                            type="button"
+                            class="btn-accion-tabla"
+                            (click)="abrirDrawer(act)"
+                            [title]="'Abrir panel lateral para ' + act.codigoActividad"
+                          >
+                            {{ (act.codigoActividad === '1.3' || act.nombre.toLowerCase().includes('normativa') || act.codigoActividad === 'ACT-01-REUNION-COORDINACION' || act.codigoActividad === '1.1') ? 'Gestionar' : 'Ver Detalle' }}
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <div class="empty-state">
+                <p>No se encontraron actividades para el filtro seleccionado.</p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Panel Lateral Derecho (Drawer offcanvas / Split-View) -->
+        @if (actividadSeleccionadaDrawer(); as actDrawer) {
+          <aside class="drawer-lateral" aria-label="Detalle de actividad seleccionada">
+            <div class="drawer-header">
+              <div class="drawer-title-area">
+                <div class="drawer-codigo-tag">{{ actDrawer.codigoActividad }} · {{ actDrawer.hoja || 'INFO' }}</div>
+                <h3 class="drawer-title">{{ actDrawer.nombre }}</h3>
+              </div>
+              <button
+                type="button"
+                class="btn-cerrar-drawer"
+                (click)="cerrarDrawer()"
+                title="Cerrar panel de detalle"
+                aria-label="Cerrar panel"
+              >
+                <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="drawer-body">
+              <!-- Metadatos de la Actividad -->
+              <div class="drawer-meta-grid">
+                <div class="drawer-meta-item">
+                  <span class="meta-label">Responsable:</span>
+                  <span class="meta-val">{{ actDrawer.responsable || '—' }}</span>
+                </div>
+                <div class="drawer-meta-item">
+                  <span class="meta-label">Estado:</span>
+                  <span
+                    class="badge-estado-pills"
+                    [class.pendiente]="actDrawer.estado === 'PENDIENTE'"
+                    [class.progreso]="actDrawer.estado === 'EN_PROGRESO'"
+                    [class.completado]="actDrawer.estado === 'COMPLETADA'"
+                  >
+                    {{ actDrawer.estado === 'EN_PROGRESO' ? 'En Progreso' : actDrawer.estado }}
+                  </span>
+                </div>
+                <div class="drawer-meta-item">
+                  <span class="meta-label">Prioridad:</span>
+                  <span class="meta-val">{{ actDrawer.prioridad || 'MEDIA' }}</span>
+                </div>
+                <div class="drawer-meta-item">
+                  <span class="meta-label">Plazo Estimado:</span>
+                  <span class="meta-val">
+                    @if (actDrawer.fechaInicioEstimada || actDrawer.fechaFinEstimada) {
+                      {{ actDrawer.fechaInicioEstimada ? (actDrawer.fechaInicioEstimada | date:'dd/MM/yyyy') : '—' }} al {{ actDrawer.fechaFinEstimada ? (actDrawer.fechaFinEstimada | date:'dd/MM/yyyy') : '—' }}
+                    } @else {
+                      Sin fecha estipulada
+                    }
                   </span>
                 </div>
               </div>
 
-              <div class="actividad-content">
-                @if (act.estado === 'PENDIENTE') {
-                  <div class="actividad-pendiente-box">
-                    <p class="box-desc">
-                      Esta actividad inicial contempla la reunión formal de coordinación entre el Área de Evaluación y Acreditación (AEA) y la Dirección de Carrera para informar sobre el cronograma y requerimientos CONEAU.
-                    </p>
-                    @if (canManage()) {
-                      <button type="button" class="btn-completar" (click)="abrirModalCompletar(act)">
-                        &check; Registrar Reunión y Documentación Probatoria
+              <!-- CASO 1: Hito 1.3 (Normativa) - EMBEDDED DIRECTAMENTE EN EL DRAWER -->
+              @if (actDrawer.codigoActividad === '1.3' || actDrawer.nombre.toLowerCase().includes('normativa')) {
+                <div class="drawer-normativa-seccion">
+                  <div class="drawer-normativa-banner">
+                    <strong>Gestión Operativa de Normativa</strong>
+                    <p>Carga y auditoría de los actos administrativos de la carrera de grado.</p>
+                  </div>
+                  <app-normativa-detalle
+                    [procesoId]="c.id"
+                    [planTrabajoId]="planTrabajo()?.id || ''"
+                    [procesoCodigo]="c.codigo"
+                    [carreraNombre]="c.carreraNombre"
+                    [embedded]="true"
+                  ></app-normativa-detalle>
+                </div>
+              }
+
+              <!-- CASO 2: Hito 1.1 (Reunión inicial) -->
+              @else if (actDrawer.codigoActividad === 'ACT-01-REUNION-COORDINACION' || actDrawer.codigoActividad === 'ACT-01-INFORMAR-PROCESO' || actDrawer.codigoActividad === '1.1' || actDrawer.numeroOrden === 1) {
+                <div class="drawer-seccion">
+                  @if (actDrawer.fechaReunionCoordinacion) {
+                    <div class="info-row">
+                      <span class="info-label">Fecha de Realización:</span>
+                      <span class="info-val">{{ actDrawer.fechaReunionCoordinacion | date:'dd/MM/yyyy HH:mm' }}</span>
+                    </div>
+                  }
+                  @if (actDrawer.sintesisAcuerdos) {
+                    <div class="info-row full">
+                      <span class="info-label">Síntesis y Acuerdos:</span>
+                      <p class="text-acuerdos">{{ actDrawer.sintesisAcuerdos }}</p>
+                    </div>
+                  }
+                  @if (actDrawer.documentos.length > 0) {
+                    @let doc = actDrawer.documentos[0];
+                    <div class="info-row full">
+                      <span class="info-label">Acta Probatoria:</span>
+                      <button type="button" class="btn-descargar-acta" (click)="descargar(doc.id, doc.nombreOriginal || 'Acta-Reunion-1.1.pdf')">
+                        <svg class="icon-svg-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                        Descargar {{ doc.nombreOriginal || 'Acta de Reunión (.pdf)' }}
                       </button>
-                    }
-                  </div>
-                } @else if (act.estado === 'COMPLETADA') {
-                  <div class="actividad-completada-box">
-                    <div class="meta-grid">
-                      <div class="meta-item">
-                        <span class="meta-label">Fecha de la Reunión:</span>
-                        <span class="meta-val">{{ act.fechaReunionCoordinacion ? (act.fechaReunionCoordinacion | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
-                      </div>
-                      <div class="meta-item">
-                        <span class="meta-label">Registrado por:</span>
-                        <span class="meta-val">{{ act.completadaPorNombre || 'Área AEA' }}</span>
-                      </div>
-                      <div class="meta-item">
-                        <span class="meta-label">Concluido en:</span>
-                        <span class="meta-val">{{ act.completadaEn ? (act.completadaEn | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
-                      </div>
                     </div>
-
-                    <div class="sintesis-container">
-                      <span class="sintesis-label">Síntesis de Acuerdos y Compromisos:</span>
-                      <p class="sintesis-text">{{ act.sintesisAcuerdos }}</p>
+                  }
+                  @if (canManage()) {
+                    <div class="drawer-acciones-box">
+                      <button type="button" class="btn-primario-accion w-full" (click)="abrirModalCompletar(actDrawer)">
+                        {{ actDrawer.estado === 'COMPLETADA' ? 'Modificar Acta / Acuerdos' : 'Registrar Reunión y Subir Acta' }}
+                      </button>
                     </div>
+                  }
+                </div>
+              }
 
-                    <!-- Documentos probatorios subidos a MinIO -->
-                    @if (act.documentos && act.documentos.length > 0) {
-                      <div class="documentos-container">
-                        <span class="documentos-label">Documentación Probatoria Oficial (MinIO):</span>
-                        <div class="doc-list">
-                          @for (doc of act.documentos; track doc.id) {
-                            <div class="doc-item">
-                              <span class="doc-icon">&mapstodown;</span>
-                              <div class="doc-info">
-                                <span class="doc-name">{{ doc.nombreOriginal }}</span>
-                                <span class="doc-meta">
-                                  {{ doc.tipoDocumento }} &bull; {{ (doc.tamanioBytes / 1024 / 1024).toFixed(2) }} MB
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                class="btn-download"
-                                (click)="descargar(doc.id, doc.nombreOriginal)"
-                              >
-                                Descargar PDF &darr;
-                              </button>
-                            </div>
-                          }
-                        </div>
-                      </div>
-                    }
+              <!-- CASO 3: Hito 1.2 (Plan de Trabajo / RG-001) -->
+              @else if (actDrawer.codigoActividad === 'ACT-02-ELABORAR-PLAN-TRABAJO' || actDrawer.codigoActividad === '1.2') {
+                <div class="drawer-seccion">
+                  <p class="drawer-texto-desc">
+                    Formular el cronograma tentativo institucional de actividades e hitos (PT-001), definir responsables y formalizar los metadatos oficiales en la ficha RG-001.
+                  </p>
+                  @if (canManage()) {
+                    <div class="drawer-acciones-box">
+                      <button type="button" class="btn-primario-accion w-full" (click)="abrirModalElaborarPlan()">
+                        {{ actDrawer.estado === 'COMPLETADA' ? 'Ajustar Cronograma y RG-001' : 'Elaborar Cronograma Tentativo y RG-001' }}
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- CASO 4: Otras actividades del plan -->
+              @else {
+                <div class="drawer-seccion">
+                  <div class="drawer-empty-notice">
+                    <p>Esta actividad se encuentra programada dentro de la secuencia del plan de trabajo institucional.</p>
                   </div>
-                }
-              </div>
+                </div>
+              }
             </div>
-          }
+          </aside>
+        }
+      </div>
+    }
+
+    <!-- PESTAÑA 3: FICHA Y RG-001 -->
+    @if (tabActiva() === 'FICHA') {
+      <div class="info-grid">
+        <!-- Ficha CONEAU RG-001 -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Metadatos CONEAU (RG-001)</h2>
+          </div>
+          <div class="card-body">
+            @if (c.registroConvocatoria) {
+              @let r = c.registroConvocatoria;
+              <div class="detail-row">
+                <span class="detail-label">Resolución CONEAU:</span>
+                <span class="detail-value font-mono">{{ r.nroResolucionConeau }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Fecha de Apertura:</span>
+                <span class="detail-value">{{ r.fechaInicio | date:'dd/MM/yyyy' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Fecha de Cierre Oficial:</span>
+                <span class="detail-value">{{ r.fechaCierre | date:'dd/MM/yyyy' }}</span>
+              </div>
+
+              @if (r.rmEstandares) {
+                <div class="detail-row">
+                  <span class="detail-label">RM Estándares:</span>
+                  <span class="detail-value font-mono">{{ r.rmEstandares }}</span>
+                </div>
+              }
+
+              @if (r.faseEvaluacion) {
+                <div class="detail-row">
+                  <span class="detail-label">Fase de Evaluación:</span>
+                  <span class="detail-value">{{ r.faseEvaluacion }}</span>
+                </div>
+              }
+
+              @if (r.fechaLimitePresentacionConeau) {
+                <div class="detail-row">
+                  <span class="detail-label">Fecha Límite CONEAU:</span>
+                  <span class="detail-value font-mono text-primary font-bold">
+                    {{ r.fechaLimitePresentacionConeau | date:'dd/MM/yyyy' }}
+                  </span>
+                </div>
+              }
+
+              @if (r.observaciones) {
+                <div class="detail-row full-width">
+                  <span class="detail-label">Observaciones:</span>
+                  <p class="detail-text">{{ r.observaciones }}</p>
+                </div>
+              }
+            } @else {
+              <p class="empty-text">Sin registro RG-001 asociado.</p>
+            }
+          </div>
         </div>
-      }
-    </div>
+
+        <!-- Ficha de Resumen del Plan de Trabajo -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Plan de Trabajo Institucional</h2>
+          </div>
+          <div class="card-body">
+            @if (planTrabajo()) {
+              @let p = planTrabajo()!;
+              <div class="detail-row">
+                <span class="detail-label">Código del Plan:</span>
+                <span class="detail-value font-mono">{{ p.codigo }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Tipo:</span>
+                <span class="detail-value">{{ p.tipo }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Estado del Plan:</span>
+                <span class="badge-estado-pills completado">{{ p.estado }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Actividades Registradas:</span>
+                <span class="detail-value">{{ p.actividades.length }}</span>
+              </div>
+            } @else {
+              <p class="empty-text">Cargando datos del plan...</p>
+            }
+          </div>
+        </div>
+      </div>
+    }
   }
 
-  <!-- Modal para completar Actividad 1 -->
+  <!-- Modal para completar Actividad 1.1 -->
   @if (actividadSeleccionada()) {
     <app-completar-actividad-modal
       [actividadId]="actividadSeleccionada()!.id"
       [actividadNombre]="actividadSeleccionada()!.nombre"
       (cerrado)="cerrarModal($event)"
     ></app-completar-actividad-modal>
+  }
+
+  <!-- Modal para Elaborar Plan de Trabajo (H-02 / RG-001) -->
+  @if (modalElaborarPlanAbierto() && convocatoria()) {
+    <app-elaborar-plan-trabajo-modal
+      [procesoId]="convocatoria()!.id"
+      [convocatoria]="convocatoria()!"
+      [planTrabajo]="planTrabajo()"
+      (guardado)="cerrarModalElaborarPlan(true)"
+      (cerrado)="cerrarModalElaborarPlan(false)"
+    ></app-elaborar-plan-trabajo-modal>
   }
 </div>

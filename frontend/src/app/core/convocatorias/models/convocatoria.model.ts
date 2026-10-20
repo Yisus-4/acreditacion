@@ -28,6 +28,9 @@ export interface RegistroConvocatoria {
   fechaInicio: string;
   fechaCierre: string;
   observaciones?: string;
+  rmEstandares?: string;
+  faseEvaluacion?: 'PRIMERA_FASE' | 'SEGUNDA_FASE' | 'NUEVO_CICLO' | 'SEGUIMIENTO';
+  fechaLimitePresentacionConeau?: string;
   creadoEn: string;
   actualizadoEn: string;
 }
@@ -95,6 +98,11 @@ export interface ActividadPlanTrabajoDto {
   completadaEn?: string;
   completadaPor?: string;
   completadaPorNombre?: string;
+  hoja?: HojaPlanTrabajo;
+  fechaInicioEstimada?: string;
+  fechaFinEstimada?: string;
+  responsable?: string;
+  prioridad?: PrioridadActividad;
   creadoEn: string;
   actualizadoEn: string;
   documentos: DocumentoAcreditacionDto[];
@@ -107,4 +115,44 @@ export interface PlanTrabajoDto {
   tipo: TipoPlanTrabajo;
   estado: EstadoPlanTrabajo;
   actividades: ActividadPlanTrabajoDto[];
+}
+
+export type HojaPlanTrabajo = 'INFO' | 'CONEAU';
+export type FaseEvaluacion = 'PRIMERA_FASE' | 'SEGUNDA_FASE' | 'NUEVO_CICLO' | 'SEGUIMIENTO';
+export type PrioridadActividad = 'ALTA' | 'MEDIA' | 'BAJA';
+
+export interface PlantillaActividadDto {
+  numeroOrden?: number;
+  ordenSugerido?: number;
+  codigoActividad: string;
+  nombre: string;
+  hoja: HojaPlanTrabajo;
+  responsableSugerido?: string;
+  prioridadSugerida: PrioridadActividad;
+}
+
+export interface PlantillaPlanTrabajoDto {
+  tipoPlan: string;
+  actividades?: PlantillaActividadDto[];
+  actividadesInfo?: PlantillaActividadDto[];
+  actividadesConeau?: PlantillaActividadDto[];
+}
+
+export interface ItemActividadPlanRequest {
+  numeroOrden: number;
+  codigoActividad: string;
+  nombre: string;
+  hoja: HojaPlanTrabajo;
+  fechaInicioEstimada: string;
+  fechaFinEstimada: string;
+  responsable: string;
+  prioridad: PrioridadActividad;
+}
+
+export interface ElaborarPlanTrabajoRequest {
+  rmEstandares: string;
+  faseEvaluacion: FaseEvaluacion;
+  fechaLimitePresentacionConeau: string;
+  fechaLimiteConeau?: string;
+  actividades: ItemActividadPlanRequest[];
 }

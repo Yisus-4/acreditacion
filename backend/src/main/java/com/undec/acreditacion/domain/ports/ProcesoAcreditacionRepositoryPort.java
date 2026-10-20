@@ -18,4 +18,6 @@ public interface ProcesoAcreditacionRepositoryPort {
     List<ProcesoAcreditacion> findAllByFiltro(ConvocatoriaFiltro filtro);
 
     long countByAnio(int anio);
+
+    void deleteById(UUID id);
 }

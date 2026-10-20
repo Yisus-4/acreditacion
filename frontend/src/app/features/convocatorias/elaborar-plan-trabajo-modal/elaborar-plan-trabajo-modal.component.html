@@ -1,0 +1,324 @@
+<div class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="header-titles">
+        <span class="badge-modal">RG-001 &bull; Cronograma Tentativo</span>
+        <h2 class="modal-title">Elaborar Plan de Trabajo para Acreditación</h2>
+        <p class="modal-subtitle">
+          Carrera: <strong>{{ convocatoria.carreraNombre }}</strong> &bull;
+          Resolución CONEAU: <strong class="font-mono">{{ convocatoria.registroConvocatoria?.nroResolucionConeau || 'S/N' }}</strong>
+        </p>
+      </div>
+      <button type="button" class="btn-close" (click)="cancelar()" aria-label="Cerrar modal">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      @if (generalError()) {
+        <div class="alert-error" role="alert">
+          <strong>Error:</strong> {{ generalError() }}
+        </div>
+      }
+
+      @if (validationErrors().length > 0) {
+        <div class="alert-warning" role="alert">
+          <h4 class="alert-warning-title">Revise las siguientes inconsistencias en el formulario:</h4>
+          <ul class="alert-warning-list">
+            @for (err of validationErrors(); track $index) {
+              <li>{{ err }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <!-- Bloque 1: Metadatos CONEAU (RG-001) -->
+        <fieldset class="form-section">
+          <legend class="section-legend">1. Metadatos Oficiales CONEAU (Ficha RG-001)</legend>
+          <p class="section-hint">
+            Defina la fase de evaluación y la fecha límite oficial de presentación ante CONEAU (Ficha RG-001).
+          </p>
+
+          <div class="form-grid-coneau">
+
+            <div class="form-group">
+              <label for="faseEvaluacion">
+                Fase de Evaluación <span class="required">*</span>
+              </label>
+              <select id="faseEvaluacion" formControlName="faseEvaluacion">
+                <option value="PRIMERA_FASE">Primera Fase</option>
+                <option value="SEGUNDA_FASE">Segunda Fase</option>
+                <option value="NUEVO_CICLO">Nuevo Ciclo</option>
+                <option value="SEGUIMIENTO">Seguimiento</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="fechaLimitePresentacionConeau">
+                Fecha Límite Presentación CONEAU <span class="required">*</span>
+              </label>
+              <input
+                id="fechaLimitePresentacionConeau"
+                type="date"
+                formControlName="fechaLimitePresentacionConeau"
+              />
+              <span class="field-help">
+                Fecha límite en que la solicitud/informe debe remitirse formalmente en CONEAU Global.
+              </span>
+              @if (form.get('fechaLimitePresentacionConeau')?.touched && form.get('fechaLimitePresentacionConeau')?.invalid) {
+                <span class="form-error">La fecha límite de presentación ante CONEAU es obligatoria.</span>
+              }
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Bloque 2: Cronograma Tentativo -->
+        <fieldset class="form-section cronograma-section">
+          <div class="cronograma-header">
+            <div>
+              <legend class="section-legend">2. Cronograma Tentativo de Actividades</legend>
+              <p class="section-hint">
+                Estructure las actividades secuenciales entre la Hoja INFO (gestión institucional y académica) y la Hoja CONEAU (carga formal en plataforma).
+              </p>
+            </div>
+            <div class="cronograma-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="agregarActividad()"
+                title="Agregar nueva actividad al cronograma"
+              >
+                + Agregar Actividad
+              </button>
+              <button
+                type="button"
+                class="btn-outline"
+                (click)="cargarPlantillaSugerida()"
+                [disabled]="loading()"
+                title="Restablecer actividades según la plantilla sugerida oficial"
+              >
+                ↻ Plantilla Sugerida
+              </button>
+            </div>
+          </div>
+
+          <!-- Filtros de Pestañas -->
+          <div class="tab-filters">
+            <button
+              type="button"
+              class="tab-btn"
+              [class.active]="filtroHoja() === 'TODAS'"
+              (click)="cambiarFiltro('TODAS')"
+            >
+              Todas <span class="tab-counter">{{ conteoTotal() }}</span>
+            </button>
+            <button
+              type="button"
+              class="tab-btn"
+              [class.active]="filtroHoja() === 'INFO'"
+              (click)="cambiarFiltro('INFO')"
+            >
+              Hoja INFO <span class="tab-counter">{{ conteoInfo() }}</span>
+            </button>
+            <button
+              type="button"
+              class="tab-btn"
+              [class.active]="filtroHoja() === 'CONEAU'"
+              (click)="cambiarFiltro('CONEAU')"
+            >
+              Hoja CONEAU <span class="tab-counter">{{ conteoConeau() }}</span>
+            </button>
+          </div>
+
+          @if (loading()) {
+            <div class="loading-state">
+              <span class="spinner"></span>
+              <p>Cargando plantilla institucional de actividades...</p>
+            </div>
+          } @else if (actividadesVisibles.length === 0) {
+            <div class="empty-state">
+              <p>No hay actividades registradas en esta hoja.</p>
+              <button type="button" class="btn-secondary btn-sm" (click)="agregarActividad()">
+                + Agregar primera actividad
+              </button>
+            </div>
+          } @else {
+            <!-- Grilla / Tabla de Actividades -->
+            <div class="table-responsive">
+              <table class="actividades-table">
+                <thead>
+                  <tr>
+                    <th class="col-orden">Hito / Orden</th>
+                    <th class="col-codigo">Código</th>
+                    <th class="col-nombre">Nombre de la Actividad</th>
+                    <th class="col-hoja">Hoja</th>
+                    <th class="col-fecha">Inicio Estimado</th>
+                    <th class="col-fecha">Fin Estimado</th>
+                    <th class="col-resp">Responsable</th>
+                    <th class="col-prioridad">Prioridad</th>
+                    <th class="col-acciones">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of actividadesVisibles; track item.control) {
+                    <tr [formGroup]="item.control" [class.row-alerta]="esInvalidaFechaFinEstimada(item.control) || esInvalidaFechaInicioEstimada(item.control)">
+                      <td class="col-orden">
+                        <input
+                          type="number"
+                          formControlName="numeroOrden"
+                          min="1"
+                          class="input-compact font-mono text-center"
+                        />
+                      </td>
+
+                      <td class="col-codigo">
+                        <input
+                          type="text"
+                          formControlName="codigoActividad"
+                          class="input-compact font-mono"
+                        />
+                      </td>
+
+                      <td class="col-nombre">
+                        <input
+                          type="text"
+                          formControlName="nombre"
+                          placeholder="Nombre descriptivo de la actividad"
+                          class="input-compact"
+                        />
+                        @if (esInvalidaFechaFinEstimada(item.control)) {
+                          <span class="row-warning-text">
+                            &bull; Fecha fin anterior al inicio o posterior al límite CONEAU.
+                          </span>
+                        }
+                        @if (esInvalidaFechaInicioEstimada(item.control)) {
+                          <span class="row-warning-text">
+                            &bull; Fecha inicio posterior a la fecha límite CONEAU.
+                          </span>
+                        }
+                      </td>
+
+                      <td class="col-hoja">
+                        <select formControlName="hoja" class="select-compact">
+                          <option value="INFO">INFO</option>
+                          <option value="CONEAU">CONEAU</option>
+                        </select>
+                      </td>
+
+                      <td class="col-fecha">
+                        <input
+                          type="date"
+                          formControlName="fechaInicioEstimada"
+                          class="input-compact"
+                          [class.input-error]="esInvalidaFechaInicioEstimada(item.control)"
+                        />
+                      </td>
+
+                      <td class="col-fecha">
+                        <input
+                          type="date"
+                          formControlName="fechaFinEstimada"
+                          class="input-compact"
+                          [class.input-error]="esInvalidaFechaFinEstimada(item.control)"
+                        />
+                      </td>
+
+                      <td class="col-resp">
+                        <div class="resp-picker-wrapper">
+                          <input
+                            type="text"
+                            formControlName="responsable"
+                            placeholder="Roles asignados..."
+                            class="input-compact resp-input"
+                            title="Puede seleccionar roles del menú o editar libremente"
+                          />
+                          <button
+                            type="button"
+                            class="btn-toggle-roles"
+                            (click)="toggleDropdown(item.index)"
+                            title="Desplegar roles del sistema"
+                          >
+                            &#9662;
+                          </button>
+
+                          @if (dropdownAbiertoIndex() === item.index) {
+                            <div class="roles-dropdown-menu">
+                              <div class="dropdown-header">
+                                <span class="dropdown-title">Roles asignables (multiselección)</span>
+                                <button type="button" class="btn-close-dropdown" (click)="toggleDropdown(item.index)">&times;</button>
+                              </div>
+                              <div class="roles-list">
+                                @for (rol of rolesDisponibles; track rol) {
+                                  <label class="role-checkbox-item">
+                                    <input
+                                      type="checkbox"
+                                      [checked]="isRolSelected(item.control, rol)"
+                                      (change)="toggleRol(item.control, rol)"
+                                    />
+                                    <span>{{ rol }}</span>
+                                  </label>
+                                }
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      </td>
+
+                      <td class="col-prioridad">
+                        <select
+                          formControlName="prioridad"
+                          class="select-compact"
+                          [class.prioridad-alta]="item.control.get('prioridad')?.value === 'ALTA'"
+                          [class.prioridad-media]="item.control.get('prioridad')?.value === 'MEDIA'"
+                          [class.prioridad-baja]="item.control.get('prioridad')?.value === 'BAJA'"
+                        >
+                          <option value="ALTA">Alta</option>
+                          <option value="MEDIA">Media</option>
+                          <option value="BAJA">Baja</option>
+                        </select>
+                      </td>
+
+                      <td class="col-acciones">
+                        <button
+                          type="button"
+                          class="btn-icon-danger"
+                          (click)="eliminarActividad(item.index)"
+                          title="Eliminar actividad"
+                          aria-label="Eliminar actividad"
+                        >
+                          &times;
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </fieldset>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-cancel"
+            (click)="cancelar()"
+            [disabled]="submitting()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="btn-submit"
+            [disabled]="submitting() || loading()"
+          >
+            @if (submitting()) {
+              <span class="spinner-small"></span>
+              <span>Guardando y Formalizando...</span>
+            } @else {
+              <span>&check; Guardar y Formalizar Plan de Trabajo</span>
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

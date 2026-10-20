@@ -1,0 +1,67 @@
+@if (abierto) {
+  <div class="modal-backdrop" (click)="onCancelar()">
+    <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <div class="header-titles">
+          <span class="badge-header">Actividad 1.3 — PT-001</span>
+          <h2 class="modal-title">Apertura y Solicitud de Normativa de Carrera</h2>
+        </div>
+        <button type="button" class="btn-close" (click)="onCancelar()" aria-label="Cerrar modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="intro-text">
+          Se notificará formalmente a la Dirección de Carrera para la carga de las normativas y resoluciones
+          requeridas por CONEAU para la carrera <strong>{{ carreraNombre }}</strong> (Proceso <code>{{ procesoCodigo }}</code>).
+        </p>
+
+        @if (errorMsg()) {
+          <div class="alert-error" role="alert">
+            {{ errorMsg() }}
+          </div>
+        }
+
+        <div class="form-group">
+          <label for="plazoDias" class="form-label">
+            Plazo de entrega (Días Hábiles):
+          </label>
+          <div class="input-with-hint">
+            <input
+              id="plazoDias"
+              type="number"
+              class="form-input"
+              min="1"
+              max="5"
+              [ngModel]="plazoDiasHabiles()"
+              (ngModelChange)="plazoDiasHabiles.set($event)"
+            />
+            <span class="hint-text">Procedimiento AEA: plazo oficial no mayor a cinco (5) días hábiles administrativos.</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="observaciones" class="form-label">
+            Instrucciones u observaciones iniciales (opcional):
+          </label>
+          <textarea
+            id="observaciones"
+            class="form-textarea"
+            rows="3"
+            placeholder="Indique requerimientos específicos o recordatorios para la Dirección de Carrera..."
+            [ngModel]="observaciones()"
+            (ngModelChange)="observaciones.set($event)"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancelar" (click)="onCancelar()">
+          Cancelar
+        </button>
+        <button type="button" class="btn-confirmar" (click)="onConfirmar()">
+          &check; Iniciar Solicitud Formal
+        </button>
+      </div>
+    </div>
+  </div>
+}

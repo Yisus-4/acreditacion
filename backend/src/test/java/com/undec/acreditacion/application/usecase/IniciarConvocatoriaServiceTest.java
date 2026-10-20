@@ -109,14 +109,15 @@ class IniciarConvocatoriaServiceTest {
         assertEquals(LocalDate.now(), registroGuardado.getFechaInicio());
         assertEquals(LocalDate.now().plusMonths(6), registroGuardado.getFechaCierre());
 
-        // Verificar que se guardó el Plan de Trabajo con la actividad inicial en PENDIENTE
+        // Verificar que se guardó el Plan de Trabajo con la actividad inicial y normativa en PENDIENTE
         ArgumentCaptor<PlanTrabajo> planCaptor = ArgumentCaptor.forClass(PlanTrabajo.class);
         verify(planTrabajoRepository).save(planCaptor.capture());
         PlanTrabajo planGuardado = planCaptor.getValue();
         assertEquals(resultado.getId(), planGuardado.getProcesoId());
         assertEquals(EstadoPlanTrabajo.ACTIVO, planGuardado.getEstado());
-        assertEquals(1, planGuardado.getActividades().size());
+        assertEquals(2, planGuardado.getActividades().size());
         assertEquals(EstadoActividad.PENDIENTE, planGuardado.getActividades().get(0).getEstado());
+        assertEquals(EstadoActividad.PENDIENTE, planGuardado.getActividades().get(1).getEstado());
     }
 
     @Test

@@ -6,8 +6,10 @@ import {
   ConvocatoriaDetalle,
   ConvocatoriaFiltro,
   ConvocatoriaResumen,
+  ElaborarPlanTrabajoRequest,
   IniciarConvocatoriaRequest,
   PlanTrabajoDto,
+  PlantillaPlanTrabajoDto,
 } from './models/convocatoria.model';
 
 export * from './models/convocatoria.model';
@@ -49,6 +51,19 @@ export class ConvocatoriaService {
     return this.http.get<PlanTrabajoDto>(`/api/convocatorias/${procesoId}/plan-trabajo`);
   }
 
+  getPlantillaPlanTrabajo(procesoId: string): Observable<PlantillaPlanTrabajoDto> {
+    return this.http.get<PlantillaPlanTrabajoDto>(`/api/convocatorias/${procesoId}/plan-trabajo/plantilla`);
+  }
+
+  elaborarPlanTrabajo(procesoId: string, request: ElaborarPlanTrabajoRequest): Observable<ConvocatoriaDetalle> {
+    const payload = {
+      ...request,
+      fechaLimiteConeau: request.fechaLimiteConeau ?? request.fechaLimitePresentacionConeau,
+      fechaLimitePresentacionConeau: request.fechaLimitePresentacionConeau ?? request.fechaLimiteConeau,
+    };
+    return this.http.post<ConvocatoriaDetalle>(`/api/convocatorias/${procesoId}/plan-trabajo/elaborar`, payload);
+  }
+
   completarActividad(actividadId: string, formData: FormData): Observable<ActividadPlanTrabajoDto> {
     return this.http.post<ActividadPlanTrabajoDto>(`/api/actividades/${actividadId}/completar`, formData);
   }
@@ -58,4 +73,9 @@ export class ConvocatoriaService {
       responseType: 'blob',
     });
   }
+
+  eliminarConvocatoria(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/convocatorias/${id}`);
+  }
 }
+

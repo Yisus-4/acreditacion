@@ -94,4 +94,12 @@ class PostgresProcesoAcreditacionRepositoryAdapterTest {
         assertTrue(res.isPresent());
         assertEquals(carreraId, res.get().getCarreraId());
     }
+
+    @Test
+    @DisplayName("Debe eliminar proceso por ID")
+    void debeEliminarProcesoPorId() {
+        UUID id = UUID.randomUUID();
+        adapter.deleteById(id);
+        verify(springDataRepository).deleteById(id);
+    }
 }

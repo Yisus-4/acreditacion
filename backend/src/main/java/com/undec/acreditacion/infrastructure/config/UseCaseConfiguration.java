@@ -29,15 +29,21 @@ import com.undec.acreditacion.domain.ports.InstitucionRepositoryPort;
 import com.undec.acreditacion.application.input.IniciarConvocatoriaUseCase;
 import com.undec.acreditacion.application.input.ConsultarConvocatoriaUseCase;
 import com.undec.acreditacion.application.input.ListarConvocatoriasUseCase;
+import com.undec.acreditacion.application.input.EliminarConvocatoriaUseCase;
 import com.undec.acreditacion.application.input.ConsultarPlanTrabajoUseCase;
 import com.undec.acreditacion.application.input.CompletarActividadInformarProcesoUseCase;
 import com.undec.acreditacion.application.input.DescargarDocumentoUseCase;
+import com.undec.acreditacion.application.input.ElaborarPlanTrabajoUseCase;
+import com.undec.acreditacion.application.input.ObtenerPlantillaPlanTrabajoUseCase;
 import com.undec.acreditacion.application.usecase.IniciarConvocatoriaService;
 import com.undec.acreditacion.application.usecase.ConsultarConvocatoriaService;
 import com.undec.acreditacion.application.usecase.ListarConvocatoriasService;
+import com.undec.acreditacion.application.usecase.EliminarConvocatoriaService;
 import com.undec.acreditacion.application.usecase.ConsultarPlanTrabajoService;
 import com.undec.acreditacion.application.usecase.CompletarActividadInformarProcesoService;
 import com.undec.acreditacion.application.usecase.DescargarDocumentoService;
+import com.undec.acreditacion.application.usecase.ElaborarPlanTrabajoService;
+import com.undec.acreditacion.application.usecase.ObtenerPlantillaPlanTrabajoService;
 import com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort;
 import com.undec.acreditacion.domain.ports.RegistroConvocatoriaRepositoryPort;
 import com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort;
@@ -239,6 +245,12 @@ public class UseCaseConfiguration {
     }
 
     @Bean
+    @Transactional
+    public EliminarConvocatoriaUseCase eliminarConvocatoriaUseCase(ProcesoAcreditacionRepositoryPort procesoRepository) {
+        return new EliminarConvocatoriaService(procesoRepository);
+    }
+
+    @Bean
     public ConsultarPlanTrabajoUseCase consultarPlanTrabajoUseCase(PlanTrabajoRepositoryPort planTrabajoRepository) {
         return new ConsultarPlanTrabajoService(planTrabajoRepository);
     }
@@ -248,5 +260,115 @@ public class UseCaseConfiguration {
             DocumentoAcreditacionRepositoryPort documentoRepository,
             DocumentStoragePort documentStoragePort) {
         return new DescargarDocumentoService(documentoRepository, documentStoragePort);
+    }
+
+    @Bean
+    @Transactional
+    public ElaborarPlanTrabajoUseCase elaborarPlanTrabajoUseCase(
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            RegistroConvocatoriaRepositoryPort registroRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository) {
+        return new ElaborarPlanTrabajoService(procesoRepository, registroRepository, planTrabajoRepository);
+    }
+
+    @Bean
+    public ObtenerPlantillaPlanTrabajoUseCase obtenerPlantillaPlanTrabajoUseCase(
+            PlanTrabajoRepositoryPort planTrabajoRepository) {
+        return new ObtenerPlantillaPlanTrabajoService(planTrabajoRepository);
+    }
+
+    @Bean
+    @Transactional
+    public com.undec.acreditacion.application.input.SolicitarNormativaUseCase solicitarNormativaUseCase(
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            com.undec.acreditacion.domain.ports.SolicitudNormativaRepositoryPort solicitudRepository,
+            com.undec.acreditacion.domain.ports.DocumentoNormativaRepositoryPort documentoRepository,
+            CarreraRepositoryPort carreraRepository,
+            RegistroConvocatoriaRepositoryPort registroConvocatoriaRepository,
+            com.undec.acreditacion.domain.ports.EmailNotificationPort emailNotificationPort) {
+        return new com.undec.acreditacion.application.usecase.SolicitarNormativaService(
+                procesoRepository, planTrabajoRepository, solicitudRepository,
+                documentoRepository, carreraRepository, registroConvocatoriaRepository, emailNotificationPort);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.ObtenerNormativaDetalleUseCase obtenerNormativaDetalleUseCase(
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            com.undec.acreditacion.domain.ports.SolicitudNormativaRepositoryPort solicitudRepository,
+            com.undec.acreditacion.domain.ports.DocumentoNormativaRepositoryPort documentoRepository) {
+        return new com.undec.acreditacion.application.usecase.ObtenerNormativaDetalleService(
+                procesoRepository, planTrabajoRepository, solicitudRepository, documentoRepository);
+    }
+
+    @Bean
+    @Transactional
+    public com.undec.acreditacion.application.input.GuardarDocumentoBorradorUseCase guardarDocumentoBorradorUseCase(
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            com.undec.acreditacion.domain.ports.SolicitudNormativaRepositoryPort solicitudRepository,
+            com.undec.acreditacion.domain.ports.DocumentoNormativaRepositoryPort documentoRepository,
+            DocumentStoragePort documentStoragePort,
+            CarreraRepositoryPort carreraRepository,
+            RegistroConvocatoriaRepositoryPort registroConvocatoriaRepository) {
+        return new com.undec.acreditacion.application.usecase.GuardarDocumentoBorradorService(
+                procesoRepository, planTrabajoRepository, solicitudRepository, documentoRepository,
+                documentStoragePort, carreraRepository, registroConvocatoriaRepository);
+    }
+
+    @Bean
+    @Transactional
+    public com.undec.acreditacion.application.input.EliminarDocumentoBorradorUseCase eliminarDocumentoBorradorUseCase(
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            com.undec.acreditacion.domain.ports.SolicitudNormativaRepositoryPort solicitudRepository,
+            com.undec.acreditacion.domain.ports.DocumentoNormativaRepositoryPort documentoRepository,
+            DocumentStoragePort documentStoragePort) {
+        return new com.undec.acreditacion.application.usecase.EliminarDocumentoBorradorService(
+                procesoRepository, planTrabajoRepository, solicitudRepository, documentoRepository, documentStoragePort);
+    }
+
+    @Bean
+    @Transactional
+    public com.undec.acreditacion.application.input.EnviarNormativaDefinitivaUseCase enviarNormativaDefinitivaUseCase(
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            com.undec.acreditacion.domain.ports.SolicitudNormativaRepositoryPort solicitudRepository,
+            com.undec.acreditacion.domain.ports.DocumentoNormativaRepositoryPort documentoRepository,
+            CarreraRepositoryPort carreraRepository,
+            RegistroConvocatoriaRepositoryPort registroConvocatoriaRepository,
+            com.undec.acreditacion.domain.ports.EmailNotificationPort emailNotificationPort) {
+        return new com.undec.acreditacion.application.usecase.EnviarNormativaDefinitivaService(
+                procesoRepository, planTrabajoRepository, solicitudRepository, documentoRepository,
+                carreraRepository, registroConvocatoriaRepository, emailNotificationPort);
+    }
+
+    @Bean
+    @Transactional
+    public com.undec.acreditacion.application.input.RevisarNormativaUseCase revisarNormativaUseCase(
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            com.undec.acreditacion.domain.ports.SolicitudNormativaRepositoryPort solicitudRepository,
+            com.undec.acreditacion.domain.ports.DocumentoNormativaRepositoryPort documentoRepository,
+            CarreraRepositoryPort carreraRepository,
+            RegistroConvocatoriaRepositoryPort registroConvocatoriaRepository,
+            com.undec.acreditacion.domain.ports.EmailNotificationPort emailNotificationPort) {
+        return new com.undec.acreditacion.application.usecase.RevisarNormativaService(
+                procesoRepository, planTrabajoRepository, solicitudRepository, documentoRepository,
+                carreraRepository, registroConvocatoriaRepository, emailNotificationPort);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.ExportarHojaInfoExcelUseCase exportarHojaInfoExcelUseCase(
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            CarreraRepositoryPort carreraRepository,
+            RegistroConvocatoriaRepositoryPort registroConvocatoriaRepository,
+            com.undec.acreditacion.domain.ports.SolicitudNormativaRepositoryPort solicitudRepository,
+            com.undec.acreditacion.domain.ports.ExcelReportGeneratorPort excelReportGeneratorPort) {
+        return new com.undec.acreditacion.application.usecase.ExportarHojaInfoExcelService(
+                planTrabajoRepository, procesoRepository, carreraRepository, registroConvocatoriaRepository,
+                solicitudRepository, excelReportGeneratorPort);
     }
 }

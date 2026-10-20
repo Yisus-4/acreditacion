@@ -4,11 +4,13 @@ import com.undec.acreditacion.domain.exceptions.ArchivoInvalidoException;
 import com.undec.acreditacion.domain.ports.DocumentStoragePort;
 import io.minio.BucketExistsArgs;
 import io.minio.GetObjectArgs;
+import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import io.minio.SetBucketPolicyArgs;
+import io.minio.http.Method;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Component;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @Profile("!test")
@@ -46,11 +49,16 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
         try {
             ensureBucketExists();
 
-            String extension = "";
-            if (filename != null && filename.contains(".")) {
-                extension = filename.substring(filename.lastIndexOf("."));
+            String objectName;
+            if (filename != null && filename.contains("/")) {
+                objectName = filename;
+            } else {
+                String extension = "";
+                if (filename != null && filename.contains(".")) {
+                    extension = filename.substring(filename.lastIndexOf("."));
+                }
+                objectName = UUID.randomUUID() + extension;
             }
-            String objectName = UUID.randomUUID() + extension;
 
             try (ByteArrayInputStream bais = new ByteArrayInputStream(data)) {
                 minioClient.putObject(
@@ -78,6 +86,27 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
         }
         String cleanEndpoint = endpoint.endsWith("/") ? endpoint.substring(0, endpoint.length() - 1) : endpoint;
         return cleanEndpoint + "/" + bucketName + "/" + path;
+    }
+
+    @Override
+    public String getPresignedDownloadUrl(String path, int duracionMinutos) {
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+        try {
+            int expiry = duracionMinutos > 0 ? duracionMinutos : 15;
+            return minioClient.getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs.builder()
+                            .method(Method.GET)
+                            .bucket(bucketName)
+                            .object(path)
+                            .expiry(expiry, TimeUnit.MINUTES)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.error("Error al generar URL presignada para '{}': {}", path, e.getMessage(), e);
+            throw new RuntimeException("Error al generar URL presignada en MinIO: " + e.getMessage(), e);
+        }
     }
 
     @Override

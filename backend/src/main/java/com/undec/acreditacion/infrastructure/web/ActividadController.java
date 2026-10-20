@@ -22,8 +22,14 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -31,6 +37,28 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/actividades")
 public class ActividadController {
+
+    private static final ZoneId ZONA_ARGENTINA = ZoneId.of("America/Argentina/Buenos_Aires");
+
+    private static final List<DateTimeFormatter> FORMATOS_FECHA_HORA = List.of(
+            DateTimeFormatter.ISO_LOCAL_DATE_TIME,
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm"),
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"),
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"),
+            DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss"),
+            DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm"),
+            new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("dd/MM/yyyy h:mm a").toFormatter(Locale.ENGLISH),
+            new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("dd/MM/yyyy hh:mm a").toFormatter(Locale.ENGLISH),
+            new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("MM/dd/yyyy h:mm a").toFormatter(Locale.ENGLISH),
+            new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("MM/dd/yyyy hh:mm a").toFormatter(Locale.ENGLISH)
+    );
+
+    private static final List<DateTimeFormatter> FORMATOS_SOLO_FECHA = List.of(
+            DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+            DateTimeFormatter.ofPattern("dd-MM-yyyy"),
+            DateTimeFormatter.ISO_LOCAL_DATE
+    );
 
     private final CompletarActividadInformarProcesoUseCase completarActividadUseCase;
     private final DocumentoAcreditacionRepositoryPort documentoRepository;
@@ -71,16 +99,7 @@ public class ActividadController {
             throw new DomainValidationException("El archivo debe pesar entre 1 byte y 20 MB");
         }
 
-        Instant fechaReunion;
-        try {
-            if (fechaReunionStr.contains("T")) {
-                fechaReunion = Instant.parse(fechaReunionStr);
-            } else {
-                fechaReunion = LocalDate.parse(fechaReunionStr).atStartOfDay(ZoneOffset.UTC).toInstant();
-            }
-        } catch (Exception ex) {
-            throw new DomainValidationException("Formato inválido de fecha de reunión (esperado ISO-8601 o YYYY-MM-DD)");
-        }
+        Instant fechaReunion = parsearFechaReunion(fechaReunionStr);
 
         TipoDocumentoAcreditacion tipoDocumento;
         try {
@@ -133,12 +152,60 @@ public class ActividadController {
                 actividad.getCompletadaEn(),
                 actividad.getCompletadaPor(),
                 nombreUsuario,
+                actividad.getHoja() != null ? actividad.getHoja().name() : "INFO",
+                actividad.getFechaInicioEstimada(),
+                actividad.getFechaFinEstimada(),
+                actividad.getResponsable(),
+                actividad.getPrioridad() != null ? actividad.getPrioridad().name() : "MEDIA",
                 actividad.getCreadoEn(),
                 actividad.getActualizadoEn(),
                 docsDto
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    private Instant parsearFechaReunion(String fechaStr) {
+        if (fechaStr == null || fechaStr.trim().isEmpty()) {
+            throw new DomainValidationException("La fecha de reunión es obligatoria");
+        }
+        String valor = fechaStr.trim();
+
+        // a) Formatos ISO completos con offset o UTC
+        try {
+            return Instant.parse(valor);
+        } catch (DateTimeParseException ignored) {
+        }
+
+        try {
+            return OffsetDateTime.parse(valor).toInstant();
+        } catch (DateTimeParseException ignored) {
+        }
+
+        // b), c) y d) Formatos con fecha y hora (HTML5 datetime-local, habituales argentinos y 12h)
+        for (DateTimeFormatter formatter : FORMATOS_FECHA_HORA) {
+            try {
+                LocalDateTime ldt = LocalDateTime.parse(valor, formatter);
+                return ldt.atZone(ZONA_ARGENTINA).toInstant();
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        // c) y e) Formatos de solo fecha (dd/MM/yyyy, dd-MM-yyyy, yyyy-MM-dd)
+        for (DateTimeFormatter formatter : FORMATOS_SOLO_FECHA) {
+            try {
+                LocalDate ld = LocalDate.parse(valor, formatter);
+                return ld.atStartOfDay(ZONA_ARGENTINA).toInstant();
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        throw new DomainValidationException(
+                "Formato inválido de fecha de reunión: '" + valor + "'. " +
+                "Formatos aceptados: ISO-8601 UTC u Offset (ej. 2026-03-10T10:00:00Z), " +
+                "HTML5 datetime-local (yyyy-MM-ddTHH:mm), DD/MM/AAAA HH:mm, DD-MM-AAAA HH:mm, " +
+                "DD/MM/AAAA, DD-MM-AAAA, MM/DD/AAAA h:mm a, o YYYY-MM-DD."
+        );
     }
 
     private UUID resolverUsuarioAutenticadoId() {

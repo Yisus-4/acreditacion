@@ -1,9 +1,6 @@
 package com.undec.acreditacion.infrastructure.persistence.postgres;
 
-import com.undec.acreditacion.domain.entities.EstadoProcesoAcreditacion;
-import com.undec.acreditacion.domain.entities.ProcesoAcreditacion;
-import com.undec.acreditacion.domain.entities.RegistroConvocatoria;
-import com.undec.acreditacion.domain.entities.TipoProcesoAcreditacion;
+import com.undec.acreditacion.domain.entities.*;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -47,6 +44,10 @@ public class ConvocatoriaPersistenceMapper {
         if (entity == null) {
             return null;
         }
+        FaseEvaluacion fase = entity.getFaseEvaluacion() != null
+                ? FaseEvaluacion.valueOf(entity.getFaseEvaluacion())
+                : FaseEvaluacion.PRIMERA_FASE;
+
         return RegistroConvocatoria.rehydrate(
                 entity.getId(),
                 entity.getProcesoId(),
@@ -54,6 +55,9 @@ public class ConvocatoriaPersistenceMapper {
                 entity.getFechaInicio(),
                 entity.getFechaCierre(),
                 entity.getObservaciones(),
+                entity.getRmEstandares(),
+                fase,
+                entity.getFechaLimitePresentacionConeau(),
                 entity.getCreadoEn(),
                 entity.getActualizadoEn()
         );
@@ -70,6 +74,9 @@ public class ConvocatoriaPersistenceMapper {
         entity.setFechaInicio(domain.getFechaInicio());
         entity.setFechaCierre(domain.getFechaCierre());
         entity.setObservaciones(domain.getObservaciones());
+        entity.setRmEstandares(domain.getRmEstandares());
+        entity.setFaseEvaluacion(domain.getFaseEvaluacion() != null ? domain.getFaseEvaluacion().name() : FaseEvaluacion.PRIMERA_FASE.name());
+        entity.setFechaLimitePresentacionConeau(domain.getFechaLimitePresentacionConeau());
         entity.setCreadoEn(domain.getCreadoEn());
         entity.setActualizadoEn(domain.getActualizadoEn());
         return entity;

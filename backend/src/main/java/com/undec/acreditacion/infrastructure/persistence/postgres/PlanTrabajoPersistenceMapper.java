@@ -49,6 +49,14 @@ public class PlanTrabajoPersistenceMapper {
         if (entity == null) {
             return null;
         }
+        HojaPlanTrabajo hoja = entity.getHoja() != null
+                ? HojaPlanTrabajo.valueOf(entity.getHoja())
+                : HojaPlanTrabajo.INFO;
+
+        PrioridadActividad prioridad = entity.getPrioridad() != null
+                ? PrioridadActividad.valueOf(entity.getPrioridad())
+                : PrioridadActividad.MEDIA;
+
         return ActividadPlanTrabajo.rehydrate(
                 entity.getId(),
                 entity.getPlanTrabajoId(),
@@ -60,6 +68,11 @@ public class PlanTrabajoPersistenceMapper {
                 entity.getSintesisAcuerdos(),
                 entity.getCompletadaEn(),
                 entity.getCompletadaPor(),
+                hoja,
+                entity.getFechaInicioEstimada(),
+                entity.getFechaFinEstimada(),
+                entity.getResponsable(),
+                prioridad,
                 entity.getCreadoEn(),
                 entity.getActualizadoEn()
         );
@@ -80,6 +93,11 @@ public class PlanTrabajoPersistenceMapper {
         entity.setSintesisAcuerdos(domain.getSintesisAcuerdos());
         entity.setCompletadaEn(domain.getCompletadaEn());
         entity.setCompletadaPor(domain.getCompletadaPor());
+        entity.setHoja(domain.getHoja() != null ? domain.getHoja().name() : HojaPlanTrabajo.INFO.name());
+        entity.setFechaInicioEstimada(domain.getFechaInicioEstimada());
+        entity.setFechaFinEstimada(domain.getFechaFinEstimada());
+        entity.setResponsable(domain.getResponsable());
+        entity.setPrioridad(domain.getPrioridad() != null ? domain.getPrioridad().name() : PrioridadActividad.MEDIA.name());
         entity.setCreadoEn(domain.getCreadoEn());
         entity.setActualizadoEn(domain.getActualizadoEn());
         return entity;

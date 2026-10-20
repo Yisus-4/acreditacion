@@ -20,11 +20,16 @@ public class InMemoryDocumentStorageAdapter implements DocumentStoragePort {
         if (data == null || data.length == 0) {
             throw new ArchivoInvalidoException("El archivo a subir no puede estar vacío");
         }
-        String extension = "";
-        if (filename != null && filename.contains(".")) {
-            extension = filename.substring(filename.lastIndexOf("."));
+        String path;
+        if (filename != null && filename.contains("/")) {
+            path = filename;
+        } else {
+            String extension = "";
+            if (filename != null && filename.contains(".")) {
+                extension = filename.substring(filename.lastIndexOf("."));
+            }
+            path = UUID.randomUUID() + extension;
         }
-        String path = UUID.randomUUID() + extension;
         storage.put(path, data);
         return path;
     }
@@ -35,6 +40,14 @@ public class InMemoryDocumentStorageAdapter implements DocumentStoragePort {
             return null;
         }
         return "http://localhost:9000/instituciones-logos/" + path;
+    }
+
+    @Override
+    public String getPresignedDownloadUrl(String path, int duracionMinutos) {
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+        return "http://localhost:9000/presigned/" + path + "?exp=" + duracionMinutos;
     }
 
     @Override

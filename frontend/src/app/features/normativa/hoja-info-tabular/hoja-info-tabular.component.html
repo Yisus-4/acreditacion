@@ -1,0 +1,141 @@
+<div class="hoja-info-container">
+  <div class="hoja-header">
+    <div class="header-info">
+      <h3 class="hoja-title">Resumen de Documentación (Hoja INFO)</h3>
+      <p class="hoja-desc">
+        Mapeo sistemático y estado de presentación de los documentos normativos institucionales.
+      </p>
+    </div>
+
+    @if (canManage) {
+      <div class="header-actions">
+        <button
+          type="button"
+          class="btn-export-excel"
+          [disabled]="descargandoExcel() || !planTrabajoId"
+          (click)="onDescargarExcel()"
+          title="Exportar grilla Hoja INFO en formato Excel"
+        >
+          @if (descargandoExcel()) {
+            <span class="spinner-sm"></span> Generando Hoja INFO...
+          } @else {
+            Exportar Hoja INFO (.xlsx)
+          }
+        </button>
+      </div>
+    }
+  </div>
+
+  <div class="table-wrapper">
+    <table class="info-table">
+      <thead>
+        <tr>
+          <th class="col-num">#</th>
+          <th class="col-tipo">Tipo de Documento</th>
+          <th class="col-titulo">Denominación Oficial</th>
+          <th class="col-oblig">Requerimiento</th>
+          <th class="col-archivo">Archivo Asociado</th>
+          <th class="col-estado">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (fila of filas(); track fila.tipoDocumento) {
+          <tr [class.row-cargada]="fila.cargado" [class.row-observada]="fila.estadoDocumento === 'Observado'">
+            <td class="col-num font-mono">{{ fila.numeroOrden }}</td>
+            <td class="col-tipo font-mono text-xs">{{ fila.tipoDocumento }}</td>
+            <td class="col-titulo font-semibold">{{ fila.titulo }}</td>
+            <td class="col-oblig">
+              @if (fila.esObligatorio) {
+                <span class="tag tag-obligatorio">Obligatorio</span>
+              } @else {
+                <span class="tag tag-opcional">Opcional</span>
+              }
+            </td>
+            <td class="col-archivo">
+              @if (fila.cargado) {
+                <div class="archivo-celda">
+                  <div class="archivo-meta-box">
+                    <span class="file-name" [title]="fila.nombreArchivo">{{ fila.nombreArchivo }}</span>
+                    <span class="file-size text-muted">{{ fila.tamanioMb }}</span>
+                  </div>
+
+                  <div class="fila-acciones">
+                    <button
+                      type="button"
+                      class="btn-tabla-btn"
+                      (click)="onDescargar(fila.documentoId, fila.nombreArchivo)"
+                      title="Descargar archivo PDF"
+                    >
+                      Descargar
+                    </button>
+
+                    @if (puedeEditar) {
+                      <label class="btn-tabla-btn btn-reemplazar" title="Reemplazar archivo">
+                        Reemplazar
+                        <input
+                          type="file"
+                          accept=".pdf,application/pdf"
+                          class="hidden-file-input"
+                          (change)="onFileSelected($event, fila.tipoDocumento)"
+                        />
+                      </label>
+
+                      @if (fila.esBorrador) {
+                        <button
+                          type="button"
+                          class="btn-tabla-btn btn-eliminar"
+                          (click)="onEliminar(fila.documentoId)"
+                          title="Eliminar borrador"
+                        >
+                          Eliminar
+                        </button>
+                      }
+                    }
+                  </div>
+                </div>
+
+                @if (fila.observado && fila.motivoObservacion) {
+                  <div class="motivo-obs-texto">
+                    <strong>Obs:</strong> {{ fila.motivoObservacion }}
+                  </div>
+                }
+              } @else {
+                <div class="sin-archivo-box">
+                  @if (puedeEditar) {
+                    <label class="btn-tabla-subir">
+                      Subir PDF
+                      <input
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        class="hidden-file-input"
+                        (change)="onFileSelected($event, fila.tipoDocumento)"
+                      />
+                    </label>
+                  } @else {
+                    <span class="text-sin-archivo">Sin cargar</span>
+                  }
+                </div>
+              }
+            </td>
+            <td class="col-estado">
+              @switch (fila.estadoDocumento) {
+                @case ('Cargado') {
+                  <span class="tag tag-cargado">Cargado</span>
+                }
+                @case ('Borrador') {
+                  <span class="tag tag-borrador">Borrador</span>
+                }
+                @case ('Observado') {
+                  <span class="tag tag-observado">Observado</span>
+                }
+                @default {
+                  <span class="tag tag-pendiente">Pendiente</span>
+                }
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

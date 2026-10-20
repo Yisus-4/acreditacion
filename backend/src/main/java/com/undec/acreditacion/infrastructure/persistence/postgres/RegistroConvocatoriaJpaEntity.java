@@ -33,6 +33,15 @@ public class RegistroConvocatoriaJpaEntity {
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
 
+    @Column(name = "rm_estandares", length = 100)
+    private String rmEstandares;
+
+    @Column(name = "fase_evaluacion", length = 50)
+    private String faseEvaluacion;
+
+    @Column(name = "fecha_limite_presentacion_coneau")
+    private LocalDate fechaLimitePresentacionConeau;
+
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
 
@@ -88,6 +97,30 @@ public class RegistroConvocatoriaJpaEntity {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public String getRmEstandares() {
+        return rmEstandares;
+    }
+
+    public void setRmEstandares(String rmEstandares) {
+        this.rmEstandares = rmEstandares;
+    }
+
+    public String getFaseEvaluacion() {
+        return faseEvaluacion;
+    }
+
+    public void setFaseEvaluacion(String faseEvaluacion) {
+        this.faseEvaluacion = faseEvaluacion;
+    }
+
+    public LocalDate getFechaLimitePresentacionConeau() {
+        return fechaLimitePresentacionConeau;
+    }
+
+    public void setFechaLimitePresentacionConeau(LocalDate fechaLimitePresentacionConeau) {
+        this.fechaLimitePresentacionConeau = fechaLimitePresentacionConeau;
     }
 
     public Instant getCreadoEn() {

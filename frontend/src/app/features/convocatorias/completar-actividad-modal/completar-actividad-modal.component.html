@@ -20,6 +20,12 @@
         <div class="form-group">
           <label for="fechaReunion">Fecha y Hora de la Reunión de Coordinación <span class="required">*</span></label>
           <input id="fechaReunion" type="datetime-local" formControlName="fechaReunion" />
+          <small class="form-help">Formato esperado: DD/MM/AAAA HH:mm (hora local de Argentina).</small>
+          @if (fechaReunionPreview) {
+            <div class="fecha-preview">
+              Vista previa: <strong>{{ fechaReunionPreview }}</strong>
+            </div>
+          }
           @if (form.get('fechaReunion')?.touched && form.get('fechaReunion')?.hasError('required')) {
             <span class="form-error">La fecha de reunión es obligatoria.</span>
           }

@@ -41,26 +41,36 @@ class PostgresPlanTrabajoRepositoryAdapterTest {
         when(actividadRepository.save(any(ActividadPlanTrabajoJpaEntity.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        ActividadPlanTrabajoJpaEntity actJpa = new ActividadPlanTrabajoJpaEntity();
-        actJpa.setId(domain.getActividades().get(0).getId());
-        actJpa.setPlanTrabajoId(domain.getId());
-        actJpa.setNumeroOrden(1);
-        actJpa.setCodigoActividad(ActividadPlanTrabajo.CODIGO_ACT_01);
-        actJpa.setNombre(ActividadPlanTrabajo.NOMBRE_ACT_01);
-        actJpa.setEstado("PENDIENTE");
-        actJpa.setCreadoEn(Instant.now());
-        actJpa.setActualizadoEn(Instant.now());
+        ActividadPlanTrabajoJpaEntity actJpa1 = new ActividadPlanTrabajoJpaEntity();
+        actJpa1.setId(domain.getActividades().get(0).getId());
+        actJpa1.setPlanTrabajoId(domain.getId());
+        actJpa1.setNumeroOrden(1);
+        actJpa1.setCodigoActividad(ActividadPlanTrabajo.CODIGO_ACT_01);
+        actJpa1.setNombre(ActividadPlanTrabajo.NOMBRE_ACT_01);
+        actJpa1.setEstado("PENDIENTE");
+        actJpa1.setCreadoEn(Instant.now());
+        actJpa1.setActualizadoEn(Instant.now());
+
+        ActividadPlanTrabajoJpaEntity actJpa2 = new ActividadPlanTrabajoJpaEntity();
+        actJpa2.setId(domain.getActividades().get(1).getId());
+        actJpa2.setPlanTrabajoId(domain.getId());
+        actJpa2.setNumeroOrden(3);
+        actJpa2.setCodigoActividad(ActividadPlanTrabajo.CODIGO_ACT_03);
+        actJpa2.setNombre(ActividadPlanTrabajo.NOMBRE_ACT_03);
+        actJpa2.setEstado("PENDIENTE");
+        actJpa2.setCreadoEn(Instant.now());
+        actJpa2.setActualizadoEn(Instant.now());
 
         when(actividadRepository.findByPlanTrabajoIdOrderByNumeroOrdenAsc(domain.getId()))
-                .thenReturn(List.of(actJpa));
+                .thenReturn(List.of(actJpa1, actJpa2));
 
         PlanTrabajo guardado = adapter.save(domain);
 
         assertNotNull(guardado);
         assertEquals(domain.getId(), guardado.getId());
-        assertEquals(1, guardado.getActividades().size());
+        assertEquals(2, guardado.getActividades().size());
         verify(planRepository).save(any(PlanTrabajoJpaEntity.class));
-        verify(actividadRepository).save(any(ActividadPlanTrabajoJpaEntity.class));
+        verify(actividadRepository, times(2)).save(any(ActividadPlanTrabajoJpaEntity.class));
     }
 
     @Test

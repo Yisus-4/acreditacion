@@ -8,19 +8,23 @@
   --color-primary-light: #9a7a88;
   --color-primary-dark: #6a4d5a;
   --color-primary-50: #f5f0f2;
+  --color-primary-tint: #eae3e7;
 
-  /* Acento */
+  /* Acento (solo línea fina bajo encabezado, marca de etapa/fila activa, bordes de énfasis - NUNCA como color de texto) */
   --color-secondary: #e5b115;
   --color-secondary-light: #ecc040;
   --color-secondary-dark: #c49a10;
   --color-secondary-50: #fdf8e7;
+  --color-secondary-tint: #fbf6e3;
 
-  /* Fondos */
+  /* Superficies y Fondos */
   --color-background: #e0e1e3;
   --color-surface: #ffffff;
   --color-surface-alt: #f5f5f6;
 
-  /* Neutros */
+  /* Texto y Neutros */
+  --color-text: #1f1a1d;
+  --color-text-muted: #5a4a53;
   --color-gray-900: #111827;
   --color-gray-700: #374151;
   --color-gray-500: #6b7280;
@@ -41,6 +45,8 @@
   --radius-lg: 12px;
 
   /* Tipografía */
+  --font-title: Candara, Calibri, 'Trebuchet MS', sans-serif;
+  --font-body: 'Arial Narrow', 'Liberation Sans Narrow', Arial, sans-serif;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     Helvetica, Arial, sans-serif;
 }
@@ -60,10 +66,10 @@ body {
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-body, var(--font-sans));
   font-size: 1rem;
-  line-height: 1.6;
-  color: var(--color-gray-900);
+  line-height: 1.5;
+  color: var(--color-text, #1f1a1d);
   background: var(--color-background);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

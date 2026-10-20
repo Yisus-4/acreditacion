@@ -1,0 +1,240 @@
+<div class="bandeja-container">
+  @if (uploadError()) {
+    <div class="alert-error" role="alert">
+      {{ uploadError() }}
+    </div>
+  }
+
+  <!-- Sección 1: Normativa General -->
+  <section class="seccion-bloque">
+    <div class="seccion-header">
+      <h3 class="seccion-titulo">Normativa General</h3>
+      <p class="seccion-subtitulo">
+        Actos administrativos y reglamentaciones institucionales requeridos para el proceso.
+        Los ítems señalados con asterisco (<span class="asterisco-obligatorio">*</span>) son obligatorios.
+      </p>
+    </div>
+
+    <div class="ranuras-lista">
+      @for (ranura of ranurasNormativaGeneral(); track ranura.meta.codigo) {
+        <div
+          class="ranura-card"
+          [class.ranura-cargada]="!!ranura.documentoCargado"
+          [class.ranura-observada]="ranura.documentoCargado?.observado"
+        >
+          <div class="ranura-top">
+            <div class="ranura-textos">
+              <h4 class="ranura-titulo">
+                {{ ranura.meta.titulo }}
+                @if (ranura.esObligatorio) {
+                  <span class="asterisco-obligatorio" title="Documento obligatorio">*</span>
+                }
+              </h4>
+              <p class="ranura-desc">{{ ranura.meta.descripcion }}</p>
+            </div>
+
+            <div class="ranura-estado-badge">
+              @if (ranura.documentoCargado) {
+                @let doc = ranura.documentoCargado;
+                @if (doc.observado) {
+                  <span class="badge-sobrio badge-observado">Observado</span>
+                } @else if (doc.esBorrador) {
+                  <span class="badge-sobrio badge-borrador">Borrador</span>
+                } @else {
+                  <span class="badge-sobrio badge-cargado">Cargado</span>
+                }
+              } @else {
+                <span class="badge-sobrio badge-pendiente">Pendiente</span>
+              }
+            </div>
+          </div>
+
+          <!-- Archivo cargado o zona de carga -->
+          @if (ranura.documentoCargado) {
+            @let doc = ranura.documentoCargado;
+            <div class="archivo-cargado-fila">
+              <div class="archivo-info">
+                <span class="archivo-nombre" [title]="doc.nombreOriginal">{{ doc.nombreOriginal }}</span>
+                <span class="archivo-detalles">
+                  {{ (doc.tamanioBytes / 1024 / 1024).toFixed(2) }} MB &bull; Subido el {{ doc.creadoEn | date:'dd/MM/yyyy HH:mm' }}
+                </span>
+              </div>
+
+              <div class="archivo-acciones">
+                <button
+                  type="button"
+                  class="btn-sm btn-secundario"
+                  (click)="onDescargar(doc)"
+                  title="Descargar documento PDF"
+                >
+                  Descargar
+                </button>
+
+                @if (puedeEditar) {
+                  <label class="btn-sm btn-secundario btn-file-label" title="Reemplazar archivo">
+                    Reemplazar
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      class="hidden-file-input"
+                      (change)="onFileSelected($event, ranura.meta.codigo)"
+                    />
+                  </label>
+
+                  @if (doc.esBorrador) {
+                    <button
+                      type="button"
+                      class="btn-sm btn-peligro"
+                      (click)="onEliminar(doc.id)"
+                      title="Eliminar borrador"
+                    >
+                      Eliminar
+                    </button>
+                  }
+                }
+              </div>
+            </div>
+
+            @if (doc.observado && doc.motivoObservacion) {
+              <div class="alerta-observacion">
+                <strong>Observación AEA:</strong> {{ doc.motivoObservacion }}
+              </div>
+            }
+          } @else {
+            <div class="zona-carga-vacia">
+              @if (puedeEditar) {
+                <label class="btn-sm btn-primario-subir">
+                  Subir PDF
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    class="hidden-file-input"
+                    (change)="onFileSelected($event, ranura.meta.codigo)"
+                  />
+                </label>
+              } @else {
+                <span class="texto-sin-archivo">Documento no presentado</span>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- Sección 2: Evaluaciones Anteriores -->
+  <section class="seccion-bloque">
+    <div class="seccion-header">
+      <h3 class="seccion-titulo">Evaluaciones Anteriores</h3>
+      <p class="seccion-subtitulo">
+        Antecedentes de resoluciones CONEAU de acreditaciones previas de la titulación.
+      </p>
+    </div>
+
+    <div class="ranuras-lista">
+      @for (ranura of ranurasEvaluacionesAnteriores(); track ranura.meta.codigo) {
+        <div
+          class="ranura-card"
+          [class.ranura-cargada]="!!ranura.documentoCargado"
+          [class.ranura-observada]="ranura.documentoCargado?.observado"
+        >
+          <div class="ranura-top">
+            <div class="ranura-textos">
+              <h4 class="ranura-titulo">
+                {{ ranura.meta.titulo }}
+                @if (ranura.esObligatorio) {
+                  <span class="asterisco-obligatorio" title="Documento obligatorio">*</span>
+                }
+              </h4>
+              <p class="ranura-desc">{{ ranura.meta.descripcion }}</p>
+            </div>
+
+            <div class="ranura-estado-badge">
+              @if (ranura.documentoCargado) {
+                @let doc = ranura.documentoCargado;
+                @if (doc.observado) {
+                  <span class="badge-sobrio badge-observado">Observado</span>
+                } @else if (doc.esBorrador) {
+                  <span class="badge-sobrio badge-borrador">Borrador</span>
+                } @else {
+                  <span class="badge-sobrio badge-cargado">Cargado</span>
+                }
+              } @else {
+                <span class="badge-sobrio badge-pendiente">Pendiente</span>
+              }
+            </div>
+          </div>
+
+          <!-- Archivo cargado o zona de carga -->
+          @if (ranura.documentoCargado) {
+            @let doc = ranura.documentoCargado;
+            <div class="archivo-cargado-fila">
+              <div class="archivo-info">
+                <span class="archivo-nombre" [title]="doc.nombreOriginal">{{ doc.nombreOriginal }}</span>
+                <span class="archivo-detalles">
+                  {{ (doc.tamanioBytes / 1024 / 1024).toFixed(2) }} MB &bull; Subido el {{ doc.creadoEn | date:'dd/MM/yyyy HH:mm' }}
+                </span>
+              </div>
+
+              <div class="archivo-acciones">
+                <button
+                  type="button"
+                  class="btn-sm btn-secundario"
+                  (click)="onDescargar(doc)"
+                  title="Descargar documento PDF"
+                >
+                  Descargar
+                </button>
+
+                @if (puedeEditar) {
+                  <label class="btn-sm btn-secundario btn-file-label" title="Reemplazar archivo">
+                    Reemplazar
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      class="hidden-file-input"
+                      (change)="onFileSelected($event, ranura.meta.codigo)"
+                    />
+                  </label>
+
+                  @if (doc.esBorrador) {
+                    <button
+                      type="button"
+                      class="btn-sm btn-peligro"
+                      (click)="onEliminar(doc.id)"
+                      title="Eliminar borrador"
+                    >
+                      Eliminar
+                    </button>
+                  }
+                }
+              </div>
+            </div>
+
+            @if (doc.observado && doc.motivoObservacion) {
+              <div class="alerta-observacion">
+                <strong>Observación AEA:</strong> {{ doc.motivoObservacion }}
+              </div>
+            }
+          } @else {
+            <div class="zona-carga-vacia">
+              @if (puedeEditar) {
+                <label class="btn-sm btn-primario-subir">
+                  Subir PDF
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    class="hidden-file-input"
+                    (change)="onFileSelected($event, ranura.meta.codigo)"
+                  />
+                </label>
+              } @else {
+                <span class="texto-sin-archivo">Documento no presentado</span>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </section>
+</div>

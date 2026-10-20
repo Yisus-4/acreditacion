@@ -60,6 +60,19 @@ export class CompletarActividadModalComponent {
     }
   }
 
+  get fechaReunionPreview(): string | null {
+    const raw = this.form.get('fechaReunion')?.value;
+    if (!raw) return null;
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return null;
+    const dia = String(d.getDate()).padStart(2, '0');
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const anio = d.getFullYear();
+    const hora = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${dia}/${mes}/${anio} ${hora}:${min} hs`;
+  }
+
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -74,8 +87,17 @@ export class CompletarActividadModalComponent {
     this.submitting.set(true);
     this.generalError.set(null);
 
+    const rawFecha = this.form.get('fechaReunion')?.value;
+    let fechaParaEnviar = rawFecha;
+    if (rawFecha) {
+      const d = new Date(rawFecha);
+      if (!isNaN(d.getTime())) {
+        fechaParaEnviar = d.toISOString();
+      }
+    }
+
     const formData = new FormData();
-    formData.append('fechaReunion', this.form.get('fechaReunion')?.value);
+    formData.append('fechaReunion', fechaParaEnviar);
     formData.append('sintesisAcuerdos', this.form.get('sintesisAcuerdos')?.value.trim());
     formData.append('tipoDocumento', this.form.get('tipoDocumento')?.value);
     formData.append('archivo', this.selectedFile);

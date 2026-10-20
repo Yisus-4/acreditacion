@@ -15,19 +15,23 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/convocatorias")
+@RequestMapping({"/api/convocatorias", "/api/v1/procesos-acreditacion"})
 public class ConvocatoriaController {
 
     private final IniciarConvocatoriaUseCase iniciarConvocatoriaUseCase;
     private final ConsultarConvocatoriaUseCase consultarConvocatoriaUseCase;
     private final ListarConvocatoriasUseCase listarConvocatoriasUseCase;
+    private final EliminarConvocatoriaUseCase eliminarConvocatoriaUseCase;
     private final ConsultarPlanTrabajoUseCase consultarPlanTrabajoUseCase;
+    private final ElaborarPlanTrabajoUseCase elaborarPlanTrabajoUseCase;
+    private final ObtenerPlantillaPlanTrabajoUseCase obtenerPlantillaPlanTrabajoUseCase;
     private final RegistroConvocatoriaRepositoryPort registroRepository;
     private final CarreraRepositoryPort carreraRepository;
     private final DocumentoAcreditacionRepositoryPort documentoRepository;
@@ -37,7 +41,10 @@ public class ConvocatoriaController {
             IniciarConvocatoriaUseCase iniciarConvocatoriaUseCase,
             ConsultarConvocatoriaUseCase consultarConvocatoriaUseCase,
             ListarConvocatoriasUseCase listarConvocatoriasUseCase,
+            EliminarConvocatoriaUseCase eliminarConvocatoriaUseCase,
             ConsultarPlanTrabajoUseCase consultarPlanTrabajoUseCase,
+            ElaborarPlanTrabajoUseCase elaborarPlanTrabajoUseCase,
+            ObtenerPlantillaPlanTrabajoUseCase obtenerPlantillaPlanTrabajoUseCase,
             RegistroConvocatoriaRepositoryPort registroRepository,
             CarreraRepositoryPort carreraRepository,
             DocumentoAcreditacionRepositoryPort documentoRepository,
@@ -45,7 +52,10 @@ public class ConvocatoriaController {
         this.iniciarConvocatoriaUseCase = iniciarConvocatoriaUseCase;
         this.consultarConvocatoriaUseCase = consultarConvocatoriaUseCase;
         this.listarConvocatoriasUseCase = listarConvocatoriasUseCase;
+        this.eliminarConvocatoriaUseCase = eliminarConvocatoriaUseCase;
         this.consultarPlanTrabajoUseCase = consultarPlanTrabajoUseCase;
+        this.elaborarPlanTrabajoUseCase = elaborarPlanTrabajoUseCase;
+        this.obtenerPlantillaPlanTrabajoUseCase = obtenerPlantillaPlanTrabajoUseCase;
         this.registroRepository = registroRepository;
         this.carreraRepository = carreraRepository;
         this.documentoRepository = documentoRepository;
@@ -120,11 +130,62 @@ public class ConvocatoriaController {
         return ResponseEntity.ok(construirDetalleResponse(proceso));
     }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    public ResponseEntity<Void> eliminarConvocatoria(@PathVariable UUID id) {
+        eliminarConvocatoriaUseCase.ejecutar(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{id}/plan-trabajo")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<PlanTrabajoResponse> obtenerPlanTrabajo(@PathVariable UUID id) {
         PlanTrabajo plan = consultarPlanTrabajoUseCase.obtenerPorProcesoId(id);
+        return ResponseEntity.ok(mapearPlanTrabajoResponse(plan));
+    }
 
+    @GetMapping("/{id}/plan-trabajo/plantilla")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    public ResponseEntity<PlantillaPlanTrabajoDto> obtenerPlantillaPlanTrabajo(@PathVariable UUID id) {
+        PlantillaPlanTrabajoDto plantilla = obtenerPlantillaPlanTrabajoUseCase.obtenerPorProcesoId(id);
+        return ResponseEntity.ok(plantilla);
+    }
+
+    @PostMapping("/{id}/plan-trabajo/elaborar")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('CONVOCATORIA_WRITE')")
+    public ResponseEntity<PlanTrabajoResponse> elaborarPlanTrabajo(
+            @PathVariable UUID id,
+            @RequestBody ElaborarPlanTrabajoRequest request
+    ) {
+        UUID usuarioId = resolverUsuarioAutenticadoId();
+
+        List<ItemActividadPlanCommand> itemsCommand = (request.actividades() != null)
+                ? request.actividades().stream().map(a -> new ItemActividadPlanCommand(
+                        a.numeroOrden(),
+                        a.codigoActividad(),
+                        a.nombre(),
+                        a.hoja(),
+                        a.fechaInicioEstimada(),
+                        a.fechaFinEstimada(),
+                        a.responsable(),
+                        a.prioridad()
+                )).collect(Collectors.toList())
+                : Collections.emptyList();
+
+        ElaborarPlanTrabajoCommand command = new ElaborarPlanTrabajoCommand(
+                id,
+                request.rmEstandares(),
+                request.faseEvaluacion(),
+                request.fechaLimiteConeau(),
+                itemsCommand,
+                usuarioId
+        );
+
+        PlanTrabajo plan = elaborarPlanTrabajoUseCase.elaborar(command);
+        return ResponseEntity.ok(mapearPlanTrabajoResponse(plan));
+    }
+
+    private PlanTrabajoResponse mapearPlanTrabajoResponse(PlanTrabajo plan) {
         List<ActividadDetalleResponse> actividadesResponse = new ArrayList<>();
         for (ActividadPlanTrabajo act : plan.getActividades()) {
             List<DocumentoAcreditacion> docs = documentoRepository.findByActividadId(act.getId());
@@ -159,13 +220,18 @@ public class ConvocatoriaController {
                     act.getCompletadaEn(),
                     act.getCompletadaPor(),
                     completadaPorNombre,
+                    act.getHoja() != null ? act.getHoja().name() : HojaPlanTrabajo.INFO.name(),
+                    act.getFechaInicioEstimada(),
+                    act.getFechaFinEstimada(),
+                    act.getResponsable(),
+                    act.getPrioridad() != null ? act.getPrioridad().name() : PrioridadActividad.MEDIA.name(),
                     act.getCreadoEn(),
                     act.getActualizadoEn(),
                     docsDto
             ));
         }
 
-        PlanTrabajoResponse response = new PlanTrabajoResponse(
+        return new PlanTrabajoResponse(
                 plan.getId(),
                 plan.getProcesoId(),
                 plan.getCodigo(),
@@ -173,8 +239,6 @@ public class ConvocatoriaController {
                 plan.getEstado().name(),
                 actividadesResponse
         );
-
-        return ResponseEntity.ok(response);
     }
 
     private ConvocatoriaDetalleResponse construirDetalleResponse(ProcesoAcreditacion proceso) {
@@ -192,6 +256,9 @@ public class ConvocatoriaController {
                 r.getFechaInicio(),
                 r.getFechaCierre(),
                 r.getObservaciones(),
+                r.getRmEstandares(),
+                r.getFaseEvaluacion() != null ? r.getFaseEvaluacion().name() : FaseEvaluacion.PRIMERA_FASE.name(),
+                r.getFechaLimitePresentacionConeau(),
                 r.getCreadoEn(),
                 r.getActualizadoEn()
         )).orElse(null);
@@ -203,6 +270,10 @@ public class ConvocatoriaController {
                 p.getEstado().name(),
                 p.getActividades().size()
         )).orElse(null);
+
+        List<ActividadDetalleResponse> actividadesDetalle = planOpt
+                .map(p -> mapearPlanTrabajoResponse(p).actividades())
+                .orElse(Collections.emptyList());
 
         return new ConvocatoriaDetalleResponse(
                 proceso.getId(),
@@ -217,7 +288,8 @@ public class ConvocatoriaController {
                 proceso.getCreadoEn(),
                 proceso.getCreadoPor(),
                 regResponse,
-                planResponse
+                planResponse,
+                actividadesDetalle
         );
     }
 

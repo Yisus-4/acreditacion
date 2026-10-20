@@ -15,6 +15,9 @@ public final class RegistroConvocatoria {
     private final LocalDate fechaInicio;
     private final LocalDate fechaCierre;
     private final String observaciones;
+    private String rmEstandares;
+    private FaseEvaluacion faseEvaluacion;
+    private LocalDate fechaLimitePresentacionConeau;
     private final Instant creadoEn;
     private Instant actualizadoEn;
 
@@ -31,6 +34,33 @@ public final class RegistroConvocatoria {
                 fechaInicio,
                 fechaCierre,
                 observaciones,
+                null,
+                FaseEvaluacion.PRIMERA_FASE,
+                null,
+                now,
+                now
+        );
+    }
+
+    public static RegistroConvocatoria crear(UUID procesoId,
+                                             String nroResolucionConeau,
+                                             LocalDate fechaInicio,
+                                             LocalDate fechaCierre,
+                                             String observaciones,
+                                             String rmEstandares,
+                                             FaseEvaluacion faseEvaluacion,
+                                             LocalDate fechaLimitePresentacionConeau) {
+        Instant now = Instant.now();
+        return new RegistroConvocatoria(
+                UUID.randomUUID(),
+                procesoId,
+                nroResolucionConeau,
+                fechaInicio,
+                fechaCierre,
+                observaciones,
+                rmEstandares,
+                faseEvaluacion,
+                fechaLimitePresentacionConeau,
                 now,
                 now
         );
@@ -51,6 +81,35 @@ public final class RegistroConvocatoria {
                 fechaInicio,
                 fechaCierre,
                 observaciones,
+                null,
+                FaseEvaluacion.PRIMERA_FASE,
+                null,
+                creadoEn,
+                actualizadoEn
+        );
+    }
+
+    public static RegistroConvocatoria rehydrate(UUID id,
+                                                 UUID procesoId,
+                                                 String nroResolucionConeau,
+                                                 LocalDate fechaInicio,
+                                                 LocalDate fechaCierre,
+                                                 String observaciones,
+                                                 String rmEstandares,
+                                                 FaseEvaluacion faseEvaluacion,
+                                                 LocalDate fechaLimitePresentacionConeau,
+                                                 Instant creadoEn,
+                                                 Instant actualizadoEn) {
+        return new RegistroConvocatoria(
+                id,
+                procesoId,
+                nroResolucionConeau,
+                fechaInicio,
+                fechaCierre,
+                observaciones,
+                rmEstandares,
+                faseEvaluacion,
+                fechaLimitePresentacionConeau,
                 creadoEn,
                 actualizadoEn
         );
@@ -62,6 +121,9 @@ public final class RegistroConvocatoria {
                                 LocalDate fechaInicio,
                                 LocalDate fechaCierre,
                                 String observaciones,
+                                String rmEstandares,
+                                FaseEvaluacion faseEvaluacion,
+                                LocalDate fechaLimitePresentacionConeau,
                                 Instant creadoEn,
                                 Instant actualizadoEn) {
         if (id == null) {
@@ -82,6 +144,9 @@ public final class RegistroConvocatoria {
         if (fechaCierre.isBefore(fechaInicio)) {
             throw new DomainValidationException("La fecha de cierre CONEAU no puede ser anterior a la fecha de inicio");
         }
+        if (fechaLimitePresentacionConeau != null && fechaLimitePresentacionConeau.isBefore(fechaCierre)) {
+            throw new DomainValidationException("La fecha límite de presentación CONEAU no puede ser anterior a la fecha de cierre de la convocatoria");
+        }
 
         this.id = id;
         this.procesoId = procesoId;
@@ -89,9 +154,29 @@ public final class RegistroConvocatoria {
         this.fechaInicio = fechaInicio;
         this.fechaCierre = fechaCierre;
         this.observaciones = observaciones != null ? observaciones.trim() : null;
+        this.rmEstandares = rmEstandares != null && !rmEstandares.trim().isEmpty() ? rmEstandares.trim() : null;
+        this.faseEvaluacion = faseEvaluacion != null ? faseEvaluacion : FaseEvaluacion.PRIMERA_FASE;
+        this.fechaLimitePresentacionConeau = fechaLimitePresentacionConeau;
         Instant now = Instant.now();
         this.creadoEn = creadoEn != null ? creadoEn : now;
         this.actualizadoEn = actualizadoEn != null ? actualizadoEn : this.creadoEn;
+    }
+
+    public void completarDatosConeau(String rmEstandares, FaseEvaluacion faseEvaluacion, LocalDate fechaLimiteConeau) {
+        if (faseEvaluacion == null) {
+            throw new DomainValidationException("La fase de evaluación es obligatoria");
+        }
+        if (fechaLimiteConeau == null) {
+            throw new DomainValidationException("La fecha límite de presentación CONEAU es obligatoria al completar los datos CONEAU");
+        }
+        if (fechaLimiteConeau.isBefore(this.fechaCierre)) {
+            throw new DomainValidationException("La fecha límite de presentación CONEAU no puede ser anterior a la fecha de cierre de la convocatoria");
+        }
+
+        this.rmEstandares = rmEstandares != null && !rmEstandares.trim().isEmpty() ? rmEstandares.trim() : null;
+        this.faseEvaluacion = faseEvaluacion;
+        this.fechaLimitePresentacionConeau = fechaLimiteConeau;
+        this.actualizadoEn = Instant.now();
     }
 
     public UUID getId() {
@@ -116,6 +201,18 @@ public final class RegistroConvocatoria {
 
     public String getObservaciones() {
         return observaciones;
+    }
+
+    public String getRmEstandares() {
+        return rmEstandares;
+    }
+
+    public FaseEvaluacion getFaseEvaluacion() {
+        return faseEvaluacion;
+    }
+
+    public LocalDate getFechaLimitePresentacionConeau() {
+        return fechaLimitePresentacionConeau;
     }
 
     public Instant getCreadoEn() {

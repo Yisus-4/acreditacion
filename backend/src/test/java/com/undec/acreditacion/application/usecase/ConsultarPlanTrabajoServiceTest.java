@@ -45,4 +45,34 @@ class ConsultarPlanTrabajoServiceTest {
 
         assertThrows(ResourceNotFoundException.class, () -> service.obtenerPorProcesoId(procesoId));
     }
+
+    @Test
+    @DisplayName("Debe auto-agregar y persistir Actividad 1.3 si el plan consultado no la posee")
+    void debeAutoAgregarActividadNormativaSiNoExiste() {
+        UUID procesoId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        com.undec.acreditacion.domain.entities.ActividadPlanTrabajo act1 =
+                com.undec.acreditacion.domain.entities.ActividadPlanTrabajo.crearActividadInicial(planId);
+        PlanTrabajo planSinNormativa = PlanTrabajo.rehydrate(
+                planId,
+                procesoId,
+                "PT-001-TEST",
+                TipoPlanTrabajo.PT_001_ACREDITACION,
+                com.undec.acreditacion.domain.entities.EstadoPlanTrabajo.ACTIVO,
+                null,
+                null,
+                java.util.List.of(act1)
+        );
+
+        when(repository.findByProcesoId(procesoId)).thenReturn(Optional.of(planSinNormativa));
+        when(repository.save(any(PlanTrabajo.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PlanTrabajo res = service.obtenerPorProcesoId(procesoId);
+
+        assertNotNull(res);
+        boolean tiene13 = res.getActividades().stream()
+                .anyMatch(a -> "1.3".equals(a.getCodigoActividad()));
+        assertTrue(tiene13);
+        verify(repository).save(any(PlanTrabajo.class));
+    }
 }

@@ -37,6 +37,9 @@ class RegistroConvocatoriaTest {
         // H-05: Auditoría Flyway V5
         assertNotNull(registro.getCreadoEn());
         assertNotNull(registro.getActualizadoEn());
+        assertEquals(FaseEvaluacion.PRIMERA_FASE, registro.getFaseEvaluacion());
+        assertNull(registro.getRmEstandares());
+        assertNull(registro.getFechaLimitePresentacionConeau());
     }
 
     @Test
@@ -103,5 +106,84 @@ class RegistroConvocatoriaTest {
         assertNotNull(registro);
         assertEquals(LocalDate.now(), registro.getFechaInicio());
         assertEquals(cierre, registro.getFechaCierre());
+    }
+
+    @Test
+    @DisplayName("Debe completar datos CONEAU válidos (RM estándares, fase y fecha límite)")
+    void debePermitirCompletarDatosConeauValidos() {
+        UUID procesoId = UUID.randomUUID();
+        LocalDate inicio = LocalDate.of(2026, 3, 1);
+        LocalDate cierre = LocalDate.of(2026, 11, 30);
+        RegistroConvocatoria registro = RegistroConvocatoria.crear(
+                procesoId,
+                "RESFC-2026-145",
+                inicio,
+                cierre,
+                "Inicio"
+        );
+
+        LocalDate fechaLimite = LocalDate.of(2026, 12, 15);
+        registro.completarDatosConeau("RM 1254/2018", FaseEvaluacion.SEGUNDA_FASE, fechaLimite);
+
+        assertEquals("RM 1254/2018", registro.getRmEstandares());
+        assertEquals(FaseEvaluacion.SEGUNDA_FASE, registro.getFaseEvaluacion());
+        assertEquals(fechaLimite, registro.getFechaLimitePresentacionConeau());
+    }
+
+    @Test
+    @DisplayName("Debe permitir completar datos CONEAU con RM de estándares opcional o nula")
+    void debePermitirCompletarDatosConeauConRmOpcional() {
+        RegistroConvocatoria registro = RegistroConvocatoria.crear(
+                UUID.randomUUID(),
+                "RESFC-2026-145",
+                LocalDate.now(),
+                LocalDate.now().plusMonths(6),
+                null
+        );
+
+        LocalDate fechaLimite = LocalDate.now().plusMonths(7);
+        registro.completarDatosConeau(null, FaseEvaluacion.PRIMERA_FASE, fechaLimite);
+
+        assertNull(registro.getRmEstandares());
+        assertEquals(FaseEvaluacion.PRIMERA_FASE, registro.getFaseEvaluacion());
+        assertEquals(fechaLimite, registro.getFechaLimitePresentacionConeau());
+    }
+
+    @Test
+    @DisplayName("Debe rechazar completar datos CONEAU sin fase de evaluación")
+    void debeRechazarCompletarDatosConeauSinFase() {
+        RegistroConvocatoria registro = RegistroConvocatoria.crear(
+                UUID.randomUUID(),
+                "RESFC-2026-145",
+                LocalDate.now(),
+                LocalDate.now().plusMonths(6),
+                null
+        );
+
+        assertThrows(DomainValidationException.class, () ->
+                registro.completarDatosConeau("RM 1254/2018", null, LocalDate.now().plusMonths(7))
+        );
+    }
+
+    @Test
+    @DisplayName("Debe rechazar completar datos CONEAU sin fecha límite o anterior a fecha de cierre")
+    void debeRechazarCompletarDatosConeauConFechaLimiteInvalida() {
+        LocalDate cierre = LocalDate.of(2026, 11, 30);
+        RegistroConvocatoria registro = RegistroConvocatoria.crear(
+                UUID.randomUUID(),
+                "RESFC-2026-145",
+                LocalDate.of(2026, 3, 1),
+                cierre,
+                null
+        );
+
+        assertThrows(DomainValidationException.class, () ->
+                registro.completarDatosConeau("RM 1254/2018", FaseEvaluacion.PRIMERA_FASE, null)
+        );
+
+        LocalDate fechaAnterior = LocalDate.of(2026, 11, 29);
+        assertThrows(DomainValidationException.class, () ->
+                registro.completarDatosConeau("RM 1254/2018", FaseEvaluacion.PRIMERA_FASE, fechaAnterior)
+        );
     }
 }

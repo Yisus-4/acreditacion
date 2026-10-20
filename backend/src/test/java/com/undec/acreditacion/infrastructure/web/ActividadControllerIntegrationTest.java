@@ -79,6 +79,75 @@ class ActividadControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("POST /api/actividades/{id}/completar debe soportar formatos datetime-local, argentino, 12h y simple")
+    void debeSoportarMultiplesFormatosDeFecha() throws Exception {
+        UUID actividadId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        UUID usuarioId = UUID.randomUUID();
+
+        ActividadPlanTrabajo actividad = ActividadPlanTrabajo.crearActividadInicial(planId);
+        actividad.registrarReunionYCompletar(
+                Instant.parse("2026-03-10T13:00:00Z"),
+                "Reunión completada",
+                usuarioId
+        );
+
+        when(completarActividadUseCase.completar(any())).thenReturn(actividad);
+        when(documentoRepository.findByActividadId(any())).thenReturn(Collections.emptyList());
+
+        MockMultipartFile file = new MockMultipartFile(
+                "archivo",
+                "Acta.pdf",
+                "application/pdf",
+                "%PDF-1.4 test stream".getBytes()
+        );
+
+        String[] fechasValidas = {
+                "2026-03-10T10:00",               // HTML5 datetime-local
+                "2026-03-10T10:00:00",            // HTML5 datetime-local con segundos
+                "2026-03-10T10:00:00-03:00",      // ISO con offset
+                "10/03/2026 10:00",               // Argentino dd/MM/yyyy HH:mm
+                "10-03-2026 10:00",               // Argentino dd-MM-yyyy HH:mm
+                "10/03/2026 10:00:00",            // Argentino dd/MM/yyyy HH:mm:ss
+                "10/03/2026",                     // Solo fecha dd/MM/yyyy
+                "10-03-2026",                     // Solo fecha dd-MM-yyyy
+                "2026-03-10",                     // Solo fecha yyyy-MM-dd
+                "03/10/2026 10:00 AM",            // 12h MM/dd/yyyy
+                "10/03/2026 10:00 AM"             // 12h dd/MM/yyyy
+        };
+
+        for (String fecha : fechasValidas) {
+            mockMvc.perform(multipart("/api/actividades/{id}/completar", actividadId)
+                            .file(file)
+                            .param("fechaReunion", fecha)
+                            .param("sintesisAcuerdos", "Reunión de prueba")
+                            .param("tipoDocumento", "ACTA_REUNION_COORDINACION"))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
+    @DisplayName("POST /api/actividades/{id}/completar debe rechazar fecha en formato ininteligible")
+    void debeRechazarFechaInvalida() throws Exception {
+        UUID actividadId = UUID.randomUUID();
+
+        MockMultipartFile file = new MockMultipartFile(
+                "archivo",
+                "Acta.pdf",
+                "application/pdf",
+                "%PDF-1.4 test stream".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/actividades/{id}/completar", actividadId)
+                        .file(file)
+                        .param("fechaReunion", "fecha-invalida-xyz")
+                        .param("sintesisAcuerdos", "Reunión de prueba")
+                        .param("tipoDocumento", "ACTA_REUNION_COORDINACION"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
     @DisplayName("POST /api/actividades/{id}/completar debe rechazar si el archivo no es PDF")
     void debeRechazarArchivoNoPdf() throws Exception {
         UUID actividadId = UUID.randomUUID();

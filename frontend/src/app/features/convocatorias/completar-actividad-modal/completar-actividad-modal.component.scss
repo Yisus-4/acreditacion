@@ -112,6 +112,22 @@
   margin-top: 0.25rem;
 }
 
+.form-help {
+  font-size: 0.75rem;
+  color: var(--color-gray-500, #6b7280);
+  margin-top: 0.125rem;
+}
+
+.fecha-preview {
+  font-size: 0.8125rem;
+  color: var(--color-primary, #826170);
+  background-color: var(--color-primary-50, #f5f0f2);
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-sm, 4px);
+  border-left: 3px solid var(--color-primary, #826170);
+  margin-top: 0.25rem;
+}
+
 .form-error {
   font-size: 0.75rem;
   color: var(--color-danger, #dc2626);

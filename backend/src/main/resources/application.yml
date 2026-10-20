@@ -31,3 +31,10 @@ minio:
   secret-key: ${MINIO_SECRET_KEY:minioadmin123}
   bucket: ${MINIO_BUCKET:instituciones-logos}
 
+spring.mail:
+  host: ${SPRING_MAIL_HOST:localhost}
+  port: ${SPRING_MAIL_PORT:1025}
+  username: ${SPRING_MAIL_USERNAME:acreditacion@undec.edu.ar}
+  password: ${SPRING_MAIL_PASSWORD:}
+
+

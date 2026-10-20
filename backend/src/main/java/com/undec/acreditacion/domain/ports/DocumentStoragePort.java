@@ -6,6 +6,8 @@ public interface DocumentStoragePort {
 
     String getFileUrl(String path);
 
+    String getPresignedDownloadUrl(String path, int duracionMinutos);
+
     byte[] downloadFile(String path);
 
     void deleteFile(String path);

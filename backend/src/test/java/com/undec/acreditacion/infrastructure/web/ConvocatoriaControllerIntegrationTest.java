@@ -6,11 +6,12 @@ import com.undec.acreditacion.application.input.*;
 import com.undec.acreditacion.application.output.UserRepository;
 import com.undec.acreditacion.domain.entities.*;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
-import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.domain.ports.CarreraRepositoryPort;
 import com.undec.acreditacion.domain.ports.DocumentoAcreditacionRepositoryPort;
 import com.undec.acreditacion.domain.ports.RegistroConvocatoriaRepositoryPort;
+import com.undec.acreditacion.infrastructure.web.dto.ElaborarPlanTrabajoRequest;
 import com.undec.acreditacion.infrastructure.web.dto.IniciarConvocatoriaRequest;
+import com.undec.acreditacion.infrastructure.web.dto.ItemActividadPlanRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -36,7 +38,10 @@ class ConvocatoriaControllerIntegrationTest {
     private IniciarConvocatoriaUseCase iniciarConvocatoriaUseCase;
     private ConsultarConvocatoriaUseCase consultarConvocatoriaUseCase;
     private ListarConvocatoriasUseCase listarConvocatoriasUseCase;
+    private EliminarConvocatoriaUseCase eliminarConvocatoriaUseCase;
     private ConsultarPlanTrabajoUseCase consultarPlanTrabajoUseCase;
+    private ElaborarPlanTrabajoUseCase elaborarPlanTrabajoUseCase;
+    private ObtenerPlantillaPlanTrabajoUseCase obtenerPlantillaPlanTrabajoUseCase;
     private RegistroConvocatoriaRepositoryPort registroRepository;
     private CarreraRepositoryPort carreraRepository;
     private DocumentoAcreditacionRepositoryPort documentoRepository;
@@ -48,7 +53,10 @@ class ConvocatoriaControllerIntegrationTest {
         iniciarConvocatoriaUseCase = mock(IniciarConvocatoriaUseCase.class);
         consultarConvocatoriaUseCase = mock(ConsultarConvocatoriaUseCase.class);
         listarConvocatoriasUseCase = mock(ListarConvocatoriasUseCase.class);
+        eliminarConvocatoriaUseCase = mock(EliminarConvocatoriaUseCase.class);
         consultarPlanTrabajoUseCase = mock(ConsultarPlanTrabajoUseCase.class);
+        elaborarPlanTrabajoUseCase = mock(ElaborarPlanTrabajoUseCase.class);
+        obtenerPlantillaPlanTrabajoUseCase = mock(ObtenerPlantillaPlanTrabajoUseCase.class);
         registroRepository = mock(RegistroConvocatoriaRepositoryPort.class);
         carreraRepository = mock(CarreraRepositoryPort.class);
         documentoRepository = mock(DocumentoAcreditacionRepositoryPort.class);
@@ -61,7 +69,10 @@ class ConvocatoriaControllerIntegrationTest {
                 iniciarConvocatoriaUseCase,
                 consultarConvocatoriaUseCase,
                 listarConvocatoriasUseCase,
+                eliminarConvocatoriaUseCase,
                 consultarPlanTrabajoUseCase,
+                elaborarPlanTrabajoUseCase,
+                obtenerPlantillaPlanTrabajoUseCase,
                 registroRepository,
                 carreraRepository,
                 documentoRepository,
@@ -135,32 +146,134 @@ class ConvocatoriaControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("GET /api/convocatorias/{id} debe retornar 200 OK con detalle")
+    @DisplayName("GET /api/convocatorias/{id} y /api/v1/procesos-acreditacion/{id} deben retornar 200 OK con detalle enriquecido y actividades")
     void debeObtenerConvocatoriaPorId() throws Exception {
-        UUID procesoId = UUID.randomUUID();
         UUID carreraId = UUID.randomUUID();
         ProcesoAcreditacion proceso = ProcesoAcreditacion.iniciar(
                 carreraId, "CONV-2026-ISI-01", "Convocatoria ISI 2026",
                 TipoProcesoAcreditacion.EN_FUNCIONAMIENTO, UUID.randomUUID()
         );
+        UUID procesoId = proceso.getId();
+
+        RegistroConvocatoria reg = RegistroConvocatoria.crear(
+                procesoId, "RESFC-2026-145", LocalDate.of(2026, 3, 1), LocalDate.of(2026, 11, 30),
+                "Observaciones", "RM 1254/2018", FaseEvaluacion.PRIMERA_FASE, LocalDate.of(2026, 12, 1)
+        );
+        PlanTrabajo plan = PlanTrabajo.inicializar(procesoId, "PT-001-ISI-2026", TipoPlanTrabajo.PT_001_ACREDITACION);
 
         when(consultarConvocatoriaUseCase.obtenerPorId(procesoId)).thenReturn(proceso);
+        when(registroRepository.findByProcesoId(procesoId)).thenReturn(Optional.of(reg));
+        when(consultarPlanTrabajoUseCase.obtenerPorProcesoId(procesoId)).thenReturn(plan);
 
+        // Test con ruta /api/convocatorias/{id}
         mockMvc.perform(get("/api/convocatorias/{id}", procesoId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.codigo").value("CONV-2026-ISI-01"));
+                .andExpect(jsonPath("$.codigo").value("CONV-2026-ISI-01"))
+                .andExpect(jsonPath("$.registroConvocatoria.rmEstandares").value("RM 1254/2018"))
+                .andExpect(jsonPath("$.registroConvocatoria.faseEvaluacion").value("PRIMERA_FASE"))
+                .andExpect(jsonPath("$.actividades[0].codigoActividad").value(ActividadPlanTrabajo.CODIGO_ACT_01))
+                .andExpect(jsonPath("$.actividades[0].hoja").value("INFO"))
+                .andExpect(jsonPath("$.actividades[0].prioridad").value("MEDIA"));
+
+        // Test con ruta /api/v1/procesos-acreditacion/{id}
+        mockMvc.perform(get("/api/v1/procesos-acreditacion/{id}", procesoId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.codigo").value("CONV-2026-ISI-01"))
+                .andExpect(jsonPath("$.registroConvocatoria.rmEstandares").value("RM 1254/2018"));
     }
 
     @Test
-    @DisplayName("GET /api/convocatorias/{id}/plan-trabajo debe retornar 200 OK con lista de actividades")
-    void debeObtenerPlanTrabajo() throws Exception {
+    @DisplayName("GET /api/v1/procesos-acreditacion/{id}/plan-trabajo/plantilla debe retornar plantilla sugerida")
+    void debeObtenerPlantillaPlanTrabajo() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        PlantillaActividadDto actInfo = new PlantillaActividadDto(
+                3, "ACT-03-DOC", "Relevamiento cuerpo docente y CVs",
+                HojaPlanTrabajo.INFO, PrioridadActividad.ALTA, "Director Carrera"
+        );
+        PlantillaActividadDto actConeau = new PlantillaActividadDto(
+                4, "ACT-04-FICHAS", "Carga de fichas docentes",
+                HojaPlanTrabajo.CONEAU, PrioridadActividad.ALTA, "Equipo Docente / AEA"
+        );
+
+        PlantillaPlanTrabajoDto plantilla = new PlantillaPlanTrabajoDto(
+                TipoPlanTrabajo.PT_001_ACREDITACION,
+                List.of(actInfo),
+                List.of(actConeau)
+        );
+
+        when(obtenerPlantillaPlanTrabajoUseCase.obtenerPorProcesoId(procesoId)).thenReturn(plantilla);
+
+        mockMvc.perform(get("/api/v1/procesos-acreditacion/{id}/plan-trabajo/plantilla", procesoId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tipoPlan").value("PT_001_ACREDITACION"))
+                .andExpect(jsonPath("$.actividadesInfo[0].nombre").value("Relevamiento cuerpo docente y CVs"))
+                .andExpect(jsonPath("$.actividadesConeau[0].nombre").value("Carga de fichas docentes"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/procesos-acreditacion/{id}/plan-trabajo/elaborar debe procesar y retornar plan elaborado")
+    void debeElaborarPlanTrabajoExitosamente() throws Exception {
         UUID procesoId = UUID.randomUUID();
         PlanTrabajo plan = PlanTrabajo.inicializar(procesoId, "PT-001-ISI-2026", TipoPlanTrabajo.PT_001_ACREDITACION);
-        when(consultarPlanTrabajoUseCase.obtenerPorProcesoId(procesoId)).thenReturn(plan);
 
-        mockMvc.perform(get("/api/convocatorias/{id}/plan-trabajo", procesoId))
+        when(elaborarPlanTrabajoUseCase.elaborar(any(ElaborarPlanTrabajoCommand.class))).thenReturn(plan);
+
+        ElaborarPlanTrabajoRequest request = new ElaborarPlanTrabajoRequest(
+                "RM 1254/2018",
+                FaseEvaluacion.PRIMERA_FASE,
+                LocalDate.of(2026, 12, 10),
+                List.of(
+                        new ItemActividadPlanRequest(
+                                3,
+                                "ACT-03-DOC",
+                                "Relevamiento cuerpo docente y CVs",
+                                HojaPlanTrabajo.INFO,
+                                LocalDate.of(2026, 4, 1),
+                                LocalDate.of(2026, 5, 1),
+                                "Director Carrera",
+                                PrioridadActividad.ALTA
+                        )
+                )
+        );
+
+        mockMvc.perform(post("/api/v1/procesos-acreditacion/{id}/plan-trabajo/elaborar", procesoId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.codigo").value("PT-001-ISI-2026"))
-                .andExpect(jsonPath("$.actividades[0].codigoActividad").value(ActividadPlanTrabajo.CODIGO_ACT_01));
+                .andExpect(jsonPath("$.codigo").value("PT-001-ISI-2026"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/procesos-acreditacion/{id}/plan-trabajo/elaborar debe responder 400 Bad Request si validación falla")
+    void debeResponder400SiValidacionFalla() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+
+        when(elaborarPlanTrabajoUseCase.elaborar(any(ElaborarPlanTrabajoCommand.class)))
+                .thenThrow(new DomainValidationException("La fecha límite CONEAU no puede ser anterior a la fecha de cierre"));
+
+        ElaborarPlanTrabajoRequest request = new ElaborarPlanTrabajoRequest(
+                "RM 1254/2018",
+                FaseEvaluacion.PRIMERA_FASE,
+                LocalDate.of(2026, 1, 1),
+                Collections.emptyList()
+        );
+
+        mockMvc.perform(post("/api/v1/procesos-acreditacion/{id}/plan-trabajo/elaborar", procesoId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("La fecha límite CONEAU no puede ser anterior a la fecha de cierre"));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/convocatorias/{id} debe eliminar la convocatoria y retornar 204 No Content")
+    void debeEliminarConvocatoriaRetornando204() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        doNothing().when(eliminarConvocatoriaUseCase).ejecutar(procesoId);
+
+        mockMvc.perform(delete("/api/convocatorias/{id}", procesoId))
+                .andExpect(status().isNoContent());
+
+        verify(eliminarConvocatoriaUseCase).ejecutar(procesoId);
     }
 }

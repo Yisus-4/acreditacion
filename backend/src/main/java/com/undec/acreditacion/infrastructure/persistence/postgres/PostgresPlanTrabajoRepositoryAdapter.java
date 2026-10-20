@@ -8,7 +8,9 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 public class PostgresPlanTrabajoRepositoryAdapter implements PlanTrabajoRepositoryPort {
@@ -30,6 +32,19 @@ public class PostgresPlanTrabajoRepositoryAdapter implements PlanTrabajoReposito
     public PlanTrabajo save(PlanTrabajo plan) {
         PlanTrabajoJpaEntity planEntity = mapper.toJpa(plan);
         PlanTrabajoJpaEntity savedPlan = planRepository.save(planEntity);
+
+        // Limpieza de actividades huérfanas si fueron reemplazadas durante la elaboración
+        List<ActividadPlanTrabajoJpaEntity> existing =
+                actividadRepository.findByPlanTrabajoIdOrderByNumeroOrdenAsc(savedPlan.getId());
+        Set<UUID> currentIds = plan.getActividades().stream()
+                .map(ActividadPlanTrabajo::getId)
+                .collect(Collectors.toSet());
+
+        for (ActividadPlanTrabajoJpaEntity oldAct : existing) {
+            if (!currentIds.contains(oldAct.getId())) {
+                actividadRepository.delete(oldAct);
+            }
+        }
 
         // Guardar las actividades asociadas al plan
         if (plan.getActividades() != null) {

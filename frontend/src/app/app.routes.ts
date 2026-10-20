@@ -105,5 +105,14 @@ export const routes: Routes = [
         './features/convocatorias/convocatoria-detalle/convocatoria-detalle.component'
       ).then((m) => m.ConvocatoriaDetalleComponent),
   },
+  {
+    path: 'acreditacion/convocatorias/:id/normativa',
+    title: 'Gestión de Normativa de Carrera — Sistema de Acreditación UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/normativa/normativa-detalle/normativa-detalle.component'
+      ).then((m) => m.NormativaDetalleComponent),
+  },
   { path: '**', redirectTo: 'dashboard' },
 ];

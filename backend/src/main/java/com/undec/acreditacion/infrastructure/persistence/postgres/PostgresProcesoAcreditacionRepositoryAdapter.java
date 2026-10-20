@@ -91,4 +91,9 @@ public class PostgresProcesoAcreditacionRepositoryAdapter implements ProcesoAcre
     public long countByAnio(int anio) {
         return springDataRepository.countByAnio(anio);
     }
+
+    @Override
+    public void deleteById(UUID id) {
+        springDataRepository.deleteById(id);
+    }
 }
