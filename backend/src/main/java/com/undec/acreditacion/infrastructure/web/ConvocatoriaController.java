@@ -144,14 +144,14 @@ public class ConvocatoriaController {
         return ResponseEntity.ok(mapearPlanTrabajoResponse(plan));
     }
 
-    @GetMapping("/{id}/plan-trabajo/plantilla")
+    @GetMapping({"/{id}/plan-trabajo/plantilla", "/{id}/plantilla-plan"})
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<PlantillaPlanTrabajoDto> obtenerPlantillaPlanTrabajo(@PathVariable UUID id) {
         PlantillaPlanTrabajoDto plantilla = obtenerPlantillaPlanTrabajoUseCase.obtenerPorProcesoId(id);
         return ResponseEntity.ok(plantilla);
     }
 
-    @PostMapping("/{id}/plan-trabajo/elaborar")
+    @PostMapping({"/{id}/plan-trabajo/elaborar", "/{id}/elaborar-plan"})
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<PlanTrabajoResponse> elaborarPlanTrabajo(
             @PathVariable UUID id,

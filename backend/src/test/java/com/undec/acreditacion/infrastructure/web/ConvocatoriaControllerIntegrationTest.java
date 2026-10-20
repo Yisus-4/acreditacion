@@ -183,7 +183,7 @@ class ConvocatoriaControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("GET /api/v1/procesos-acreditacion/{id}/plan-trabajo/plantilla debe retornar plantilla sugerida")
+    @DisplayName("GET /api/v1/procesos-acreditacion/{id}/plan-trabajo/plantilla y alias /plantilla-plan deben retornar plantilla sugerida")
     void debeObtenerPlantillaPlanTrabajo() throws Exception {
         UUID procesoId = UUID.randomUUID();
         PlantillaActividadDto actInfo = new PlantillaActividadDto(
@@ -203,15 +203,22 @@ class ConvocatoriaControllerIntegrationTest {
 
         when(obtenerPlantillaPlanTrabajoUseCase.obtenerPorProcesoId(procesoId)).thenReturn(plantilla);
 
+        // Ruta canónica
         mockMvc.perform(get("/api/v1/procesos-acreditacion/{id}/plan-trabajo/plantilla", procesoId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tipoPlan").value("PT_001_ACREDITACION"))
                 .andExpect(jsonPath("$.actividadesInfo[0].nombre").value("Relevamiento cuerpo docente y CVs"))
                 .andExpect(jsonPath("$.actividadesConeau[0].nombre").value("Carga de fichas docentes"));
+
+        // Alias canónico /plantilla-plan
+        mockMvc.perform(get("/api/convocatorias/{id}/plantilla-plan", procesoId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tipoPlan").value("PT_001_ACREDITACION"))
+                .andExpect(jsonPath("$.actividadesInfo[0].nombre").value("Relevamiento cuerpo docente y CVs"));
     }
 
     @Test
-    @DisplayName("POST /api/v1/procesos-acreditacion/{id}/plan-trabajo/elaborar debe procesar y retornar plan elaborado")
+    @DisplayName("POST /api/v1/procesos-acreditacion/{id}/plan-trabajo/elaborar y alias /elaborar-plan deben procesar y retornar plan elaborado")
     void debeElaborarPlanTrabajoExitosamente() throws Exception {
         UUID procesoId = UUID.randomUUID();
         PlanTrabajo plan = PlanTrabajo.inicializar(procesoId, "PT-001-ISI-2026", TipoPlanTrabajo.PT_001_ACREDITACION);
@@ -236,9 +243,25 @@ class ConvocatoriaControllerIntegrationTest {
                 )
         );
 
+        // Ruta canónica
         mockMvc.perform(post("/api/v1/procesos-acreditacion/{id}/plan-trabajo/elaborar", procesoId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.codigo").value("PT-001-ISI-2026"));
+
+        // Alias /elaborar-plan con payload JSON usando alias fechaLimitePresentacionConeau
+        String jsonConAlias = """
+                {
+                  "rmEstandares": "RM 1254/2018",
+                  "faseEvaluacion": "PRIMERA_FASE",
+                  "fechaLimitePresentacionConeau": "2026-12-10",
+                  "actividades": []
+                }
+                """;
+        mockMvc.perform(post("/api/convocatorias/{id}/elaborar-plan", procesoId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonConAlias))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.codigo").value("PT-001-ISI-2026"));
     }
