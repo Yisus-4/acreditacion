@@ -186,4 +186,23 @@ class RegistroConvocatoriaTest {
                 registro.completarDatosConeau("RM 1254/2018", FaseEvaluacion.PRIMERA_FASE, fechaAnterior)
         );
     }
+
+    @Test
+    @DisplayName("Debe permitir actualizar RM de estándares normalizada con trim y tratar en blanco como nulo")
+    void debePermitirActualizarRmEstandaresNormalizada() {
+        RegistroConvocatoria registro = RegistroConvocatoria.crear(
+                UUID.randomUUID(),
+                "RESFC-2026-145",
+                LocalDate.of(2026, 3, 1),
+                LocalDate.of(2026, 11, 30),
+                null
+        );
+
+        LocalDate fechaLimite = LocalDate.of(2026, 12, 1);
+        registro.completarDatosConeau("   RM 1254/2018 - Estándares de Grado   ", FaseEvaluacion.PRIMERA_FASE, fechaLimite);
+        assertEquals("RM 1254/2018 - Estándares de Grado", registro.getRmEstandares());
+
+        registro.completarDatosConeau("   ", FaseEvaluacion.PRIMERA_FASE, fechaLimite);
+        assertNull(registro.getRmEstandares());
+    }
 }
