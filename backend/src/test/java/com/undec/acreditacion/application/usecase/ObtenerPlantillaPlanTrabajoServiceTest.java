@@ -87,4 +87,37 @@ class ObtenerPlantillaPlanTrabajoServiceTest {
         assertNotNull(plantilla);
         assertEquals(TipoPlanTrabajo.PT_001_ACREDITACION, plantilla.tipoPlan());
     }
+
+    @Test
+    @DisplayName("Debe verificar que todas las actividades tienen roles del catálogo oficial sin AEA suelta ni menciones a DEA")
+    void debeVerificarQueTodasLasActividadesTienenRolesDelCatalogoOficial() {
+        PlantillaPlanTrabajoDto acreditacion = service.obtenerPorTipo(TipoPlanTrabajo.PT_001_ACREDITACION);
+        PlantillaPlanTrabajoDto seguimiento = service.obtenerPorTipo(TipoPlanTrabajo.PT_003_SEGUIMIENTO);
+
+        for (var act : acreditacion.actividadesInfo()) {
+            assertFilaRolesValidos(act.responsableSugerido());
+        }
+        for (var act : acreditacion.actividadesConeau()) {
+            assertFilaRolesValidos(act.responsableSugerido());
+        }
+        for (var act : seguimiento.actividadesInfo()) {
+            assertFilaRolesValidos(act.responsableSugerido());
+        }
+        for (var act : seguimiento.actividadesConeau()) {
+            assertFilaRolesValidos(act.responsableSugerido());
+        }
+    }
+
+    private void assertFilaRolesValidos(String responsable) {
+        assertNotNull(responsable);
+        assertFalse(responsable.contains("DEA"), "No debe existir ninguna referencia a DEA");
+        // Si contiene AEA, debe ser la denominación oficial completa
+        if (responsable.contains("AEA")) {
+            assertTrue(responsable.contains("Área de Evaluación y Acreditación (AEA)"),
+                    "El rol debe utilizar la denominación completa 'Área de Evaluación y Acreditación (AEA)', encontrado: " + responsable);
+            // No debe contener la sigla suelta "/ AEA" ni empezar/terminar con "AEA" suelto
+            assertFalse(responsable.matches(".*(^|\\s|/)AEA(\\s|/|$).*"),
+                    "No debe contener la sigla AEA suelta sin denominación completa: " + responsable);
+        }
+    }
 }

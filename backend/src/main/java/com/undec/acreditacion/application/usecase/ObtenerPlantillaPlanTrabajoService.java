@@ -209,11 +209,11 @@ public class ObtenerPlantillaPlanTrabajoService implements ObtenerPlantillaPlanT
         ));
         coneau.add(new PlantillaActividadDto(
                 42, "8.5", "Completar el sistema web CONEAU Global ATENEA (Plan de estudios y asignaturas)",
-                HojaPlanTrabajo.CONEAU, PrioridadActividad.ALTA, "Director de Carrera / Comisión Curricular / AEA"
+                HojaPlanTrabajo.CONEAU, PrioridadActividad.ALTA, "Director de Carrera / Comisión Curricular / Área de Evaluación y Acreditación (AEA)"
         ));
         coneau.add(new PlantillaActividadDto(
                 43, "9.6", "Completar el sistema web CONEAU Global ATENEA (Alumnos y graduados)",
-                HojaPlanTrabajo.CONEAU, PrioridadActividad.MEDIA, "Secretaría Académica / Técnica / AEA"
+                HojaPlanTrabajo.CONEAU, PrioridadActividad.MEDIA, "Secretaría Académica / Técnica / Área de Evaluación y Acreditación (AEA)"
         ));
         coneau.add(new PlantillaActividadDto(
                 44, "10.4", "Completar el sistema web CONEAU Global ATENEA (Cuerpo académico)",
@@ -229,7 +229,7 @@ public class ObtenerPlantillaPlanTrabajoService implements ObtenerPlantillaPlanT
         ));
         coneau.add(new PlantillaActividadDto(
                 47, "13.5", "Completar el sistema web CONEAU Global ATENEA (Autoevaluación y Planes de Mejora)",
-                HojaPlanTrabajo.CONEAU, PrioridadActividad.ALTA, "Comité de Autoevaluación / Director de Carrera / AEA"
+                HojaPlanTrabajo.CONEAU, PrioridadActividad.ALTA, "Comité de Autoevaluación / Director de Carrera / Área de Evaluación y Acreditación (AEA)"
         ));
 
         return new PlantillaPlanTrabajoDto(TipoPlanTrabajo.PT_001_ACREDITACION, info, coneau);
@@ -267,7 +267,7 @@ public class ObtenerPlantillaPlanTrabajoService implements ObtenerPlantillaPlanT
                 "Redacción del informe de seguimiento y planes de mejora",
                 HojaPlanTrabajo.INFO,
                 PrioridadActividad.ALTA,
-                "Comisión de Seguimiento / AEA"
+                "Comisión de Seguimiento / Área de Evaluación y Acreditación (AEA)"
         ));
 
         List<PlantillaActividadDto> coneau = new ArrayList<>();
@@ -285,7 +285,7 @@ public class ObtenerPlantillaPlanTrabajoService implements ObtenerPlantillaPlanT
                 "Actualización de fichas docentes y curriculares",
                 HojaPlanTrabajo.CONEAU,
                 PrioridadActividad.MEDIA,
-                "Comisión de Seguimiento / AEA"
+                "Comisión de Seguimiento / Área de Evaluación y Acreditación (AEA)"
         ));
         coneau.add(new PlantillaActividadDto(
                 9,
@@ -293,7 +293,7 @@ public class ObtenerPlantillaPlanTrabajoService implements ObtenerPlantillaPlanT
                 "Carga de informe de seguimiento y probanzas",
                 HojaPlanTrabajo.CONEAU,
                 PrioridadActividad.ALTA,
-                "Comisión de Seguimiento / AEA"
+                "Comisión de Seguimiento / Área de Evaluación y Acreditación (AEA)"
         ));
         coneau.add(new PlantillaActividadDto(
                 10,
@@ -301,7 +301,7 @@ public class ObtenerPlantillaPlanTrabajoService implements ObtenerPlantillaPlanT
                 "Formalización y presentación de seguimiento ante CONEAU",
                 HojaPlanTrabajo.CONEAU,
                 PrioridadActividad.ALTA,
-                "Autoridad Institucional / AEA"
+                "Autoridad Institucional / Área de Evaluación y Acreditación (AEA)"
         ));
 
         return new PlantillaPlanTrabajoDto(TipoPlanTrabajo.PT_003_SEGUIMIENTO, info, coneau);
