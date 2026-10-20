@@ -39,14 +39,28 @@
           </p>
 
           <div class="form-grid-coneau">
+            <div class="form-group form-group-full">
+              <label for="rmEstandares">
+                Resolución Ministerial de Estándares (RM)
+              </label>
+              <input
+                id="rmEstandares"
+                type="text"
+                formControlName="rmEstandares"
+                placeholder="Ej. RM 1254/2018 - Estándares para carreras de Grado"
+              />
+              <span class="field-help">
+                Resolución Ministerial de estándares aplicable a la carrera (precargada automáticamente desde la normativa previa de la Actividad 1.3).
+              </span>
+            </div>
 
             <div class="form-group">
               <label for="faseEvaluacion">
                 Fase de Evaluación <span class="required">*</span>
               </label>
               <select id="faseEvaluacion" formControlName="faseEvaluacion">
-                <option value="PRIMERA_FASE">Primera Fase</option>
-                <option value="SEGUNDA_FASE">Segunda Fase</option>
+                <option value="PRIMERA_FASE">1era Fase (Primera Fase)</option>
+                <option value="SEGUNDA_FASE">2da Fase - Seguimiento de Compromisos</option>
                 <option value="NUEVO_CICLO">Nuevo Ciclo</option>
                 <option value="SEGUIMIENTO">Seguimiento</option>
               </select>
@@ -314,7 +328,7 @@
               <span class="spinner-small"></span>
               <span>Guardando y Formalizando...</span>
             } @else {
-              <span>&check; Guardar y Formalizar Plan de Trabajo</span>
+              <span>&check; Guardar Cronograma y Formalizar RG-001</span>
             }
           </button>
         </div>

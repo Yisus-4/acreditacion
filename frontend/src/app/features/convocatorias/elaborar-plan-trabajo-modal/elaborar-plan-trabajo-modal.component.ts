@@ -40,13 +40,11 @@ export class ElaborarPlanTrabajoModalComponent implements OnInit {
 
   readonly rolesDisponibles: string[] = [
     'Área de Evaluación y Acreditación (AEA)',
-    'Director de Carrera',
-    'Comité de Autoevaluación',
+    'Dirección de Carrera',
     'Comisión Curricular',
-    'Coordinador de Acreditación',
-    'Docentes / Proveedores de Información',
     'Secretaría Académica / Técnica',
-    'Dirección de Escuela',
+    'Comité de Autoevaluación',
+    'Docentes / Proveedores de Información',
     'Autoridad Institucional',
   ];
 
@@ -57,14 +55,22 @@ export class ElaborarPlanTrabajoModalComponent implements OnInit {
   isRolSelected(ctrl: FormGroup, rol: string): boolean {
     const val = (ctrl.get('responsable')?.value || '').trim();
     const roles = val.split('/').map((s: string) => s.trim()).filter(Boolean);
+    if (rol === 'Dirección de Carrera') {
+      return roles.includes('Dirección de Carrera') || roles.includes('Director de Carrera');
+    }
     return roles.includes(rol);
   }
 
   toggleRol(ctrl: FormGroup, rol: string): void {
     const val = (ctrl.get('responsable')?.value || '').trim();
     let roles = val ? val.split('/').map((s: string) => s.trim()).filter(Boolean) : [];
-    if (roles.includes(rol)) {
-      roles = roles.filter((r: string) => r !== rol);
+    const isSelected = this.isRolSelected(ctrl, rol);
+    if (isSelected) {
+      if (rol === 'Dirección de Carrera') {
+        roles = roles.filter((r: string) => r !== 'Dirección de Carrera' && r !== 'Director de Carrera');
+      } else {
+        roles = roles.filter((r: string) => r !== rol);
+      }
     } else {
       roles.push(rol);
     }
@@ -109,6 +115,17 @@ export class ElaborarPlanTrabajoModalComponent implements OnInit {
     if (reg) {
       if (reg.rmEstandares) {
         this.form.patchValue({ rmEstandares: reg.rmEstandares });
+      } else {
+        // Buscar si existe documento de RM en Actividad 1.3
+        const actNormativa = this.planTrabajo?.actividades?.find(
+          (a) => a.codigoActividad === '1.3' || a.codigoActividad === 'ACT-03-NORMATIVA' || a.nombre.toLowerCase().includes('normativa')
+        );
+        const rmDoc = actNormativa?.documentos?.find(
+          (d) => d.tipoDocumento === 'NORMATIVA_CONVOCATORIA' && d.nombreOriginal.toLowerCase().includes('rm')
+        );
+        if (rmDoc) {
+          this.form.patchValue({ rmEstandares: rmDoc.nombreOriginal });
+        }
       }
       if (reg.faseEvaluacion) {
         this.form.patchValue({ faseEvaluacion: reg.faseEvaluacion });

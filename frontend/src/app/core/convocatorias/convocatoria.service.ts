@@ -55,6 +55,10 @@ export class ConvocatoriaService {
     return this.http.get<PlantillaPlanTrabajoDto>(`/api/convocatorias/${procesoId}/plan-trabajo/plantilla`);
   }
 
+  obtenerPlantillaPlan(procesoId: string): Observable<PlantillaPlanTrabajoDto> {
+    return this.getPlantillaPlanTrabajo(procesoId);
+  }
+
   elaborarPlanTrabajo(procesoId: string, request: ElaborarPlanTrabajoRequest): Observable<ConvocatoriaDetalle> {
     const payload = {
       ...request,
@@ -62,6 +66,10 @@ export class ConvocatoriaService {
       fechaLimitePresentacionConeau: request.fechaLimitePresentacionConeau ?? request.fechaLimiteConeau,
     };
     return this.http.post<ConvocatoriaDetalle>(`/api/convocatorias/${procesoId}/plan-trabajo/elaborar`, payload);
+  }
+
+  elaborarPlan(procesoId: string, request: ElaborarPlanTrabajoRequest): Observable<ConvocatoriaDetalle> {
+    return this.elaborarPlanTrabajo(procesoId, request);
   }
 
   completarActividad(actividadId: string, formData: FormData): Observable<ActividadPlanTrabajoDto> {
