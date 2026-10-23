@@ -36,6 +36,10 @@ class ConvocatoriaControllerIntegrationTest {
 
     private MockMvc mockMvc;
     private IniciarConvocatoriaUseCase iniciarConvocatoriaUseCase;
+    private IniciarConvocatoriaEscuelaUseCase iniciarConvocatoriaEscuelaUseCase;
+    private ConfirmarConvocatoriaDirectorEscuelaUseCase confirmarConvocatoriaDirectorEscuelaUseCase;
+    private ConsultarConvocatoriaEscuelaUseCase consultarConvocatoriaEscuelaUseCase;
+    private com.undec.acreditacion.domain.ports.ConvocatoriaEscuelaRepositoryPort convocatoriaEscuelaRepository;
     private ConsultarConvocatoriaUseCase consultarConvocatoriaUseCase;
     private ListarConvocatoriasUseCase listarConvocatoriasUseCase;
     private EliminarConvocatoriaUseCase eliminarConvocatoriaUseCase;
@@ -51,6 +55,10 @@ class ConvocatoriaControllerIntegrationTest {
     @BeforeEach
     void setUp() {
         iniciarConvocatoriaUseCase = mock(IniciarConvocatoriaUseCase.class);
+        iniciarConvocatoriaEscuelaUseCase = mock(IniciarConvocatoriaEscuelaUseCase.class);
+        confirmarConvocatoriaDirectorEscuelaUseCase = mock(ConfirmarConvocatoriaDirectorEscuelaUseCase.class);
+        consultarConvocatoriaEscuelaUseCase = mock(ConsultarConvocatoriaEscuelaUseCase.class);
+        convocatoriaEscuelaRepository = mock(com.undec.acreditacion.domain.ports.ConvocatoriaEscuelaRepositoryPort.class);
         consultarConvocatoriaUseCase = mock(ConsultarConvocatoriaUseCase.class);
         listarConvocatoriasUseCase = mock(ListarConvocatoriasUseCase.class);
         eliminarConvocatoriaUseCase = mock(EliminarConvocatoriaUseCase.class);
@@ -67,6 +75,10 @@ class ConvocatoriaControllerIntegrationTest {
 
         ConvocatoriaController controller = new ConvocatoriaController(
                 iniciarConvocatoriaUseCase,
+                iniciarConvocatoriaEscuelaUseCase,
+                confirmarConvocatoriaDirectorEscuelaUseCase,
+                consultarConvocatoriaEscuelaUseCase,
+                convocatoriaEscuelaRepository,
                 consultarConvocatoriaUseCase,
                 listarConvocatoriasUseCase,
                 eliminarConvocatoriaUseCase,

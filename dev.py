@@ -113,7 +113,21 @@ def start_backend() -> None:
         )
         subprocess.Popen(["powershell", "-NoExit", "-Command", cmd])
     elif OS_NAME == "Darwin":  # macOS
-        script = f'tell application "Terminal" to do script "cd \\"{BACKEND_DIR}\\" && echo \\"Iniciando Backend...\\" && mvn spring-boot:run"'
+        jdk_candidates = [
+            Path("/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"),
+            Path("/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home"),
+            Path("/usr/local/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"),
+            Path("/usr/local/opt/openjdk/libexec/openjdk.jdk/Contents/Home"),
+        ]
+        java_home_export = ""
+        for candidate in jdk_candidates:
+            if candidate.exists():
+                java_home_export = f'export JAVA_HOME=\\"{candidate}\\" && export PATH=\\"$JAVA_HOME/bin:/opt/homebrew/bin:$PATH\\" && '
+                break
+        script = (
+            f'tell application "Terminal" to do script '
+            f'"{java_home_export}cd \\"{BACKEND_DIR}\\" && echo \\"Iniciando Backend...\\" && mvn spring-boot:run"'
+        )
         subprocess.Popen(["osascript", "-e", script])
     else:  # Linux
         terminal = shutil.which("gnome-terminal") or shutil.which("x-terminal-emulator")

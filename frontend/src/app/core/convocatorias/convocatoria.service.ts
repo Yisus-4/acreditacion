@@ -50,6 +50,10 @@ export class ConvocatoriaService {
     return this.http.post<ConvocatoriaDetalle>('/api/convocatorias', request);
   }
 
+  confirmarConvocatoriaDe(id: string, carrerasSeleccionadas: string[]): Observable<ConvocatoriaDetalle> {
+    return this.http.post<ConvocatoriaDetalle>(`/api/convocatorias/${id}/confirmar-de`, { carrerasSeleccionadas });
+  }
+
   obtenerPlanTrabajo(procesoId: string): Observable<PlanTrabajoDto> {
     return this.http.get<PlanTrabajoDto>(`/api/convocatorias/${procesoId}/plan-trabajo`);
   }

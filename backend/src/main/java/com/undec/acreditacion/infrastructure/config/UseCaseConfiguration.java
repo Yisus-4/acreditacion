@@ -404,4 +404,37 @@ public class UseCaseConfiguration {
                 planTrabajoRepository, procesoRepository, carreraRepository, registroConvocatoriaRepository,
                 solicitudRepository, excelReportGeneratorPort);
     }
+
+    @Bean
+    @Transactional
+    public com.undec.acreditacion.application.input.IniciarConvocatoriaEscuelaUseCase iniciarConvocatoriaEscuelaUseCase(
+            com.undec.acreditacion.domain.ports.ConvocatoriaEscuelaRepositoryPort convocatoriaRepository,
+            com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort unidadAcademicaRepository,
+            CarreraRepositoryPort carreraRepository) {
+        return new com.undec.acreditacion.application.usecase.IniciarConvocatoriaEscuelaService(
+                convocatoriaRepository, unidadAcademicaRepository, carreraRepository);
+    }
+
+    @Bean
+    @Transactional
+    public com.undec.acreditacion.application.input.ConfirmarConvocatoriaDirectorEscuelaUseCase confirmarConvocatoriaDirectorEscuelaUseCase(
+            com.undec.acreditacion.domain.ports.ConvocatoriaEscuelaRepositoryPort convocatoriaRepository,
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            RegistroConvocatoriaRepositoryPort registroConvocatoriaRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            CarreraRepositoryPort carreraRepository) {
+        return new com.undec.acreditacion.application.usecase.ConfirmarConvocatoriaDirectorEscuelaService(
+                convocatoriaRepository, procesoRepository, registroConvocatoriaRepository,
+                planTrabajoRepository, carreraRepository);
+    }
+
+    @Bean
+    public com.undec.acreditacion.application.input.ConsultarConvocatoriaEscuelaUseCase consultarConvocatoriaEscuelaUseCase(
+            com.undec.acreditacion.domain.ports.ConvocatoriaEscuelaRepositoryPort convocatoriaRepository,
+            com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort unidadAcademicaRepository,
+            CarreraRepositoryPort carreraRepository,
+            ProcesoAcreditacionRepositoryPort procesoRepository) {
+        return new com.undec.acreditacion.application.usecase.ConsultarConvocatoriaEscuelaService(
+                convocatoriaRepository, unidadAcademicaRepository, carreraRepository, procesoRepository);
+    }
 }

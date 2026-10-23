@@ -18,13 +18,36 @@ export interface ConvocatoriaFiltro {
   anio?: number;
 }
 
-export interface IniciarConvocatoriaRequest {
+export interface ItemCarreraSeleccion {
   carreraId: string;
+  seleccionada?: boolean;
+  esObligatoria?: boolean;
+}
+
+export interface IniciarConvocatoriaRequest {
+  carreraId?: string;
+  unidadAcademicaId?: string;
   nroResolucionConeau?: string;
   fechaInicio: string;
   fechaCierre: string;
   tipoProceso: TipoProceso;
   observaciones?: string;
+  carreras?: ItemCarreraSeleccion[];
+}
+
+export interface ConvocatoriaCarreraItem {
+  id: string;
+  carreraId: string;
+  carreraNombre: string;
+  carreraSigla: string;
+  modalidad: string;
+  nivel: string;
+  areaDisciplinaria: string;
+  seleccionadaPorAea: boolean;
+  esObligatoria: boolean;
+  seleccionadaPorDe: boolean;
+  procesoId?: string;
+  estadoProceso?: string;
 }
 
 export interface RegistroConvocatoria {
@@ -58,33 +81,42 @@ export interface ConvocatoriaResumen {
   id: string;
   codigo: string;
   titulo: string;
-  carreraId: string;
-  carreraNombre: string;
+  carreraId?: string;
+  carreraNombre?: string;
   carreraSigla?: string;
-  nivel: string;
-  nroResolucionConeau: string;
+  nivel?: string;
+  nroResolucionConeau?: string;
   tipoProceso: TipoProceso;
-  estado: EstadoProceso;
+  estado: string;
   fechaInicio: string;
   fechaCierre: string;
   planTrabajoCodigo?: string;
   creadoEn: string;
+  unidadAcademicaId?: string;
+  escuelaNombre?: string;
+  cantidadCarreras?: number;
 }
 
 export interface ConvocatoriaDetalle {
   id: string;
   codigo: string;
   titulo: string;
-  carreraId: string;
-  carreraNombre: string;
+  carreraId?: string;
+  carreraNombre?: string;
   carreraSigla?: string;
-  nivel: string;
+  nivel?: string;
   tipoProceso: TipoProceso;
-  estado: EstadoProceso;
+  estado: string;
   creadoEn: string;
   creadoPor: string;
   registroConvocatoria?: RegistroConvocatoria;
   planTrabajo?: PlanTrabajoResumen;
+  unidadAcademicaId?: string;
+  unidadAcademicaNombre?: string;
+  unidadAcademicaSigla?: string;
+  confirmadoPorDe?: string;
+  confirmadoPorDeEn?: string;
+  carrerasPropuestas?: ConvocatoriaCarreraItem[];
 }
 
 export interface DocumentoAcreditacionDto {

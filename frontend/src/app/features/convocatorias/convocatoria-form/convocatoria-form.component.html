@@ -10,7 +10,7 @@
   <div class="form-header">
     <h1 class="page-title">Apertura Formal de Convocatoria CONEAU</h1>
     <p class="page-subtitle">
-      Registro oficial de procedimiento RG-001 y generación automática del Plan de Trabajo para la carrera de grado.
+      Selección institucional de Escuela, proposición de carreras por AEA y envío formal a la Dirección de Escuela.
     </p>
   </div>
 
@@ -21,31 +21,124 @@
   }
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-card">
+    <!-- BLOQUE 1: ESCUELA Y CARRERAS -->
     <div class="section-title">
-      <h3>1. Carrera Universitaria</h3>
-      <p>Seleccione la carrera de grado sobre la cual se iniciará el proceso de acreditación.</p>
+      <h3>1. Escuela y Carreras a Acreditar</h3>
+      <p>Seleccione la Escuela (Unidad Académica) y marque las carreras sugeridas u obligatorias para la acreditación.</p>
     </div>
 
     <div class="form-row">
       <div class="form-group full-width">
-        <label for="carreraId">Carrera de Grado <span class="required">*</span></label>
-        @if (loadingCarreras()) {
-          <p class="loading-inline">Cargando carreras disponibles...</p>
+        <label for="unidadAcademicaId">Escuela / Unidad Académica <span class="required">*</span></label>
+        @if (loadingEscuelas()) {
+          <p class="loading-inline">Cargando escuelas registradas...</p>
         } @else {
-          <select id="carreraId" formControlName="carreraId">
-            <option value="" disabled>Seleccione una carrera de grado...</option>
-            @for (c of carreras(); track c.id) {
-              <option [value]="c.id">{{ c.nombre }} ({{ c.sigla || 'S/S' }}) — Nivel: GRADO</option>
+          <select id="unidadAcademicaId" formControlName="unidadAcademicaId">
+            <option value="" disabled>Seleccione una escuela registrada...</option>
+            @for (escuela of escuelas(); track escuela.id) {
+              <option [value]="escuela.id">
+                {{ escuela.nombre }} {{ escuela.sigla ? '(' + escuela.sigla + ')' : '' }}
+              </option>
             }
           </select>
         }
-        @if (form.get('carreraId')?.touched && form.get('carreraId')?.hasError('required')) {
-          <span class="form-error">Debe seleccionar una carrera de grado activa.</span>
+        @if (form.get('unidadAcademicaId')?.touched && form.get('unidadAcademicaId')?.hasError('required')) {
+          <span class="form-error">Debe seleccionar una escuela registrada.</span>
         }
       </div>
     </div>
 
-    <div class="section-title">
+    <!-- Lista de Carreras de la Escuela Seleccionada -->
+    @if (form.get('unidadAcademicaId')?.value) {
+      <div class="carreras-seleccion-card">
+        <div class="carreras-header">
+          <div>
+            <span class="carreras-title">Carreras de Grado de la Escuela</span>
+            <p class="carreras-desc">
+              Seleccione las carreras que la AEA sugiere para la convocatoria y marque al menos una con el check de <strong>Obligatoria</strong>.
+            </p>
+          </div>
+          @if (carrerasState().length > 0) {
+            <span class="badge-total">
+              {{ carrerasState().length }} carreras registradas
+            </span>
+          }
+        </div>
+
+        @if (loadingCarreras()) {
+          <p class="loading-inline">Cargando carreras de la escuela...</p>
+        } @else if (carrerasState().length === 0) {
+          <div class="carreras-vacio">
+            <p>La escuela seleccionada no tiene carreras de grado activas registradas en el sistema.</p>
+          </div>
+        } @else {
+          <div class="carreras-table-wrapper">
+            <table class="table-carreras">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">Sugerir</th>
+                  <th>Carrera de Grado</th>
+                  <th>Modalidad</th>
+                  <th style="width: 170px;" class="text-center">¿Es Obligatoria?</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of carrerasState(); track item.carrera.id; let idx = $index) {
+                  <tr [class.fila-seleccionada]="item.seleccionada" [class.fila-obligatoria]="item.esObligatoria" (click)="toggleSeleccionCarrera(item.carrera.id)">
+                    <td class="text-center" (click)="$event.stopPropagation()">
+                      <input
+                        type="checkbox"
+                        [id]="'check-carrera-' + item.carrera.id"
+                        [checked]="item.seleccionada"
+                        (change)="toggleSeleccionCarrera(item.carrera.id)"
+                      />
+                    </td>
+                    <td>
+                      <label [for]="'check-carrera-' + item.carrera.id" class="carrera-label">
+                        <strong>{{ item.carrera.nombre }}</strong>
+                        @if (item.carrera.sigla) {
+                          <span class="carrera-sigla">({{ item.carrera.sigla }})</span>
+                        }
+                      </label>
+                      <span class="carrera-subinfo">{{ item.carrera.areaDisciplinaria }}</span>
+                    </td>
+                    <td>
+                      <span class="badge-modalidad">{{ item.carrera.modalidad }}</span>
+                    </td>
+                    <td class="text-center" (click)="$event.stopPropagation()">
+                      <label class="check-obligatoria-label">
+                        <input
+                          type="checkbox"
+                          [checked]="item.esObligatoria"
+                          (change)="toggleObligatoriaCarrera(item.carrera.id, $event)"
+                        />
+                        <span class="check-text" [class.texto-obligatorio]="item.esObligatoria">
+                          {{ item.esObligatoria ? 'Obligatoria' : 'Opcional / Sugerida' }}
+                        </span>
+                      </label>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Alertas de Validación de Selección -->
+          @if (!hasAtLeastOneCarreraSeleccionada()) {
+            <p class="form-warning-inline">
+              ⚠️ Debe marcar al menos una carrera para incluirla en la convocatoria.
+            </p>
+          } @else if (!hasAtLeastOneObligatoria()) {
+            <p class="form-warning-inline">
+              ⚠️ Al menos una de las carreras seleccionadas debe tener marcado el check de <strong>Obligatoria</strong>.
+            </p>
+          }
+        }
+      </div>
+    }
+
+    <!-- BLOQUE 2: METADATOS CONEAU RG-001 -->
+    <div class="section-title" style="margin-top: 1.75rem;">
       <h3>2. Metadatos de la Convocatoria CONEAU (RG-001)</h3>
       <p>Información administrativa de la resolución y plazos fijados por la Comisión Nacional.</p>
     </div>
@@ -119,7 +212,7 @@
         <textarea
           id="observaciones"
           rows="3"
-          placeholder="Detalles complementarios de la convocatoria, expediente o notas institucionales..."
+          placeholder="Detalles complementarios de la convocatoria, expediente o notas institucionales para la Dirección de Escuela..."
           formControlName="observaciones"
         ></textarea>
       </div>
@@ -127,11 +220,15 @@
 
     <div class="form-footer">
       <a routerLink="/acreditacion/convocatorias" class="btn-cancel">Cancelar</a>
-      <button type="submit" class="btn-submit" [disabled]="submitting()">
+      <button
+        type="submit"
+        class="btn-submit"
+        [disabled]="submitting() || !hasAtLeastOneCarreraSeleccionada() || !hasAtLeastOneObligatoria()"
+      >
         @if (submitting()) {
-          <span>Iniciando Convocatoria...</span>
+          <span>Enviando Convocatoria...</span>
         } @else {
-          <span>Confirmar e Iniciar Convocatoria &rarr;</span>
+          <span>Enviar a Dirección de Escuela &rarr;</span>
         }
       </button>
     </div>

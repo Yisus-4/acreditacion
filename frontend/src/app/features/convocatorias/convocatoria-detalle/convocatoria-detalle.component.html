@@ -31,6 +31,258 @@
   } @else if (convocatoria()) {
     @let c = convocatoria()!;
 
+    @if (esConvocatoriaEscuela()) {
+      <!-- ============================================================= -->
+      <!-- VISTA CONVOCATORIA DE ESCUELA (SELECCIÓN Y CONFIRMACIÓN DE)  -->
+      <!-- ============================================================= -->
+      <header class="institucional-header">
+        <div class="membrete-container">
+          <div class="membrete-textos">
+            <div class="membrete-superior">Área de Evaluación y Acreditación (AEA)</div>
+            <h1 class="membrete-intermedia">
+              {{ c.unidadAcademicaNombre || c.carreraNombre }} <span class="separador-codigo">·</span> <span class="codigo-convocatoria">{{ c.codigo }}</span>
+            </h1>
+            <div class="membrete-inferior">UNIVERSIDAD NACIONAL DE CHILECITO</div>
+          </div>
+        </div>
+
+        <div class="header-metadatos-bar">
+          <div class="meta-item-box">
+            <span class="meta-rotulo">Escuela:</span>
+            <span class="meta-valor">{{ c.unidadAcademicaNombre || c.carreraNombre }}</span>
+          </div>
+          <div class="meta-divisor"></div>
+          <div class="meta-item-box">
+            <span class="meta-rotulo">Tipo de Proceso:</span>
+            <span class="meta-valor">{{ c.tipoProceso === 'EN_FUNCIONAMIENTO' ? 'En Funcionamiento' : 'Nueva' }}</span>
+          </div>
+          <div class="meta-divisor"></div>
+          <div class="meta-item-box">
+            <span class="meta-rotulo">N° Res. CONEAU:</span>
+            <span class="meta-valor">{{ c.registroConvocatoria?.nroResolucionConeau || '—' }}</span>
+          </div>
+          <div class="meta-divisor"></div>
+          <div class="meta-item-box">
+            <span class="meta-rotulo">Plazo Oficial:</span>
+            <span class="meta-valor">{{ c.registroConvocatoria?.fechaInicio }} &rarr; {{ c.registroConvocatoria?.fechaCierre }}</span>
+          </div>
+          <div class="meta-divisor"></div>
+          <div class="meta-item-box">
+            <span class="meta-rotulo">Estado:</span>
+            <span
+              class="badge-estado-institucional"
+              [class.estado-iniciado]="c.estado === 'PENDIENTE_DIRECTOR_ESCUELA'"
+              [class.estado-autoevaluacion]="c.estado === 'CONFIRMADA_DIRECTOR_ESCUELA'"
+            >
+              {{ c.estado === 'PENDIENTE_DIRECTOR_ESCUELA' ? 'Pendiente Director de Escuela' : 'Confirmada por Director de Escuela' }}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      @if (c.registroConvocatoria?.observaciones) {
+        <div class="panel-observaciones-escuela">
+          <strong>Observaciones AEA:</strong> {{ c.registroConvocatoria?.observaciones }}
+        </div>
+      }
+
+      @if (c.estado === 'PENDIENTE_DIRECTOR_ESCUELA') {
+        <!-- CASO 1: PENDIENTE DE CONFIRMACIÓN POR EL DIRECTOR DE ESCUELA -->
+        <section class="seccion-de-card">
+          <div class="seccion-de-header">
+            <div class="icono-flujo">📋</div>
+            <div>
+              <h2 class="seccion-de-titulo">Propuesta de Carreras para Acreditación (Sugerencia AEA)</h2>
+              <p class="seccion-de-subtitulo">
+                El Área de Evaluación y Acreditación (AEA) remite la siguiente propuesta de carreras pertenecientes a la Escuela.
+                <strong>La selección de la AEA es a modo de sugerencia, excepto aquellas marcadas como OBLIGATORIAS</strong>,
+                las cuales deben ser remitidas a acreditar sin excepción.
+              </p>
+            </div>
+          </div>
+
+          <div class="aviso-orientacion-de">
+            <strong>Instrucciones para la Dirección de Escuela:</strong>
+            Revise y seleccione las carreras que confirma enviar a acreditar. Puede seleccionar varias o una sola, pero las carreras marcadas como
+            <span class="tag-obligatoria-mini">★ OBLIGATORIA</span> no pueden ser desmarcadas.
+          </div>
+
+          @if (errorConfirmacionDe()) {
+            <div class="alert-error" role="alert">
+              {{ errorConfirmacionDe() }}
+            </div>
+          }
+
+          <div class="carreras-seleccion-de-resumen">
+            <span><strong>{{ cantidadSeleccionadasDe() }}</strong> de {{ carrerasPropuestas().length }} carrera(s) seleccionada(s) para acreditar</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table-de-carreras">
+              <thead>
+                <tr>
+                  <th class="col-check">Acreditar</th>
+                  <th>Carrera de Grado</th>
+                  <th>Modalidad</th>
+                  <th>Área Disciplinaria</th>
+                  <th>Carácter Propuesta</th>
+                  <th>Decisión DE</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of carrerasPropuestas(); track item.carreraId) {
+                  <tr
+                    [class.fila-seleccionada]="estaCarreraSeleccionadaDe(item.carreraId)"
+                    [class.fila-obligatoria]="item.esObligatoria"
+                  >
+                    <td class="col-check">
+                      <label class="check-container">
+                        <input
+                          type="checkbox"
+                          [checked]="estaCarreraSeleccionadaDe(item.carreraId)"
+                          [disabled]="item.esObligatoria"
+                          (change)="toggleCarreraDe(item.carreraId, item.esObligatoria)"
+                          [title]="item.esObligatoria ? 'Esta carrera es obligatoria y no puede ser excluida' : 'Seleccionar para acreditar'"
+                        />
+                      </label>
+                    </td>
+                    <td>
+                      <div class="nombre-carrera-principal">{{ item.carreraNombre }}</div>
+                      <div class="sigla-sub">{{ item.carreraSigla || 'S/S' }} · Grado</div>
+                    </td>
+                    <td>
+                      <span class="badge-modalidad">{{ item.modalidad || 'Presencial' }}</span>
+                    </td>
+                    <td>{{ item.areaDisciplinaria || '—' }}</td>
+                    <td>
+                      @if (item.esObligatoria) {
+                        <span class="badge-tag-obligatoria" title="Obligatoria por directriz institucional">
+                          ★ OBLIGATORIA
+                        </span>
+                      } @else if (item.seleccionadaPorAea) {
+                        <span class="badge-tag-sugerida" title="Sugerida por la AEA">
+                          Sugerida por AEA
+                        </span>
+                      } @else {
+                        <span class="badge-tag-opcional">No sugerida</span>
+                      }
+                    </td>
+                    <td>
+                      @if (estaCarreraSeleccionadaDe(item.carreraId)) {
+                        <span class="decision-texto confirmada">
+                          ✓ Se enviará a acreditar
+                        </span>
+                      } @else {
+                        <span class="decision-texto excluida">
+                          ✕ No se envía
+                        </span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="seccion-de-footer">
+            <div class="footer-info">
+              Al confirmar, el sistema dará de alta formalmente el proceso de acreditación de cada carrera seleccionada junto con su Plan de Trabajo (PT-001) y Registro de Convocatoria (RG-001).
+            </div>
+            <button
+              type="button"
+              class="btn-confirmar-de-accion"
+              (click)="confirmarSeleccionDirectorEscuela()"
+              [disabled]="guardandoConfirmacionDe()"
+            >
+              @if (guardandoConfirmacionDe()) {
+                <span class="spinner-sm"></span> Confirmando carreras...
+              } @else {
+                Confirmar Carreras y Enviar a Acreditar &rarr;
+              }
+            </button>
+          </div>
+        </section>
+
+      } @else if (c.estado === 'CONFIRMADA_DIRECTOR_ESCUELA') {
+        <!-- CASO 2: CONFIRMADA POR EL DIRECTOR DE ESCUELA (LISTA DE CARRERAS Y ACCIONES A FT-012) -->
+        <section class="seccion-confirmadas-card">
+          <div class="seccion-confirmadas-header">
+            <div class="icono-exito">🎓</div>
+            <div>
+              <h2 class="seccion-confirmadas-titulo">Carreras Confirmadas en Proceso de Acreditación</h2>
+              <p class="seccion-confirmadas-subtitulo">
+                La Dirección de Escuela ha confirmado las siguientes carreras para participar en esta convocatoria.
+                Para cada carrera se encuentra iniciado su proceso de acreditación y su Plan de Trabajo institucional (PT-001).
+                Haga clic en la acción de cada carrera para gestionar sus actividades oficiales y completar la Ficha de Formalización Electrónica (Formulario FT-012).
+              </p>
+            </div>
+          </div>
+
+          <div class="carreras-grid-cards">
+            @for (carrera of carrerasConfirmadasDe(); track carrera.carreraId) {
+              <div class="carrera-card-item">
+                <div class="carrera-card-top">
+                  <div>
+                    <h3 class="carrera-card-nombre">{{ carrera.carreraNombre }}</h3>
+                    <div class="carrera-card-sigla">{{ carrera.carreraSigla || 'S/S' }} · Grado</div>
+                  </div>
+                  @if (carrera.esObligatoria) {
+                    <span class="badge-tag-obligatoria">★ OBLIGATORIA</span>
+                  } @else {
+                    <span class="badge-tag-sugerida">CONFIRMADA DE</span>
+                  }
+                </div>
+
+                <div class="carrera-card-body">
+                  <div class="carrera-card-campo">
+                    <span class="campo-etiqueta">Modalidad:</span>
+                    <span class="campo-valor">{{ carrera.modalidad || 'Presencial' }}</span>
+                  </div>
+                  <div class="carrera-card-campo">
+                    <span class="campo-etiqueta">Área Disciplinaria:</span>
+                    <span class="campo-valor">{{ carrera.areaDisciplinaria || '—' }}</span>
+                  </div>
+                  <div class="carrera-card-campo">
+                    <span class="campo-etiqueta">Estado de Acreditación:</span>
+                    <span class="badge-proceso-activo">{{ carrera.estadoProceso || 'INICIADO' }}</span>
+                  </div>
+                </div>
+
+                <div class="carrera-card-footer">
+                  @if (carrera.procesoId) {
+                    <a [routerLink]="['/acreditacion/convocatorias', carrera.procesoId]" class="btn-ir-actividades">
+                      <span>Completar Actividades / Ficha FT-012</span>
+                      <span class="flecha">&rarr;</span>
+                    </a>
+                  } @else {
+                    <span class="texto-sin-proceso">Proceso en inicialización...</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (carrerasNoConfirmadasDe().length > 0) {
+            <div class="carreras-excluidas-seccion">
+              <h4 class="subtitulo-excluidas">Carreras de la Escuela no enviadas a acreditar en esta convocatoria ({{ carrerasNoConfirmadasDe().length }})</h4>
+              <ul class="lista-excluidas">
+                @for (noConf of carrerasNoConfirmadasDe(); track noConf.carreraId) {
+                  <li>
+                    <span class="nombre-excluida">{{ noConf.carreraNombre }} ({{ noConf.carreraSigla || 'S/S' }})</span>
+                    <span class="motivo-excluida">— Decisión Dirección de Escuela (No remitida en esta convocatoria)</span>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        </section>
+      }
+
+    } @else {
+      <!-- ============================================================= -->
+      <!-- VISTA INDIVIDUAL DE CARRERA: ACTIVIDADES Y FICHA FT-012        -->
+      <!-- ============================================================= -->
+
     <!-- 1. Encabezado Institucional (DESIGN.md 7.1 y 4) -->
     <header class="institucional-header">
       <div class="membrete-container">
@@ -451,7 +703,7 @@
                 [procesoId]="c.id"
                 [planTrabajoId]="planTrabajo()?.id || ''"
                 [procesoCodigo]="c.codigo"
-                [carreraNombre]="c.carreraNombre"
+                [carreraNombre]="c.carreraNombre || ''"
                 [embedded]="true"
               ></app-normativa-detalle>
             </div>
@@ -1398,7 +1650,7 @@
                     [procesoId]="c.id"
                     [planTrabajoId]="planTrabajo()?.id || ''"
                     [procesoCodigo]="c.codigo"
-                    [carreraNombre]="c.carreraNombre"
+                    [carreraNombre]="c.carreraNombre || ''"
                     [embedded]="true"
                   ></app-normativa-detalle>
                 </div>
@@ -1648,6 +1900,7 @@
       </div>
     }
   }
+}
 
   <!-- Modal para completar Actividad 1 -->
   @if (actividadSeleccionada()) {

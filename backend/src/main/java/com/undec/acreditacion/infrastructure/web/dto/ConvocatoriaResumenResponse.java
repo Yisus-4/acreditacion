@@ -18,6 +18,28 @@ public record ConvocatoriaResumenResponse(
         LocalDate fechaInicio,
         LocalDate fechaCierre,
         String planTrabajoCodigo,
-        Instant creadoEn
+        Instant creadoEn,
+        UUID unidadAcademicaId,
+        String escuelaNombre,
+        Integer cantidadCarreras
 ) {
+    public ConvocatoriaResumenResponse(
+            UUID id,
+            String codigo,
+            String titulo,
+            UUID carreraId,
+            String carreraNombre,
+            String carreraSigla,
+            String nivel,
+            String nroResolucionConeau,
+            String tipoProceso,
+            String estado,
+            LocalDate fechaInicio,
+            LocalDate fechaCierre,
+            String planTrabajoCodigo,
+            Instant creadoEn
+    ) {
+        this(id, codigo, titulo, carreraId, carreraNombre, carreraSigla, nivel, nroResolucionConeau,
+             tipoProceso, estado, fechaInicio, fechaCierre, planTrabajoCodigo, creadoEn, null, null, null);
+    }
 }

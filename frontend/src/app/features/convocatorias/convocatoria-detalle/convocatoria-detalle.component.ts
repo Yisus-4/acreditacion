@@ -82,6 +82,32 @@ export class ConvocatoriaDetalleComponent implements OnInit {
   readonly filtroEstado = signal<string>('TODOS');
   readonly busquedaTexto = signal<string>('');
 
+  // Estado Convocatoria de Escuela (Selección y Confirmación del Director de Escuela)
+  readonly carrerasSeleccionadasDe = signal<Set<string>>(new Set<string>());
+  readonly guardandoConfirmacionDe = signal<boolean>(false);
+  readonly errorConfirmacionDe = signal<string | null>(null);
+
+  readonly esConvocatoriaEscuela = computed(() => {
+    const c = this.convocatoria();
+    return !!c && (!!c.unidadAcademicaId || (c.carrerasPropuestas && c.carrerasPropuestas.length > 0));
+  });
+
+  readonly carrerasPropuestas = computed(() => {
+    return this.convocatoria()?.carrerasPropuestas ?? [];
+  });
+
+  readonly carrerasConfirmadasDe = computed(() => {
+    return (this.convocatoria()?.carrerasPropuestas ?? []).filter((item) => item.seleccionadaPorDe);
+  });
+
+  readonly carrerasNoConfirmadasDe = computed(() => {
+    return (this.convocatoria()?.carrerasPropuestas ?? []).filter((item) => !item.seleccionadaPorDe);
+  });
+
+  readonly cantidadSeleccionadasDe = computed(() => {
+    return this.carrerasSeleccionadasDe().size;
+  });
+
   // Estado Actividad 4 (Documentación de interés)
   readonly documentosAct4 = signal<DocumentoInteresDto[]>([]);
   readonly archivoAct4 = signal<File | null>(null);
@@ -358,6 +384,15 @@ export class ConvocatoriaDetalleComponent implements OnInit {
     this.convocatoriaService.obtenerConvocatoria(id).subscribe({
       next: (conv) => {
         this.convocatoria.set(conv);
+
+        // Si es una convocatoria a nivel de Escuela (con carreras propuestas)
+        if (conv.carrerasPropuestas && conv.carrerasPropuestas.length > 0) {
+          this.initSeleccionDirectorEscuela(conv);
+          this.loading.set(false);
+          return;
+        }
+
+        // Si es un proceso individual de acreditación de carrera
         this.convocatoriaService.obtenerPlanTrabajo(id).subscribe({
           next: (plan) => {
             this.planTrabajo.set(plan);
@@ -376,6 +411,79 @@ export class ConvocatoriaDetalleComponent implements OnInit {
       error: (err) => {
         this.error.set(err?.error?.error || 'No fue posible cargar el detalle de la convocatoria.');
         this.loading.set(false);
+      },
+    });
+  }
+
+  initSeleccionDirectorEscuela(conv: ConvocatoriaDetalle): void {
+    const seleccionadas = new Set<string>();
+    for (const item of conv.carrerasPropuestas ?? []) {
+      if (conv.estado === 'CONFIRMADA_DIRECTOR_ESCUELA') {
+        if (item.seleccionadaPorDe) {
+          seleccionadas.add(item.carreraId);
+        }
+      } else {
+        // En estado PENDIENTE_DIRECTOR_ESCUELA:
+        // Las obligatorias van marcadas por regla institucional,
+        // y las seleccionadas por AEA se pre-marcan como sugerencia.
+        if (item.esObligatoria || item.seleccionadaPorAea) {
+          seleccionadas.add(item.carreraId);
+        }
+      }
+    }
+    this.carrerasSeleccionadasDe.set(seleccionadas);
+  }
+
+  toggleCarreraDe(carreraId: string, esObligatoria: boolean): void {
+    if (esObligatoria) {
+      // Las carreras obligatorias no pueden ser desmarcadas
+      return;
+    }
+    const current = new Set(this.carrerasSeleccionadasDe());
+    if (current.has(carreraId)) {
+      current.delete(carreraId);
+    } else {
+      current.add(carreraId);
+    }
+    this.carrerasSeleccionadasDe.set(current);
+  }
+
+  estaCarreraSeleccionadaDe(carreraId: string): boolean {
+    return this.carrerasSeleccionadasDe().has(carreraId);
+  }
+
+  confirmarSeleccionDirectorEscuela(): void {
+    const conv = this.convocatoria();
+    if (!conv) return;
+
+    const seleccionadas = Array.from(this.carrerasSeleccionadasDe());
+
+    // Validar que todas las obligatorias estén incluidas
+    for (const item of conv.carrerasPropuestas ?? []) {
+      if (item.esObligatoria && !seleccionadas.includes(item.carreraId)) {
+        this.errorConfirmacionDe.set(`La carrera obligatoria "${item.carreraNombre}" debe incluirse obligatoriamente.`);
+        return;
+      }
+    }
+
+    if (seleccionadas.length === 0) {
+      this.errorConfirmacionDe.set('Debe seleccionar al menos una carrera para enviar a acreditar.');
+      return;
+    }
+
+    this.guardandoConfirmacionDe.set(true);
+    this.errorConfirmacionDe.set(null);
+
+    this.convocatoriaService.confirmarConvocatoriaDe(conv.id, seleccionadas).subscribe({
+      next: (actualizada) => {
+        this.convocatoria.set(actualizada);
+        this.initSeleccionDirectorEscuela(actualizada);
+        this.guardandoConfirmacionDe.set(false);
+        this.bannerExitoPlan.set('¡Carreras confirmadas exitosamente por la Dirección de Escuela! Se han iniciado los procesos de acreditación para cada carrera seleccionada.');
+      },
+      error: (err) => {
+        this.errorConfirmacionDe.set(err?.error?.error || 'No fue posible confirmar la selección de carreras.');
+        this.guardandoConfirmacionDe.set(false);
       },
     });
   }

@@ -26,6 +26,10 @@ import java.util.stream.Collectors;
 public class ConvocatoriaController {
 
     private final IniciarConvocatoriaUseCase iniciarConvocatoriaUseCase;
+    private final IniciarConvocatoriaEscuelaUseCase iniciarConvocatoriaEscuelaUseCase;
+    private final ConfirmarConvocatoriaDirectorEscuelaUseCase confirmarConvocatoriaDirectorEscuelaUseCase;
+    private final ConsultarConvocatoriaEscuelaUseCase consultarConvocatoriaEscuelaUseCase;
+    private final com.undec.acreditacion.domain.ports.ConvocatoriaEscuelaRepositoryPort convocatoriaEscuelaRepository;
     private final ConsultarConvocatoriaUseCase consultarConvocatoriaUseCase;
     private final ListarConvocatoriasUseCase listarConvocatoriasUseCase;
     private final EliminarConvocatoriaUseCase eliminarConvocatoriaUseCase;
@@ -39,6 +43,10 @@ public class ConvocatoriaController {
 
     public ConvocatoriaController(
             IniciarConvocatoriaUseCase iniciarConvocatoriaUseCase,
+            IniciarConvocatoriaEscuelaUseCase iniciarConvocatoriaEscuelaUseCase,
+            ConfirmarConvocatoriaDirectorEscuelaUseCase confirmarConvocatoriaDirectorEscuelaUseCase,
+            ConsultarConvocatoriaEscuelaUseCase consultarConvocatoriaEscuelaUseCase,
+            com.undec.acreditacion.domain.ports.ConvocatoriaEscuelaRepositoryPort convocatoriaEscuelaRepository,
             ConsultarConvocatoriaUseCase consultarConvocatoriaUseCase,
             ListarConvocatoriasUseCase listarConvocatoriasUseCase,
             EliminarConvocatoriaUseCase eliminarConvocatoriaUseCase,
@@ -50,6 +58,10 @@ public class ConvocatoriaController {
             DocumentoAcreditacionRepositoryPort documentoRepository,
             UserRepository userRepository) {
         this.iniciarConvocatoriaUseCase = iniciarConvocatoriaUseCase;
+        this.iniciarConvocatoriaEscuelaUseCase = iniciarConvocatoriaEscuelaUseCase;
+        this.confirmarConvocatoriaDirectorEscuelaUseCase = confirmarConvocatoriaDirectorEscuelaUseCase;
+        this.consultarConvocatoriaEscuelaUseCase = consultarConvocatoriaEscuelaUseCase;
+        this.convocatoriaEscuelaRepository = convocatoriaEscuelaRepository;
         this.consultarConvocatoriaUseCase = consultarConvocatoriaUseCase;
         this.listarConvocatoriasUseCase = listarConvocatoriasUseCase;
         this.eliminarConvocatoriaUseCase = eliminarConvocatoriaUseCase;
@@ -67,6 +79,33 @@ public class ConvocatoriaController {
     public ResponseEntity<ConvocatoriaDetalleResponse> iniciarConvocatoria(@RequestBody IniciarConvocatoriaRequest request) {
         UUID usuarioId = resolverUsuarioAutenticadoId();
 
+        // 1. Si es convocatoria a nivel Escuela / Selección múltiple de carreras
+        if (request.unidadAcademicaId() != null || (request.carreras() != null && !request.carreras().isEmpty())) {
+            List<ItemCarreraSeleccionCommand> items = request.carreras() != null
+                    ? request.carreras().stream().map(c -> new ItemCarreraSeleccionCommand(
+                            c.carreraId(),
+                            c.seleccionada() != null ? c.seleccionada() : true,
+                            c.esObligatoria() != null ? c.esObligatoria() : false
+                    )).toList()
+                    : Collections.emptyList();
+
+            IniciarConvocatoriaEscuelaCommand command = new IniciarConvocatoriaEscuelaCommand(
+                    request.unidadAcademicaId(),
+                    request.tipoProceso() != null ? request.tipoProceso() : TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
+                    request.nroResolucionConeau(),
+                    request.fechaInicio(),
+                    request.fechaCierre(),
+                    request.observaciones(),
+                    items,
+                    usuarioId
+            );
+
+            Convocatoria conv = iniciarConvocatoriaEscuelaUseCase.iniciar(command);
+            ConvocatoriaEscuelaDetalleDto detalle = consultarConvocatoriaEscuelaUseCase.obtenerPorId(conv.getId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(construirDetalleResponseDesdeEscuela(detalle));
+        }
+
+        // 2. Modo compatibilidad histórica con proceso de carrera individual
         IniciarConvocatoriaCommand command = new IniciarConvocatoriaCommand(
                 request.carreraId(),
                 request.nroResolucionConeau(),
@@ -82,6 +121,24 @@ public class ConvocatoriaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PostMapping("/{id}/confirmar-de")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    public ResponseEntity<ConvocatoriaDetalleResponse> confirmarConvocatoriaDirectorEscuela(
+            @PathVariable UUID id,
+            @RequestBody ConfirmarConvocatoriaDeRequest request
+    ) {
+        UUID usuarioId = resolverUsuarioAutenticadoId();
+        ConfirmarConvocatoriaDirectorEscuelaCommand command = new ConfirmarConvocatoriaDirectorEscuelaCommand(
+                id,
+                request.carrerasSeleccionadas() != null ? request.carrerasSeleccionadas() : Collections.emptyList(),
+                usuarioId
+        );
+
+        confirmarConvocatoriaDirectorEscuelaUseCase.confirmar(command);
+        ConvocatoriaEscuelaDetalleDto detalle = consultarConvocatoriaEscuelaUseCase.obtenerPorId(id);
+        return ResponseEntity.ok(construirDetalleResponseDesdeEscuela(detalle));
+    }
+
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<List<ConvocatoriaResumenResponse>> listarConvocatorias(
@@ -90,10 +147,37 @@ public class ConvocatoriaController {
             @RequestParam(required = false) TipoProcesoAcreditacion tipoProceso,
             @RequestParam(required = false) Integer anio
     ) {
+        List<ConvocatoriaResumenResponse> response = new ArrayList<>();
+
+        // 1. Agregar Convocatorias de Escuela
+        List<ConvocatoriaEscuelaDetalleDto> escuelasConvocatorias = consultarConvocatoriaEscuelaUseCase.listarTodas();
+        for (ConvocatoriaEscuelaDetalleDto ec : escuelasConvocatorias) {
+            response.add(new ConvocatoriaResumenResponse(
+                    ec.id(),
+                    ec.codigo(),
+                    ec.titulo(),
+                    null,
+                    ec.unidadAcademicaNombre(),
+                    ec.unidadAcademicaSigla(),
+                    "GRADO",
+                    ec.nroResolucionConeau() != null ? ec.nroResolucionConeau() : "",
+                    ec.tipoProceso().name(),
+                    ec.estado().name(),
+                    ec.fechaInicio(),
+                    ec.fechaCierre(),
+                    null,
+                    ec.creadoEn(),
+                    ec.unidadAcademicaId(),
+                    ec.unidadAcademicaNombre(),
+                    ec.carreras().size()
+            ));
+        }
+
+        // 2. Agregar Procesos de Acreditación individuales
         ConvocatoriaFiltro filtro = new ConvocatoriaFiltro(carreraId, estado, tipoProceso, anio);
         List<ProcesoAcreditacion> procesos = listarConvocatoriasUseCase.listar(filtro);
 
-        List<ConvocatoriaResumenResponse> response = procesos.stream().map(p -> {
+        for (ProcesoAcreditacion p : procesos) {
             Optional<Carrera> carreraOpt = carreraRepository.findById(p.getCarreraId());
             Optional<RegistroConvocatoria> regOpt = registroRepository.findByProcesoId(p.getId());
             Optional<PlanTrabajo> planOpt = Optional.empty();
@@ -102,7 +186,7 @@ public class ConvocatoriaController {
             } catch (Exception ignored) {
             }
 
-            return new ConvocatoriaResumenResponse(
+            response.add(new ConvocatoriaResumenResponse(
                     p.getId(),
                     p.getCodigo(),
                     p.getTitulo(),
@@ -116,9 +200,12 @@ public class ConvocatoriaController {
                     regOpt.map(RegistroConvocatoria::getFechaInicio).orElse(null),
                     regOpt.map(RegistroConvocatoria::getFechaCierre).orElse(null),
                     planOpt.map(PlanTrabajo::getCodigo).orElse(null),
-                    p.getCreadoEn()
-            );
-        }).collect(Collectors.toList());
+                    p.getCreadoEn(),
+                    null,
+                    null,
+                    1
+            ));
+        }
 
         return ResponseEntity.ok(response);
     }
@@ -126,6 +213,12 @@ public class ConvocatoriaController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<ConvocatoriaDetalleResponse> obtenerPorId(@PathVariable UUID id) {
+        Optional<Convocatoria> convOpt = convocatoriaEscuelaRepository.findById(id);
+        if (convOpt.isPresent()) {
+            ConvocatoriaEscuelaDetalleDto detalle = consultarConvocatoriaEscuelaUseCase.obtenerPorId(id);
+            return ResponseEntity.ok(construirDetalleResponseDesdeEscuela(detalle));
+        }
+
         ProcesoAcreditacion proceso = consultarConvocatoriaUseCase.obtenerPorId(id);
         return ResponseEntity.ok(construirDetalleResponse(proceso));
     }
@@ -310,6 +403,48 @@ public class ConvocatoriaController {
                 regResponse,
                 planResponse,
                 actividadesDetalle
+        );
+    }
+
+    private ConvocatoriaDetalleResponse construirDetalleResponseDesdeEscuela(ConvocatoriaEscuelaDetalleDto d) {
+        RegistroConvocatoriaResponse regResponse = new RegistroConvocatoriaResponse(
+                d.id(),
+                d.nroResolucionConeau() != null ? d.nroResolucionConeau() : "",
+                d.fechaInicio(),
+                d.fechaCierre(),
+                d.observaciones(),
+                null,
+                "",
+                "PRESENCIAL",
+                d.tipoProceso().name(),
+                FaseEvaluacion.PRIMERA_FASE.name(),
+                null,
+                null,
+                d.creadoEn(),
+                d.actualizadoEn()
+        );
+
+        return new ConvocatoriaDetalleResponse(
+                d.id(),
+                d.codigo(),
+                d.titulo(),
+                null,
+                d.unidadAcademicaNombre(),
+                d.unidadAcademicaSigla(),
+                "GRADO",
+                d.tipoProceso().name(),
+                d.estado().name(),
+                d.creadoEn(),
+                d.creadoPor(),
+                regResponse,
+                null,
+                Collections.emptyList(),
+                d.unidadAcademicaId(),
+                d.unidadAcademicaNombre(),
+                d.unidadAcademicaSigla(),
+                d.confirmadoPorDe(),
+                d.confirmadoPorDeEn(),
+                d.carreras()
         );
     }
 
