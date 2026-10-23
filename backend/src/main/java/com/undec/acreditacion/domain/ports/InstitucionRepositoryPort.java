@@ -18,5 +18,9 @@ public interface InstitucionRepositoryPort {
 
     Optional<Institucion> findByNombre(String nombre);
 
+    Optional<Institucion> findBySigla(String sigla);
+
     List<Institucion> findAll();
+
+    void deleteById(UUID id);
 }

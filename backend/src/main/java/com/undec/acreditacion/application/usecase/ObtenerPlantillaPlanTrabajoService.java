@@ -176,11 +176,7 @@ public class ObtenerPlantillaPlanTrabajoService implements ObtenerPlantillaPlanT
 
         List<PlantillaActividadDto> coneau = new ArrayList<>();
         coneau.add(new PlantillaActividadDto(
-                34, "1.7", "Verificar y/o actualizar la información institucional precargada",
-                HojaPlanTrabajo.CONEAU, PrioridadActividad.ALTA, "Área de Evaluación y Acreditación (AEA)"
-        ));
-        coneau.add(new PlantillaActividadDto(
-                35, "1.8", "Formalización electrónica de participación en la convocatoria",
+                34, "1.8", "Formalización electrónica de participación en la convocatoria",
                 HojaPlanTrabajo.CONEAU, PrioridadActividad.ALTA, "Área de Evaluación y Acreditación (AEA)"
         ));
         coneau.add(new PlantillaActividadDto(

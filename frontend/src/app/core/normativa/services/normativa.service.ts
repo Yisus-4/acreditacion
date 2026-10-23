@@ -27,6 +27,10 @@ export class NormativaService {
     return this.detalle()?.porcentajeAvance ?? 0;
   });
 
+  readonly tieneDocumentosObservadosPendientes = computed(() =>
+    (this.detalle()?.documentos ?? []).some((d) => d.observado)
+  );
+
   readonly puedeEnviar = computed(() => {
     const d = this.detalle();
     if (!d) return false;
@@ -34,7 +38,8 @@ export class NormativaService {
     return (
       estadosPermitidos.includes(d.estado) &&
       d.porcentajeAvance >= 100 &&
-      (!d.documentosFaltantes || d.documentosFaltantes.length === 0)
+      (!d.documentosFaltantes || d.documentosFaltantes.length === 0) &&
+      !this.tieneDocumentosObservadosPendientes()
     );
   });
 

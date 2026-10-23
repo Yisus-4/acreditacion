@@ -156,9 +156,15 @@ public final class PlanTrabajo {
                 }
             }
 
-            // 3. Buscar si existía una actividad de normativa previa en el plan para preservar su ID y estado
+            // 3. Buscar si existían actividades troncales (1.3, ACT-04, ACT-06) previas en el plan para preservar su ID y estado
             Optional<ActividadPlanTrabajo> normativaPreviaOpt = this.actividades.stream()
                     .filter(PlanTrabajo::esActividadNormativa)
+                    .findFirst();
+            Optional<ActividadPlanTrabajo> act4PreviaOpt = this.actividades.stream()
+                    .filter(PlanTrabajo::esActividadIdentificarDocumentacionInteres)
+                    .findFirst();
+            Optional<ActividadPlanTrabajo> act6PreviaOpt = this.actividades.stream()
+                    .filter(PlanTrabajo::esActividadFormalizacionElectronica)
                     .findFirst();
 
             // Reemplazar actividades de cronograma previas (orden > 2)
@@ -166,9 +172,14 @@ public final class PlanTrabajo {
 
             // 4. Incorporar nuevas actividades asegurando orden único secuencial
             boolean normativaIncorporada = false;
+            boolean act4Incorporada = false;
+            boolean act6Incorporada = false;
             int ordenActual = 3;
             for (ActividadPlanTrabajo act : cronograma) {
                 boolean esNormativa = esActividadNormativa(act);
+                boolean esAct4 = esActividadIdentificarDocumentacionInteres(act);
+                boolean esAct6 = esActividadFormalizacionElectronica(act);
+
                 int orden = act.getNumeroOrden() >= 3 ? act.getNumeroOrden() : ordenActual;
                 // Si ya existe alguna con ese orden, usamos el correlativo secuencial
                 final int finalOrden = orden;
@@ -178,27 +189,14 @@ public final class PlanTrabajo {
 
                 ActividadPlanTrabajo nueva;
                 if (esNormativa && normativaPreviaOpt.isPresent()) {
-                    ActividadPlanTrabajo prev = normativaPreviaOpt.get();
                     normativaIncorporada = true;
-                    nueva = ActividadPlanTrabajo.rehydrate(
-                            prev.getId(),
-                            this.id,
-                            orden,
-                            act.getCodigoActividad() != null ? act.getCodigoActividad() : prev.getCodigoActividad(),
-                            act.getNombre() != null ? act.getNombre() : prev.getNombre(),
-                            prev.getEstado(),
-                            prev.getFechaReunionCoordinacion(),
-                            prev.getSintesisAcuerdos(),
-                            prev.getCompletadaEn(),
-                            prev.getCompletadaPor(),
-                            act.getHoja() != null ? act.getHoja() : prev.getHoja(),
-                            act.getFechaInicioEstimada() != null ? act.getFechaInicioEstimada() : prev.getFechaInicioEstimada(),
-                            act.getFechaFinEstimada() != null ? act.getFechaFinEstimada() : prev.getFechaFinEstimada(),
-                            act.getResponsable() != null ? act.getResponsable() : prev.getResponsable(),
-                            act.getPrioridad() != null ? act.getPrioridad() : prev.getPrioridad(),
-                            prev.getCreadoEn(),
-                            Instant.now()
-                    );
+                    nueva = fusionarConPrevia(normativaPreviaOpt.get(), act, orden);
+                } else if (esAct4 && act4PreviaOpt.isPresent()) {
+                    act4Incorporada = true;
+                    nueva = fusionarConPrevia(act4PreviaOpt.get(), act, orden);
+                } else if (esAct6 && act6PreviaOpt.isPresent()) {
+                    act6Incorporada = true;
+                    nueva = fusionarConPrevia(act6PreviaOpt.get(), act, orden);
                 } else {
                     nueva = ActividadPlanTrabajo.rehydrate(
                             act.getId(),
@@ -219,43 +217,116 @@ public final class PlanTrabajo {
                             act.getCreadoEn(),
                             act.getActualizadoEn()
                     );
+                    nueva.restaurarRegistroComunicacion(act.getAreasInformadas(), act.getDocumentacionRemitida());
                 }
                 this.actividades.add(nueva);
                 ordenActual = Math.max(ordenActual, orden) + 1;
             }
 
-            // Si había una actividad de normativa previa y el cronograma no incluyó ninguna, preservarla
+            // Preservar actividades troncales previas que no hayan venido en el cronograma enviado
             if (normativaPreviaOpt.isPresent() && !normativaIncorporada) {
-                ActividadPlanTrabajo prev = normativaPreviaOpt.get();
-                int orden = prev.getNumeroOrden();
-                final int ordFinal = orden;
-                if (this.actividades.stream().anyMatch(a -> a.getNumeroOrden() == ordFinal)) {
-                    orden = ordenActual;
-                }
-                ActividadPlanTrabajo preservada = ActividadPlanTrabajo.rehydrate(
-                        prev.getId(),
-                        this.id,
-                        orden,
-                        prev.getCodigoActividad(),
-                        prev.getNombre(),
-                        prev.getEstado(),
-                        prev.getFechaReunionCoordinacion(),
-                        prev.getSintesisAcuerdos(),
-                        prev.getCompletadaEn(),
-                        prev.getCompletadaPor(),
-                        prev.getHoja(),
-                        prev.getFechaInicioEstimada(),
-                        prev.getFechaFinEstimada(),
-                        prev.getResponsable(),
-                        prev.getPrioridad(),
-                        prev.getCreadoEn(),
-                        Instant.now()
-                );
-                this.actividades.add(preservada);
+                ordenActual = preservarActividadPrevia(normativaPreviaOpt.get(), ordenActual);
             }
+            if (act4PreviaOpt.isPresent() && !act4Incorporada) {
+                ordenActual = preservarActividadPrevia(act4PreviaOpt.get(), ordenActual);
+            }
+            if (act6PreviaOpt.isPresent() && !act6Incorporada) {
+                preservarActividadPrevia(act6PreviaOpt.get(), ordenActual);
+            }
+
+            // Re-normalizar numeroOrden de forma estrictamente secuencial y única para evitar colisiones
+            List<ActividadPlanTrabajo> normalizadas = new ArrayList<>();
+            int seq = 1;
+            for (ActividadPlanTrabajo a : this.actividades) {
+                if (a.getNumeroOrden() == seq) {
+                    normalizadas.add(a);
+                } else {
+                    ActividadPlanTrabajo reordenada = ActividadPlanTrabajo.rehydrate(
+                            a.getId(),
+                            a.getPlanTrabajoId(),
+                            seq,
+                            a.getCodigoActividad(),
+                            a.getNombre(),
+                            a.getEstado(),
+                            a.getFechaReunionCoordinacion(),
+                            a.getSintesisAcuerdos(),
+                            a.getCompletadaEn(),
+                            a.getCompletadaPor(),
+                            a.getHoja(),
+                            a.getFechaInicioEstimada(),
+                            a.getFechaFinEstimada(),
+                            a.getResponsable(),
+                            a.getPrioridad(),
+                            a.getCreadoEn(),
+                            Instant.now()
+                    );
+                    reordenada.restaurarRegistroComunicacion(a.getAreasInformadas(), a.getDocumentacionRemitida());
+                    normalizadas.add(reordenada);
+                }
+                seq++;
+            }
+            this.actividades.clear();
+            this.actividades.addAll(normalizadas);
         }
 
         this.actualizadoEn = Instant.now();
+    }
+
+    private ActividadPlanTrabajo fusionarConPrevia(ActividadPlanTrabajo prev, ActividadPlanTrabajo act, int orden) {
+        ActividadPlanTrabajo nueva = ActividadPlanTrabajo.rehydrate(
+                prev.getId(),
+                this.id,
+                orden,
+                prev.getCodigoActividad(),
+                act.getNombre() != null ? act.getNombre() : prev.getNombre(),
+                prev.getEstado(),
+                prev.getFechaReunionCoordinacion(),
+                prev.getSintesisAcuerdos(),
+                prev.getCompletadaEn(),
+                prev.getCompletadaPor(),
+                act.getHoja() != null ? act.getHoja() : prev.getHoja(),
+                act.getFechaInicioEstimada() != null ? act.getFechaInicioEstimada() : prev.getFechaInicioEstimada(),
+                act.getFechaFinEstimada() != null ? act.getFechaFinEstimada() : prev.getFechaFinEstimada(),
+                act.getResponsable() != null ? act.getResponsable() : prev.getResponsable(),
+                act.getPrioridad() != null ? act.getPrioridad() : prev.getPrioridad(),
+                prev.getCreadoEn(),
+                Instant.now()
+        );
+        nueva.restaurarRegistroComunicacion(prev.getAreasInformadas(), prev.getDocumentacionRemitida());
+        return nueva;
+    }
+
+    private int preservarActividadPrevia(ActividadPlanTrabajo prev, int ordenActual) {
+        int orden = prev.getNumeroOrden();
+        final int ordFinal = orden;
+        if (this.actividades.stream().anyMatch(a -> a.getNumeroOrden() == ordFinal)) {
+            orden = ordenActual;
+        }
+        while (existeOrden(orden)) {
+            orden++;
+        }
+        ActividadPlanTrabajo preservada = ActividadPlanTrabajo.rehydrate(
+                prev.getId(),
+                this.id,
+                orden,
+                prev.getCodigoActividad(),
+                prev.getNombre(),
+                prev.getEstado(),
+                prev.getFechaReunionCoordinacion(),
+                prev.getSintesisAcuerdos(),
+                prev.getCompletadaEn(),
+                prev.getCompletadaPor(),
+                prev.getHoja(),
+                prev.getFechaInicioEstimada(),
+                prev.getFechaFinEstimada(),
+                prev.getResponsable(),
+                prev.getPrioridad(),
+                prev.getCreadoEn(),
+                Instant.now()
+        );
+        preservada.restaurarRegistroComunicacion(prev.getAreasInformadas(), prev.getDocumentacionRemitida());
+        this.actividades.add(preservada);
+        return Math.max(ordenActual, orden) + 1;
     }
 
     public void agregarActividad(ActividadPlanTrabajo actividad) {
@@ -293,10 +364,23 @@ public final class PlanTrabajo {
                         actividad.getCreadoEn(),
                         actividad.getActualizadoEn()
                 );
+                paraAgregar.restaurarRegistroComunicacion(actividad.getAreasInformadas(), actividad.getDocumentacionRemitida());
             }
             this.actividades.add(paraAgregar);
             this.actualizadoEn = Instant.now();
         }
+    }
+
+    public boolean eliminarActividadSiExiste(String codigoActividad) {
+        if (codigoActividad == null) return false;
+        boolean removed = this.actividades.removeIf(a ->
+                codigoActividad.equals(a.getCodigoActividad())
+                        || (a.getNombre() != null && a.getNombre().toLowerCase().contains(codigoActividad.toLowerCase()))
+        );
+        if (removed) {
+            this.actualizadoEn = Instant.now();
+        }
+        return removed;
     }
 
     private boolean existeOrden(int orden) {
@@ -310,6 +394,22 @@ public final class PlanTrabajo {
             return true;
         }
         return a.getNombre() != null && a.getNombre().toLowerCase().contains("normativa");
+    }
+
+    public static boolean esActividadIdentificarDocumentacionInteres(ActividadPlanTrabajo a) {
+        if (a == null) return false;
+        if (ActividadPlanTrabajo.CODIGO_ACT_04.equals(a.getCodigoActividad()) || "1.5".equals(a.getCodigoActividad())) {
+            return true;
+        }
+        return a.getNombre() != null && a.getNombre().toLowerCase().contains("documentación de interés");
+    }
+
+    public static boolean esActividadFormalizacionElectronica(ActividadPlanTrabajo a) {
+        if (a == null) return false;
+        if (ActividadPlanTrabajo.CODIGO_ACT_06.equals(a.getCodigoActividad()) || "1.8".equals(a.getCodigoActividad())) {
+            return true;
+        }
+        return a.getNombre() != null && a.getNombre().toLowerCase().contains("formalización electrónica");
     }
 
     public List<ActividadPlanTrabajo> getActividadesInfo() {

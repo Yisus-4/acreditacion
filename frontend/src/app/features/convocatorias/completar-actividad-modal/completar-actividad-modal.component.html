@@ -1,15 +1,14 @@
 <div class="modal-backdrop">
   <div class="modal-dialog">
     <div class="modal-header">
-      <h3 class="modal-title">Registrar Reunión y Concluir Actividad</h3>
+      <div class="header-titles">
+        <span class="badge-modal">Actividad 1 · Hoja INFO · Nivel Grado</span>
+        <h3 class="modal-title">Informar sobre el proceso de acreditación</h3>
+      </div>
       <button type="button" class="btn-close" (click)="cancelar()" aria-label="Cerrar">&times;</button>
     </div>
 
     <div class="modal-body">
-      <p class="modal-subtitle">
-        Actividad: <strong>{{ actividadNombre }}</strong>
-      </p>
-
       @if (generalError()) {
         <div class="alert-error" role="alert">
           {{ generalError() }}
@@ -17,59 +16,120 @@
       }
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <!-- 1. Áreas informadas -->
         <div class="form-group">
-          <label for="fechaReunion">Fecha y Hora de la Reunión de Coordinación <span class="required">*</span></label>
-          <input id="fechaReunion" type="datetime-local" formControlName="fechaReunion" />
-          <small class="form-help">Formato esperado: DD/MM/AAAA HH:mm (hora local de Argentina).</small>
-          @if (fechaReunionPreview) {
-            <div class="fecha-preview">
-              Vista previa: <strong>{{ fechaReunionPreview }}</strong>
-            </div>
+          <div class="label-row">
+            <label>1. Áreas informadas sobre el proceso dispuesto por CONEAU <span class="required">*</span></label>
+            <span class="selection-counter">{{ areasSeleccionadas().length }} seleccionada(s)</span>
+          </div>
+          <small class="form-help">Seleccione al menos un área institucional o académica a la que se cursó la comunicación formal.</small>
+
+          <div class="checkbox-grid">
+            @for (area of areasCatalogo; track area.codigo) {
+              <label class="checkbox-card" [class.checked]="isAreaSelected(area.codigo)">
+                <input
+                  type="checkbox"
+                  [checked]="isAreaSelected(area.codigo)"
+                  (change)="toggleArea(area.codigo)"
+                />
+                <span class="checkbox-label">{{ area.etiqueta }}</span>
+              </label>
+            }
+          </div>
+
+          @if (areasTouched() && areasSeleccionadas().length === 0) {
+            <span class="form-error">Debe seleccionar al menos un área informada.</span>
           }
+        </div>
+
+        <!-- 2. Documentación remitida según el caso -->
+        <div class="form-group">
+          <div class="label-row">
+            <label>2. Documentación remitida según el caso <span class="required">*</span></label>
+            <span class="caso-pill">{{ etiquetaCasoDocumentacion }}</span>
+          </div>
+          <small class="form-help">Marque la documentación oficial remitida junto con la comunicación del proceso (al menos 1 documento).</small>
+
+          <div class="checkbox-list">
+            @for (doc of opcionesDocumentacion; track doc.codigo) {
+              <label class="checkbox-card checkbox-card-full" [class.checked]="isDocSelected(doc.codigo)">
+                <input
+                  type="checkbox"
+                  [checked]="isDocSelected(doc.codigo)"
+                  (change)="toggleDoc(doc.codigo)"
+                />
+                <span class="checkbox-label">{{ doc.etiqueta }}</span>
+              </label>
+            }
+          </div>
+
+          @if (docsTouched() && docsSeleccionados().length === 0) {
+            <span class="form-error">Debe seleccionar al menos un documento remitido.</span>
+          }
+        </div>
+
+        <!-- 3. Fecha de reunión coordinada con la Dirección de Carrera -->
+        <div class="form-group">
+          <label for="fechaReunion">
+            3. Fecha de reunión coordinada con la Dirección de Carrera <span class="required">*</span>
+          </label>
+          <div class="fecha-input-row">
+            <input id="fechaReunion" type="date" formControlName="fechaReunion" [min]="today" />
+            @if (fechaReunionPreview) {
+              <div class="fecha-preview">
+                Formato DD-MM-AAAA: <strong>{{ fechaReunionPreview }}</strong>
+              </div>
+            }
+          </div>
+          <small class="form-help">Reunión para poner en conocimiento las actividades necesarias para el desarrollo del proceso y coordinar la metodología de trabajo.</small>
           @if (form.get('fechaReunion')?.touched && form.get('fechaReunion')?.hasError('required')) {
-            <span class="form-error">La fecha de reunión es obligatoria.</span>
+            <span class="form-error">La fecha de la reunión coordinada con la Dirección de Carrera es obligatoria.</span>
+          } @else if (form.get('fechaReunion')?.hasError('fechaAnteriorAHoy')) {
+            <span class="form-error">La fecha de la reunión no puede ser anterior a la fecha actual.</span>
           }
         </div>
 
+        <!-- 4. Observaciones / Metodología acordada (100% Opcional) -->
         <div class="form-group">
-          <label for="tipoDocumento">Tipo de Documento Probatorio <span class="required">*</span></label>
-          <select id="tipoDocumento" formControlName="tipoDocumento">
-            <option value="ACTA_REUNION_COORDINACION">Acta de Reunión de Coordinación (AEA - Dirección)</option>
-            <option value="NORMATIVA_CONVOCATORIA">Normativa / Resolución Institucional de Apertura</option>
-          </select>
+          <div class="label-row">
+            <label for="observaciones">4. Observaciones / Metodología acordada</label>
+            <span class="optional-tag">Opcional</span>
+          </div>
+          <textarea
+            id="observaciones"
+            rows="3"
+            placeholder="Si lo desea, anote observaciones breves sobre la comunicación o la metodología de trabajo coordinada con la Dirección de Carrera..."
+            formControlName="observaciones"
+          ></textarea>
         </div>
 
+        <!-- 5. Documento / Respaldo en PDF (100% Opcional) -->
         <div class="form-group">
-          <label for="archivo">Documento PDF Firmado (Máx. 20 MB) <span class="required">*</span></label>
-          <input
-            id="archivo"
-            type="file"
-            accept=".pdf,application/pdf"
-            (change)="onFileChange($event)"
-          />
-          @if (selectedFile) {
-            <span class="file-info">
-              Archivo seleccionado: {{ selectedFile.name }} ({{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB)
-            </span>
-          }
+          <div class="label-row">
+            <label for="archivo">5. Documento / Respaldo en PDF (Máx. 20 MB)</label>
+            <span class="optional-tag">Opcional · No bloqueante</span>
+          </div>
+          <div class="file-upload-box">
+            <input
+              #archivoInput
+              id="archivo"
+              type="file"
+              accept=".pdf,application/pdf"
+              (change)="onFileChange($event)"
+            />
+            @if (selectedFile) {
+              <div class="file-selected-bar">
+                <span class="file-info">
+                  {{ selectedFile.name }} ({{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB)
+                </span>
+                <button type="button" class="btn-clear-file" (click)="quitarArchivo(archivoInput)">
+                  Quitar archivo
+                </button>
+              </div>
+            }
+          </div>
           @if (fileError()) {
             <span class="form-error">{{ fileError() }}</span>
-          }
-        </div>
-
-        <div class="form-group">
-          <label for="sintesisAcuerdos">Síntesis de Acuerdos y Compromisos <span class="required">*</span></label>
-          <textarea
-            id="sintesisAcuerdos"
-            rows="4"
-            placeholder="Documente los acuerdos alcanzados con la Dirección de Carrera (mínimo 10 caracteres)..."
-            formControlName="sintesisAcuerdos"
-          ></textarea>
-          @if (form.get('sintesisAcuerdos')?.touched && form.get('sintesisAcuerdos')?.hasError('required')) {
-            <span class="form-error">La síntesis de acuerdos es obligatoria.</span>
-          }
-          @if (form.get('sintesisAcuerdos')?.touched && form.get('sintesisAcuerdos')?.hasError('minlength')) {
-            <span class="form-error">La síntesis debe contener al menos 10 caracteres explicativos.</span>
           }
         </div>
 
@@ -79,9 +139,9 @@
           </button>
           <button type="submit" class="btn-submit" [disabled]="submitting()">
             @if (submitting()) {
-              <span>Guardando en MinIO y BD...</span>
+              <span>Registrando comunicación...</span>
             } @else {
-              <span>Completar Actividad &check;</span>
+              <span>Registrar comunicación y completar actividad</span>
             }
           </button>
         </div>

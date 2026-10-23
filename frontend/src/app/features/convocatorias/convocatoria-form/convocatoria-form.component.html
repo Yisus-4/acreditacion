@@ -52,24 +52,39 @@
 
     <div class="form-row">
       <div class="form-group">
-        <label for="nroResolucionConeau">N° de Resolución CONEAU <span class="required">*</span></label>
-        <input
-          id="nroResolucionConeau"
-          type="text"
-          placeholder="Ej: RESFC-2026-145-APN-CONEAU#ME"
-          formControlName="nroResolucionConeau"
-        />
-        @if (form.get('nroResolucionConeau')?.touched && form.get('nroResolucionConeau')?.invalid) {
-          <span class="form-error">El número de resolución es obligatorio.</span>
-        }
-      </div>
-
-      <div class="form-group">
-        <label for="tipoProceso">Tipo de Convocatoria <span class="required">*</span></label>
+        <label for="tipoProceso">Estado de la Carrera / Tipo de Convocatoria <span class="required">*</span></label>
         <select id="tipoProceso" formControlName="tipoProceso">
           <option value="EN_FUNCIONAMIENTO">Carrera en Funcionamiento</option>
           <option value="NUEVA">Carrera Nueva</option>
         </select>
+      </div>
+
+      <div class="form-group">
+        <label for="nroResolucionConeau">
+          N° de Resolución CONEAU
+          @if (esCarreraEnFuncionamiento) {
+            <span class="required">*</span>
+          }
+        </label>
+        @if (esCarreraEnFuncionamiento) {
+          <input
+            id="nroResolucionConeau"
+            type="text"
+            placeholder="Ej: RESFC-2026-145-APN-CONEAU#ME"
+            formControlName="nroResolucionConeau"
+          />
+          @if (form.get('nroResolucionConeau')?.touched && form.get('nroResolucionConeau')?.invalid) {
+            <span class="form-error">El número de resolución es obligatorio para carreras en funcionamiento.</span>
+          }
+        } @else {
+          <input
+            id="nroResolucionConeau"
+            type="text"
+            placeholder="Opcional (solo aplica para carreras en funcionamiento)"
+            formControlName="nroResolucionConeau"
+          />
+          <small class="form-hint">No obligatorio para carreras nuevas.</small>
+        }
       </div>
     </div>
 

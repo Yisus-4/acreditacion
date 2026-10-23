@@ -27,7 +27,7 @@
           </div>
         }
         <div class="title-with-badge">
-          <span class="badge-actividad-id">Actividad 1.3 — PT-001</span>
+          <span class="badge-actividad-id">Actividad 2 · Hoja INFO</span>
           <h2 class="normativa-title">Gestionar normativa de la carrera</h2>
         </div>
         <p class="normativa-sub">
@@ -55,7 +55,7 @@
               <div class="status-item">
                 <span class="status-label">Cumplimiento de Plazo:</span>
                 <span class="badge-plazo" [ngClass]="d.badgePlazo.cssClass">
-                  &#9201; {{ d.badgePlazo.etiqueta }} ({{ d.badgePlazo.diasRestantes }} días hábiles)
+                  {{ d.badgePlazo.etiqueta }} ({{ d.badgePlazo.diasRestantes }} días hábiles)
                 </span>
               </div>
             }
@@ -97,7 +97,7 @@
             [disabled]="actionLoading()"
             (click)="abrirModalSolicitar()"
           >
-            &#128392; Iniciar Solicitud de Normativa
+            Iniciar Solicitud de Normativa
           </button>
         }
 
@@ -109,7 +109,11 @@
             (click)="onEnviarDefinitiva()"
             title="Enviar la documentación a revisión formal por AEA"
           >
-            &check; Enviar a Revisión AEA
+            @if (esObservada() || detalle()?.observacionesRevision) {
+              Reenviar Documentación Corregida a AEA
+            } @else {
+              Enviar a Revisión AEA
+            }
           </button>
         }
 
@@ -126,14 +130,37 @@
       </div>
     </div>
 
-    <!-- Si fue observada, mostrar caja de feedback destacada -->
-    @if (esObservada() && detalle()?.observacionesRevision) {
+    <!-- Si fue observada, mostrar caja de feedback destacada para el usuario asignado -->
+    @if (esObservada() || detalle()?.observacionesRevision) {
       <div class="alert-observada-box">
-        <div class="obs-icon">&#9888;</div>
         <div class="obs-body">
-          <h4 class="obs-title">Observaciones emitidas por el Área de Evaluación y Acreditación (AEA):</h4>
-          <p class="obs-text">{{ detalle()?.observacionesRevision }}</p>
-          <span class="obs-hint">Por favor, corrija o reemplace los documentos señalados y vuelva a presionar "Enviar a Revisión AEA".</span>
+          <div class="obs-header-row">
+            <span class="obs-badge-destinatario">Correcciones solicitadas a Dirección de Carrera (Usuario asignado)</span>
+            <h4 class="obs-title">Dictamen de Observaciones del Área de Evaluación y Acreditación (AEA)</h4>
+          </div>
+          @if (detalle()?.observacionesRevision) {
+            <p class="obs-text"><strong>Fundamento general:</strong> {{ detalle()?.observacionesRevision }}</p>
+          }
+
+          @if (documentosObservadosPendientes().length > 0) {
+            <div class="obs-docs-pendientes">
+              <span class="obs-docs-label">Documentos pendientes de subsanación y reemplazo ({{ documentosObservadosPendientes().length }}):</span>
+              <ul class="obs-docs-list">
+                @for (docObs of documentosObservadosPendientes(); track docObs.id) {
+                  <li>
+                    <strong>{{ obtenerTituloTipoDocumento(docObs.tipoDocumento) }}</strong>
+                    (<code>{{ docObs.nombreOriginal }}</code>):
+                    <span>{{ docObs.motivoObservacion || detalle()?.observacionesRevision }}</span>
+                  </li>
+                }
+              </ul>
+              <span class="obs-hint">Suba la nueva versión PDF en cada documento observado utilizando el botón "Subir PDF Corregido" para habilitar el reenvío a revisión.</span>
+            </div>
+          } @else {
+            <div class="obs-subsanacion-lista">
+              <span class="obs-ready-text">Todos los documentos observados fueron reemplazados por su nueva versión PDF. Ya puede reenviar la documentación para nueva revisión de AEA.</span>
+            </div>
+          }
         </div>
       </div>
     }
@@ -203,6 +230,8 @@
     [procesoCodigo]="procesoCodigo"
     [carreraNombre]="carreraNombre"
     [documentos]="detalle()?.documentos || []"
+    [submitting]="actionLoading()"
+    [serverError]="errorRevision()"
     (confirmar)="confirmarRevision($event)"
     (cancelar)="cerrarModalRevisar()"
   ></app-modal-revisar-normativa>

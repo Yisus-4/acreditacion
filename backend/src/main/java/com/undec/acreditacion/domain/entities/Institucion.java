@@ -49,6 +49,49 @@ public final class Institucion {
         );
     }
 
+    public Institucion actualizar(String nombre,
+                                  String sigla,
+                                  String nuevoLogoPath,
+                                  AutoridadInstitucional maximaAutoridad,
+                                  AutoridadInstitucional administradorInstitucional,
+                                  SedeCentral sedeCentral) {
+        if (maximaAutoridad == null) {
+            throw new DomainValidationException("La máxima autoridad es obligatoria");
+        }
+        if (administradorInstitucional == null) {
+            throw new DomainValidationException("El administrador institucional es obligatorio");
+        }
+        String effectiveLogoPath = (nuevoLogoPath != null && !nuevoLogoPath.trim().isEmpty())
+                ? nuevoLogoPath.trim()
+                : this.logoPath;
+        List<AutoridadInstitucional> list = List.of(maximaAutoridad, administradorInstitucional);
+        return new Institucion(
+                this.id,
+                nombre,
+                sigla,
+                effectiveLogoPath,
+                this.activo,
+                this.creadoEn,
+                Instant.now(),
+                list,
+                sedeCentral
+        );
+    }
+
+    public Institucion cambiarEstado(boolean activo) {
+        return new Institucion(
+                this.id,
+                this.nombre,
+                this.sigla,
+                this.logoPath,
+                activo,
+                this.creadoEn,
+                Instant.now(),
+                this.autoridades,
+                this.sedeCentral
+        );
+    }
+
     public static Institucion rehydrate(UUID id,
                                        String nombre,
                                        String sigla,

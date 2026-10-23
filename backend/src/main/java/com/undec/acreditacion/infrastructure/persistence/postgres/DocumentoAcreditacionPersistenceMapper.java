@@ -17,6 +17,8 @@ public class DocumentoAcreditacionPersistenceMapper {
                 entity.getActividadId(),
                 entity.getNombreOriginal(),
                 TipoDocumentoAcreditacion.valueOf(entity.getTipoDocumento()),
+                entity.getClasificacionOrigen(),
+                entity.getDescripcion(),
                 entity.getMimeType(),
                 entity.getTamanioBytes(),
                 entity.getStoragePath(),
@@ -35,6 +37,8 @@ public class DocumentoAcreditacionPersistenceMapper {
         entity.setActividadId(domain.getActividadId());
         entity.setNombreOriginal(domain.getNombreOriginal());
         entity.setTipoDocumento(domain.getTipoDocumento().name());
+        entity.setClasificacionOrigen(domain.getClasificacionOrigen());
+        entity.setDescripcion(domain.getDescripcion());
         entity.setMimeType(domain.getMimeType());
         entity.setTamanioBytes(domain.getTamanioBytes());
         entity.setStoragePath(domain.getStoragePath());

@@ -34,6 +34,15 @@ export const routes: Routes = [
       ).then((m) => m.InstitucionListComponent),
   },
   {
+    path: 'admin/instituciones/:id/editar',
+    title: 'Editar Institución — Sistema de Acreditación UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/instituciones/institucion-register/institucion-register.component'
+      ).then((m) => m.InstitucionRegisterComponent),
+  },
+  {
     path: 'admin/instituciones/nueva',
     title: 'Registrar Institución — Sistema de Acreditación UNdeC',
     canActivate: [authGuard],

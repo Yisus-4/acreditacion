@@ -3,12 +3,16 @@ package com.undec.acreditacion.infrastructure.persistence.postgres;
 import com.undec.acreditacion.domain.entities.*;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
 public class PlanTrabajoPersistenceMapper {
+
+    /** Separador de valores múltiples en columnas TEXT (áreas informadas / documentación remitida). */
+    static final String SEPARADOR = " | ";
 
     public PlanTrabajo toDomain(PlanTrabajoJpaEntity entity, List<ActividadPlanTrabajoJpaEntity> actividadesJpa) {
         if (entity == null) {
@@ -57,7 +61,7 @@ public class PlanTrabajoPersistenceMapper {
                 ? PrioridadActividad.valueOf(entity.getPrioridad())
                 : PrioridadActividad.MEDIA;
 
-        return ActividadPlanTrabajo.rehydrate(
+        ActividadPlanTrabajo actividad = ActividadPlanTrabajo.rehydrate(
                 entity.getId(),
                 entity.getPlanTrabajoId(),
                 entity.getNumeroOrden(),
@@ -76,6 +80,37 @@ public class PlanTrabajoPersistenceMapper {
                 entity.getCreadoEn(),
                 entity.getActualizadoEn()
         );
+        actividad.restaurarRegistroComunicacion(
+                deserializar(entity.getAreasInformadas(), AreaInformadaProceso.class),
+                deserializar(entity.getDocumentacionRemitida(), DocumentacionRemitidaProceso.class)
+        );
+        return actividad;
+    }
+
+    private static <E extends Enum<E>> String serializar(List<E> valores) {
+        if (valores == null || valores.isEmpty()) {
+            return null;
+        }
+        return valores.stream().map(Enum::name).collect(Collectors.joining(SEPARADOR));
+    }
+
+    private static <E extends Enum<E>> List<E> deserializar(String valor, Class<E> tipo) {
+        if (valor == null || valor.isBlank()) {
+            return List.of();
+        }
+        List<E> resultado = new ArrayList<>();
+        for (String parte : valor.split("\\|")) {
+            String codigo = parte.trim();
+            if (codigo.isEmpty()) {
+                continue;
+            }
+            try {
+                resultado.add(Enum.valueOf(tipo, codigo));
+            } catch (IllegalArgumentException ignored) {
+                // Códigos obsoletos o desconocidos se ignoran para no romper la lectura de datos previos
+            }
+        }
+        return resultado;
     }
 
     public ActividadPlanTrabajoJpaEntity toJpaActividad(ActividadPlanTrabajo domain) {
@@ -98,6 +133,8 @@ public class PlanTrabajoPersistenceMapper {
         entity.setFechaFinEstimada(domain.getFechaFinEstimada());
         entity.setResponsable(domain.getResponsable());
         entity.setPrioridad(domain.getPrioridad() != null ? domain.getPrioridad().name() : PrioridadActividad.MEDIA.name());
+        entity.setAreasInformadas(serializar(domain.getAreasInformadas()));
+        entity.setDocumentacionRemitida(serializar(domain.getDocumentacionRemitida()));
         entity.setCreadoEn(domain.getCreadoEn());
         entity.setActualizadoEn(domain.getActualizadoEn());
         return entity;

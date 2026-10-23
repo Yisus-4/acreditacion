@@ -18,6 +18,14 @@ import com.undec.acreditacion.application.usecase.LoginService;
 import com.undec.acreditacion.application.usecase.RegisterUserService;
 import com.undec.acreditacion.application.usecase.UpdateUserService;
 import com.undec.acreditacion.application.input.ConsultarGeografiaUseCase;
+import com.undec.acreditacion.application.input.ActualizarInstitucionUseCase;
+import com.undec.acreditacion.application.input.CambiarEstadoInstitucionUseCase;
+import com.undec.acreditacion.application.input.ConsultarInstitucionUseCase;
+import com.undec.acreditacion.application.input.EliminarInstitucionUseCase;
+import com.undec.acreditacion.application.usecase.ActualizarInstitucionService;
+import com.undec.acreditacion.application.usecase.CambiarEstadoInstitucionService;
+import com.undec.acreditacion.application.usecase.ConsultarInstitucionService;
+import com.undec.acreditacion.application.usecase.EliminarInstitucionService;
 import com.undec.acreditacion.application.input.ListarInstitucionesUseCase;
 import com.undec.acreditacion.application.input.RegistrarInstitucionUseCase;
 import com.undec.acreditacion.application.usecase.ConsultarGeografiaService;
@@ -111,6 +119,31 @@ public class UseCaseConfiguration {
     @Bean
     public ListarInstitucionesUseCase listarInstitucionesUseCase(InstitucionRepositoryPort institucionRepository) {
         return new ListarInstitucionesService(institucionRepository);
+    }
+
+    @Bean
+    @Transactional
+    public ConsultarInstitucionUseCase consultarInstitucionUseCase(InstitucionRepositoryPort institucionRepository) {
+        return new ConsultarInstitucionService(institucionRepository);
+    }
+
+    @Bean
+    @Transactional
+    public ActualizarInstitucionUseCase actualizarInstitucionUseCase(InstitucionRepositoryPort institucionRepository,
+                                                                     DocumentStoragePort documentStoragePort) {
+        return new ActualizarInstitucionService(institucionRepository, documentStoragePort);
+    }
+
+    @Bean
+    @Transactional
+    public CambiarEstadoInstitucionUseCase cambiarEstadoInstitucionUseCase(InstitucionRepositoryPort institucionRepository) {
+        return new CambiarEstadoInstitucionService(institucionRepository);
+    }
+
+    @Bean
+    @Transactional
+    public EliminarInstitucionUseCase eliminarInstitucionUseCase(InstitucionRepositoryPort institucionRepository) {
+        return new EliminarInstitucionService(institucionRepository);
     }
 
     @Bean

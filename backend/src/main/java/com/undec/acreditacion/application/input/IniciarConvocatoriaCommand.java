@@ -4,7 +4,6 @@ import com.undec.acreditacion.domain.entities.TipoProcesoAcreditacion;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 
 import java.time.LocalDate;
-import java.util.Objects;
 import java.util.UUID;
 
 public record IniciarConvocatoriaCommand(
@@ -20,7 +19,11 @@ public record IniciarConvocatoriaCommand(
         if (carreraId == null) {
             throw new DomainValidationException("El ID de la carrera es obligatorio");
         }
-        if (nroResolucionConeau == null || nroResolucionConeau.trim().isEmpty()) {
+        if (tipoProceso == null) {
+            throw new DomainValidationException("El tipo de proceso es obligatorio");
+        }
+        if (tipoProceso == TipoProcesoAcreditacion.EN_FUNCIONAMIENTO
+                && (nroResolucionConeau == null || nroResolucionConeau.trim().isEmpty())) {
             throw new DomainValidationException("El número de resolución CONEAU es obligatorio");
         }
         if (fechaInicio == null) {
@@ -37,13 +40,12 @@ public record IniciarConvocatoriaCommand(
         if (fechaCierre.isBefore(fechaInicio)) {
             throw new DomainValidationException("La fecha de cierre no puede ser anterior a la fecha de inicio");
         }
-        if (tipoProceso == null) {
-            throw new DomainValidationException("El tipo de proceso es obligatorio");
-        }
         if (creadoPor == null) {
             throw new DomainValidationException("El usuario creador es obligatorio");
         }
-        nroResolucionConeau = nroResolucionConeau.trim();
+        nroResolucionConeau = nroResolucionConeau != null && !nroResolucionConeau.trim().isEmpty()
+                ? nroResolucionConeau.trim()
+                : null;
         observaciones = observaciones != null ? observaciones.trim() : null;
     }
 }

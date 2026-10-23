@@ -38,6 +38,17 @@ export class ElaborarPlanTrabajoModalComponent implements OnInit {
   readonly validationErrors = signal<string[]>([]);
   readonly dropdownAbiertoIndex = signal<number | null>(null);
 
+  readonly areasDisciplinariasSugeridas: string[] = [
+    'Ingeniería',
+    'Informática / Sistemas',
+    'Ciencias de la Salud',
+    'Ciencias Agrarias',
+    'Ciencias Aplicadas',
+    'Ciencias Económicas',
+    'Ciencias Básicas',
+    'Ciencias Humanas y Sociales',
+  ];
+
   readonly rolesDisponibles: string[] = [
     'Área de Evaluación y Acreditación (AEA)',
     'Dirección de Carrera',
@@ -79,7 +90,13 @@ export class ElaborarPlanTrabajoModalComponent implements OnInit {
   }
 
   readonly form: FormGroup = this.fb.group({
-    rmEstandares: [''],
+    fechaInicio: ['', Validators.required],
+    fechaCierre: ['', Validators.required],
+    estadoCarrera: ['EN_FUNCIONAMIENTO', Validators.required],
+    nroResolucionConeau: [''],
+    rmEstandares: ['', Validators.required],
+    areaDisciplinaria: ['Informática / Sistemas', Validators.required],
+    modalidadCarrera: ['PRESENCIAL', Validators.required],
     faseEvaluacion: ['PRIMERA_FASE', Validators.required],
     fechaLimitePresentacionConeau: ['', Validators.required],
     actividades: this.fb.array([]),
@@ -87,6 +104,10 @@ export class ElaborarPlanTrabajoModalComponent implements OnInit {
 
   get actividadesArray(): FormArray {
     return this.form.get('actividades') as FormArray;
+  }
+
+  get esCarreraEnFuncionamiento(): boolean {
+    return this.form.get('estadoCarrera')?.value === 'EN_FUNCIONAMIENTO';
   }
 
   readonly conteoInfo = computed(() => {
@@ -107,21 +128,63 @@ export class ElaborarPlanTrabajoModalComponent implements OnInit {
 
   ngOnInit(): void {
     this.inicializarMetadatos();
+    this.configurarValidacionCondicionalResolucion();
     this.cargarActividades();
+  }
+
+  private configurarValidacionCondicionalResolucion(): void {
+    const actualizarValidador = (estado: string) => {
+      const ctrl = this.form.get('nroResolucionConeau');
+      if (!ctrl) return;
+      if (estado === 'EN_FUNCIONAMIENTO') {
+        ctrl.setValidators([Validators.required]);
+      } else {
+        ctrl.clearValidators();
+      }
+      ctrl.updateValueAndValidity({ emitEvent: false });
+    };
+
+    actualizarValidador(this.form.get('estadoCarrera')?.value);
+    this.form.get('estadoCarrera')?.valueChanges.subscribe((estado) => {
+      actualizarValidador(estado);
+    });
   }
 
   private inicializarMetadatos(): void {
     const reg = this.convocatoria.registroConvocatoria;
+    const today = new Date().toISOString().substring(0, 10);
+
+    const estadoInicial = reg?.estadoCarrera || this.convocatoria.tipoProceso || 'EN_FUNCIONAMIENTO';
+    const modalidadInicial =
+      reg?.modalidadCarrera === 'DISTANCIA'
+        ? 'A_DISTANCIA'
+        : reg?.modalidadCarrera || 'PRESENCIAL';
+    const areaInicial = reg?.areaDisciplinaria || 'Informática / Sistemas';
+
+    this.form.patchValue({
+      fechaInicio: reg?.fechaInicio || today,
+      fechaCierre: reg?.fechaCierre || today,
+      estadoCarrera: estadoInicial,
+      nroResolucionConeau: reg?.nroResolucionConeau || '',
+      areaDisciplinaria: areaInicial,
+      modalidadCarrera: modalidadInicial,
+    });
+
     if (reg) {
       if (reg.rmEstandares) {
         this.form.patchValue({ rmEstandares: reg.rmEstandares });
       } else {
-        // Buscar si existe documento de RM en Actividad 1.3
+        // Buscar si existe documento de RM en Actividad 1.3 (Actividad 2)
         const actNormativa = this.planTrabajo?.actividades?.find(
-          (a) => a.codigoActividad === '1.3' || a.codigoActividad === 'ACT-03-NORMATIVA' || a.nombre.toLowerCase().includes('normativa')
+          (a) =>
+            a.codigoActividad === '1.3' ||
+            a.codigoActividad === 'ACT-03-NORMATIVA' ||
+            a.nombre.toLowerCase().includes('normativa')
         );
         const rmDoc = actNormativa?.documentos?.find(
-          (d) => d.tipoDocumento === 'NORMATIVA_CONVOCATORIA' && d.nombreOriginal.toLowerCase().includes('rm')
+          (d) =>
+            d.tipoDocumento === 'NORMATIVA_CONVOCATORIA' &&
+            d.nombreOriginal.toLowerCase().includes('rm')
         );
         if (rmDoc) {
           this.form.patchValue({ rmEstandares: rmDoc.nombreOriginal });
@@ -143,17 +206,15 @@ export class ElaborarPlanTrabajoModalComponent implements OnInit {
   }
 
   private cargarActividades(): void {
-    // Si ya existen actividades cargadas en el plan con orden >= 3, utilizarlas
     const actividadesExistentes = this.planTrabajo?.actividades?.filter(
       (a) => a.numeroOrden >= 3
     );
 
-    if (actividadesExistentes && actividadesExistentes.length > 0) {
+    if (actividadesExistentes && actividadesExistentes.length >= 20) {
       this.poblarActividadesDesdeExistentes(actividadesExistentes);
       return;
     }
 
-    // De lo contrario, solicitar la plantilla oficial sugerida para este proceso
     this.cargarPlantillaSugerida();
   }
 
@@ -172,10 +233,12 @@ export class ElaborarPlanTrabajoModalComponent implements OnInit {
         this.actividadesArray.clear();
 
         const fechaBaseInicio =
+          this.form.get('fechaInicio')?.value ||
           this.convocatoria.registroConvocatoria?.fechaInicio ||
           new Date().toISOString().substring(0, 10);
         const fechaBaseFin =
           this.form.get('fechaLimitePresentacionConeau')?.value ||
+          this.form.get('fechaCierre')?.value ||
           this.convocatoria.registroConvocatoria?.fechaCierre ||
           fechaBaseInicio;
 
@@ -211,10 +274,12 @@ export class ElaborarPlanTrabajoModalComponent implements OnInit {
   private poblarActividadesDesdeExistentes(actividades: any[]): void {
     this.actividadesArray.clear();
     const fechaBaseInicio =
+      this.form.get('fechaInicio')?.value ||
       this.convocatoria.registroConvocatoria?.fechaInicio ||
       new Date().toISOString().substring(0, 10);
     const fechaBaseFin =
       this.form.get('fechaLimitePresentacionConeau')?.value ||
+      this.form.get('fechaCierre')?.value ||
       this.convocatoria.registroConvocatoria?.fechaCierre ||
       fechaBaseInicio;
 
@@ -269,10 +334,12 @@ export class ElaborarPlanTrabajoModalComponent implements OnInit {
     const hojaAsignada: HojaPlanTrabajo = tabActual === 'CONEAU' ? 'CONEAU' : 'INFO';
 
     const fechaBaseInicio =
+      this.form.get('fechaInicio')?.value ||
       this.convocatoria.registroConvocatoria?.fechaInicio ||
       new Date().toISOString().substring(0, 10);
     const fechaBaseFin =
       this.form.get('fechaLimitePresentacionConeau')?.value ||
+      this.form.get('fechaCierre')?.value ||
       this.convocatoria.registroConvocatoria?.fechaCierre ||
       fechaBaseInicio;
 
@@ -342,21 +409,54 @@ export class ElaborarPlanTrabajoModalComponent implements OnInit {
 
     const errors: string[] = [];
 
+    const fechaInicio = this.form.get('fechaInicio')?.value;
+    const fechaCierre = this.form.get('fechaCierre')?.value;
+    const estadoCarrera = this.form.get('estadoCarrera')?.value;
+    const nroResolucion = (this.form.get('nroResolucionConeau')?.value || '').trim();
+    const rmEstandares = (this.form.get('rmEstandares')?.value || '').trim();
+    const areaDisciplinaria = (this.form.get('areaDisciplinaria')?.value || '').trim();
+    const modalidadCarrera = this.form.get('modalidadCarrera')?.value;
     const fase = this.form.get('faseEvaluacion')?.value;
-    if (!fase) {
-      errors.push('La Fase de Evaluación CONEAU es obligatoria.');
+    const fechaLimite = this.form.get('fechaLimitePresentacionConeau')?.value;
+
+    if (!fechaInicio) {
+      errors.push('La Fecha de Inicio del proceso de acreditación es obligatoria.');
+    }
+    if (!fechaCierre) {
+      errors.push('La Fecha de Cierre de la convocatoria o plazo vigente es obligatoria.');
+    }
+    if (fechaInicio && fechaCierre && fechaCierre < fechaInicio) {
+      errors.push(
+        `La Fecha de Cierre (${fechaCierre}) no puede ser anterior a la Fecha de Inicio (${fechaInicio}).`
+      );
     }
 
-    const fechaLimite = this.form.get('fechaLimitePresentacionConeau')?.value;
+    if (estadoCarrera === 'EN_FUNCIONAMIENTO' && !nroResolucion) {
+      errors.push('El Nro. de Resolución de Convocatoria CONEAU es obligatorio para carreras en funcionamiento.');
+    }
+
+    if (!rmEstandares) {
+      errors.push('La RM de estándares de la carrera es obligatoria.');
+    }
+
+    if (!areaDisciplinaria) {
+      errors.push('El Área Disciplinaria es obligatoria.');
+    }
+
+    if (!modalidadCarrera) {
+      errors.push('La Modalidad de la carrera es obligatoria.');
+    }
+
+    if (!fase) {
+      errors.push('La Fase de Evaluación de la carrera es obligatoria.');
+    }
+
     if (!fechaLimite) {
-      errors.push('La Fecha Límite de Presentación CONEAU es obligatoria.');
-    } else {
-      const fechaCierre = this.convocatoria.registroConvocatoria?.fechaCierre;
-      if (fechaCierre && fechaLimite < fechaCierre) {
-        errors.push(
-          `La Fecha Límite CONEAU (${fechaLimite}) no puede ser anterior a la fecha de cierre de la convocatoria (${fechaCierre}).`
-        );
-      }
+      errors.push('La Fecha Límite de Presentación en CONEAU es obligatoria.');
+    } else if (fechaCierre && fechaLimite < fechaCierre) {
+      errors.push(
+        `La Fecha Límite CONEAU (${fechaLimite}) no puede ser anterior a la fecha de cierre de la convocatoria (${fechaCierre}).`
+      );
     }
 
     if (this.actividadesArray.length === 0) {
@@ -417,13 +517,22 @@ export class ElaborarPlanTrabajoModalComponent implements OnInit {
           fechaInicioEstimada: val.fechaInicioEstimada,
           fechaFinEstimada: val.fechaFinEstimada,
           responsable: val.responsable.trim(),
-          prioridad: val.prioridad as PrioridadActividad,
+          prioridad: (val.prioridad || 'MEDIA') as PrioridadActividad,
         };
       }
     );
 
     const requestPayload: ElaborarPlanTrabajoRequest = {
-      rmEstandares: formVal.rmEstandares.trim(),
+      fechaInicio: formVal.fechaInicio,
+      fechaCierre: formVal.fechaCierre,
+      estadoCarrera: formVal.estadoCarrera,
+      nroResolucionConeau:
+        formVal.estadoCarrera === 'EN_FUNCIONAMIENTO'
+          ? (formVal.nroResolucionConeau || '').trim()
+          : (formVal.nroResolucionConeau || '').trim() || undefined,
+      rmEstandares: (formVal.rmEstandares || '').trim(),
+      areaDisciplinaria: (formVal.areaDisciplinaria || '').trim(),
+      modalidadCarrera: formVal.modalidadCarrera,
       faseEvaluacion: formVal.faseEvaluacion as FaseEvaluacion,
       fechaLimitePresentacionConeau: formVal.fechaLimitePresentacionConeau,
       fechaLimiteConeau: formVal.fechaLimitePresentacionConeau,

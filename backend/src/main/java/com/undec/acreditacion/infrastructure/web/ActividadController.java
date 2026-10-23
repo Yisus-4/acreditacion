@@ -4,6 +4,8 @@ import com.undec.acreditacion.application.input.CompletarActividadCommand;
 import com.undec.acreditacion.application.input.CompletarActividadInformarProcesoUseCase;
 import com.undec.acreditacion.application.output.UserRepository;
 import com.undec.acreditacion.domain.entities.ActividadPlanTrabajo;
+import com.undec.acreditacion.domain.entities.AreaInformadaProceso;
+import com.undec.acreditacion.domain.entities.DocumentacionRemitidaProceso;
 import com.undec.acreditacion.domain.entities.DocumentoAcreditacion;
 import com.undec.acreditacion.domain.entities.TipoDocumentoAcreditacion;
 import com.undec.acreditacion.domain.entities.User;
@@ -28,6 +30,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -77,47 +80,67 @@ public class ActividadController {
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
     public ResponseEntity<ActividadDetalleResponse> completarActividad(
             @PathVariable UUID id,
-            @RequestParam("fechaReunion") String fechaReunionStr,
-            @RequestParam("sintesisAcuerdos") String sintesisAcuerdos,
-            @RequestParam("tipoDocumento") String tipoDocumentoStr,
-            @RequestParam("archivo") MultipartFile archivo
+            @RequestParam(value = "areasInformadas", required = false) List<String> areasInformadasStr,
+            @RequestParam(value = "documentacionRemitida", required = false) List<String> documentacionRemitidaStr,
+            @RequestParam(value = "fechaReunion", required = false) String fechaReunionStr,
+            @RequestParam(value = "observaciones", required = false) String observaciones,
+            @RequestParam(value = "sintesisAcuerdos", required = false) String sintesisAcuerdos,
+            @RequestParam(value = "tipoDocumento", required = false) String tipoDocumentoStr,
+            @RequestParam(value = "archivo", required = false) MultipartFile archivo
     ) throws IOException {
-        if (archivo == null || archivo.isEmpty()) {
-            throw new DomainValidationException("El archivo probatorio es obligatorio");
+        List<AreaInformadaProceso> areasInformadas = parsearCodigos(areasInformadasStr, AreaInformadaProceso.class, "área informada");
+        List<DocumentacionRemitidaProceso> documentacionRemitida =
+                parsearCodigos(documentacionRemitidaStr, DocumentacionRemitidaProceso.class, "documentación remitida");
+        if (areasInformadas.isEmpty()) {
+            throw new DomainValidationException("Debe indicar al menos un área informada");
         }
-
-        String mimeType = archivo.getContentType();
-        if (mimeType == null || !DocumentoAcreditacion.MIME_PDF.equalsIgnoreCase(mimeType.trim())) {
-            // También validar por extensión si el navegador no setea el mime exacto
-            if (archivo.getOriginalFilename() == null || !archivo.getOriginalFilename().toLowerCase().endsWith(".pdf")) {
-                throw new DomainValidationException("Solo se admiten documentos en formato PDF");
-            }
-            mimeType = DocumentoAcreditacion.MIME_PDF;
-        }
-
-        if (archivo.getSize() > DocumentoAcreditacion.MAX_TAMANIO_BYTES) {
-            throw new DomainValidationException("El archivo debe pesar entre 1 byte y 20 MB");
+        if (documentacionRemitida.isEmpty()) {
+            throw new DomainValidationException("Debe indicar al menos un documento remitido");
         }
 
         Instant fechaReunion = parsearFechaReunion(fechaReunionStr);
+        String observacionesFinales = (observaciones != null && !observaciones.isBlank()) ? observaciones : sintesisAcuerdos;
 
-        TipoDocumentoAcreditacion tipoDocumento;
-        try {
-            tipoDocumento = TipoDocumentoAcreditacion.valueOf(tipoDocumentoStr.trim().toUpperCase());
-        } catch (Exception ex) {
-            throw new DomainValidationException("Tipo de documento inválido: " + tipoDocumentoStr);
+        byte[] archivoBytes = null;
+        String nombreArchivo = null;
+        String mimeType = null;
+        TipoDocumentoAcreditacion tipoDocumento = null;
+        if (archivo != null && !archivo.isEmpty()) {
+            mimeType = archivo.getContentType();
+            if (mimeType == null || !DocumentoAcreditacion.MIME_PDF.equalsIgnoreCase(mimeType.trim())) {
+                // También validar por extensión si el navegador no setea el mime exacto
+                if (archivo.getOriginalFilename() == null || !archivo.getOriginalFilename().toLowerCase().endsWith(".pdf")) {
+                    throw new DomainValidationException("Solo se admiten documentos en formato PDF");
+                }
+            }
+            if (archivo.getSize() > DocumentoAcreditacion.MAX_TAMANIO_BYTES) {
+                throw new DomainValidationException("El archivo debe pesar entre 1 byte y 20 MB");
+            }
+            mimeType = DocumentoAcreditacion.MIME_PDF;
+            archivoBytes = archivo.getBytes();
+            nombreArchivo = archivo.getOriginalFilename() != null ? archivo.getOriginalFilename() : "documento.pdf";
+            tipoDocumento = TipoDocumentoAcreditacion.ACTA_REUNION_COORDINACION;
+            if (tipoDocumentoStr != null && !tipoDocumentoStr.isBlank()) {
+                try {
+                    tipoDocumento = TipoDocumentoAcreditacion.valueOf(tipoDocumentoStr.trim().toUpperCase());
+                } catch (Exception ex) {
+                    throw new DomainValidationException("Tipo de documento inválido: " + tipoDocumentoStr);
+                }
+            }
         }
 
         UUID usuarioId = resolverUsuarioAutenticadoId();
 
         CompletarActividadCommand command = new CompletarActividadCommand(
                 id,
+                areasInformadas,
+                documentacionRemitida,
                 fechaReunion,
-                sintesisAcuerdos,
+                observacionesFinales,
                 tipoDocumento,
-                archivo.getBytes(),
-                archivo.getOriginalFilename() != null ? archivo.getOriginalFilename() : "documento.pdf",
-                DocumentoAcreditacion.MIME_PDF,
+                archivoBytes,
+                nombreArchivo,
+                mimeType,
                 usuarioId
         );
 
@@ -129,6 +152,8 @@ public class ActividadController {
                         d.getId(),
                         d.getNombreOriginal(),
                         d.getTipoDocumento().name(),
+                        d.getClasificacionOrigen(),
+                        d.getDescripcion(),
                         d.getMimeType(),
                         d.getTamanioBytes(),
                         "/api/documentos/" + d.getId() + "/descargar",
@@ -159,10 +184,51 @@ public class ActividadController {
                 actividad.getPrioridad() != null ? actividad.getPrioridad().name() : "MEDIA",
                 actividad.getCreadoEn(),
                 actividad.getActualizadoEn(),
-                docsDto
+                docsDto,
+                actividad.getAreasInformadas().stream().map(Enum::name).toList(),
+                actividad.getDocumentacionRemitida().stream().map(Enum::name).toList(),
+                actividad.getObservaciones()
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    private static <E extends Enum<E>> List<E> parsearCodigos(List<String> valores, Class<E> tipo, String descripcion) {
+        if (valores == null) {
+            return List.of();
+        }
+        List<E> resultado = new ArrayList<>();
+        for (String valor : valores) {
+            if (valor == null || valor.isBlank()) {
+                continue;
+            }
+            // Se admite tanto parámetros repetidos como una lista separada por comas
+            for (String parte : valor.split(",")) {
+                String codigo = normalizarCodigo(parte.trim().toUpperCase(), tipo);
+                if (codigo.isEmpty()) {
+                    continue;
+                }
+                try {
+                    resultado.add(Enum.valueOf(tipo, codigo));
+                } catch (IllegalArgumentException ex) {
+                    throw new DomainValidationException("Valor inválido de " + descripcion + ": " + codigo);
+                }
+            }
+        }
+        return resultado;
+    }
+
+    private static <E extends Enum<E>> String normalizarCodigo(String codigo, Class<E> tipo) {
+        if (tipo == DocumentacionRemitidaProceso.class) {
+            return switch (codigo) {
+                case "RM_ESTANDARES_CARRERA" -> "RM_ESTANDARES";
+                case "ORDENANZAS_Y_NOTAS_TECNICAS" -> "ORDENANZAS_NOTAS_TECNICAS";
+                case "RESOLUCIONES_INFORMES_SEGUIMIENTO" -> "RESOLUCIONES_INFORME_SEGUIMIENTO";
+                case "PLANES_MEJORA_CONEAU" -> "PLANES_MEJORA_PRESENTADOS";
+                default -> codigo;
+            };
+        }
+        return codigo;
     }
 
     private Instant parsearFechaReunion(String fechaStr) {
@@ -217,6 +283,9 @@ public class ActividadController {
                 return userOpt.get().getId();
             }
         }
-        return UUID.fromString("00000000-0000-0000-0000-000000000001");
+        return userRepository.findByEmail("admin@undec.edu.ar")
+                .map(User::getId)
+                .orElseGet(() -> userRepository.findAll().stream().findFirst().map(User::getId)
+                        .orElse(UUID.fromString("00000000-0000-0000-0000-000000000001")));
     }
 }

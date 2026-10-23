@@ -16,6 +16,8 @@ public final class DocumentoAcreditacion {
     private final UUID actividadId;
     private final String nombreOriginal;
     private final TipoDocumentoAcreditacion tipoDocumento;
+    private final String clasificacionOrigen;
+    private final String descripcion;
     private final String mimeType;
     private final long tamanioBytes;
     private final String storagePath;
@@ -30,12 +32,38 @@ public final class DocumentoAcreditacion {
                                               long tamanioBytes,
                                               String storagePath,
                                               UUID subidoPor) {
+        return crear(
+                procesoId,
+                actividadId,
+                nombreOriginal,
+                tipoDocumento,
+                null,
+                null,
+                mimeType,
+                tamanioBytes,
+                storagePath,
+                subidoPor
+        );
+    }
+
+    public static DocumentoAcreditacion crear(UUID procesoId,
+                                              UUID actividadId,
+                                              String nombreOriginal,
+                                              TipoDocumentoAcreditacion tipoDocumento,
+                                              String clasificacionOrigen,
+                                              String descripcion,
+                                              String mimeType,
+                                              long tamanioBytes,
+                                              String storagePath,
+                                              UUID subidoPor) {
         return new DocumentoAcreditacion(
                 UUID.randomUUID(),
                 procesoId,
                 actividadId,
                 nombreOriginal,
                 tipoDocumento,
+                clasificacionOrigen,
+                descripcion,
                 mimeType,
                 tamanioBytes,
                 storagePath,
@@ -54,12 +82,42 @@ public final class DocumentoAcreditacion {
                                                   String storagePath,
                                                   UUID subidoPor,
                                                   Instant creadoEn) {
+        return rehydrate(
+                id,
+                procesoId,
+                actividadId,
+                nombreOriginal,
+                tipoDocumento,
+                null,
+                null,
+                mimeType,
+                tamanioBytes,
+                storagePath,
+                subidoPor,
+                creadoEn
+        );
+    }
+
+    public static DocumentoAcreditacion rehydrate(UUID id,
+                                                  UUID procesoId,
+                                                  UUID actividadId,
+                                                  String nombreOriginal,
+                                                  TipoDocumentoAcreditacion tipoDocumento,
+                                                  String clasificacionOrigen,
+                                                  String descripcion,
+                                                  String mimeType,
+                                                  long tamanioBytes,
+                                                  String storagePath,
+                                                  UUID subidoPor,
+                                                  Instant creadoEn) {
         return new DocumentoAcreditacion(
                 id,
                 procesoId,
                 actividadId,
                 nombreOriginal,
                 tipoDocumento,
+                clasificacionOrigen,
+                descripcion,
                 mimeType,
                 tamanioBytes,
                 storagePath,
@@ -73,6 +131,34 @@ public final class DocumentoAcreditacion {
                                  UUID actividadId,
                                  String nombreOriginal,
                                  TipoDocumentoAcreditacion tipoDocumento,
+                                 String mimeType,
+                                 long tamanioBytes,
+                                 String storagePath,
+                                 UUID subidoPor,
+                                 Instant creadoEn) {
+        this(
+                id,
+                procesoId,
+                actividadId,
+                nombreOriginal,
+                tipoDocumento,
+                null,
+                null,
+                mimeType,
+                tamanioBytes,
+                storagePath,
+                subidoPor,
+                creadoEn
+        );
+    }
+
+    public DocumentoAcreditacion(UUID id,
+                                 UUID procesoId,
+                                 UUID actividadId,
+                                 String nombreOriginal,
+                                 TipoDocumentoAcreditacion tipoDocumento,
+                                 String clasificacionOrigen,
+                                 String descripcion,
                                  String mimeType,
                                  long tamanioBytes,
                                  String storagePath,
@@ -108,11 +194,25 @@ public final class DocumentoAcreditacion {
         this.actividadId = actividadId;
         this.nombreOriginal = nombreOriginal.trim();
         this.tipoDocumento = tipoDocumento;
+        this.clasificacionOrigen = (clasificacionOrigen != null && !clasificacionOrigen.trim().isEmpty())
+                ? clasificacionOrigen.trim()
+                : null;
+        this.descripcion = (descripcion != null && !descripcion.trim().isEmpty())
+                ? descripcion.trim()
+                : null;
         this.mimeType = MIME_PDF;
         this.tamanioBytes = tamanioBytes;
         this.storagePath = storagePath.trim();
         this.subidoPor = subidoPor;
         this.creadoEn = creadoEn != null ? creadoEn : Instant.now();
+    }
+
+    public String getClasificacionOrigen() {
+        return clasificacionOrigen;
+    }
+
+    public String getDescripcion() {
+        return descripcion;
     }
 
     public UUID getId() {

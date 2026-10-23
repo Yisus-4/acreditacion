@@ -3,6 +3,7 @@ package com.undec.acreditacion.infrastructure.institucion;
 import com.undec.acreditacion.domain.exceptions.ArchivoInvalidoException;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 import com.undec.acreditacion.domain.exceptions.InstitucionDuplicadaException;
+import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +36,12 @@ public class InstitucionExceptionHandler {
     @ExceptionHandler(DomainValidationException.class)
     public ResponseEntity<Map<String, String>> handleDomainValidation(DomainValidationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleResourceNotFound(ResourceNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("error", ex.getMessage()));
     }
 

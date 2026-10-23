@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Auth } from '../../../core/auth/auth';
 import { NormativaService } from '../../../core/normativa/services/normativa.service';
 import {
+  METADATOS_DOCUMENTOS_NORMATIVA,
   RevisarNormativaRequest,
   SolicitarNormativaRequest,
   TipoDocumentoNormativa,
@@ -42,6 +43,7 @@ export class NormativaDetalleComponent implements OnInit {
   readonly vistaActiva = signal<'BANDEJA' | 'HOJA_INFO'>('BANDEJA');
   readonly modalSolicitarAbierto = signal<boolean>(false);
   readonly modalRevisarAbierto = signal<boolean>(false);
+  readonly errorRevision = signal<string | null>(null);
   readonly alertMensaje = signal<{ tipo: 'success' | 'error'; texto: string } | null>(null);
 
   readonly detalle = this.normativaService.detalle;
@@ -49,9 +51,14 @@ export class NormativaDetalleComponent implements OnInit {
   readonly actionLoading = this.normativaService.actionLoading;
   readonly porcentajeAvance = this.normativaService.porcentajeAvance;
   readonly puedeEnviar = this.normativaService.puedeEnviar;
+  readonly tieneDocumentosObservadosPendientes = this.normativaService.tieneDocumentosObservadosPendientes;
   readonly esCompletada = this.normativaService.esCompletada;
   readonly esEnviadaRevision = this.normativaService.esEnviadaRevision;
   readonly esObservada = this.normativaService.esObservada;
+
+  readonly documentosObservadosPendientes = computed(() =>
+    (this.detalle()?.documentos ?? []).filter((d) => d.observado)
+  );
 
   readonly esAeaOAdmin = computed(() => {
     const roles = this.auth.currentSession?.user?.roleCodes ?? [];
@@ -67,6 +74,10 @@ export class NormativaDetalleComponent implements OnInit {
 
   formatearEstado(estado?: string | null): string {
     return formatearEstadoNormativa(estado);
+  }
+
+  obtenerTituloTipoDocumento(tipo: TipoDocumentoNormativa): string {
+    return METADATOS_DOCUMENTOS_NORMATIVA[tipo]?.titulo || tipo;
   }
 
   ngOnInit(): void {
@@ -155,25 +166,30 @@ export class NormativaDetalleComponent implements OnInit {
   }
 
   abrirModalRevisar(): void {
+    this.errorRevision.set(null);
     this.modalRevisarAbierto.set(true);
   }
 
   cerrarModalRevisar(): void {
+    this.errorRevision.set(null);
     this.modalRevisarAbierto.set(false);
   }
 
   confirmarRevision(request: RevisarNormativaRequest): void {
+    this.errorRevision.set(null);
     this.normativaService.revisarNormativa(this.procesoId, request).subscribe({
       next: () => {
         this.cerrarModalRevisar();
         const msg =
           request.decision === 'APROBADO'
-            ? '¡Normativa aprobada exitosamente! La Actividad 2 ha sido completada.'
-            : 'Observaciones emitidas y notificadas a la Dirección de Carrera.';
+            ? 'Normativa aprobada exitosamente. La Actividad 2 ha sido completada.'
+            : 'Observaciones emitidas y enviadas al usuario asignado (Dirección de Carrera) para subsanación.';
         this.mostrarAlerta('success', msg);
       },
       error: (err) => {
-        this.mostrarAlerta('error', err?.error?.error || 'Error al dictaminar sobre la normativa.');
+        const msg = err?.error?.error || err?.error?.message || 'Error al dictaminar sobre la normativa.';
+        this.errorRevision.set(msg);
+        this.mostrarAlerta('error', msg);
       },
     });
   }

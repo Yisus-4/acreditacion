@@ -6,11 +6,21 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class ActividadPlanTrabajoTest {
+
+    private static final List<AreaInformadaProceso> AREAS = List.of(
+            AreaInformadaProceso.DIRECCION_CARRERA,
+            AreaInformadaProceso.SECRETARIAS
+    );
+    private static final List<DocumentacionRemitidaProceso> DOCUMENTACION = List.of(
+            DocumentacionRemitidaProceso.RM_ESTANDARES,
+            DocumentacionRemitidaProceso.ORDENANZAS_NOTAS_TECNICAS
+    );
 
     @Test
     @DisplayName("Debe crear la actividad inicial con código y nombre oficial en estado PENDIENTE")
@@ -27,12 +37,14 @@ class ActividadPlanTrabajoTest {
         assertEquals(EstadoActividad.PENDIENTE, actividad.getEstado());
         assertEquals(HojaPlanTrabajo.INFO, actividad.getHoja());
         assertEquals(PrioridadActividad.MEDIA, actividad.getPrioridad());
+        assertTrue(actividad.getAreasInformadas().isEmpty());
+        assertTrue(actividad.getDocumentacionRemitida().isEmpty());
         assertNotNull(actividad.getCreadoEn());
         assertNotNull(actividad.getActualizadoEn());
     }
 
     @Test
-    @DisplayName("Debe definir y crear la actividad 2 Elaborar Plan de Trabajo")
+    @DisplayName("Debe definir y crear la actividad Elaborar Plan de Trabajo")
     void debeCrearActividadElaborarPlan() {
         UUID planId = UUID.randomUUID();
 
@@ -50,27 +62,83 @@ class ActividadPlanTrabajoTest {
     }
 
     @Test
-    @DisplayName("Debe completar la actividad inicial exitosamente con fecha, síntesis (>=10 chars) y usuario AEA")
-    void debeCompletarActividadExitosamente() {
-        UUID planId = UUID.randomUUID();
+    @DisplayName("Actividad 1: debe completar registrando áreas informadas, documentación remitida y fecha de reunión con la DC, sin exigir síntesis")
+    void debeCompletarActividadInformarSinSintesis() {
         UUID usuarioAeaId = UUID.randomUUID();
-        ActividadPlanTrabajo actividad = ActividadPlanTrabajo.crearActividadInicial(planId);
-
+        ActividadPlanTrabajo actividad = ActividadPlanTrabajo.crearActividadInicial(UUID.randomUUID());
         Instant fechaReunion = Instant.now().minusSeconds(3600);
-        String sintesis = "Reunión de coordinación formal con la Dirección de Carrera para acordar plazos.";
 
-        actividad.registrarReunionYCompletar(fechaReunion, sintesis, usuarioAeaId);
+        actividad.registrarComunicacionYCompletar(AREAS, DOCUMENTACION, fechaReunion, null, usuarioAeaId);
 
         assertEquals(EstadoActividad.COMPLETADA, actividad.getEstado());
         assertEquals(fechaReunion, actividad.getFechaReunionCoordinacion());
-        assertEquals(sintesis, actividad.getSintesisAcuerdos());
+        assertEquals(AREAS, actividad.getAreasInformadas());
+        assertEquals(DOCUMENTACION, actividad.getDocumentacionRemitida());
+        assertNull(actividad.getObservaciones());
         assertEquals(usuarioAeaId, actividad.getCompletadaPor());
         assertNotNull(actividad.getCompletadaEn());
-        assertNotNull(actividad.getActualizadoEn());
     }
 
     @Test
-    @DisplayName("Debe completar actividad sin reunión (como ACT-02) auditando usuario AEA")
+    @DisplayName("Actividad 1: las observaciones son opcionales y se guardan recortadas; una observación corta es válida")
+    void debeGuardarObservacionesOpcionales() {
+        ActividadPlanTrabajo actividad = ActividadPlanTrabajo.crearActividadInicial(UUID.randomUUID());
+
+        actividad.registrarComunicacionYCompletar(AREAS, DOCUMENTACION, Instant.now(), "  Ok  ", UUID.randomUUID());
+
+        assertEquals("Ok", actividad.getObservaciones());
+        assertEquals("Ok", actividad.getSintesisAcuerdos());
+    }
+
+    @Test
+    @DisplayName("Actividad 1: observaciones en blanco se normalizan a null")
+    void debeNormalizarObservacionesEnBlanco() {
+        ActividadPlanTrabajo actividad = ActividadPlanTrabajo.crearActividadInicial(UUID.randomUUID());
+
+        actividad.registrarComunicacionYCompletar(AREAS, DOCUMENTACION, Instant.now(), "   ", UUID.randomUUID());
+
+        assertNull(actividad.getObservaciones());
+    }
+
+    @Test
+    @DisplayName("Actividad 1: debe exigir al menos un área informada")
+    void debeExigirAreasInformadas() {
+        ActividadPlanTrabajo actividad = ActividadPlanTrabajo.crearActividadInicial(UUID.randomUUID());
+
+        assertThrows(DomainValidationException.class, () ->
+                actividad.registrarComunicacionYCompletar(List.of(), DOCUMENTACION, Instant.now(), null, UUID.randomUUID()));
+        assertThrows(DomainValidationException.class, () ->
+                actividad.registrarComunicacionYCompletar(null, DOCUMENTACION, Instant.now(), null, UUID.randomUUID()));
+        assertEquals(EstadoActividad.PENDIENTE, actividad.getEstado());
+    }
+
+    @Test
+    @DisplayName("Actividad 1: debe exigir al menos un documento remitido")
+    void debeExigirDocumentacionRemitida() {
+        ActividadPlanTrabajo actividad = ActividadPlanTrabajo.crearActividadInicial(UUID.randomUUID());
+
+        assertThrows(DomainValidationException.class, () ->
+                actividad.registrarComunicacionYCompletar(AREAS, List.of(), Instant.now(), null, UUID.randomUUID()));
+        assertThrows(DomainValidationException.class, () ->
+                actividad.registrarComunicacionYCompletar(AREAS, null, Instant.now(), null, UUID.randomUUID()));
+    }
+
+    @Test
+    @DisplayName("Actividad 1: debe eliminar duplicados preservando el orden")
+    void debeEliminarDuplicados() {
+        ActividadPlanTrabajo actividad = ActividadPlanTrabajo.crearActividadInicial(UUID.randomUUID());
+
+        actividad.registrarComunicacionYCompletar(
+                List.of(AreaInformadaProceso.SECRETARIAS, AreaInformadaProceso.SECRETARIAS, AreaInformadaProceso.DIRECCION_CARRERA),
+                List.of(DocumentacionRemitidaProceso.RM_ESTANDARES, DocumentacionRemitidaProceso.RM_ESTANDARES),
+                Instant.now(), null, UUID.randomUUID());
+
+        assertEquals(List.of(AreaInformadaProceso.SECRETARIAS, AreaInformadaProceso.DIRECCION_CARRERA), actividad.getAreasInformadas());
+        assertEquals(List.of(DocumentacionRemitidaProceso.RM_ESTANDARES), actividad.getDocumentacionRemitida());
+    }
+
+    @Test
+    @DisplayName("Debe completar actividad sin reunión (como Elaborar Plan) auditando usuario AEA")
     void debeCompletarActividadConAuditoria() {
         UUID planId = UUID.randomUUID();
         UUID usuarioAeaId = UUID.randomUUID();
@@ -87,38 +155,20 @@ class ActividadPlanTrabajoTest {
     @DisplayName("Debe rechazar completar si la actividad ya fue completada")
     void debeRechazarRecompletar() {
         ActividadPlanTrabajo actividad = ActividadPlanTrabajo.crearActividadInicial(UUID.randomUUID());
-        actividad.registrarReunionYCompletar(Instant.now(), "Síntesis válida con más de 10 caracteres.", UUID.randomUUID());
+        actividad.registrarComunicacionYCompletar(AREAS, DOCUMENTACION, Instant.now(), null, UUID.randomUUID());
 
         assertThrows(DomainValidationException.class, () ->
-                actividad.registrarReunionYCompletar(Instant.now(), "Otra síntesis válida.", UUID.randomUUID())
+                actividad.registrarComunicacionYCompletar(AREAS, DOCUMENTACION, Instant.now(), null, UUID.randomUUID())
         );
     }
 
     @Test
-    @DisplayName("Debe rechazar si la fecha de reunión es nula")
+    @DisplayName("Debe rechazar si la fecha de reunión con la DC es nula")
     void debeRechazarFechaReunionNula() {
         ActividadPlanTrabajo actividad = ActividadPlanTrabajo.crearActividadInicial(UUID.randomUUID());
 
         assertThrows(DomainValidationException.class, () ->
-                actividad.registrarReunionYCompletar(null, "Síntesis válida de acuerdos.", UUID.randomUUID())
-        );
-    }
-
-    @Test
-    @DisplayName("Debe rechazar si la síntesis de acuerdos es nula, vacía o menor a 10 caracteres")
-    void debeRechazarSintesisInvalida() {
-        ActividadPlanTrabajo actividad = ActividadPlanTrabajo.crearActividadInicial(UUID.randomUUID());
-
-        assertThrows(DomainValidationException.class, () ->
-                actividad.registrarReunionYCompletar(Instant.now(), null, UUID.randomUUID())
-        );
-
-        assertThrows(DomainValidationException.class, () ->
-                actividad.registrarReunionYCompletar(Instant.now(), "   ", UUID.randomUUID())
-        );
-
-        assertThrows(DomainValidationException.class, () ->
-                actividad.registrarReunionYCompletar(Instant.now(), "123456789", UUID.randomUUID())
+                actividad.registrarComunicacionYCompletar(AREAS, DOCUMENTACION, null, null, UUID.randomUUID())
         );
     }
 
@@ -128,8 +178,43 @@ class ActividadPlanTrabajoTest {
         ActividadPlanTrabajo actividad = ActividadPlanTrabajo.crearActividadInicial(UUID.randomUUID());
 
         assertThrows(DomainValidationException.class, () ->
-                actividad.registrarReunionYCompletar(Instant.now(), "Síntesis válida con más de 10 caracteres.", null)
+                actividad.registrarComunicacionYCompletar(AREAS, DOCUMENTACION, Instant.now(), null, null)
         );
+    }
+
+    @Test
+    @DisplayName("Debe restaurar áreas y documentación persistidas al rehidratar")
+    void debeRestaurarRegistroComunicacion() {
+        ActividadPlanTrabajo actividad = ActividadPlanTrabajo.crearActividadInicial(UUID.randomUUID());
+
+        actividad.restaurarRegistroComunicacion(AREAS, DOCUMENTACION);
+
+        assertEquals(AREAS, actividad.getAreasInformadas());
+        assertEquals(DOCUMENTACION, actividad.getDocumentacionRemitida());
+    }
+
+    @Test
+    @DisplayName("Documentación remitida: opciones según el caso del proceso (solo GRADO)")
+    void debeResolverOpcionesDeDocumentacionSegunCaso() {
+        assertEquals(List.of(
+                DocumentacionRemitidaProceso.RM_ESTANDARES,
+                DocumentacionRemitidaProceso.RM_INCLUSION_ART_43_LES,
+                DocumentacionRemitidaProceso.ORDENANZAS_NOTAS_TECNICAS
+        ), DocumentacionRemitidaProceso.opcionesPara(TipoProcesoAcreditacion.NUEVA, TipoPlanTrabajo.PT_001_ACREDITACION));
+
+        assertEquals(List.of(
+                DocumentacionRemitidaProceso.RESOLUCION_CONVOCATORIA_CONEAU,
+                DocumentacionRemitidaProceso.RM_ESTANDARES,
+                DocumentacionRemitidaProceso.RM_INCLUSION_ART_43_LES,
+                DocumentacionRemitidaProceso.ORDENANZAS_NOTAS_TECNICAS
+        ), DocumentacionRemitidaProceso.opcionesPara(TipoProcesoAcreditacion.EN_FUNCIONAMIENTO, TipoPlanTrabajo.PT_001_ACREDITACION));
+
+        assertEquals(List.of(
+                DocumentacionRemitidaProceso.ORDENANZAS_NOTAS_TECNICAS,
+                DocumentacionRemitidaProceso.RESOLUCION_ACREDITACION_COMPROMISOS,
+                DocumentacionRemitidaProceso.RESOLUCIONES_INFORME_SEGUIMIENTO,
+                DocumentacionRemitidaProceso.PLANES_MEJORA_PRESENTADOS
+        ), DocumentacionRemitidaProceso.opcionesPara(TipoProcesoAcreditacion.EN_FUNCIONAMIENTO, TipoPlanTrabajo.PT_003_SEGUIMIENTO));
     }
 
     @Test

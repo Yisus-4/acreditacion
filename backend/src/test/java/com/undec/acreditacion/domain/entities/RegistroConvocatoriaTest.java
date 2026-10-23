@@ -205,4 +205,53 @@ class RegistroConvocatoriaTest {
         registro.completarDatosConeau("   ", FaseEvaluacion.PRIMERA_FASE, fechaLimite);
         assertNull(registro.getRmEstandares());
     }
+
+    @Test
+    @DisplayName("Debe permitir crear y completar RG-001 para carrera NUEVA sin número de resolución CONEAU")
+    void debePermitirCarreraNuevaSinResolucionConeau() {
+        UUID procesoId = UUID.randomUUID();
+        LocalDate inicio = LocalDate.of(2026, 3, 1);
+        LocalDate cierre = LocalDate.of(2026, 10, 30);
+
+        RegistroConvocatoria registro = RegistroConvocatoria.crear(
+                procesoId,
+                null,
+                inicio,
+                cierre,
+                "Carrera nueva sin resolución de convocatoria",
+                "RM 1254/2018",
+                "Informática / Sistemas",
+                "A_DISTANCIA",
+                "NUEVA",
+                FaseEvaluacion.PRIMERA_FASE,
+                LocalDate.of(2026, 11, 15)
+        );
+
+        assertNull(registro.getNroResolucionConeau());
+        assertEquals("NUEVA", registro.getEstadoCarrera());
+        assertEquals("Informática / Sistemas", registro.getAreaDisciplinaria());
+        assertEquals("A_DISTANCIA", registro.getModalidadCarrera());
+
+        registro.completarDatosRg001(
+                LocalDate.of(2026, 3, 10),
+                LocalDate.of(2026, 11, 1),
+                "NUEVA",
+                "",
+                "RM 999/2025",
+                "Ingeniería",
+                "PRESENCIAL",
+                FaseEvaluacion.NUEVO_CICLO,
+                LocalDate.of(2026, 12, 1)
+        );
+
+        assertEquals(LocalDate.of(2026, 3, 10), registro.getFechaInicio());
+        assertEquals(LocalDate.of(2026, 11, 1), registro.getFechaCierre());
+        assertEquals("NUEVA", registro.getEstadoCarrera());
+        assertNull(registro.getNroResolucionConeau());
+        assertEquals("RM 999/2025", registro.getRmEstandares());
+        assertEquals("Ingeniería", registro.getAreaDisciplinaria());
+        assertEquals("PRESENCIAL", registro.getModalidadCarrera());
+        assertEquals(FaseEvaluacion.NUEVO_CICLO, registro.getFaseEvaluacion());
+        assertEquals(LocalDate.of(2026, 12, 1), registro.getFechaLimitePresentacionConeau());
+    }
 }

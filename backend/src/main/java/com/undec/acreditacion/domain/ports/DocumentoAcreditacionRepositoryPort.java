@@ -13,4 +13,7 @@ public interface DocumentoAcreditacionRepositoryPort {
     Optional<DocumentoAcreditacion> findById(UUID id);
 
     List<DocumentoAcreditacion> findByActividadId(UUID actividadId);
+
+    default void deleteById(UUID id) {
+    }
 }

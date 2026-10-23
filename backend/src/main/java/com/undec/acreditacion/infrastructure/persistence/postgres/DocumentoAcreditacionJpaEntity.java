@@ -29,6 +29,12 @@ public class DocumentoAcreditacionJpaEntity {
     @Column(name = "tipo_documento", nullable = false, length = 100)
     private String tipoDocumento;
 
+    @Column(name = "clasificacion_origen", length = 100)
+    private String clasificacionOrigen;
+
+    @Column(name = "descripcion", length = 500)
+    private String descripcion;
+
     @Column(name = "mime_type", nullable = false, length = 100)
     private String mimeType;
 
@@ -85,6 +91,22 @@ public class DocumentoAcreditacionJpaEntity {
 
     public void setTipoDocumento(String tipoDocumento) {
         this.tipoDocumento = tipoDocumento;
+    }
+
+    public String getClasificacionOrigen() {
+        return clasificacionOrigen;
+    }
+
+    public void setClasificacionOrigen(String clasificacionOrigen) {
+        this.clasificacionOrigen = clasificacionOrigen;
+    }
+
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
     }
 
     public String getMimeType() {

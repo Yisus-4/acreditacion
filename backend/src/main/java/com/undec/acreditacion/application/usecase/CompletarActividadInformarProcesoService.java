@@ -41,12 +41,18 @@ public class CompletarActividadInformarProcesoService implements CompletarActivi
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el plan de trabajo con ID: " + actividad.getPlanTrabajoId()));
         UUID procesoId = plan.getProcesoId();
 
-        // 3. Subir archivo a MinIO
+        // 3. Adjunto opcional: si no hay archivo, solo se registra la comunicación y se completa
+        if (!command.tieneAdjunto()) {
+            registrarComunicacion(actividad, command);
+            return planTrabajoRepository.saveActividad(actividad);
+        }
+
+        // 4. Subir archivo a MinIO
         String filename = "ACTA_" + UUID.randomUUID() + ".pdf";
         String storagePath = documentStoragePort.uploadFile(command.archivoBytes(), filename, "application/pdf");
 
         try {
-            // 4. Persistir metadatos probatorios del documento vinculados al procesoId
+            // 5. Persistir metadatos del documento adjunto vinculados al procesoId
             DocumentoAcreditacion documento = DocumentoAcreditacion.crear(
                     procesoId,
                     actividad.getId(),
@@ -59,12 +65,8 @@ public class CompletarActividadInformarProcesoService implements CompletarActivi
             );
             documentoRepository.save(documento);
 
-            // 5. Completar actividad en el dominio y persistir
-            actividad.registrarReunionYCompletar(
-                    command.fechaReunion(),
-                    command.sintesisAcuerdos(),
-                    command.usuarioAeaId()
-            );
+            // 6. Completar actividad en el dominio y persistir
+            registrarComunicacion(actividad, command);
             return planTrabajoRepository.saveActividad(actividad);
 
         } catch (Exception ex) {
@@ -76,5 +78,15 @@ public class CompletarActividadInformarProcesoService implements CompletarActivi
             }
             throw ex;
         }
+    }
+
+    private void registrarComunicacion(ActividadPlanTrabajo actividad, CompletarActividadCommand command) {
+        actividad.registrarComunicacionYCompletar(
+                command.areasInformadas(),
+                command.documentacionRemitida(),
+                command.fechaReunion(),
+                command.observaciones(),
+                command.usuarioAeaId()
+        );
     }
 }

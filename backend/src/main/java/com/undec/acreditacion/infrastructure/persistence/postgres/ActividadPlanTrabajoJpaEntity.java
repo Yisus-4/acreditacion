@@ -60,6 +60,12 @@ public class ActividadPlanTrabajoJpaEntity {
     @Column(name = "prioridad", length = 20)
     private String prioridad;
 
+    @Column(name = "areas_informadas", columnDefinition = "TEXT")
+    private String areasInformadas;
+
+    @Column(name = "documentacion_remitida", columnDefinition = "TEXT")
+    private String documentacionRemitida;
+
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
 
@@ -67,6 +73,22 @@ public class ActividadPlanTrabajoJpaEntity {
     private Instant actualizadoEn;
 
     public ActividadPlanTrabajoJpaEntity() {
+    }
+
+    public String getAreasInformadas() {
+        return areasInformadas;
+    }
+
+    public void setAreasInformadas(String areasInformadas) {
+        this.areasInformadas = areasInformadas;
+    }
+
+    public String getDocumentacionRemitida() {
+        return documentacionRemitida;
+    }
+
+    public void setDocumentacionRemitida(String documentacionRemitida) {
+        this.documentacionRemitida = documentacionRemitida;
     }
 
     public UUID getId() {

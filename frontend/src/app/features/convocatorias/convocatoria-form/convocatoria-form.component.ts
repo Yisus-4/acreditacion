@@ -27,6 +27,10 @@ export class ConvocatoriaFormComponent implements OnInit {
   readonly submitting = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
 
+  get esCarreraEnFuncionamiento(): boolean {
+    return this.form?.get('tipoProceso')?.value === 'EN_FUNCIONAMIENTO';
+  }
+
   ngOnInit(): void {
     this.initForm();
     this.cargarCarrerasDeGrado();
@@ -55,6 +59,17 @@ export class ConvocatoriaFormComponent implements OnInit {
       },
       { validators: this.fechasValidator }
     );
+
+    this.form.get('tipoProceso')?.valueChanges.subscribe((tipo: TipoProceso) => {
+      const ctrl = this.form.get('nroResolucionConeau');
+      if (!ctrl) return;
+      if (tipo === 'EN_FUNCIONAMIENTO') {
+        ctrl.setValidators([Validators.required, Validators.pattern(/.*\S.*/)]);
+      } else {
+        ctrl.clearValidators();
+      }
+      ctrl.updateValueAndValidity();
+    });
   }
 
   private fechasValidator(group: FormGroup): { [key: string]: boolean } | null {
@@ -92,9 +107,10 @@ export class ConvocatoriaFormComponent implements OnInit {
     this.errorMessage.set(null);
 
     const formVal = this.form.value;
+    const nroRes = (formVal.nroResolucionConeau || '').trim();
     const request: IniciarConvocatoriaRequest = {
       carreraId: formVal.carreraId,
-      nroResolucionConeau: formVal.nroResolucionConeau.trim(),
+      nroResolucionConeau: formVal.tipoProceso === 'EN_FUNCIONAMIENTO' ? nroRes : (nroRes || undefined),
       fechaInicio: formVal.fechaInicio,
       fechaCierre: formVal.fechaCierre,
       tipoProceso: formVal.tipoProceso,

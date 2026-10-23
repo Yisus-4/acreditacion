@@ -21,7 +21,7 @@ public class RegistroConvocatoriaJpaEntity {
     @Column(name = "proceso_id", nullable = false, unique = true)
     private UUID procesoId;
 
-    @Column(name = "nro_resolucion_coneau", nullable = false, length = 100)
+    @Column(name = "nro_resolucion_coneau", length = 100)
     private String nroResolucionConeau;
 
     @Column(name = "fecha_inicio", nullable = false)
@@ -36,11 +36,23 @@ public class RegistroConvocatoriaJpaEntity {
     @Column(name = "rm_estandares", length = 100)
     private String rmEstandares;
 
+    @Column(name = "area_disciplinaria", length = 150)
+    private String areaDisciplinaria;
+
+    @Column(name = "modalidad_carrera", nullable = false, length = 50)
+    private String modalidadCarrera = "PRESENCIAL";
+
+    @Column(name = "estado_carrera", nullable = false, length = 50)
+    private String estadoCarrera = "EN_FUNCIONAMIENTO";
+
     @Column(name = "fase_evaluacion", length = 50)
     private String faseEvaluacion;
 
     @Column(name = "fecha_limite_presentacion_coneau")
     private LocalDate fechaLimitePresentacionConeau;
+
+    @Column(name = "fecha_formalizacion_electronica")
+    private LocalDate fechaFormalizacionElectronica;
 
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
@@ -107,6 +119,30 @@ public class RegistroConvocatoriaJpaEntity {
         this.rmEstandares = rmEstandares;
     }
 
+    public String getAreaDisciplinaria() {
+        return areaDisciplinaria;
+    }
+
+    public void setAreaDisciplinaria(String areaDisciplinaria) {
+        this.areaDisciplinaria = areaDisciplinaria;
+    }
+
+    public String getModalidadCarrera() {
+        return modalidadCarrera;
+    }
+
+    public void setModalidadCarrera(String modalidadCarrera) {
+        this.modalidadCarrera = modalidadCarrera;
+    }
+
+    public String getEstadoCarrera() {
+        return estadoCarrera;
+    }
+
+    public void setEstadoCarrera(String estadoCarrera) {
+        this.estadoCarrera = estadoCarrera;
+    }
+
     public String getFaseEvaluacion() {
         return faseEvaluacion;
     }
@@ -121,6 +157,14 @@ public class RegistroConvocatoriaJpaEntity {
 
     public void setFechaLimitePresentacionConeau(LocalDate fechaLimitePresentacionConeau) {
         this.fechaLimitePresentacionConeau = fechaLimitePresentacionConeau;
+    }
+
+    public LocalDate getFechaFormalizacionElectronica() {
+        return fechaFormalizacionElectronica;
+    }
+
+    public void setFechaFormalizacionElectronica(LocalDate fechaFormalizacionElectronica) {
+        this.fechaFormalizacionElectronica = fechaFormalizacionElectronica;
     }
 
     public Instant getCreadoEn() {

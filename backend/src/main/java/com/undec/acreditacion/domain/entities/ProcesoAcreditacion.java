@@ -12,7 +12,7 @@ public final class ProcesoAcreditacion {
     private final UUID carreraId;
     private final String codigo;
     private final String titulo;
-    private final TipoProcesoAcreditacion tipoProceso;
+    private TipoProcesoAcreditacion tipoProceso;
     private EstadoProcesoAcreditacion estado;
     private final UUID creadoPor;
     private final Instant creadoEn;
@@ -108,6 +108,13 @@ public final class ProcesoAcreditacion {
         }
         this.estado = EstadoProcesoAcreditacion.EN_AUTOEVALUACION;
         this.actualizadoEn = Instant.now();
+    }
+
+    public void actualizarTipoProceso(TipoProcesoAcreditacion nuevoTipo) {
+        if (nuevoTipo != null && this.tipoProceso != nuevoTipo) {
+            this.tipoProceso = nuevoTipo;
+            this.actualizadoEn = Instant.now();
+        }
     }
 
     public void finalizar() {

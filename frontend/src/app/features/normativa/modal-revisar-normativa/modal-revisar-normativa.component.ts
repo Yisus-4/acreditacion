@@ -26,6 +26,8 @@ export class ModalRevisarNormativaComponent {
   @Input({ required: true }) abierto = false;
   @Input() procesoCodigo = '';
   @Input() carreraNombre = '';
+  @Input() submitting = false;
+  @Input() serverError: string | null = null;
 
   @Input() set documentos(docs: DocumentoNormativaDto[]) {
     if (docs) {
@@ -65,20 +67,30 @@ export class ModalRevisarNormativaComponent {
 
   onConfirmar(): void {
     const dec = this.decision();
-    const obs = this.observaciones().trim();
+    let obs = this.observaciones().trim();
 
     if (dec === 'REQUIERE_CORRECCIONES') {
+      const seleccionados = this.itemsObservacion().filter((item) => item.seleccionado);
+      const motivosPuntuales = seleccionados
+        .map((item) => item.motivo.trim())
+        .filter((m) => m.length > 0);
+
+      if (!obs && motivosPuntuales.length > 0) {
+        obs = motivosPuntuales.join('; ');
+        this.observaciones.set(obs);
+      }
+
       if (!obs) {
-        this.errorMsg.set('Las observaciones de revisión son obligatorias al requerir correcciones.');
+        this.errorMsg.set(
+          'Debe ingresar las observaciones generales de revisión o detallar el motivo en al menos un documento observado.'
+        );
         return;
       }
 
-      const observados: DocumentoObservadoDto[] = this.itemsObservacion()
-        .filter((item) => item.seleccionado)
-        .map((item) => ({
-          documentoId: item.documentoId,
-          motivo: item.motivo.trim() || obs,
-        }));
+      const observados: DocumentoObservadoDto[] = seleccionados.map((item) => ({
+        documentoId: item.documentoId,
+        motivo: item.motivo.trim() || obs,
+      }));
 
       this.errorMsg.set(null);
       this.confirmar.emit({

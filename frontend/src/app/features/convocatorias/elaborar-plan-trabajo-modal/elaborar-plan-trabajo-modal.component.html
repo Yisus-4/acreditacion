@@ -6,7 +6,8 @@
         <h2 class="modal-title">Elaborar Plan de Trabajo para Acreditación</h2>
         <p class="modal-subtitle">
           Carrera: <strong>{{ convocatoria.carreraNombre }}</strong> &bull;
-          Resolución CONEAU: <strong class="font-mono">{{ convocatoria.registroConvocatoria?.nroResolucionConeau || 'S/N' }}</strong>
+          Nivel: <strong>GRADO</strong> &bull;
+          Código: <strong class="font-mono">{{ convocatoria.codigo }}</strong>
         </p>
       </div>
       <button type="button" class="btn-close" (click)="cancelar()" aria-label="Cerrar modal">&times;</button>
@@ -31,44 +32,194 @@
       }
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <!-- Bloque 1: Metadatos CONEAU (RG-001) -->
+        <!-- Bloque 1: Registro de participación en acreditaciones (RG-001 · Nivel Grado) -->
         <fieldset class="form-section">
-          <legend class="section-legend">1. Metadatos Oficiales CONEAU (Ficha RG-001)</legend>
+          <legend class="section-legend">1. Registro de participación en acreditaciones (RG-001 · Nivel Grado)</legend>
           <p class="section-hint">
-            Defina la fase de evaluación y la fecha límite oficial de presentación ante CONEAU (Ficha RG-001).
+            A partir de la información y documentación recolectada en las Actividades 1 y 2, complete y valide los campos oficiales de la convocatoria en el RG-001 para carreras de Grado.
           </p>
 
+          <!-- Identificación institucional de la carrera incluida en la convocatoria -->
+          <div class="rg001-resumen-grid">
+            <div class="rg001-item">
+              <span class="rg001-label">Carrera incluida en la convocatoria:</span>
+              <span class="rg001-val">{{ convocatoria.carreraNombre }} {{ convocatoria.carreraSigla ? '(' + convocatoria.carreraSigla + ')' : '' }}</span>
+            </div>
+            <div class="rg001-item">
+              <span class="rg001-label">Nivel educativo:</span>
+              <span class="rg001-badge-grado">GRADO</span>
+            </div>
+            <div class="rg001-item">
+              <span class="rg001-label">Código de Proceso:</span>
+              <span class="rg001-val font-mono">{{ convocatoria.codigo }}</span>
+            </div>
+          </div>
+
+          <!-- Campos editables del RG-001 (Grado) -->
           <div class="form-grid-coneau">
-            <div class="form-group form-group-full">
+            <!-- 1. Estado de la carrera -->
+            <div class="form-group">
+              <label for="estadoCarrera">
+                Estado de la Carrera <span class="required">*</span>
+              </label>
+              <select id="estadoCarrera" formControlName="estadoCarrera">
+                <option value="EN_FUNCIONAMIENTO">En funcionamiento</option>
+                <option value="NUEVA">Nueva</option>
+              </select>
+              <span class="field-help">
+                Indique si la carrera se encuentra en funcionamiento o si se trata de una carrera nueva.
+              </span>
+            </div>
+
+            <!-- 2. Nro. de resolución de convocatoria CONEAU (solo para carreras en funcionamiento) -->
+            <div class="form-group">
+              <label for="nroResolucionConeau">
+                Nro. de Resolución de Convocatoria CONEAU
+                @if (esCarreraEnFuncionamiento) {
+                  <span class="required">*</span>
+                }
+              </label>
+              @if (esCarreraEnFuncionamiento) {
+                <input
+                  id="nroResolucionConeau"
+                  type="text"
+                  formControlName="nroResolucionConeau"
+                  placeholder="Ej. RESFC-2026-145-APN-CONEAU#ME"
+                />
+                <span class="field-help">
+                  Resolución oficial de convocatoria CONEAU (obligatorio para carreras en funcionamiento).
+                </span>
+                @if (form.get('nroResolucionConeau')?.touched && form.get('nroResolucionConeau')?.invalid) {
+                  <span class="form-error">El número de resolución CONEAU es obligatorio para carreras en funcionamiento.</span>
+                }
+              } @else {
+                <input
+                  id="nroResolucionConeau"
+                  type="text"
+                  value="No aplica (Solo para carreras en funcionamiento)"
+                  disabled
+                  class="input-disabled-note"
+                />
+                <span class="field-help">
+                  Solo aplica para carreras en funcionamiento.
+                </span>
+              }
+            </div>
+
+            <!-- 3. Fecha de inicio del proceso de acreditación dispuesto por la CONEAU -->
+            <div class="form-group">
+              <label for="fechaInicio">
+                Fecha de Inicio del Proceso (CONEAU) <span class="required">*</span>
+              </label>
+              <input
+                id="fechaInicio"
+                type="date"
+                formControlName="fechaInicio"
+              />
+              <span class="field-help">
+                Fecha de inicio del proceso de acreditación dispuesto por la CONEAU.
+              </span>
+              @if (form.get('fechaInicio')?.touched && form.get('fechaInicio')?.invalid) {
+                <span class="form-error">La fecha de inicio del proceso es obligatoria.</span>
+              }
+            </div>
+
+            <!-- 4. Fecha de cierre de la convocatoria o plazo vigente -->
+            <div class="form-group">
+              <label for="fechaCierre">
+                Fecha de Cierre de la Convocatoria / Plazo Vigente <span class="required">*</span>
+              </label>
+              <input
+                id="fechaCierre"
+                type="date"
+                formControlName="fechaCierre"
+              />
+              <span class="field-help">
+                Fecha de cierre de la convocatoria o plazo vigente dispuesto por CONEAU.
+              </span>
+              @if (form.get('fechaCierre')?.touched && form.get('fechaCierre')?.invalid) {
+                <span class="form-error">La fecha de cierre de la convocatoria es obligatoria.</span>
+              }
+            </div>
+
+            <!-- 5. RM de estándares de la carrera -->
+            <div class="form-group">
               <label for="rmEstandares">
-                Resolución Ministerial de Estándares (RM)
+                RM de Estándares de la Carrera <span class="required">*</span>
               </label>
               <input
                 id="rmEstandares"
                 type="text"
                 formControlName="rmEstandares"
-                placeholder="Ej. RM 1254/2018 - Estándares para carreras de Grado"
+                placeholder="Ej. RM 1254/2018 - Estándares de Grado"
               />
               <span class="field-help">
-                Resolución Ministerial de estándares aplicable a la carrera (precargada automáticamente desde la normativa previa de la Actividad 1.3).
+                Resolución Ministerial que fija los estándares de la carrera.
+              </span>
+              @if (form.get('rmEstandares')?.touched && form.get('rmEstandares')?.invalid) {
+                <span class="form-error">La RM de estándares de la carrera es obligatoria.</span>
+              }
+            </div>
+
+            <!-- 6. Área disciplinaria -->
+            <div class="form-group">
+              <label for="areaDisciplinaria">
+                Área Disciplinaria <span class="required">*</span>
+              </label>
+              <input
+                id="areaDisciplinaria"
+                type="text"
+                list="areasDisciplinariasList"
+                formControlName="areaDisciplinaria"
+                placeholder="Seleccione o escriba el área disciplinaria..."
+              />
+              <datalist id="areasDisciplinariasList">
+                @for (area of areasDisciplinariasSugeridas; track area) {
+                  <option [value]="area"></option>
+                }
+              </datalist>
+              <span class="field-help">
+                Área disciplinaria según clasificación CONEAU (Nivel Grado).
+              </span>
+              @if (form.get('areaDisciplinaria')?.touched && form.get('areaDisciplinaria')?.invalid) {
+                <span class="form-error">El área disciplinaria es obligatoria.</span>
+              }
+            </div>
+
+            <!-- 7. Modalidad de la carrera -->
+            <div class="form-group">
+              <label for="modalidadCarrera">
+                Modalidad de la Carrera <span class="required">*</span>
+              </label>
+              <select id="modalidadCarrera" formControlName="modalidadCarrera">
+                <option value="PRESENCIAL">Presencial</option>
+                <option value="A_DISTANCIA">A distancia</option>
+              </select>
+              <span class="field-help">
+                Modalidad de dictado de la carrera incluida en la convocatoria.
               </span>
             </div>
 
+            <!-- 8. Fase de evaluación de la carrera -->
             <div class="form-group">
               <label for="faseEvaluacion">
-                Fase de Evaluación <span class="required">*</span>
+                Fase de Evaluación de la Carrera <span class="required">*</span>
               </label>
               <select id="faseEvaluacion" formControlName="faseEvaluacion">
-                <option value="PRIMERA_FASE">1era Fase (Primera Fase)</option>
-                <option value="SEGUNDA_FASE">2da Fase - Seguimiento de Compromisos</option>
-                <option value="NUEVO_CICLO">Nuevo Ciclo</option>
+                <option value="PRIMERA_FASE">1era Fase</option>
+                <option value="SEGUNDA_FASE">2da Fase</option>
+                <option value="NUEVO_CICLO">Nuevo ciclo</option>
                 <option value="SEGUIMIENTO">Seguimiento</option>
               </select>
+              <span class="field-help">
+                Instancia o ciclo de evaluación aplicable en CONEAU.
+              </span>
             </div>
 
+            <!-- 9. Fecha límite de presentación en CONEAU -->
             <div class="form-group">
               <label for="fechaLimitePresentacionConeau">
-                Fecha Límite Presentación CONEAU <span class="required">*</span>
+                Fecha Límite de Presentación en CONEAU <span class="required">*</span>
               </label>
               <input
                 id="fechaLimitePresentacionConeau"
@@ -76,10 +227,10 @@
                 formControlName="fechaLimitePresentacionConeau"
               />
               <span class="field-help">
-                Fecha límite en que la solicitud/informe debe remitirse formalmente en CONEAU Global.
+                Fecha límite en que la presentación debe remitirse formalmente en CONEAU Global.
               </span>
               @if (form.get('fechaLimitePresentacionConeau')?.touched && form.get('fechaLimitePresentacionConeau')?.invalid) {
-                <span class="form-error">La fecha límite de presentación ante CONEAU es obligatoria.</span>
+                <span class="form-error">La fecha límite de presentación en CONEAU es obligatoria.</span>
               }
             </div>
           </div>
@@ -161,14 +312,13 @@
               <table class="actividades-table">
                 <thead>
                   <tr>
-                    <th class="col-orden">Hito / Orden</th>
+                    <th class="col-orden">Orden</th>
                     <th class="col-codigo">Código</th>
                     <th class="col-nombre">Nombre de la Actividad</th>
                     <th class="col-hoja">Hoja</th>
                     <th class="col-fecha">Inicio Estimado</th>
                     <th class="col-fecha">Fin Estimado</th>
                     <th class="col-resp">Responsable</th>
-                    <th class="col-prioridad">Prioridad</th>
                     <th class="col-acciones">Acción</th>
                   </tr>
                 </thead>
@@ -275,20 +425,6 @@
                             </div>
                           }
                         </div>
-                      </td>
-
-                      <td class="col-prioridad">
-                        <select
-                          formControlName="prioridad"
-                          class="select-compact"
-                          [class.prioridad-alta]="item.control.get('prioridad')?.value === 'ALTA'"
-                          [class.prioridad-media]="item.control.get('prioridad')?.value === 'MEDIA'"
-                          [class.prioridad-baja]="item.control.get('prioridad')?.value === 'BAJA'"
-                        >
-                          <option value="ALTA">Alta</option>
-                          <option value="MEDIA">Media</option>
-                          <option value="BAJA">Baja</option>
-                        </select>
                       </td>
 
                       <td class="col-acciones">

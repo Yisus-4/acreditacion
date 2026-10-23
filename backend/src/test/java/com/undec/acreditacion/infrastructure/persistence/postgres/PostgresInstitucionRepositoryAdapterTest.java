@@ -117,4 +117,30 @@ class PostgresInstitucionRepositoryAdapterTest {
         assertTrue(result.isPresent());
         assertEquals(domain, result.get());
     }
+
+    @Test
+    @DisplayName("findBySigla delega en springDataRepository con trim e ignoreCase")
+    void findBySiglaDelega() {
+        Institucion domain = sampleInstitucion();
+        InstitucionJpaEntity entity = new InstitucionJpaEntity();
+
+        when(springDataRepository.findBySiglaIgnoreCase("UNdeC")).thenReturn(Optional.of(entity));
+        when(mapper.toDomain(entity)).thenReturn(domain);
+
+        Optional<Institucion> result = adapter.findBySigla("  UNdeC  ");
+
+        assertTrue(result.isPresent());
+        assertEquals(domain, result.get());
+        verify(springDataRepository).findBySiglaIgnoreCase("UNdeC");
+    }
+
+    @Test
+    @DisplayName("deleteById delega en springDataRepository")
+    void deleteByIdDelega() {
+        UUID id = UUID.randomUUID();
+
+        adapter.deleteById(id);
+
+        verify(springDataRepository).deleteById(id);
+    }
 }

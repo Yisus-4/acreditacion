@@ -22,13 +22,41 @@ public class ConsultarPlanTrabajoService implements ConsultarPlanTrabajoUseCase 
         PlanTrabajo plan = planTrabajoRepository.findByProcesoId(procesoId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el plan de trabajo para el proceso: " + procesoId));
 
-        boolean tieneActividad13 = plan.getActividades().stream()
-                .anyMatch(a -> "1.3".equals(a.getCodigoActividad()) ||
-                               (a.getNombre() != null && a.getNombre().toLowerCase().contains("normativa")));
+        boolean modificado = false;
 
+        boolean tieneActividad13 = plan.getActividades().stream().anyMatch(PlanTrabajo::esActividadNormativa);
         if (!tieneActividad13) {
             ActividadPlanTrabajo actividad13 = ActividadPlanTrabajo.crearActividadNormativa(plan.getId());
             plan.agregarActividad(actividad13);
+            persistirActividadAgregada(plan, actividad13.getId());
+            modificado = true;
+        }
+
+        boolean tieneActividad04 = plan.getActividades().stream().anyMatch(PlanTrabajo::esActividadIdentificarDocumentacionInteres);
+        if (!tieneActividad04) {
+            ActividadPlanTrabajo actividad04 = ActividadPlanTrabajo.crearActividadIdentificarDocumentacionInteres(plan.getId());
+            plan.agregarActividad(actividad04);
+            persistirActividadAgregada(plan, actividad04.getId());
+            modificado = true;
+        }
+
+        // Eliminar Actividad 5 obsoleta de planes existentes
+        boolean teniaActividad05 = plan.eliminarActividadSiExiste("ACT-05-VERIFICAR-INFO-INSTITUCIONAL")
+                || plan.eliminarActividadSiExiste("1.7")
+                || plan.eliminarActividadSiExiste("información institucional precargada");
+        if (teniaActividad05) {
+            modificado = true;
+        }
+
+        boolean tieneActividad06 = plan.getActividades().stream().anyMatch(PlanTrabajo::esActividadFormalizacionElectronica);
+        if (!tieneActividad06) {
+            ActividadPlanTrabajo actividad06 = ActividadPlanTrabajo.crearActividadFormalizacionElectronica(plan.getId());
+            plan.agregarActividad(actividad06);
+            persistirActividadAgregada(plan, actividad06.getId());
+            modificado = true;
+        }
+
+        if (modificado) {
             PlanTrabajo saved = planTrabajoRepository.save(plan);
             if (saved != null) {
                 plan = saved;
@@ -36,5 +64,12 @@ public class ConsultarPlanTrabajoService implements ConsultarPlanTrabajoUseCase 
         }
 
         return plan;
+    }
+
+    private void persistirActividadAgregada(PlanTrabajo plan, UUID actividadId) {
+        plan.getActividades().stream()
+                .filter(a -> a.getId().equals(actividadId))
+                .findFirst()
+                .ifPresent(planTrabajoRepository::saveActividad);
     }
 }

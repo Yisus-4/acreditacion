@@ -4,9 +4,9 @@
     <div class="register-header__content">
       <div class="register-header__left">
         <a class="back-link" routerLink="/admin/instituciones">&larr; Volver a Instituciones</a>
-        <h1 class="register-header__title">Registrar Institución</h1>
+        <h1 class="register-header__title">{{ isEditing() ? 'Editar Institución Universitaria' : 'Registrar Institución' }}</h1>
         <p class="register-header__desc">
-          Complete los cuatro bloques de datos para registrar una nueva institución universitaria en el sistema.
+          {{ isEditing() ? 'Modifique los datos institucionales, sedes centrales y autoridades.' : 'Complete los cuatro bloques de datos para registrar una nueva institución universitaria en el sistema.' }}
         </p>
       </div>
     </div>
@@ -86,7 +86,7 @@
 
           <!-- Carga de logotipo -->
           <div class="form-field mt-3">
-            <label>Logotipo Institucional <span class="required">*</span></label>
+            <label>Logotipo Institucional @if (!isEditing()) { <span class="required">*</span> }</label>
 
             @if (!previewUrl()) {
               <div
@@ -507,9 +507,9 @@
         >
           @if (submitting()) {
             <span class="spinner-sm" aria-hidden="true"></span>
-            <span>Registrando institución...</span>
+            <span>{{ isEditing() ? 'Guardando cambios...' : 'Registrando institución...' }}</span>
           } @else {
-            <span>Registrar Institución</span>
+            <span>{{ isEditing() ? 'Guardar Cambios' : 'Registrar Institución' }}</span>
           }
         </button>
       </footer>

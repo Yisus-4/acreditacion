@@ -60,9 +60,23 @@ public class PostgresInstitucionRepositoryAdapter implements InstitucionReposito
     }
 
     @Override
+    public Optional<Institucion> findBySigla(String sigla) {
+        if (sigla == null || sigla.isBlank()) {
+            return Optional.empty();
+        }
+        return springDataRepository.findBySiglaIgnoreCase(sigla.trim()).map(mapper::toDomain);
+    }
+
+    @Override
     public List<Institucion> findAll() {
         return springDataRepository.findAll().stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public void deleteById(UUID id) {
+        springDataRepository.deleteById(id);
     }
 }

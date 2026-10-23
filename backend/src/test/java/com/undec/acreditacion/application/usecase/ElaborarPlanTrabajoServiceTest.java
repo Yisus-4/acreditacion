@@ -177,4 +177,54 @@ class ElaborarPlanTrabajoServiceTest {
 
         assertThrows(ResourceNotFoundException.class, () -> service.elaborar(command));
     }
+
+    @Test
+    @DisplayName("Debe actualizar todos los campos oficiales del RG-001 de Grado en Actividad 3")
+    void debeActualizarTodosLosCamposRg001EnElaborarPlan() {
+        UUID procesoId = UUID.randomUUID();
+        UUID carreraId = UUID.randomUUID();
+        UUID usuarioAeaId = UUID.randomUUID();
+
+        ProcesoAcreditacion proceso = ProcesoAcreditacion.iniciar(
+                carreraId, "CONV-2026-ISI-01", "Acreditación ISI 2026",
+                TipoProcesoAcreditacion.EN_FUNCIONAMIENTO, usuarioAeaId
+        );
+        RegistroConvocatoria registro = RegistroConvocatoria.crear(
+                procesoId, "RESFC-2026-145", LocalDate.of(2026, 3, 1), LocalDate.of(2026, 10, 30), "Obs"
+        );
+        PlanTrabajo plan = PlanTrabajo.inicializar(procesoId, "PT-001-ISI-2026", TipoPlanTrabajo.PT_001_ACREDITACION);
+
+        when(procesoRepository.findById(procesoId)).thenReturn(Optional.of(proceso));
+        when(registroRepository.findByProcesoId(procesoId)).thenReturn(Optional.of(registro));
+        when(planTrabajoRepository.findByProcesoId(procesoId)).thenReturn(Optional.of(plan));
+        when(planTrabajoRepository.save(any(PlanTrabajo.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ElaborarPlanTrabajoCommand command = new ElaborarPlanTrabajoCommand(
+                procesoId,
+                LocalDate.of(2026, 3, 15),
+                LocalDate.of(2026, 11, 15),
+                "EN_FUNCIONAMIENTO",
+                "RESFC-2026-999-APN-CONEAU#ME",
+                "RM 1254/2018",
+                "Informática / Sistemas",
+                "A_DISTANCIA",
+                FaseEvaluacion.SEGUNDA_FASE,
+                LocalDate.of(2026, 12, 15),
+                List.of(),
+                usuarioAeaId
+        );
+
+        service.elaborar(command);
+
+        assertEquals(LocalDate.of(2026, 3, 15), registro.getFechaInicio());
+        assertEquals(LocalDate.of(2026, 11, 15), registro.getFechaCierre());
+        assertEquals("EN_FUNCIONAMIENTO", registro.getEstadoCarrera());
+        assertEquals("RESFC-2026-999-APN-CONEAU#ME", registro.getNroResolucionConeau());
+        assertEquals("RM 1254/2018", registro.getRmEstandares());
+        assertEquals("Informática / Sistemas", registro.getAreaDisciplinaria());
+        assertEquals("A_DISTANCIA", registro.getModalidadCarrera());
+        assertEquals(FaseEvaluacion.SEGUNDA_FASE, registro.getFaseEvaluacion());
+        assertEquals(LocalDate.of(2026, 12, 15), registro.getFechaLimitePresentacionConeau());
+        verify(registroRepository).save(registro);
+    }
 }

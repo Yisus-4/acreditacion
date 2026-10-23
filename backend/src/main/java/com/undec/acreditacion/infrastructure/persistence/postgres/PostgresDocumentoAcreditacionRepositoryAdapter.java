@@ -42,4 +42,9 @@ public class PostgresDocumentoAcreditacionRepositoryAdapter implements Documento
                 .map(mapper::toDomain)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public void deleteById(UUID id) {
+        springDataRepository.deleteById(id);
+    }
 }

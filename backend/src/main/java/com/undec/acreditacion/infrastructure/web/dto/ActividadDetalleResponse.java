@@ -24,7 +24,10 @@ public record ActividadDetalleResponse(
         String prioridad,
         Instant creadoEn,
         Instant actualizadoEn,
-        List<DocumentoAcreditacionResponse> documentos
+        List<DocumentoAcreditacionResponse> documentos,
+        List<String> areasInformadas,
+        List<String> documentacionRemitida,
+        String observaciones
 ) {
     public ActividadDetalleResponse(UUID id,
                                    UUID planTrabajoId,
@@ -42,6 +45,6 @@ public record ActividadDetalleResponse(
                                    List<DocumentoAcreditacionResponse> documentos) {
         this(id, planTrabajoId, numeroOrden, codigoActividad, nombre, estado, fechaReunionCoordinacion,
              sintesisAcuerdos, completadaEn, completadaPor, completadaPorNombre, "INFO", null, null, null, "MEDIA",
-             creadoEn, actualizadoEn, documentos);
+             creadoEn, actualizadoEn, documentos, List.of(), List.of(), sintesisAcuerdos);
     }
 }

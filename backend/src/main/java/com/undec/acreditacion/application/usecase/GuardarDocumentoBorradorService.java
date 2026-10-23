@@ -95,7 +95,7 @@ public class GuardarDocumentoBorradorService implements GuardarDocumentoBorrador
 
         List<DocumentoNormativa> existentes = documentoRepository.findBySolicitudNormativaId(solicitud.getId());
         Optional<DocumentoNormativa> existente = command.tipoDocumento() == TipoDocumentoNormativa.ACTA_COMISION_CURRICULAR
-            ? Optional.empty()
+            ? existentes.stream().filter(d -> d.getTipoDocumento() == TipoDocumentoNormativa.ACTA_COMISION_CURRICULAR && d.isObservado()).findFirst()
             : existentes.stream().filter(d -> d.getTipoDocumento() == command.tipoDocumento()).findFirst();
 
         DocumentoNormativa docAGuardar;

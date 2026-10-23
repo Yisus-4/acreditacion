@@ -9,8 +9,12 @@ import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.domain.ports.*;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 public class RevisarNormativaService implements RevisarNormativaUseCase {
@@ -66,15 +70,52 @@ public class RevisarNormativaService implements RevisarNormativaUseCase {
             .orElse(proceso.getCodigo());
 
         if (command.decision() == DecisionRevisionNormativa.OBSERVAR) {
-            solicitud.observar(command.revisorId(), command.observacionesRevision());
+            String rawObs = command.observacionesRevision() != null ? command.observacionesRevision().trim() : "";
 
-            List<String> nombresObservados = new ArrayList<>();
+            Map<UUID, String> motivosPorDocId = new LinkedHashMap<>();
             if (command.documentosObservados() != null) {
                 for (DocumentoObservadoDto obs : command.documentosObservados()) {
-                    documentoRepository.findById(obs.documentoId()).ifPresent(doc -> {
-                        doc.marcarObservado(obs.motivo());
+                    if (obs != null && obs.documentoId() != null) {
+                        String motivoDoc = (obs.motivo() != null && !obs.motivo().trim().isEmpty())
+                            ? obs.motivo().trim()
+                            : (!rawObs.isEmpty() ? rawObs : "Requiere corrección");
+                        motivosPorDocId.put(obs.documentoId(), motivoDoc);
+                    }
+                }
+            }
+
+            String motivoGeneral = rawObs;
+            if (motivoGeneral.isEmpty() && !motivosPorDocId.isEmpty()) {
+                motivoGeneral = String.join("; ", motivosPorDocId.values());
+            }
+
+            solicitud.observar(command.revisorId(), motivoGeneral);
+
+            List<String> nombresObservados = new ArrayList<>();
+            List<DocumentoNormativa> todosDocs = documentoRepository.findBySolicitudNormativaId(solicitud.getId());
+            Set<UUID> procesados = new HashSet<>();
+
+            if (todosDocs != null) {
+                for (DocumentoNormativa doc : todosDocs) {
+                    if (motivosPorDocId.containsKey(doc.getId())) {
+                        String motivo = motivosPorDocId.get(doc.getId());
+                        doc.marcarObservado(motivo);
                         documentoRepository.save(doc);
-                        nombresObservados.add(doc.getNombreOriginal() + " (" + obs.motivo() + ")");
+                        nombresObservados.add(doc.getNombreOriginal() + " (" + motivo + ")");
+                        procesados.add(doc.getId());
+                    } else if (doc.isObservado()) {
+                        doc.limpiarObservacion();
+                        documentoRepository.save(doc);
+                    }
+                }
+            }
+
+            for (Map.Entry<UUID, String> entry : motivosPorDocId.entrySet()) {
+                if (!procesados.contains(entry.getKey())) {
+                    documentoRepository.findById(entry.getKey()).ifPresent(doc -> {
+                        doc.marcarObservado(entry.getValue());
+                        documentoRepository.save(doc);
+                        nombresObservados.add(doc.getNombreOriginal() + " (" + entry.getValue() + ")");
                     });
                 }
             }
@@ -87,12 +128,22 @@ public class RevisarNormativaService implements RevisarNormativaUseCase {
                 "Dirección de Carrera",
                 carreraNombre,
                 codigoConvocatoria,
-                command.observacionesRevision(),
+                solicitud.getObservacionesRevision(),
                 nombresObservados
             );
         } else {
             solicitud.aprobar(command.revisorId(), command.observacionesRevision());
             solicitudRepository.save(solicitud);
+
+            List<DocumentoNormativa> todosDocs = documentoRepository.findBySolicitudNormativaId(solicitud.getId());
+            if (todosDocs != null) {
+                for (DocumentoNormativa doc : todosDocs) {
+                    if (doc.isObservado()) {
+                        doc.limpiarObservacion();
+                        documentoRepository.save(doc);
+                    }
+                }
+            }
 
             actividadNormativa.completar(command.revisorId());
             planTrabajoRepository.saveActividad(actividadNormativa);

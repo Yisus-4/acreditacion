@@ -95,18 +95,20 @@
       </div>
     </header>
 
-    <!-- 3. Indicador de Etapas (DESIGN.md 7.3) -->
-    <nav class="indicador-etapas" aria-label="Etapas del proceso de acreditación">
+    <!-- 3. Indicador de Progreso de las 6 Actividades Oficiales -->
+    <nav class="indicador-etapas" aria-label="Actividades oficiales del proceso de acreditación">
       <div class="etapas-grid">
         @for (etapa of etapas(); track etapa.numero) {
           <div
-            class="etapa-item"
+            class="etapa-item etapa-clickable"
             [class.etapa-activa]="etapa.estado === 'ACTIVA'"
             [class.etapa-completada]="etapa.estado === 'COMPLETADA'"
             [class.etapa-pendiente]="etapa.estado === 'PENDIENTE'"
+            [class.etapa-foco-actual]="actividadFoco() === etapa.foco"
+            (click)="seleccionarTab('ACTIVIDADES'); seleccionarActividadFoco(etapa.foco)"
           >
             <div class="etapa-header">
-              <span class="etapa-numero">ETAPA {{ etapa.numero }}</span>
+              <span class="etapa-numero">ACTIVIDAD {{ etapa.numero }} · {{ etapa.hoja }}</span>
               @if (etapa.estado === 'COMPLETADA') {
                 <span class="etapa-badge-status completada">
                   <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -162,63 +164,23 @@
             <line x1="3" y1="10" x2="21" y2="10" />
           </svg>
           <span class="tab-label">Seguimiento del Plan de Trabajo (AEA)</span>
-          <span class="tab-counter-neutral">{{ conteoTotal() }} hitos</span>
+          <span class="tab-counter-neutral">{{ conteoTotal() }} actividades</span>
         </button>
       }
     </div>
 
-    <!-- PESTAÑA 1: MIS ACTIVIDADES ASIGNADAS (Vista de Acción por Rol) -->
+    <!-- PESTAÑA 1: MIS ACTIVIDADES ASIGNADAS (Vista de Acción por Rol en orden 1 -> 2 -> 3) -->
     @if (tabActiva() === 'ACTIVIDADES') {
       <div class="actividades-split-container">
-        <!-- Columna Izquierda: Tarjetas de Actividades con Semáforo Textual -->
+        <!-- Columna Izquierda: Tarjetas de Actividades en orden estricto 1, 2, 3 -->
         <aside class="tareas-sidebar" aria-label="Listado de actividades asignadas">
           <div class="sidebar-header">
             <h3 class="sidebar-title">Actividades del Rol</h3>
-            <p class="sidebar-sub">Seleccione una actividad para gestionar su documentación y estado.</p>
+            <p class="sidebar-sub">Seleccione una actividad para gestionar su ejecución y estado.</p>
           </div>
 
           <div class="tareas-list">
-            <!-- Hito 1.3: Gestionar normativa -->
-            @if (actividadNormativa(); as actNorm) {
-              @let normDto = normativaDetalle();
-              <div
-                class="tarea-sidebar-card"
-                [class.active]="actividadFoco() === '1.3'"
-                [class.tarea-completada]="actNorm.estado === 'COMPLETADA' || normDto?.estado === 'COMPLETADA'"
-                (click)="seleccionarActividadFoco('1.3')"
-              >
-                <div class="card-top">
-                  <span class="tag-hito">Hito 1.3 · Hoja INFO</span>
-                  <!-- Semáforo textual DESIGN.md 7.6 -->
-                  @if (normDto?.badgePlazo) {
-                    <span class="badge-semaforo-textual" [class]="normDto!.badgePlazo!.cssClass">
-                      {{ normDto!.badgePlazo!.etiqueta }}
-                    </span>
-                  } @else if (actNorm.estado === 'COMPLETADA' || normDto?.estado === 'COMPLETADA') {
-                    <span class="badge-semaforo-textual completada">En término · Completada</span>
-                  } @else {
-                    <span class="badge-semaforo-textual pendiente">Plazo: 5 días hábiles</span>
-                  }
-                </div>
-                <h4 class="tarea-card-title">Gestionar normativa de la carrera</h4>
-                <div class="tarea-card-resp">
-                  <strong>Responsable:</strong> Dirección de Carrera (DC) / AEA
-                </div>
-                <p class="tarea-card-desc">
-                  Presentación de 8 actos administrativos y ordenanzas solicitados formalmente por AEA para su auditoría y dictamen.
-                </p>
-                <div class="card-bottom">
-                  <span class="badge-estado-pills" [class.progreso]="normDto?.estado === 'EN_CARGA_BORRADOR' || normDto?.estado === 'ENVIADA_A_REVISION'" [class.completado]="normDto?.estado === 'COMPLETADA'">
-                    {{ normDto?.estado ? formatearEstadoSolicitud(normDto!.estado) : actNorm.estado }}
-                  </span>
-                  <span class="link-foco">
-                    {{ actividadFoco() === '1.3' ? 'Gestionando →' : 'Gestionar →' }}
-                  </span>
-                </div>
-              </div>
-            }
-
-            <!-- Hito 1.1: Reunión inicial -->
+            <!-- Actividad 1: Informar sobre el proceso de acreditación -->
             @if (actividadReunion(); as act1) {
               <div
                 class="tarea-sidebar-card"
@@ -227,8 +189,7 @@
                 (click)="seleccionarActividadFoco('1.1')"
               >
                 <div class="card-top">
-                  <span class="tag-hito">Hito 1.1 · Hoja INFO</span>
-                  <!-- Semáforo textual DESIGN.md 7.6 -->
+                  <span class="tag-hito">Actividad 1 · Hoja INFO</span>
                   @if (act1.estado === 'COMPLETADA') {
                     <span class="badge-semaforo-textual completada">En término · Completada</span>
                   } @else {
@@ -237,10 +198,10 @@
                 </div>
                 <h4 class="tarea-card-title">Informar sobre el proceso de acreditación</h4>
                 <div class="tarea-card-resp">
-                  <strong>Responsable:</strong> AEA / Dirección de Carrera
+                  <strong>Responsable:</strong> Área de Evaluación y Acreditación (AEA)
                 </div>
                 <p class="tarea-card-desc">
-                  Reunión inicial de coordinación institucional. Registro de acuerdos alcanzados y carga de acta probatoria.
+                  Informar a las áreas académicas e institucionales, remitir la documentación según el caso y coordinar reunión con la Dirección de Carrera.
                 </p>
                 <div class="card-bottom">
                   <span class="badge-estado-pills" [class.completado]="act1.estado === 'COMPLETADA'">
@@ -253,63 +214,162 @@
               </div>
             }
 
-            <!-- Hito 1.2: Elaborar Plan de Trabajo -->
-            @if (actividadElaborarPlan(); as act2) {
+            <!-- Actividad 2: Gestionar normativa de la carrera -->
+            @if (actividadNormativa(); as actNorm) {
+              @let normDto = normativaDetalle();
               <div
                 class="tarea-sidebar-card"
-                [class.active]="actividadFoco() === '1.2'"
-                [class.tarea-completada]="act2.estado === 'COMPLETADA'"
-                (click)="seleccionarActividadFoco('1.2')"
+                [class.active]="actividadFoco() === '1.3'"
+                [class.tarea-completada]="actNorm.estado === 'COMPLETADA' || normDto?.estado === 'COMPLETADA'"
+                (click)="seleccionarActividadFoco('1.3')"
               >
                 <div class="card-top">
-                  <span class="tag-hito">Hito 1.2 · Hoja INFO</span>
-                  <!-- Semáforo textual DESIGN.md 7.6 -->
-                  @if (act2.estado === 'COMPLETADA') {
+                  <span class="tag-hito">Actividad 2 · Hoja INFO</span>
+                  @if (actNorm.estado === 'COMPLETADA' || normDto?.estado === 'COMPLETADA') {
                     <span class="badge-semaforo-textual completada">En término · Completada</span>
+                  } @else if (normDto?.badgePlazo) {
+                    <span class="badge-semaforo-textual" [class]="normDto!.badgePlazo!.cssClass">
+                      {{ normDto!.badgePlazo!.etiqueta }}
+                    </span>
                   } @else {
-                    <span class="badge-semaforo-textual pendiente">Pendiente de formulación</span>
+                    <span class="badge-semaforo-textual pendiente">Plazo: 5 días hábiles</span>
                   }
                 </div>
-                <h4 class="tarea-card-title">Elaborar plan de trabajo para acreditación</h4>
+                <h4 class="tarea-card-title">Gestionar normativa de la carrera</h4>
                 <div class="tarea-card-resp">
-                  <strong>Responsable:</strong> Área de Evaluación y Acreditación (AEA)
+                  <strong>Responsable:</strong> Dirección de Carrera (DC) / AEA
                 </div>
                 <p class="tarea-card-desc">
-                  Formular el cronograma tentativo institucional (PT-001) y formalizar los metadatos oficiales en la ficha RG-001.
+                  Presentación de los actos administrativos y ordenanzas de la carrera solicitados por AEA para su auditoría y dictamen.
                 </p>
                 <div class="card-bottom">
-                  <span class="badge-estado-pills" [class.completado]="act2.estado === 'COMPLETADA'">
-                    {{ act2.estado }}
+                  <span class="badge-estado-pills" [class.progreso]="normDto?.estado === 'EN_CARGA_BORRADOR' || normDto?.estado === 'ENVIADA_A_REVISION'" [class.completado]="actNorm.estado === 'COMPLETADA' || normDto?.estado === 'COMPLETADA'">
+                    {{ normDto?.estado ? formatearEstadoSolicitud(normDto!.estado) : actNorm.estado }}
                   </span>
                   <span class="link-foco">
-                    {{ actividadFoco() === '1.2' ? 'Viendo →' : 'Ver detalle →' }}
+                    {{ actividadFoco() === '1.3' ? 'Gestionando →' : 'Gestionar →' }}
                   </span>
                 </div>
               </div>
             }
+
+            <!-- Actividad 3: Elaborar Plan de Trabajo para acreditación de carreras y RG-001 -->
+            @let actPlanCard = actividadElaborarPlan();
+            <div
+              class="tarea-sidebar-card"
+              [class.active]="actividadFoco() === '1.2'"
+              [class.tarea-completada]="actPlanCard?.estado === 'COMPLETADA' && !requiereElaborarPlan()"
+              (click)="seleccionarActividadFoco('1.2')"
+            >
+              <div class="card-top">
+                <span class="tag-hito">Actividad 3 · Hoja INFO</span>
+                @if (actPlanCard?.estado === 'COMPLETADA' && !requiereElaborarPlan()) {
+                  <span class="badge-semaforo-textual completada">En término · Completada</span>
+                } @else {
+                  <span class="badge-semaforo-textual pendiente">Plan y RG-001</span>
+                }
+              </div>
+              <h4 class="tarea-card-title">Elaborar Plan de Trabajo para acreditación de carreras y RG-001</h4>
+              <div class="tarea-card-resp">
+                <strong>Responsable:</strong> Área de Evaluación y Acreditación (AEA)
+              </div>
+              <p class="tarea-card-desc">
+                Formular el cronograma tentativo institucional (PT-001 / PT-003) y formalizar los metadatos oficiales en la ficha RG-001 para desplegar el seguimiento.
+              </p>
+              <div class="card-bottom">
+                <span class="badge-estado-pills" [class.completado]="actPlanCard?.estado === 'COMPLETADA' && !requiereElaborarPlan()">
+                  {{ (actPlanCard?.estado === 'COMPLETADA' && !requiereElaborarPlan()) ? 'COMPLETADA' : 'PENDIENTE' }}
+                </span>
+                <span class="link-foco">
+                  {{ actividadFoco() === '1.2' ? 'Gestionando →' : 'Gestionar →' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Actividad 4: Identificar información y documentación de interés -->
+            @let act4Card = actividadDocumentacionInteres();
+            <div
+              class="tarea-sidebar-card"
+              [class.active]="actividadFoco() === '1.5'"
+              [class.tarea-completada]="act4Card?.estado === 'COMPLETADA'"
+              (click)="seleccionarActividadFoco('1.5')"
+            >
+              <div class="card-top">
+                <span class="tag-hito">Actividad 4 · Hoja INFO</span>
+                @if (act4Card?.estado === 'COMPLETADA') {
+                  <span class="badge-semaforo-textual completada">En término · Completada</span>
+                } @else {
+                  <span class="badge-semaforo-textual pendiente">Relevamiento documental</span>
+                }
+              </div>
+              <h4 class="tarea-card-title">Identificar información y documentación de interés</h4>
+              <div class="tarea-card-resp">
+                <strong>Responsable:</strong> Área de Evaluación y Acreditación (AEA) / SGI
+              </div>
+              <p class="tarea-card-desc">
+                Relevar documentación propia del área, de procesos de acreditación previos, evaluación de funciones y evaluación institucional.
+              </p>
+              <div class="card-bottom">
+                <span class="badge-estado-pills" [class.completado]="act4Card?.estado === 'COMPLETADA'">
+                  {{ act4Card?.estado || 'PENDIENTE' }}
+                </span>
+                <span class="link-foco">
+                  {{ actividadFoco() === '1.5' ? 'Gestionando →' : 'Gestionar →' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Actividad 5: Formalización electrónica de participación en convocatoria -->
+            @let act5Card = actividadFormalizacionElectronica();
+            @let ftCard = fichaFt012();
+            <div
+              class="tarea-sidebar-card"
+              [class.active]="actividadFoco() === '1.8'"
+              [class.tarea-completada]="act5Card?.estado === 'COMPLETADA' || ftCard.estado === 'FORMALIZADA_EN_CONEAU'"
+              (click)="seleccionarActividadFoco('1.8')"
+            >
+              <div class="card-top">
+                <span class="tag-hito tag-coneau">Actividad 5 · Hoja CONEAU</span>
+                @if (act5Card?.estado === 'COMPLETADA' || ftCard.estado === 'FORMALIZADA_EN_CONEAU') {
+                  <span class="badge-semaforo-textual completada">Formalizada en ATENEA</span>
+                } @else {
+                  <span class="badge-semaforo-textual pendiente">FT-012 · IT-002 Ap. 3.2</span>
+                }
+              </div>
+              <h4 class="tarea-card-title">Formalización electrónica de participación en convocatoria</h4>
+              <div class="tarea-card-resp">
+                <strong>Responsable:</strong> Dirección de Carrera (DC) / AEA
+              </div>
+              <p class="tarea-card-desc">
+                Completar Ficha FT-012, formalizar electrónicamente en CONEAU Global ATENEA, registrar fecha en RG-001 y remitir comprobante PDF.
+              </p>
+              <div class="card-bottom">
+                <span
+                  class="badge-estado-pills"
+                  [class.progreso]="ftCard.estado === 'SOLICITADA_A_DC' || ftCard.estado === 'BORRADOR' || ftCard.estado === 'REMITIDA_POR_DC'"
+                  [class.completado]="act5Card?.estado === 'COMPLETADA' || ftCard.estado === 'FORMALIZADA_EN_CONEAU'"
+                >
+                  {{ formatearEstadoFt012(ftCard.estado) }}
+                </span>
+                <span class="link-foco">
+                  {{ actividadFoco() === '1.8' ? 'Gestionando →' : 'Gestionar →' }}
+                </span>
+              </div>
+            </div>
           </div>
         </aside>
 
         <!-- Columna Derecha: Panel de Trabajo / Ejecución -->
         <main class="tarea-panel-trabajo" aria-label="Panel de ejecución de la actividad seleccionada">
-          @if (actividadFoco() === '1.3') {
-            <div class="panel-actividad-wrapper">
-              <app-normativa-detalle
-                [procesoId]="c.id"
-                [planTrabajoId]="planTrabajo()?.id || ''"
-                [procesoCodigo]="c.codigo"
-                [carreraNombre]="c.carreraNombre"
-                [embedded]="true"
-              ></app-normativa-detalle>
-            </div>
-          } @else if (actividadFoco() === '1.1') {
+          <!-- Actividad 1: Informar sobre el proceso de acreditación -->
+          @if (actividadFoco() === '1.1') {
             <div class="panel-actividad-wrapper panel-generico">
               @let act1 = actividadReunion();
               <div class="actividad-header-hero">
-                <span class="tag-actividad">Hito 1.1 — Plan de Trabajo Institucional</span>
-                <h2 class="actividad-titulo">Informar sobre el proceso de acreditación de la carrera</h2>
+                <span class="tag-actividad">Actividad 1 · Hoja INFO</span>
+                <h2 class="actividad-titulo">Informar sobre el proceso de acreditación</h2>
                 <p class="actividad-descripcion">
-                  Reunión inicial de coordinación entre el Área de Evaluación y Acreditación (AEA) y la Dirección de Carrera. Se informa sobre el cronograma, la normativa aplicable y se registran los acuerdos alcanzados junto con el acta probatoria.
+                  El Área de Evaluación y Acreditación (AEA) informa a la Dirección de Carrera, Dirección de Escuela, Direcciones de Departamentos, Direcciones de Institutos y Secretarías sobre el proceso dispuesto por CONEAU, remite la documentación según el caso y coordina una reunión con la Dirección de Carrera. Al completarse, se actualiza el PT-001.
                 </p>
               </div>
 
@@ -322,69 +382,158 @@
                 </div>
                 <div class="info-row">
                   <span class="info-label">Responsable:</span>
-                  <span class="info-val">{{ act1?.responsable || 'AEA / Dirección de Carrera' }}</span>
+                  <span class="info-val">{{ act1?.responsable || 'Área de Evaluación y Acreditación (AEA)' }}</span>
                 </div>
+
+                @if (act1?.areasInformadas && act1!.areasInformadas!.length > 0) {
+                  <div class="info-row full">
+                    <span class="info-label">Áreas informadas:</span>
+                    <div class="chips-container">
+                      @for (codArea of act1!.areasInformadas!; track codArea) {
+                        <span class="chip-institucional">{{ formatearAreaInformada(codArea) }}</span>
+                      }
+                    </div>
+                  </div>
+                }
+
+                @if (act1?.documentacionRemitida && act1!.documentacionRemitida!.length > 0) {
+                  <div class="info-row full">
+                    <span class="info-label">Documentación remitida:</span>
+                    <ul class="lista-documentacion-remitida">
+                      @for (codDoc of act1!.documentacionRemitida!; track codDoc) {
+                        <li>{{ formatearDocRemitida(codDoc) }}</li>
+                      }
+                    </ul>
+                  </div>
+                }
+
                 @if (act1?.fechaReunionCoordinacion) {
                   <div class="info-row">
-                    <span class="info-label">Fecha de Realización:</span>
-                    <span class="info-val">{{ act1?.fechaReunionCoordinacion | date:'dd/MM/yyyy HH:mm' }}</span>
+                    <span class="info-label">Fecha de reunión con DC:</span>
+                    <span class="info-val">{{ act1?.fechaReunionCoordinacion | date:'dd-MM-yyyy' }}</span>
                   </div>
                 }
-                @if (act1?.sintesisAcuerdos) {
+
+                @if (act1?.observaciones || act1?.sintesisAcuerdos) {
                   <div class="info-row full">
-                    <span class="info-label">Síntesis y Acuerdos:</span>
-                    <p class="text-acuerdos">{{ act1?.sintesisAcuerdos }}</p>
+                    <span class="info-label">Observaciones / Metodología:</span>
+                    <p class="text-acuerdos">{{ act1?.observaciones || act1?.sintesisAcuerdos }}</p>
                   </div>
                 }
+
                 @if (act1 && act1.documentos.length > 0) {
                   @let doc = act1.documentos[0];
                   <div class="info-row full">
-                    <span class="info-label">Acta Probatoria:</span>
-                    <button type="button" class="btn-descargar-acta" (click)="descargar(doc.id, doc.nombreOriginal || 'Acta-Reunion-1.1.pdf')">
+                    <span class="info-label">Documento de respaldo (PDF):</span>
+                    <button type="button" class="btn-descargar-acta" (click)="descargar(doc.id, doc.nombreOriginal || 'Respaldo-Actividad-1.pdf')">
                       <svg class="icon-svg-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                         <polyline points="14 2 14 8 20 8" />
                       </svg>
-                      Descargar {{ doc.nombreOriginal || 'Acta de Reunión (.pdf)' }}
+                      Descargar {{ doc.nombreOriginal || 'Respaldo (.pdf)' }}
                     </button>
                   </div>
                 }
               </div>
 
-              @if (canManage()) {
+              @if (canManage() && act1 && act1.estado !== 'COMPLETADA') {
                 <div class="actividad-acciones-footer">
-                  <button type="button" class="btn-primario-accion" (click)="abrirModalCompletar(act1!)">
-                    {{ act1?.estado === 'COMPLETADA' ? 'Modificar Acta / Acuerdos' : 'Registrar Reunión y Subir Acta' }}
+                  <button type="button" class="btn-primario-accion" (click)="abrirModalCompletar(act1)">
+                    Registrar comunicación y reunión
                   </button>
                 </div>
               }
             </div>
+          } @else if (actividadFoco() === '1.3') {
+            <!-- Actividad 2: Gestionar normativa de la carrera -->
+            <div class="panel-actividad-wrapper">
+              <app-normativa-detalle
+                [procesoId]="c.id"
+                [planTrabajoId]="planTrabajo()?.id || ''"
+                [procesoCodigo]="c.codigo"
+                [carreraNombre]="c.carreraNombre"
+                [embedded]="true"
+              ></app-normativa-detalle>
+            </div>
           } @else if (actividadFoco() === '1.2') {
+            <!-- Actividad 3: Elaborar Plan de Trabajo para acreditación de carreras y RG-001 -->
             <div class="panel-actividad-wrapper panel-generico">
               @let act2 = actividadElaborarPlan();
               <div class="actividad-header-hero">
-                <span class="tag-actividad">Hito 1.2 — Plan de Trabajo Institucional</span>
-                <h2 class="actividad-titulo">Elaborar plan de trabajo para acreditación de carreras</h2>
+                <span class="tag-actividad">Actividad 3 · Hoja INFO</span>
+                <h2 class="actividad-titulo">Elaborar Plan de Trabajo para acreditación de carreras y RG-001</h2>
                 <p class="actividad-descripcion">
-                  Formular el cronograma tentativo institucional de actividades e hitos (PT-001), definir responsables y formalizar los metadatos oficiales en la ficha RG-001 (Resolución CONEAU, fechas oficiales).
+                  Formular el cronograma tentativo institucional de actividades (PT-001 / PT-003), definir responsables para las hojas INFO y CONEAU y formalizar los metadatos oficiales en la ficha RG-001 (Resolución CONEAU, fechas oficiales, RM de estándares y fase de evaluación). Al guardar, se establece el seguimiento oficial y se despliega la convocatoria.
                 </p>
               </div>
 
               <div class="actividad-cuerpo-info card">
                 <div class="info-row">
                   <span class="info-label">Estado:</span>
-                  <span class="badge-estado-pills" [class.completado]="act2?.estado === 'COMPLETADA'" [class.pendiente]="act2?.estado === 'PENDIENTE'">
-                    {{ act2?.estado || 'PENDIENTE' }}
+                  <span class="badge-estado-pills" [class.completado]="act2?.estado === 'COMPLETADA' && !requiereElaborarPlan()" [class.pendiente]="act2?.estado !== 'COMPLETADA' || requiereElaborarPlan()">
+                    {{ (act2?.estado === 'COMPLETADA' && !requiereElaborarPlan()) ? 'COMPLETADA' : 'PENDIENTE' }}
                   </span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Responsable:</span>
                   <span class="info-val">{{ act2?.responsable || 'Área de Evaluación y Acreditación (AEA)' }}</span>
                 </div>
+                @if (c.registroConvocatoria; as reg3) {
+                  <div class="info-row">
+                    <span class="info-label">Estado de la Carrera:</span>
+                    <span class="info-val">{{ (reg3.estadoCarrera || c.tipoProceso) === 'EN_FUNCIONAMIENTO' ? 'En funcionamiento' : 'Nueva' }}</span>
+                  </div>
+                  @if ((reg3.estadoCarrera || c.tipoProceso) === 'EN_FUNCIONAMIENTO' || reg3.nroResolucionConeau) {
+                    <div class="info-row">
+                      <span class="info-label">Nro. Resolución CONEAU:</span>
+                      <span class="info-val font-mono">{{ reg3.nroResolucionConeau || '—' }}</span>
+                    </div>
+                  }
+                  <div class="info-row">
+                    <span class="info-label">Plazo Convocatoria CONEAU:</span>
+                    <span class="info-val">{{ reg3.fechaInicio | date:'dd-MM-yyyy' }} al {{ reg3.fechaCierre | date:'dd-MM-yyyy' }}</span>
+                  </div>
+                  @if (reg3.rmEstandares) {
+                    <div class="info-row">
+                      <span class="info-label">RM de Estándares:</span>
+                      <span class="info-val font-mono">{{ reg3.rmEstandares }}</span>
+                    </div>
+                  }
+                  @if (reg3.areaDisciplinaria) {
+                    <div class="info-row">
+                      <span class="info-label">Área Disciplinaria:</span>
+                      <span class="info-val">{{ reg3.areaDisciplinaria }}</span>
+                    </div>
+                  }
+                  <div class="info-row">
+                    <span class="info-label">Modalidad:</span>
+                    <span class="info-val">{{ reg3.modalidadCarrera === 'A_DISTANCIA' || reg3.modalidadCarrera === 'DISTANCIA' ? 'A distancia' : 'Presencial' }}</span>
+                  </div>
+                  @if (reg3.faseEvaluacion) {
+                    <div class="info-row">
+                      <span class="info-label">Fase de Evaluación:</span>
+                      <span class="info-val">
+                        {{ reg3.faseEvaluacion === 'PRIMERA_FASE' ? '1era Fase' : reg3.faseEvaluacion === 'SEGUNDA_FASE' ? '2da Fase' : reg3.faseEvaluacion === 'NUEVO_CICLO' ? 'Nuevo ciclo' : 'Seguimiento' }}
+                      </span>
+                    </div>
+                  }
+                  @if (reg3.fechaLimitePresentacionConeau) {
+                    <div class="info-row">
+                      <span class="info-label">Fecha Límite Presentación CONEAU:</span>
+                      <span class="info-val font-mono">{{ reg3.fechaLimitePresentacionConeau | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                  }
+                  @if (reg3.fechaFormalizacionElectronica) {
+                    <div class="info-row">
+                      <span class="info-label">Fecha Formalización Electrónica:</span>
+                      <span class="info-val font-mono">{{ reg3.fechaFormalizacionElectronica | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                  }
+                }
                 @if (planTrabajo()?.actividades?.length) {
                   <div class="info-row">
-                    <span class="info-label">Hitos en Cronograma:</span>
-                    <span class="info-val">{{ planTrabajo()!.actividades.length }} actividades programadas</span>
+                    <span class="info-label">Actividades en Cronograma:</span>
+                    <span class="info-val">{{ planTrabajo()!.actividades.length }} actividades programadas en PT-001</span>
                   </div>
                 }
               </div>
@@ -392,8 +541,556 @@
               @if (canManage()) {
                 <div class="actividad-acciones-footer">
                   <button type="button" class="btn-primario-accion" (click)="abrirModalElaborarPlan()">
-                    {{ act2?.estado === 'COMPLETADA' ? 'Ajustar Cronograma y RG-001' : 'Elaborar Cronograma Tentativo y RG-001' }}
+                    {{ (act2?.estado === 'COMPLETADA' && !requiereElaborarPlan()) ? 'Ajustar Cronograma y RG-001' : 'Ajustar Cronograma Tentativo y RG-001' }}
                   </button>
+                </div>
+              }
+            </div>
+          } @else if (actividadFoco() === '1.5') {
+            <!-- Actividad 4: Identificar información y documentación de interés (Hoja INFO) -->
+            <div class="panel-actividad-wrapper panel-generico">
+              @let act4 = actividadDocumentacionInteres();
+              <div class="actividad-header-hero">
+                <span class="tag-actividad">Actividad 4 · Hoja INFO</span>
+                <h2 class="actividad-titulo">Identificar información y documentación de interés</h2>
+                <p class="actividad-descripcion">
+                  El Área de Evaluación y Acreditación (AEA) releva y clasifica la documentación e información pertinente para el proceso de acreditación de la carrera de grado.
+                </p>
+              </div>
+
+              <div class="actividad-cuerpo-info card">
+                  <div class="info-row">
+                    <span class="info-label">Estado:</span>
+                    <span class="badge-estado-pills" [class.completado]="act4?.estado === 'COMPLETADA'" [class.pendiente]="act4?.estado !== 'COMPLETADA'">
+                      {{ act4?.estado || 'PENDIENTE' }}
+                    </span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Responsable:</span>
+                    <span class="info-val">{{ act4?.responsable || 'Área de Evaluación y Acreditación (AEA) / SGI' }}</span>
+                  </div>
+
+                  <!-- 1. Repositorio Oficial de Normativa de la Carrera (Generado en Actividad 2) -->
+                  <div class="bloque-seccion-interna">
+                    <h3 class="subtitulo-bloque">1. Documentación Oficial de Normativa de la Carrera (Subcarpeta "Normativa")</h3>
+                    <p class="ayuda-bloque">
+                      Archivos oficiales cargados y aprobados en la Actividad 2 dentro del espacio compartido de la carrera.
+                    </p>
+                    @let normDocs = normativaDetalle()?.documentos ?? [];
+                    @if (normDocs.length > 0) {
+                      <div class="tabla-responsive mt-xs">
+                        <table class="tabla-plan">
+                          <thead>
+                            <tr>
+                              <th>Documento / Requisito</th>
+                              <th>Archivo Oficial</th>
+                              <th style="width: 100px;">Tamaño</th>
+                              <th style="width: 120px; text-align: center;">Acción</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (ndoc of normDocs; track ndoc.id) {
+                              <tr>
+                                <td class="font-bold">{{ ndoc.tipoDocumento }}</td>
+                                <td>{{ ndoc.nombreOriginal }}</td>
+                                <td class="text-muted">{{ (ndoc.tamanioBytes / 1024).toFixed(0) }} KB</td>
+                                <td class="col-acciones">
+                                  <button
+                                    type="button"
+                                    class="btn-accion-tabla"
+                                    (click)="descargarDocumentoNormativa(ndoc.id, ndoc.nombreOriginal)"
+                                  >
+                                    Descargar
+                                  </button>
+                                </td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    } @else {
+                      <div class="aviso-vacio-compacto">
+                        No se registran documentos en la subcarpeta Normativa de la Actividad 2.
+                      </div>
+                    }
+                  </div>
+
+                  <!-- 2. Selección de las 4 fuentes oficiales -->
+                  <div class="bloque-seccion-interna">
+                    <h3 class="subtitulo-bloque">2. Fuentes de Información y Documentación Relevadas</h3>
+                    <p class="ayuda-bloque">Seleccione las fuentes institucionales verificadas e incorporadas para el análisis del proceso:</p>
+                    <div class="checklist-institucional-grid">
+                      @for (fuente of fuentesInteresCatalogo; track fuente.codigo) {
+                        <label class="checkbox-card-item" [class.checked]="tieneFuenteAct4(fuente.codigo)">
+                          <input
+                            type="checkbox"
+                            [checked]="tieneFuenteAct4(fuente.codigo)"
+                            [disabled]="!canManage()"
+                            (change)="toggleFuenteAct4(fuente.codigo)"
+                          />
+                          <div class="checkbox-card-body">
+                            <span class="checkbox-card-title">{{ fuente.etiqueta }}</span>
+                            <span class="checkbox-card-desc">{{ fuente.descripcion }}</span>
+                          </div>
+                        </label>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- 3. Repositorio de Documentos Adicionales de Interés -->
+                  <div class="bloque-seccion-interna">
+                    <h3 class="subtitulo-bloque">3. Documentación y Anexos Adicionales de Interés</h3>
+                    <p class="ayuda-bloque">Adjunte normativa complementaria, antecedentes de procesos de acreditación previos o informes de funciones e institucionales:</p>
+                    @if (canManage()) {
+                      <div class="form-adjuntar-doc-box">
+                        <div class="form-row-grid-3">
+                          <div class="campo-form">
+                            <label class="label-inst">Origen / Clasificación</label>
+                            <select
+                              class="input-inst"
+                              [ngModel]="clasificacionAct4()"
+                              (ngModelChange)="clasificacionAct4.set($event)"
+                            >
+                              @for (f of fuentesInteresCatalogo; track f.codigo) {
+                                <option [value]="f.codigo">{{ f.etiqueta }}</option>
+                              }
+                            </select>
+                          </div>
+                          <div class="campo-form">
+                            <label class="label-inst">Descripción o Referencia</label>
+                            <input
+                              type="text"
+                              class="input-inst"
+                              placeholder="Ej: Informe de Autoevaluación anterior / Dictamen CONEAU..."
+                              [ngModel]="descripcionAct4()"
+                              (ngModelChange)="descripcionAct4.set($event)"
+                            />
+                          </div>
+                          <div class="campo-form">
+                            <label class="label-inst">Archivo (PDF, DOCX, XLSX)</label>
+                            <input
+                              type="file"
+                              class="input-inst-file"
+                              accept=".pdf,.doc,.docx,.xls,.xlsx"
+                              (change)="onArchivoAct4Selected($event)"
+                            />
+                          </div>
+                        </div>
+                        <div class="acciones-inline-end">
+                          <button
+                            type="button"
+                            class="btn-secundario-accion"
+                            [disabled]="!archivoAct4() || subiendoDocAct4()"
+                            (click)="subirDocumentoAct4()"
+                          >
+                            {{ subiendoDocAct4() ? 'Adjuntando documento...' : 'Adjuntar documento adicional' }}
+                          </button>
+                        </div>
+                      </div>
+                    }
+
+                    @if (documentosAct4().length > 0) {
+                      <div class="tabla-responsive mt-sm">
+                        <table class="tabla-plan">
+                          <thead>
+                            <tr>
+                              <th>Archivo</th>
+                              <th>Origen / Clasificación</th>
+                              <th>Descripción</th>
+                              <th style="width: 160px; text-align: center;">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (doc of documentosAct4(); track doc.id) {
+                              <tr>
+                                <td class="font-bold">{{ doc.nombreOriginal }}</td>
+                                <td>
+                                  <span class="chip-institucional">{{ formatearDocRemitida(doc.clasificacionOrigen || 'DOC_PROPIA_AREA') }}</span>
+                                </td>
+                                <td>{{ doc.descripcion || '—' }}</td>
+                                <td class="col-acciones">
+                                  <div class="acciones-celda-flex">
+                                    <button type="button" class="btn-accion-tabla" (click)="descargarDocumentoAct4(doc)">Descargar</button>
+                                    @if (canManage()) {
+                                      <button type="button" class="btn-accion-peligro" (click)="eliminarDocumentoAct4(doc)">Quitar</button>
+                                    }
+                                  </div>
+                                </td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    } @else {
+                      <div class="aviso-vacio-compacto">
+                        No se han adjuntado archivos adicionales en el repositorio de esta actividad.
+                      </div>
+                    }
+                  </div>
+
+                  <!-- 4. Observaciones y Hallazgos -->
+                  <div class="bloque-seccion-interna">
+                    <label class="label-inst" for="obsAct4">4. Síntesis del Relevamiento y Observaciones (Hoja INFO)</label>
+                    <textarea
+                      id="obsAct4"
+                      rows="3"
+                      class="textarea-inst"
+                      placeholder="Registre las observaciones sobre la documentación identificada, informes previos de acreditación, evaluación de funciones o evaluación institucional..."
+                      [ngModel]="observacionesAct4()"
+                      (ngModelChange)="observacionesAct4.set($event)"
+                      [disabled]="!canManage()"
+                    ></textarea>
+                  </div>
+                </div>
+
+                @if (canManage()) {
+                  <div class="actividad-acciones-footer">
+                    <button
+                      type="button"
+                      class="btn-primario-accion"
+                      [disabled]="guardandoAct4()"
+                      (click)="completarActividad4()"
+                    >
+                      {{ guardandoAct4() ? 'Guardando...' : (act4?.estado === 'COMPLETADA' ? 'Actualizar Relevamiento Documental (Actividad 4)' : 'Registrar y Completar Actividad 4') }}
+                    </button>
+                  </div>
+                }
+            </div>
+          } @else if (actividadFoco() === '1.8') {
+            <!-- Actividad 5: Formalización electrónica de participación en convocatoria (Hoja CONEAU · FT-012 + IT-002 Ap. 3.2) -->
+            <div class="panel-actividad-wrapper panel-generico">
+              @let act5 = actividadFormalizacionElectronica();
+              @let ft = fichaFt012();
+              <div class="actividad-header-hero">
+                <span class="tag-actividad tag-coneau">Actividad 5 · Hoja CONEAU — Formulario FT-012 e IT-002 (Ap. 3.2)</span>
+                <h2 class="actividad-titulo">Formalización electrónica de participación en convocatoria</h2>
+                <p class="actividad-descripcion">
+                  El Área de Evaluación y Acreditación (AEA) solicita a la Dirección de Carrera (DC) completar la Ficha de Formalización Electrónica (FT-012). Con dicha información, AEA realiza la formalización en CONEAU Global ATENEA, registra la fecha oficial en el RG-001 y remite el comprobante PDF a la Dirección de Carrera.
+                </p>
+              </div>
+
+              <!-- Barra de Estado del Flujo FT-012 / ATENEA -->
+              <div class="barra-flujo-ft012 card">
+                <div class="flujo-ft012-info">
+                  <span class="info-label">Estado de la Formalización (FT-012):</span>
+                  <span
+                    class="badge-estado-pills"
+                    [class.progreso]="ft.estado === 'SOLICITADA_A_DC' || ft.estado === 'BORRADOR' || ft.estado === 'REMITIDA_POR_DC'"
+                    [class.completado]="ft.estado === 'FORMALIZADA_EN_CONEAU' || act5?.estado === 'COMPLETADA'"
+                  >
+                    {{ formatearEstadoFt012(ft.estado) }}
+                  </span>
+                  @if (ft.fechaFormalizacionElectronica) {
+                    <span class="chip-institucional">
+                      Formalizada el {{ ft.fechaFormalizacionElectronica | date:'dd-MM-yyyy' }}
+                    </span>
+                  }
+                </div>
+
+                <div class="flujo-ft012-acciones">
+                  @if (canManage() && ft.estado === 'PENDIENTE_SOLICITUD') {
+                    <button
+                      type="button"
+                      class="btn-secundario-accion"
+                      [disabled]="solicitandoFt012()"
+                      (click)="solicitarFt012ADireccionCarrera()"
+                    >
+                      {{ solicitandoFt012() ? 'Solicitando...' : 'Solicitar Ficha FT-012 a Dirección de Carrera' }}
+                    </button>
+                  }
+                  @if (ft.comprobanteNombre || ft.estado === 'FORMALIZADA_EN_CONEAU') {
+                    <button type="button" class="btn-descargar-acta" (click)="descargarComprobanteConeau()">
+                      <svg class="icon-svg-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                      </svg>
+                      Descargar Comprobante CONEAU ({{ ft.comprobanteNombre || 'PDF' }})
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <!-- Formulario Oficial FT-012: Ficha de Formalización Electrónica -->
+              <div class="actividad-cuerpo-info card mt-md">
+                <div class="encabezado-ft012-card">
+                  <div>
+                    <h3 class="subtitulo-bloque">Formulario FT-012 — Ficha de Formalización Electrónica</h3>
+                    <p class="ayuda-bloque">
+                      Datos requeridos por CONEAU Global ATENEA para formalizar la participación de la carrera de grado en la convocatoria.
+                    </p>
+                  </div>
+                  <div class="selector-modalidad-ft012">
+                    <label class="label-inst">Modalidad de dictado *:</label>
+                    <select
+                      class="input-inst"
+                      [ngModel]="ft.modalidadDictado"
+                      (ngModelChange)="actualizarCampoFt012('modalidadDictado', $event)"
+                    >
+                      <option value="PRESENCIAL">Presencial</option>
+                      <option value="A_DISTANCIA">A distancia</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Sección 1: Datos de la Institución -->
+                <div class="bloque-seccion-interna">
+                  <h4 class="titulo-seccion-ft012">1. Datos de la Institución</h4>
+                  <div class="form-row-grid-3">
+                    <div class="campo-form">
+                      <label class="label-inst">Institución Universitaria *</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.institucionUniversitaria" (ngModelChange)="actualizarCampoFt012('institucionUniversitaria', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Autoridad — Apellido *</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.autoridadApellido" (ngModelChange)="actualizarCampoFt012('autoridadApellido', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Autoridad — Primer Nombre *</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.autoridadPrimerNombre" (ngModelChange)="actualizarCampoFt012('autoridadPrimerNombre', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Autoridad — Segundo Nombre</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.autoridadSegundoNombre" (ngModelChange)="actualizarCampoFt012('autoridadSegundoNombre', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Autoridad — Correo Electrónico *</label>
+                      <input type="email" class="input-inst" [ngModel]="ft.autoridadCorreo" (ngModelChange)="actualizarCampoFt012('autoridadCorreo', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Autoridad — Teléfono</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.autoridadTelefono" (ngModelChange)="actualizarCampoFt012('autoridadTelefono', $event)" />
+                    </div>
+                  </div>
+
+                  <div class="subbloque-ft012">
+                    <span class="sublabel-ft012">1.2 Unidad Académica y Sede donde se dicta la carrera</span>
+                    <div class="form-row-grid-4">
+                      <div class="campo-form">
+                        <label class="label-inst">Unidad Académica *</label>
+                        <input type="text" class="input-inst" [ngModel]="ft.unidadAcademica" (ngModelChange)="actualizarCampoFt012('unidadAcademica', $event)" />
+                      </div>
+                      <div class="campo-form">
+                        <label class="label-inst">Calle *</label>
+                        <input type="text" class="input-inst" [ngModel]="ft.sedeCalle" (ngModelChange)="actualizarCampoFt012('sedeCalle', $event)" />
+                      </div>
+                      <div class="campo-form">
+                        <label class="label-inst">Número *</label>
+                        <input type="text" class="input-inst" [ngModel]="ft.sedeNumero" (ngModelChange)="actualizarCampoFt012('sedeNumero', $event)" />
+                      </div>
+                      <div class="campo-form">
+                        <label class="label-inst">Código Postal *</label>
+                        <input type="text" class="input-inst" [ngModel]="ft.sedeCodigoPostal" (ngModelChange)="actualizarCampoFt012('sedeCodigoPostal', $event)" />
+                      </div>
+                      <div class="campo-form">
+                        <label class="label-inst">Provincia *</label>
+                        <input type="text" class="input-inst" [ngModel]="ft.sedeProvincia" (ngModelChange)="actualizarCampoFt012('sedeProvincia', $event)" />
+                      </div>
+                      <div class="campo-form">
+                        <label class="label-inst">Localidad *</label>
+                        <input type="text" class="input-inst" [ngModel]="ft.sedeLocalidad" (ngModelChange)="actualizarCampoFt012('sedeLocalidad', $event)" />
+                      </div>
+                      <div class="campo-form">
+                        <label class="label-inst">Departamento / Partido</label>
+                        <input type="text" class="input-inst" [ngModel]="ft.sedeDepartamentoPartido" (ngModelChange)="actualizarCampoFt012('sedeDepartamentoPartido', $event)" />
+                      </div>
+                      <div class="campo-form">
+                        <label class="label-inst">Piso / Dpto.</label>
+                        <input type="text" class="input-inst" placeholder="S/N" [ngModel]="ft.sedePiso" (ngModelChange)="actualizarCampoFt012('sedePiso', $event)" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="subbloque-ft012">
+                    <span class="sublabel-ft012">1.3 Persona Nexo con la CONEAU</span>
+                    <div class="form-row-grid-3">
+                      <div class="campo-form">
+                        <label class="label-inst">Apellido *</label>
+                        <input type="text" class="input-inst" [ngModel]="ft.nexoApellido" (ngModelChange)="actualizarCampoFt012('nexoApellido', $event)" />
+                      </div>
+                      <div class="campo-form">
+                        <label class="label-inst">Primer Nombre *</label>
+                        <input type="text" class="input-inst" [ngModel]="ft.nexoPrimerNombre" (ngModelChange)="actualizarCampoFt012('nexoPrimerNombre', $event)" />
+                      </div>
+                      <div class="campo-form">
+                        <label class="label-inst">Segundo Nombre</label>
+                        <input type="text" class="input-inst" [ngModel]="ft.nexoSegundoNombre" (ngModelChange)="actualizarCampoFt012('nexoSegundoNombre', $event)" />
+                      </div>
+                      <div class="campo-form">
+                        <label class="label-inst">Cargo *</label>
+                        <input type="text" class="input-inst" [ngModel]="ft.nexoCargo" (ngModelChange)="actualizarCampoFt012('nexoCargo', $event)" />
+                      </div>
+                      <div class="campo-form">
+                        <label class="label-inst">Teléfono</label>
+                        <input type="text" class="input-inst" [ngModel]="ft.nexoTelefono" (ngModelChange)="actualizarCampoFt012('nexoTelefono', $event)" />
+                      </div>
+                      <div class="campo-form">
+                        <label class="label-inst">Correo Electrónico *</label>
+                        <input type="email" class="input-inst" [ngModel]="ft.nexoCorreo" (ngModelChange)="actualizarCampoFt012('nexoCorreo', $event)" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sección 2: Datos de la Carrera -->
+                <div class="bloque-seccion-interna">
+                  <h4 class="titulo-seccion-ft012">2. Datos de la Carrera</h4>
+                  <div class="form-row-grid-3">
+                    <div class="campo-form">
+                      <label class="label-inst">Nombre de la Carrera *</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.carreraNombre" (ngModelChange)="actualizarCampoFt012('carreraNombre', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Título Asimilado *</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.tituloAsimilado" (ngModelChange)="actualizarCampoFt012('tituloAsimilado', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Año de Inicio del Dictado</label>
+                      <input type="number" class="input-inst" placeholder="Ej: 2010" [ngModel]="ft.anioInicioDictado" (ngModelChange)="actualizarCampoFt012('anioInicioDictado', $event)" />
+                    </div>
+                    @if (ft.modalidadDictado === 'A_DISTANCIA') {
+                      <div class="campo-form">
+                        <label class="label-inst">Carga Horaria No Presencial (Opción Pedagógica a Distancia)</label>
+                        <input type="text" class="input-inst" placeholder="Ej: 100% / Horas a distancia" [ngModel]="ft.cargaHorariaNoPresencial" (ngModelChange)="actualizarCampoFt012('cargaHorariaNoPresencial', $event)" />
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <!-- Sección 3: Responsable de la Carrera -->
+                <div class="bloque-seccion-interna">
+                  <h4 class="titulo-seccion-ft012">3. Responsable de la Carrera</h4>
+                  <div class="form-row-grid-3">
+                    <div class="campo-form">
+                      <label class="label-inst">Apellido *</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.responsableApellido" (ngModelChange)="actualizarCampoFt012('responsableApellido', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Primer Nombre *</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.responsablePrimerNombre" (ngModelChange)="actualizarCampoFt012('responsablePrimerNombre', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Segundo Nombre</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.responsableSegundoNombre" (ngModelChange)="actualizarCampoFt012('responsableSegundoNombre', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Cargo *</label>
+                      <select class="input-inst" [ngModel]="ft.responsableCargo" (ngModelChange)="actualizarCampoFt012('responsableCargo', $event)">
+                        <option value="">Seleccione cargo...</option>
+                        <option value="Director">Director</option>
+                        <option value="Coordinador">Coordinador</option>
+                      </select>
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Teléfono</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.responsableTelefono" (ngModelChange)="actualizarCampoFt012('responsableTelefono', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Correo Electrónico *</label>
+                      <input type="email" class="input-inst" [ngModel]="ft.responsableCorreo" (ngModelChange)="actualizarCampoFt012('responsableCorreo', $event)" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sección 4: Coordinador del Comité de Autoevaluación -->
+                <div class="bloque-seccion-interna">
+                  <h4 class="titulo-seccion-ft012">4. Coordinador del Comité de Autoevaluación</h4>
+                  <div class="form-row-grid-3">
+                    <div class="campo-form">
+                      <label class="label-inst">Apellido *</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.coordinadorCaApellido" (ngModelChange)="actualizarCampoFt012('coordinadorCaApellido', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Primer Nombre *</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.coordinadorCaPrimerNombre" (ngModelChange)="actualizarCampoFt012('coordinadorCaPrimerNombre', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Segundo Nombre</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.coordinadorCaSegundoNombre" (ngModelChange)="actualizarCampoFt012('coordinadorCaSegundoNombre', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Teléfono</label>
+                      <input type="text" class="input-inst" [ngModel]="ft.coordinadorCaTelefono" (ngModelChange)="actualizarCampoFt012('coordinadorCaTelefono', $event)" />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Correo Electrónico *</label>
+                      <input type="email" class="input-inst" [ngModel]="ft.coordinadorCaCorreo" (ngModelChange)="actualizarCampoFt012('coordinadorCaCorreo', $event)" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="acciones-ft012-bar">
+                  <button
+                    type="button"
+                    class="btn-secundario-accion"
+                    [disabled]="guardandoFt012()"
+                    (click)="guardarORemitirFt012(false)"
+                  >
+                    {{ guardandoFt012() ? 'Guardando...' : 'Guardar Borrador FT-012' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-primario-accion"
+                    [disabled]="guardandoFt012()"
+                    (click)="guardarORemitirFt012(true)"
+                  >
+                    {{ guardandoFt012() ? 'Remitiendo...' : 'Remitir Ficha FT-012 Completa a AEA' }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Bloque Exclusivo AEA: Formalización en CONEAU Global ATENEA y Comprobante PDF -->
+              @if (canManage()) {
+                <div class="actividad-cuerpo-info card mt-md bloque-atenea-aea">
+                  <h3 class="subtitulo-bloque">Formalización Electrónica en CONEAU Global ATENEA (Ejecución AEA · IT-002 Ap. 3.2)</h3>
+                  <p class="ayuda-bloque">
+                    Una vez formalizada la participación en CONEAU Global ATENEA, registre la fecha oficial (se actualizará automáticamente en el RG-001) y adjunte el comprobante PDF generado por el sistema para su puesta a disposición de la Dirección de Carrera.
+                  </p>
+
+                  <div class="form-row-grid-2">
+                    <div class="campo-form">
+                      <label class="label-inst" for="fechaFormAct6">Fecha de Formalización Electrónica (RG-001) *</label>
+                      <input
+                        id="fechaFormAct6"
+                        type="date"
+                        class="input-inst"
+                        [max]="today"
+                        [ngModel]="fechaFormalizacionAct6()"
+                        (ngModelChange)="fechaFormalizacionAct6.set($event)"
+                      />
+                    </div>
+                    <div class="campo-form">
+                      <label class="label-inst">Comprobante de Formalización CONEAU Global (PDF) *</label>
+                      <input
+                        type="file"
+                        class="input-inst-file"
+                        accept=".pdf"
+                        (change)="onArchivoComprobanteAct6Selected($event)"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="campo-form mt-xs">
+                    <label class="label-inst" for="obsAct6">Observaciones de Formalización y Remisión a DC</label>
+                    <textarea
+                      id="obsAct6"
+                      rows="2"
+                      class="textarea-inst"
+                      placeholder="Observaciones adicionales sobre el alta del usuario Responsable de Carrera y Coordinador del Comité de Autoevaluación en CONEAU Global..."
+                      [ngModel]="observacionesFormalizacionAct6()"
+                      (ngModelChange)="observacionesFormalizacionAct6.set($event)"
+                    ></textarea>
+                  </div>
+
+                  <div class="actividad-acciones-footer">
+                    <button
+                      type="button"
+                      class="btn-primario-accion"
+                      [disabled]="formalizandoAct6()"
+                      (click)="registrarFormalizacionConeauGlobal()"
+                    >
+                      {{ formalizandoAct6() ? 'Registrando formalización...' : 'Registrar Formalización CONEAU Global y Remitir Comprobante PDF' }}
+                    </button>
+                  </div>
                 </div>
               }
             </div>
@@ -415,7 +1112,7 @@
                   <span class="pill-rol">Supervisión AEA</span>
                 </div>
                 <p class="section-subtitle">
-                  Monitoreo general de hitos, estados de ejecución y plazos proyectados para la carrera de grado.
+                  Monitoreo general de actividades, estados de ejecución y plazos proyectados para la carrera de grado.
                 </p>
               </div>
 
@@ -432,7 +1129,7 @@
               }
             </div>
 
-            <!-- Barra de Filtros y Búsqueda -->
+            <!-- Barra de Filtros y Búsqueda (Sin Prioridad) -->
             <div class="supervision-toolbar">
               <div class="tab-filters">
                 <button
@@ -477,21 +1174,6 @@
                   </select>
                 </div>
 
-                <div class="filter-item">
-                  <label for="filtroPrioridad" class="filter-label">Prioridad:</label>
-                  <select
-                    id="filtroPrioridad"
-                    class="filter-select"
-                    [value]="filtroPrioridad()"
-                    (change)="filtroPrioridad.set($any($event.target).value)"
-                  >
-                    <option value="TODAS">Todas las prioridades</option>
-                    <option value="ALTA">Alta</option>
-                    <option value="MEDIA">Media</option>
-                    <option value="BAJA">Baja</option>
-                  </select>
-                </div>
-
                 <div class="filter-search">
                   <input
                     type="text"
@@ -504,20 +1186,21 @@
               </div>
             </div>
 
-            <!-- Tabla de Actividades -->
+            <!-- Tabla de Actividades (Sin columna Prioridad) -->
             @if (actividadesFiltradas().length > 0) {
               <div class="tabla-responsive">
                 <table class="tabla-plan">
                   <thead>
                     <tr>
-                      <th style="width: 75px;">Cód.</th>
-                      <th style="width: 85px;">Hoja</th>
+                      <th style="width: 70px;">Cód.</th>
+                      <th style="width: 80px;">Hoja</th>
                       <th>Actividad Plan de Trabajo</th>
                       <th>Responsable(s)</th>
-                      <th style="width: 170px;">Plazo Estimado</th>
-                      <th style="width: 95px;">Prioridad</th>
-                      <th style="width: 110px;">Estado</th>
-                      <th style="width: 120px; text-align: center;">Acción</th>
+                      <th style="width: 160px;">Plazo Estimado</th>
+                      <th style="width: 105px;">Estado</th>
+                      <th style="width: 190px;">Documento Asociado</th>
+                      <th style="min-width: 180px;">Observaciones</th>
+                      <th style="width: 100px; text-align: center;">Acción</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -547,22 +1230,86 @@
                         </td>
                         <td>
                           <span
-                            class="badge-prioridad"
-                            [class.prioridad-alta]="act.prioridad === 'ALTA'"
-                            [class.prioridad-media]="act.prioridad === 'MEDIA'"
-                            [class.prioridad-baja]="act.prioridad === 'BAJA'"
-                          >
-                            {{ act.prioridad || 'MEDIA' }}
-                          </span>
-                        </td>
-                        <td>
-                          <span
                             class="badge-estado-pills"
                             [class.pendiente]="act.estado === 'PENDIENTE'"
                             [class.progreso]="act.estado === 'EN_PROGRESO'"
                             [class.completado]="act.estado === 'COMPLETADA'"
                           >
                             {{ act.estado === 'EN_PROGRESO' ? 'En Progreso' : act.estado }}
+                          </span>
+                        </td>
+                        <td class="col-documento">
+                          @if (esActividadNormativa(act)) {
+                            @let normDto = normativaDetalle();
+                            @if (normDto && normDto.documentos && normDto.documentos.length > 0) {
+                              <div class="doc-asociado-item">
+                                <span class="badge-doc-count">{{ normDto.documentos.length }} actos</span>
+                                <button
+                                  type="button"
+                                  class="btn-link-doc"
+                                  (click)="abrirDrawer(act)"
+                                  title="Ver o gestionar actos de normativa"
+                                >
+                                  Ver actos
+                                </button>
+                              </div>
+                            } @else {
+                              <span class="sin-doc">—</span>
+                            }
+                          } @else if (esActividadFormalizacion(act)) {
+                            @let ft = fichaFt012();
+                            @if (ft.comprobanteStoragePath || ft.comprobanteNombre) {
+                              <button
+                                type="button"
+                                class="btn-descarga-doc"
+                                (click)="descargarComprobanteConeau()"
+                                [title]="'Descargar ' + (ft.comprobanteNombre || 'Comprobante_ATENEA.pdf')"
+                              >
+                                <svg class="icon-svg-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                  <polyline points="14 2 14 8 20 8" />
+                                </svg>
+                                <span>Comprobante ATENEA</span>
+                              </button>
+                            } @else {
+                              <span class="sin-doc">—</span>
+                            }
+                          } @else if (esActividadDocumentacionInteres(act)) {
+                            @if (act.documentos && act.documentos.length > 0) {
+                              <div class="doc-asociado-item">
+                                <span class="badge-doc-count">{{ act.documentos.length }} anexo(s)</span>
+                                <button
+                                  type="button"
+                                  class="btn-link-doc"
+                                  (click)="irAGestionarActividadDesdeDrawer(act)"
+                                >
+                                  Ver anexos
+                                </button>
+                              </div>
+                            } @else {
+                              <span class="sin-doc">—</span>
+                            }
+                          } @else if (act.documentos && act.documentos.length > 0) {
+                            @let doc = act.documentos[0];
+                            <button
+                              type="button"
+                              class="btn-descarga-doc"
+                              (click)="descargar(doc.id, doc.nombreOriginal || 'Documento.pdf')"
+                              [title]="'Descargar ' + (doc.nombreOriginal || 'documento')"
+                            >
+                              <svg class="icon-svg-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                              </svg>
+                              <span>{{ doc.nombreOriginal || 'Descargar' }}</span>
+                            </button>
+                          } @else {
+                            <span class="sin-doc">—</span>
+                          }
+                        </td>
+                        <td class="col-observaciones">
+                          <span class="obs-texto" [title]="obtenerTextoObservaciones(act)">
+                            {{ obtenerTextoObservaciones(act) }}
                           </span>
                         </td>
                         <td class="col-acciones">
@@ -572,7 +1319,7 @@
                             (click)="abrirDrawer(act)"
                             [title]="'Abrir panel lateral para ' + act.codigoActividad"
                           >
-                            {{ (act.codigoActividad === '1.3' || act.nombre.toLowerCase().includes('normativa') || act.codigoActividad === 'ACT-01-REUNION-COORDINACION' || act.codigoActividad === '1.1') ? 'Gestionar' : 'Ver Detalle' }}
+                            {{ (esActividadNormativa(act) || esActividadInformar(act) || esActividadPlanTrabajo(act)) ? 'Gestionar' : 'Ver Detalle' }}
                           </button>
                         </td>
                       </tr>
@@ -611,7 +1358,7 @@
             </div>
 
             <div class="drawer-body">
-              <!-- Metadatos de la Actividad -->
+              <!-- Metadatos de la Actividad (Sin Prioridad) -->
               <div class="drawer-meta-grid">
                 <div class="drawer-meta-item">
                   <span class="meta-label">Responsable:</span>
@@ -629,10 +1376,6 @@
                   </span>
                 </div>
                 <div class="drawer-meta-item">
-                  <span class="meta-label">Prioridad:</span>
-                  <span class="meta-val">{{ actDrawer.prioridad || 'MEDIA' }}</span>
-                </div>
-                <div class="drawer-meta-item">
                   <span class="meta-label">Plazo Estimado:</span>
                   <span class="meta-val">
                     @if (actDrawer.fechaInicioEstimada || actDrawer.fechaFinEstimada) {
@@ -644,7 +1387,7 @@
                 </div>
               </div>
 
-              <!-- CASO 1: Hito 1.3 (Normativa) - EMBEDDED DIRECTAMENTE EN EL DRAWER -->
+              <!-- CASO 1: Actividad 2 (Normativa) -->
               @if (actDrawer.codigoActividad === '1.3' || actDrawer.nombre.toLowerCase().includes('normativa')) {
                 <div class="drawer-normativa-seccion">
                   <div class="drawer-normativa-banner">
@@ -661,49 +1404,69 @@
                 </div>
               }
 
-              <!-- CASO 2: Hito 1.1 (Reunión inicial) -->
+              <!-- CASO 2: Actividad 1 (Informar sobre el proceso de acreditación) -->
               @else if (actDrawer.codigoActividad === 'ACT-01-REUNION-COORDINACION' || actDrawer.codigoActividad === 'ACT-01-INFORMAR-PROCESO' || actDrawer.codigoActividad === '1.1' || actDrawer.numeroOrden === 1) {
                 <div class="drawer-seccion">
-                  @if (actDrawer.fechaReunionCoordinacion) {
-                    <div class="info-row">
-                      <span class="info-label">Fecha de Realización:</span>
-                      <span class="info-val">{{ actDrawer.fechaReunionCoordinacion | date:'dd/MM/yyyy HH:mm' }}</span>
+                  @if (actDrawer.areasInformadas && actDrawer.areasInformadas.length > 0) {
+                    <div class="info-row full">
+                      <span class="info-label">Áreas informadas:</span>
+                      <div class="chips-container">
+                        @for (codArea of actDrawer.areasInformadas; track codArea) {
+                          <span class="chip-institucional">{{ formatearAreaInformada(codArea) }}</span>
+                        }
+                      </div>
                     </div>
                   }
-                  @if (actDrawer.sintesisAcuerdos) {
+                  @if (actDrawer.documentacionRemitida && actDrawer.documentacionRemitida.length > 0) {
                     <div class="info-row full">
-                      <span class="info-label">Síntesis y Acuerdos:</span>
-                      <p class="text-acuerdos">{{ actDrawer.sintesisAcuerdos }}</p>
+                      <span class="info-label">Documentación remitida:</span>
+                      <ul class="lista-documentacion-remitida">
+                        @for (codDoc of actDrawer.documentacionRemitida; track codDoc) {
+                          <li>{{ formatearDocRemitida(codDoc) }}</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                  @if (actDrawer.fechaReunionCoordinacion) {
+                    <div class="info-row">
+                      <span class="info-label">Fecha de reunión con DC:</span>
+                      <span class="info-val">{{ actDrawer.fechaReunionCoordinacion | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                  }
+                  @if (actDrawer.observaciones || actDrawer.sintesisAcuerdos) {
+                    <div class="info-row full">
+                      <span class="info-label">Observaciones / Metodología:</span>
+                      <p class="text-acuerdos">{{ actDrawer.observaciones || actDrawer.sintesisAcuerdos }}</p>
                     </div>
                   }
                   @if (actDrawer.documentos.length > 0) {
                     @let doc = actDrawer.documentos[0];
                     <div class="info-row full">
-                      <span class="info-label">Acta Probatoria:</span>
-                      <button type="button" class="btn-descargar-acta" (click)="descargar(doc.id, doc.nombreOriginal || 'Acta-Reunion-1.1.pdf')">
+                      <span class="info-label">Documento de respaldo (PDF):</span>
+                      <button type="button" class="btn-descargar-acta" (click)="descargar(doc.id, doc.nombreOriginal || 'Respaldo-Actividad-1.pdf')">
                         <svg class="icon-svg-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                           <polyline points="14 2 14 8 20 8" />
                         </svg>
-                        Descargar {{ doc.nombreOriginal || 'Acta de Reunión (.pdf)' }}
+                        Descargar {{ doc.nombreOriginal || 'Respaldo (.pdf)' }}
                       </button>
                     </div>
                   }
-                  @if (canManage()) {
+                  @if (canManage() && actDrawer.estado !== 'COMPLETADA') {
                     <div class="drawer-acciones-box">
                       <button type="button" class="btn-primario-accion w-full" (click)="abrirModalCompletar(actDrawer)">
-                        {{ actDrawer.estado === 'COMPLETADA' ? 'Modificar Acta / Acuerdos' : 'Registrar Reunión y Subir Acta' }}
+                        Registrar comunicación y reunión
                       </button>
                     </div>
                   }
                 </div>
               }
 
-              <!-- CASO 3: Hito 1.2 (Plan de Trabajo / RG-001) -->
+              <!-- CASO 3: Actividad 3 (Plan de Trabajo / RG-001) -->
               @else if (actDrawer.codigoActividad === 'ACT-02-ELABORAR-PLAN-TRABAJO' || actDrawer.codigoActividad === '1.2') {
                 <div class="drawer-seccion">
                   <p class="drawer-texto-desc">
-                    Formular el cronograma tentativo institucional de actividades e hitos (PT-001), definir responsables y formalizar los metadatos oficiales en la ficha RG-001.
+                    Formular el cronograma tentativo institucional de actividades (PT-001 / PT-003), definir responsables y formalizar los metadatos oficiales en la ficha RG-001.
                   </p>
                   @if (canManage()) {
                     <div class="drawer-acciones-box">
@@ -715,7 +1478,39 @@
                 </div>
               }
 
-              <!-- CASO 4: Otras actividades del plan -->
+              <!-- CASO 4: Actividades 4 y 5 -->
+              @else if (
+                actDrawer.codigoActividad === 'ACT-04-IDENTIFICAR-DOCUMENTACION-INTERES' ||
+                actDrawer.codigoActividad === '1.5' ||
+                actDrawer.codigoActividad === 'ACT-06-FORMALIZACION-ELECTRONICA' ||
+                actDrawer.codigoActividad === '1.8'
+              ) {
+                <div class="drawer-seccion">
+                  @if (actDrawer.documentacionRemitida && actDrawer.documentacionRemitida.length > 0) {
+                    <div class="info-row full">
+                      <span class="info-label">Ítems / Fuentes registradas:</span>
+                      <ul class="lista-documentacion-remitida">
+                        @for (codItem of actDrawer.documentacionRemitida; track codItem) {
+                          <li>{{ formatearDocRemitida(codItem) }}</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                  @if (actDrawer.observaciones || actDrawer.sintesisAcuerdos) {
+                    <div class="info-row full">
+                      <span class="info-label">Observaciones:</span>
+                      <p class="text-acuerdos">{{ actDrawer.observaciones || actDrawer.sintesisAcuerdos }}</p>
+                    </div>
+                  }
+                  <div class="drawer-acciones-box">
+                    <button type="button" class="btn-primario-accion w-full" (click)="irAGestionarActividadDesdeDrawer(actDrawer)">
+                      Ir al Panel Operativo de la Actividad
+                    </button>
+                  </div>
+                </div>
+              }
+
+              <!-- CASO 5: Otras actividades del plan -->
               @else {
                 <div class="drawer-seccion">
                   <div class="drawer-empty-notice">
@@ -741,11 +1536,21 @@
             @if (c.registroConvocatoria) {
               @let r = c.registroConvocatoria;
               <div class="detail-row">
-                <span class="detail-label">Resolución CONEAU:</span>
-                <span class="detail-value font-mono">{{ r.nroResolucionConeau }}</span>
+                <span class="detail-label">Carrera y Nivel:</span>
+                <span class="detail-value">{{ c.carreraNombre }} ({{ c.nivel || 'GRADO' }})</span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Fecha de Apertura:</span>
+                <span class="detail-label">Estado de la Carrera:</span>
+                <span class="detail-value">{{ (r.estadoCarrera || c.tipoProceso) === 'EN_FUNCIONAMIENTO' ? 'En funcionamiento' : 'Nueva' }}</span>
+              </div>
+              @if ((r.estadoCarrera || c.tipoProceso) === 'EN_FUNCIONAMIENTO' || r.nroResolucionConeau) {
+                <div class="detail-row">
+                  <span class="detail-label">Resolución CONEAU:</span>
+                  <span class="detail-value font-mono">{{ r.nroResolucionConeau || '—' }}</span>
+                </div>
+              }
+              <div class="detail-row">
+                <span class="detail-label">Fecha de Inicio (CONEAU):</span>
                 <span class="detail-value">{{ r.fechaInicio | date:'dd/MM/yyyy' }}</span>
               </div>
               <div class="detail-row">
@@ -760,10 +1565,24 @@
                 </div>
               }
 
+              @if (r.areaDisciplinaria) {
+                <div class="detail-row">
+                  <span class="detail-label">Área Disciplinaria:</span>
+                  <span class="detail-value">{{ r.areaDisciplinaria }}</span>
+                </div>
+              }
+
+              <div class="detail-row">
+                <span class="detail-label">Modalidad:</span>
+                <span class="detail-value">{{ r.modalidadCarrera === 'A_DISTANCIA' || r.modalidadCarrera === 'DISTANCIA' ? 'A distancia' : 'Presencial' }}</span>
+              </div>
+
               @if (r.faseEvaluacion) {
                 <div class="detail-row">
                   <span class="detail-label">Fase de Evaluación:</span>
-                  <span class="detail-value">{{ r.faseEvaluacion }}</span>
+                  <span class="detail-value">
+                    {{ r.faseEvaluacion === 'PRIMERA_FASE' ? '1era Fase' : r.faseEvaluacion === 'SEGUNDA_FASE' ? '2da Fase' : r.faseEvaluacion === 'NUEVO_CICLO' ? 'Nuevo ciclo' : 'Seguimiento' }}
+                  </span>
                 </div>
               }
 
@@ -772,6 +1591,15 @@
                   <span class="detail-label">Fecha Límite CONEAU:</span>
                   <span class="detail-value font-mono text-primary font-bold">
                     {{ r.fechaLimitePresentacionConeau | date:'dd/MM/yyyy' }}
+                  </span>
+                </div>
+              }
+
+              @if (r.fechaFormalizacionElectronica) {
+                <div class="detail-row">
+                  <span class="detail-label">Fecha Formalización Electrónica:</span>
+                  <span class="detail-value font-mono text-primary font-bold">
+                    {{ r.fechaFormalizacionElectronica | date:'dd/MM/yyyy' }}
                   </span>
                 </div>
               }
@@ -821,16 +1649,19 @@
     }
   }
 
-  <!-- Modal para completar Actividad 1.1 -->
+  <!-- Modal para completar Actividad 1 -->
   @if (actividadSeleccionada()) {
     <app-completar-actividad-modal
       [actividadId]="actividadSeleccionada()!.id"
       [actividadNombre]="actividadSeleccionada()!.nombre"
+      [tipoProceso]="convocatoria()?.tipoProceso || 'EN_FUNCIONAMIENTO'"
+      [tipoPlan]="planTrabajo()?.tipo || 'PT_001_ACREDITACION'"
+      [actividad]="actividadSeleccionada()"
       (cerrado)="cerrarModal($event)"
     ></app-completar-actividad-modal>
   }
 
-  <!-- Modal para Elaborar Plan de Trabajo (H-02 / RG-001) -->
+  <!-- Modal para Elaborar Plan de Trabajo (Actividad 3 / RG-001) -->
   @if (modalElaborarPlanAbierto() && convocatoria()) {
     <app-elaborar-plan-trabajo-modal
       [procesoId]="convocatoria()!.id"

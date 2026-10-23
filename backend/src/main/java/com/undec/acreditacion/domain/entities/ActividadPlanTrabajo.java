@@ -4,6 +4,8 @@ import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -15,6 +17,10 @@ public final class ActividadPlanTrabajo {
     public static final String NOMBRE_ACT_02 = "Elaborar Plan de Trabajo";
     public static final String CODIGO_ACT_03 = "1.3";
     public static final String NOMBRE_ACT_03 = "Gestionar normativa de la carrera que se presenta a acreditación";
+    public static final String CODIGO_ACT_04 = "ACT-04-IDENTIFICAR-DOCUMENTACION-INTERES";
+    public static final String NOMBRE_ACT_04 = "Identificar información y documentación de interés";
+    public static final String CODIGO_ACT_06 = "ACT-06-FORMALIZACION-ELECTRONICA";
+    public static final String NOMBRE_ACT_06 = "Formalización electrónica de participación en convocatoria";
 
     private final UUID id;
     private final UUID planTrabajoId;
@@ -31,6 +37,8 @@ public final class ActividadPlanTrabajo {
     private LocalDate fechaFinEstimada;
     private String responsable;
     private PrioridadActividad prioridad;
+    private List<AreaInformadaProceso> areasInformadas = List.of();
+    private List<DocumentacionRemitidaProceso> documentacionRemitida = List.of();
     private final Instant creadoEn;
     private Instant actualizadoEn;
 
@@ -97,6 +105,52 @@ public final class ActividadPlanTrabajo {
                 null,
                 null,
                 "Área de Evaluación y Acreditación (AEA) / Dirección de Carrera",
+                PrioridadActividad.ALTA,
+                now,
+                now
+        );
+    }
+
+    public static ActividadPlanTrabajo crearActividadIdentificarDocumentacionInteres(UUID planTrabajoId) {
+        Instant now = Instant.now();
+        return new ActividadPlanTrabajo(
+                UUID.randomUUID(),
+                planTrabajoId,
+                4,
+                CODIGO_ACT_04,
+                NOMBRE_ACT_04,
+                EstadoActividad.PENDIENTE,
+                null,
+                null,
+                null,
+                null,
+                HojaPlanTrabajo.INFO,
+                null,
+                null,
+                "Área de Evaluación y Acreditación (AEA) | SGI",
+                PrioridadActividad.ALTA,
+                now,
+                now
+        );
+    }
+
+    public static ActividadPlanTrabajo crearActividadFormalizacionElectronica(UUID planTrabajoId) {
+        Instant now = Instant.now();
+        return new ActividadPlanTrabajo(
+                UUID.randomUUID(),
+                planTrabajoId,
+                5,
+                CODIGO_ACT_06,
+                NOMBRE_ACT_06,
+                EstadoActividad.PENDIENTE,
+                null,
+                null,
+                null,
+                null,
+                HojaPlanTrabajo.CONEAU,
+                null,
+                null,
+                "Área de Evaluación y Acreditación (AEA) | Dirección de Carrera",
                 PrioridadActividad.ALTA,
                 now,
                 now
@@ -290,27 +344,54 @@ public final class ActividadPlanTrabajo {
         this.actualizadoEn = actualizadoEn != null ? actualizadoEn : this.creadoEn;
     }
 
-    public void registrarReunionYCompletar(Instant fechaReunion, String sintesis, UUID usuarioAeaId) {
+    /**
+     * Actividad 1 del procedimiento oficial: el AEA informa a las áreas sobre el proceso dispuesto
+     * por CONEAU, remite la documentación según el caso y coordina una reunión con la Dirección de Carrera.
+     * Las observaciones son opcionales (se persisten en la columna histórica sintesis_acuerdos).
+     */
+    public void registrarComunicacionYCompletar(List<AreaInformadaProceso> areasInformadas,
+                                                List<DocumentacionRemitidaProceso> documentacionRemitida,
+                                                Instant fechaReunion,
+                                                String observaciones,
+                                                UUID usuarioAeaId) {
         if (this.estado == EstadoActividad.COMPLETADA) {
             throw new DomainValidationException("La actividad ya ha sido completada previamente");
         }
-        if (fechaReunion == null) {
-            throw new DomainValidationException("La fecha de reunión de coordinación es obligatoria");
+        if (areasInformadas == null || areasInformadas.stream().noneMatch(Objects::nonNull)) {
+            throw new DomainValidationException("Debe indicar al menos un área informada");
         }
-        if (sintesis == null || sintesis.trim().length() < 10) {
-            throw new DomainValidationException("La síntesis de acuerdos debe contener al menos 10 caracteres");
+        if (documentacionRemitida == null || documentacionRemitida.stream().noneMatch(Objects::nonNull)) {
+            throw new DomainValidationException("Debe indicar al menos un documento remitido");
+        }
+        if (fechaReunion == null) {
+            throw new DomainValidationException("La fecha de la reunión coordinada con la Dirección de Carrera es obligatoria");
         }
         if (usuarioAeaId == null) {
             throw new DomainValidationException("El usuario de AEA responsable es obligatorio");
         }
 
+        this.areasInformadas = sinDuplicados(areasInformadas);
+        this.documentacionRemitida = sinDuplicados(documentacionRemitida);
         this.fechaReunionCoordinacion = fechaReunion;
-        this.sintesisAcuerdos = sintesis.trim();
+        this.sintesisAcuerdos = (observaciones == null || observaciones.isBlank()) ? null : observaciones.trim();
         this.completadaPor = usuarioAeaId;
         Instant now = Instant.now();
         this.completadaEn = now;
         this.actualizadoEn = now;
         this.estado = EstadoActividad.COMPLETADA;
+    }
+
+    /**
+     * Restaura el registro de comunicación persistido (usado por la capa de persistencia al rehidratar).
+     */
+    public void restaurarRegistroComunicacion(List<AreaInformadaProceso> areasInformadas,
+                                              List<DocumentacionRemitidaProceso> documentacionRemitida) {
+        this.areasInformadas = areasInformadas == null ? List.of() : sinDuplicados(areasInformadas);
+        this.documentacionRemitida = documentacionRemitida == null ? List.of() : sinDuplicados(documentacionRemitida);
+    }
+
+    private static <T> List<T> sinDuplicados(List<T> valores) {
+        return List.copyOf(new LinkedHashSet<>(valores.stream().filter(Objects::nonNull).toList()));
     }
 
     public void completar(UUID usuarioAeaId) {
@@ -321,6 +402,44 @@ public final class ActividadPlanTrabajo {
             throw new DomainValidationException("El usuario de AEA responsable es obligatorio");
         }
 
+        this.completadaPor = usuarioAeaId;
+        Instant now = Instant.now();
+        this.completadaEn = now;
+        this.actualizadoEn = now;
+        this.estado = EstadoActividad.COMPLETADA;
+    }
+
+    public void completarDocumentacionInteres(List<DocumentacionRemitidaProceso> fuentesSeleccionadas,
+                                              String observaciones,
+                                              UUID usuarioAeaId) {
+        if (fuentesSeleccionadas == null || fuentesSeleccionadas.stream().noneMatch(Objects::nonNull)) {
+            throw new DomainValidationException("Debe seleccionar al menos una fuente de información y documentación de interés");
+        }
+        if (usuarioAeaId == null) {
+            throw new DomainValidationException("El usuario de AEA responsable es obligatorio");
+        }
+
+        this.documentacionRemitida = sinDuplicados(fuentesSeleccionadas);
+        this.sintesisAcuerdos = (observaciones == null || observaciones.isBlank()) ? null : observaciones.trim();
+        this.hoja = HojaPlanTrabajo.INFO;
+        this.completadaPor = usuarioAeaId;
+        Instant now = Instant.now();
+        this.completadaEn = now;
+        this.actualizadoEn = now;
+        this.estado = EstadoActividad.COMPLETADA;
+    }
+
+    public void completarFormalizacionElectronica(Instant fechaFormalizacion,
+                                                  String observaciones,
+                                                  UUID usuarioAeaId) {
+        if (usuarioAeaId == null) {
+            throw new DomainValidationException("El usuario de AEA responsable es obligatorio");
+        }
+        this.fechaReunionCoordinacion = fechaFormalizacion != null ? fechaFormalizacion : Instant.now();
+        if (observaciones != null && !observaciones.isBlank()) {
+            this.sintesisAcuerdos = observaciones.trim();
+        }
+        this.hoja = HojaPlanTrabajo.CONEAU;
         this.completadaPor = usuarioAeaId;
         Instant now = Instant.now();
         this.completadaEn = now;
@@ -365,6 +484,18 @@ public final class ActividadPlanTrabajo {
 
     public String getSintesisAcuerdos() {
         return sintesisAcuerdos;
+    }
+
+    public String getObservaciones() {
+        return sintesisAcuerdos;
+    }
+
+    public List<AreaInformadaProceso> getAreasInformadas() {
+        return areasInformadas;
+    }
+
+    public List<DocumentacionRemitidaProceso> getDocumentacionRemitida() {
+        return documentacionRemitida;
     }
 
     public Instant getCompletadaEn() {

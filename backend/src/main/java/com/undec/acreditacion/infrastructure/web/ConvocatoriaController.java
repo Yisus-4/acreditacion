@@ -174,7 +174,13 @@ public class ConvocatoriaController {
 
         ElaborarPlanTrabajoCommand command = new ElaborarPlanTrabajoCommand(
                 id,
+                request.fechaInicio(),
+                request.fechaCierre(),
+                request.estadoCarrera(),
+                request.nroResolucionConeau(),
                 request.rmEstandares(),
+                request.areaDisciplinaria(),
+                request.modalidadCarrera(),
                 request.faseEvaluacion(),
                 request.fechaLimiteConeau(),
                 itemsCommand,
@@ -194,6 +200,8 @@ public class ConvocatoriaController {
                             d.getId(),
                             d.getNombreOriginal(),
                             d.getTipoDocumento().name(),
+                            d.getClasificacionOrigen(),
+                            d.getDescripcion(),
                             d.getMimeType(),
                             d.getTamanioBytes(),
                             "/api/documentos/" + d.getId() + "/descargar",
@@ -227,7 +235,10 @@ public class ConvocatoriaController {
                     act.getPrioridad() != null ? act.getPrioridad().name() : PrioridadActividad.MEDIA.name(),
                     act.getCreadoEn(),
                     act.getActualizadoEn(),
-                    docsDto
+                    docsDto,
+                    act.getAreasInformadas().stream().map(Enum::name).toList(),
+                    act.getDocumentacionRemitida().stream().map(Enum::name).toList(),
+                    act.getObservaciones()
             ));
         }
 
@@ -250,15 +261,24 @@ public class ConvocatoriaController {
         } catch (Exception ignored) {
         }
 
+        String areaCarreraFallback = carreraOpt.map(Carrera::getAreaDisciplinaria).orElse("Ingeniería / Sistemas");
+        String modalidadCarreraFallback = carreraOpt
+                .map(c -> c.getModalidad() == ModalidadCarrera.DISTANCIA ? "A_DISTANCIA" : "PRESENCIAL")
+                .orElse("PRESENCIAL");
+
         RegistroConvocatoriaResponse regResponse = regOpt.map(r -> new RegistroConvocatoriaResponse(
                 r.getId(),
-                r.getNroResolucionConeau(),
+                r.getNroResolucionConeau() != null ? r.getNroResolucionConeau() : "",
                 r.getFechaInicio(),
                 r.getFechaCierre(),
                 r.getObservaciones(),
                 r.getRmEstandares(),
+                r.getAreaDisciplinaria() != null && !r.getAreaDisciplinaria().isBlank() ? r.getAreaDisciplinaria() : areaCarreraFallback,
+                r.getModalidadCarrera() != null && !r.getModalidadCarrera().isBlank() ? r.getModalidadCarrera() : modalidadCarreraFallback,
+                r.getEstadoCarrera() != null && !r.getEstadoCarrera().isBlank() ? r.getEstadoCarrera() : proceso.getTipoProceso().name(),
                 r.getFaseEvaluacion() != null ? r.getFaseEvaluacion().name() : FaseEvaluacion.PRIMERA_FASE.name(),
                 r.getFechaLimitePresentacionConeau(),
+                r.getFechaFormalizacionElectronica(),
                 r.getCreadoEn(),
                 r.getActualizadoEn()
         )).orElse(null);
@@ -302,6 +322,9 @@ public class ConvocatoriaController {
                 return userOpt.get().getId();
             }
         }
-        return UUID.fromString("00000000-0000-0000-0000-000000000001");
+        return userRepository.findByEmail("admin@undec.edu.ar")
+                .map(User::getId)
+                .orElseGet(() -> userRepository.findAll().stream().findFirst().map(User::getId)
+                        .orElse(UUID.fromString("00000000-0000-0000-0000-000000000001")));
     }
 }

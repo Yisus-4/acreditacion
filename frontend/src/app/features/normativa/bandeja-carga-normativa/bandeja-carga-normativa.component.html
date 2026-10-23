@@ -71,8 +71,13 @@
                 </button>
 
                 @if (puedeEditar) {
-                  <label class="btn-sm btn-secundario btn-file-label" title="Reemplazar archivo">
-                    Reemplazar
+                  <label
+                    class="btn-sm btn-file-label"
+                    [class.btn-primario-subir]="doc.observado"
+                    [class.btn-secundario]="!doc.observado"
+                    [title]="doc.observado ? 'Subir nueva versión corregida del documento PDF' : 'Reemplazar archivo'"
+                  >
+                    {{ doc.observado ? 'Subir PDF Corregido' : 'Reemplazar' }}
                     <input
                       type="file"
                       accept=".pdf,application/pdf"
@@ -95,9 +100,9 @@
               </div>
             </div>
 
-            @if (doc.observado && doc.motivoObservacion) {
+            @if (doc.observado) {
               <div class="alerta-observacion">
-                <strong>Observación AEA:</strong> {{ doc.motivoObservacion }}
+                <strong>Observación AEA (Requiere reemplazo):</strong> {{ doc.motivoObservacion }}
               </div>
             }
           } @else {
@@ -187,8 +192,13 @@
                 </button>
 
                 @if (puedeEditar) {
-                  <label class="btn-sm btn-secundario btn-file-label" title="Reemplazar archivo">
-                    Reemplazar
+                  <label
+                    class="btn-sm btn-file-label"
+                    [class.btn-primario-subir]="doc.observado"
+                    [class.btn-secundario]="!doc.observado"
+                    [title]="doc.observado ? 'Subir nueva versión corregida del documento PDF' : 'Reemplazar archivo'"
+                  >
+                    {{ doc.observado ? 'Subir PDF Corregido' : 'Reemplazar' }}
                     <input
                       type="file"
                       accept=".pdf,application/pdf"
@@ -211,9 +221,9 @@
               </div>
             </div>
 
-            @if (doc.observado && doc.motivoObservacion) {
+            @if (doc.observado) {
               <div class="alerta-observacion">
-                <strong>Observación AEA:</strong> {{ doc.motivoObservacion }}
+                <strong>Observación AEA (Requiere reemplazo):</strong> {{ doc.motivoObservacion }}
               </div>
             }
           } @else {

@@ -27,14 +27,14 @@ class ObtenerPlantillaPlanTrabajoServiceTest {
     }
 
     @Test
-    @DisplayName("Debe retornar la plantilla estándar para PT_001_ACREDITACION con 31 actividades INFO y 14 CONEAU")
+    @DisplayName("Debe retornar la plantilla estándar para PT_001_ACREDITACION con 31 actividades INFO y 13 CONEAU")
     void debeRetornarPlantillaAcreditacion() {
         PlantillaPlanTrabajoDto plantilla = service.obtenerPorTipo(TipoPlanTrabajo.PT_001_ACREDITACION);
 
         assertNotNull(plantilla);
         assertEquals(TipoPlanTrabajo.PT_001_ACREDITACION, plantilla.tipoPlan());
         assertEquals(31, plantilla.actividadesInfo().size());
-        assertEquals(14, plantilla.actividadesConeau().size());
+        assertEquals(13, plantilla.actividadesConeau().size());
 
         assertTrue(plantilla.actividadesInfo().stream().allMatch(a -> a.hoja() == HojaPlanTrabajo.INFO));
         assertTrue(plantilla.actividadesConeau().stream().allMatch(a -> a.hoja() == HojaPlanTrabajo.CONEAU));
@@ -52,8 +52,6 @@ class ObtenerPlantillaPlanTrabajoServiceTest {
                 .anyMatch(a -> a.nombre().contains("Elaborar plan de mejoras")));
 
         // Verificar actividades específicas de CONEAU
-        assertTrue(plantilla.actividadesConeau().stream()
-                .anyMatch(a -> a.nombre().contains("información institucional precargada")));
         assertTrue(plantilla.actividadesConeau().stream()
                 .anyMatch(a -> a.nombre().contains("Creación de la solicitud de acreditación")));
         assertTrue(plantilla.actividadesConeau().stream()

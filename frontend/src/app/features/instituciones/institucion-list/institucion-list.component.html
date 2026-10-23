@@ -22,13 +22,34 @@
   </header>
 
   <main class="instituciones-container">
+    <!-- Banner de éxito -->
+    @if (successMessage()) {
+      <div class="alert alert--success" role="alert">
+        <div class="alert__content">
+          <svg class="alert__icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+          </svg>
+          <span>{{ successMessage() }}</span>
+        </div>
+        <button type="button" class="alert__close" (click)="successMessage.set(null)" aria-label="Cerrar">&times;</button>
+      </div>
+    }
+
     <!-- Alerta de error -->
     @if (errorMessage()) {
       <div class="alert alert--danger" role="alert">
-        <span>{{ errorMessage() }}</span>
-        <button type="button" class="btn btn--secondary btn--sm" (click)="cargarInstituciones()">
-          Reintentar
-        </button>
+        <div class="alert__content">
+          <svg class="alert__icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span>{{ errorMessage() }}</span>
+        </div>
+        <div class="alert__actions">
+          <button type="button" class="btn btn--secondary btn--sm" (click)="cargarInstituciones()">
+            Reintentar
+          </button>
+          <button type="button" class="alert__close" (click)="errorMessage.set(null)" aria-label="Cerrar">&times;</button>
+        </div>
       </div>
     }
 
@@ -77,7 +98,7 @@
         <p class="empty-state__desc">No se encontraron instituciones que coincidan con "{{ searchQuery() }}".</p>
       </div>
     } @else {
-      <!-- Listado de instituciones en tarjetas responsivas y tabla -->
+      <!-- Listado de instituciones en tabla -->
       <div class="table-container">
         <table class="data-table">
           <thead>
@@ -87,6 +108,7 @@
               <th>Máxima Autoridad</th>
               <th>Administrador</th>
               <th class="text-center">Estado</th>
+              <th class="text-center th-acciones">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -162,6 +184,41 @@
                     <span class="badge badge--inactive">Inactiva</span>
                   }
                 </td>
+
+                <td class="text-center">
+                  <div class="table-actions">
+                    <a
+                      class="btn btn--sm btn--secondary"
+                      [routerLink]="['/admin/instituciones', inst.id, 'editar']"
+                      title="Editar institución"
+                    >
+                      Editar
+                    </a>
+                    <button
+                      type="button"
+                      class="btn btn--sm"
+                      [class.btn--warning]="inst.activo"
+                      [class.btn--outline]="!inst.activo"
+                      [disabled]="procesandoEstadoId() === inst.id"
+                      (click)="cambiarEstado(inst)"
+                      [title]="inst.activo ? 'Desactivar institución' : 'Activar institución'"
+                    >
+                      @if (procesandoEstadoId() === inst.id) {
+                        <span class="spinner-sm" aria-hidden="true"></span>
+                      } @else {
+                        {{ inst.activo ? 'Desactivar' : 'Activar' }}
+                      }
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn--sm btn--danger-outline"
+                      (click)="abrirModalEliminar(inst)"
+                      title="Eliminar institución"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </td>
               </tr>
             }
           </tbody>
@@ -169,4 +226,47 @@
       </div>
     }
   </main>
+
+  <!-- Modal institucional de confirmación de eliminación -->
+  @if (institucionAEliminar(); as inst) {
+    <div class="modal-backdrop" (click)="cerrarModalEliminar()">
+      <div class="modal-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3 class="modal-title">Confirmar Eliminación</h3>
+          <button type="button" class="modal-close" (click)="cerrarModalEliminar()" aria-label="Cerrar">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>
+            ¿Está seguro de que desea eliminar la institución <strong>{{ inst.nombre }}</strong> ({{ inst.sigla }})?
+          </p>
+          <p class="modal-warning">
+            Esta acción eliminará de forma permanente los registros y datos institucionales vinculados.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn--secondary"
+            [disabled]="eliminando()"
+            (click)="cerrarModalEliminar()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn btn--danger"
+            [disabled]="eliminando()"
+            (click)="confirmarEliminar()"
+          >
+            @if (eliminando()) {
+              <span class="spinner-sm" aria-hidden="true"></span>
+              <span>Eliminando...</span>
+            } @else {
+              <span>Eliminar Definitivamente</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

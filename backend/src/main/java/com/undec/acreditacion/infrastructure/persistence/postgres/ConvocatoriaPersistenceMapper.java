@@ -48,7 +48,7 @@ public class ConvocatoriaPersistenceMapper {
                 ? FaseEvaluacion.valueOf(entity.getFaseEvaluacion())
                 : FaseEvaluacion.PRIMERA_FASE;
 
-        return RegistroConvocatoria.rehydrate(
+        RegistroConvocatoria domain = RegistroConvocatoria.rehydrate(
                 entity.getId(),
                 entity.getProcesoId(),
                 entity.getNroResolucionConeau(),
@@ -56,11 +56,18 @@ public class ConvocatoriaPersistenceMapper {
                 entity.getFechaCierre(),
                 entity.getObservaciones(),
                 entity.getRmEstandares(),
+                entity.getAreaDisciplinaria(),
+                entity.getModalidadCarrera(),
+                entity.getEstadoCarrera(),
                 fase,
                 entity.getFechaLimitePresentacionConeau(),
                 entity.getCreadoEn(),
                 entity.getActualizadoEn()
         );
+        if (entity.getFechaFormalizacionElectronica() != null) {
+            domain.registrarFechaFormalizacionElectronica(entity.getFechaFormalizacionElectronica());
+        }
+        return domain;
     }
 
     public RegistroConvocatoriaJpaEntity toJpa(RegistroConvocatoria domain) {
@@ -75,8 +82,12 @@ public class ConvocatoriaPersistenceMapper {
         entity.setFechaCierre(domain.getFechaCierre());
         entity.setObservaciones(domain.getObservaciones());
         entity.setRmEstandares(domain.getRmEstandares());
+        entity.setAreaDisciplinaria(domain.getAreaDisciplinaria());
+        entity.setModalidadCarrera(domain.getModalidadCarrera() != null ? domain.getModalidadCarrera() : "PRESENCIAL");
+        entity.setEstadoCarrera(domain.getEstadoCarrera() != null ? domain.getEstadoCarrera() : "EN_FUNCIONAMIENTO");
         entity.setFaseEvaluacion(domain.getFaseEvaluacion() != null ? domain.getFaseEvaluacion().name() : FaseEvaluacion.PRIMERA_FASE.name());
         entity.setFechaLimitePresentacionConeau(domain.getFechaLimitePresentacionConeau());
+        entity.setFechaFormalizacionElectronica(domain.getFechaFormalizacionElectronica());
         entity.setCreadoEn(domain.getCreadoEn());
         entity.setActualizadoEn(domain.getActualizadoEn());
         return entity;

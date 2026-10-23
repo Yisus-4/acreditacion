@@ -14,9 +14,9 @@
           Revisión técnica de la documentación normativa presentada para <strong>{{ carreraNombre }}</strong> (Proceso <code>{{ procesoCodigo }}</code>).
         </p>
 
-        @if (errorMsg()) {
+        @if (serverError || errorMsg()) {
           <div class="alert-error" role="alert">
-            {{ errorMsg() }}
+            {{ serverError || errorMsg() }}
           </div>
         }
 
@@ -32,7 +32,7 @@
                 (ngModelChange)="decision.set($event)"
               />
               <div class="radio-info">
-                <span class="radio-title text-success">&check; Aprobar y Completar Actividad 2</span>
+                <span class="radio-title text-success">Aprobar y Completar Actividad 2</span>
                 <span class="radio-desc">La documentación cumple los estándares y ordenanzas requeridas. Se da por completado el hito.</span>
               </div>
             </label>
@@ -46,7 +46,7 @@
                 (ngModelChange)="decision.set($event)"
               />
               <div class="radio-info">
-                <span class="radio-title text-warning">&#9888; Solicitar Correcciones / Observar</span>
+                <span class="radio-title text-warning">Solicitar Correcciones / Observar</span>
                 <span class="radio-desc">Se devuelve a la Dirección de Carrera para subsanar archivos observados o adjuntar faltantes.</span>
               </div>
             </label>
@@ -107,19 +107,22 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn-cancelar" (click)="onCancelar()">
+        <button type="button" class="btn-cancelar" [disabled]="submitting" (click)="onCancelar()">
           Cancelar
         </button>
         <button
           type="button"
           class="btn-confirmar"
           [class.btn-warning-action]="decision() === 'REQUIERE_CORRECCIONES'"
+          [disabled]="submitting"
           (click)="onConfirmar()"
         >
-          @if (decision() === 'APROBADO') {
-            &check; Confirmar Aprobación
+          @if (submitting) {
+            Procesando dictamen...
+          } @else if (decision() === 'APROBADO') {
+            Confirmar Aprobación
           } @else {
-            &#9888; Emitir Observaciones
+            Emitir Observaciones
           }
         </button>
       </div>

@@ -108,10 +108,11 @@ public final class SolicitudNormativaCarrera {
     }
 
     public void iniciarCargaBorrador() {
-        if (this.estado == EstadoSolicitudNormativa.EN_CARGA_BORRADOR) {
+        if (this.estado == EstadoSolicitudNormativa.EN_CARGA_BORRADOR || this.estado == EstadoSolicitudNormativa.OBSERVADA) {
+            this.actualizadoEn = Instant.now();
             return;
         }
-        if (this.estado != EstadoSolicitudNormativa.SOLICITADA && this.estado != EstadoSolicitudNormativa.OBSERVADA) {
+        if (this.estado != EstadoSolicitudNormativa.SOLICITADA) {
             throw new EstadoInvalidoException("No se puede iniciar carga en borrador cuando la solicitud está en estado: " + this.estado);
         }
         this.estado = EstadoSolicitudNormativa.EN_CARGA_BORRADOR;
@@ -144,12 +145,17 @@ public final class SolicitudNormativaCarrera {
         }
 
         if (documentos != null) {
+            boolean hayObservados = documentos.stream().anyMatch(DocumentoNormativa::isObservado);
+            if (hayObservados) {
+                throw new NormativaValidationException("Debe reemplazar los documentos observados antes de reenviar la documentación a revisión");
+            }
             for (DocumentoNormativa doc : documentos) {
                 doc.marcarComoDefinitivo();
             }
         }
 
         this.estado = EstadoSolicitudNormativa.ENVIADA_A_REVISION;
+        this.observacionesRevision = null;
         this.enviadoPor = usuarioDcId;
         this.fechaEnvio = Instant.now();
 
@@ -165,8 +171,8 @@ public final class SolicitudNormativaCarrera {
         if (this.estado != EstadoSolicitudNormativa.ENVIADA_A_REVISION) {
             throw new EstadoInvalidoException("Solo se puede observar una solicitud en estado ENVIADA_A_REVISION (actual: " + this.estado + ")");
         }
-        if (motivoRevision == null || motivoRevision.trim().length() < 10) {
-            throw new NormativaValidationException("Las observaciones de revisión deben contener al menos 10 caracteres");
+        if (motivoRevision == null || motivoRevision.trim().isEmpty()) {
+            throw new NormativaValidationException("Las observaciones de revisión son obligatorias");
         }
         this.estado = EstadoSolicitudNormativa.OBSERVADA;
         this.revisadoPor = Objects.requireNonNull(usuarioAeaId, "El usuario auditor es obligatorio");

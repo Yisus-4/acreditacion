@@ -14,7 +14,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, finalize, of, switchMap, tap } from 'rxjs';
 
 import {
@@ -40,12 +40,15 @@ export class InstitucionRegisterComponent implements OnInit {
   private readonly institucionService = inject(InstitucionService);
   private readonly geografiaService = inject(GeografiaService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
 
   // Status signals
   readonly submitting = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
+  readonly isEditing = signal<boolean>(false);
+  readonly institucionId = signal<string | null>(null);
 
   // Geographic signals
   readonly provincias = signal<Provincia[]>([]);
@@ -96,6 +99,13 @@ export class InstitucionRegisterComponent implements OnInit {
   ngOnInit(): void {
     this.cargarProvincias();
     this.setupGeografiaCascade();
+
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.isEditing.set(true);
+      this.institucionId.set(id);
+      this.cargarInstitucionParaEditar(id);
+    }
   }
 
   // Helper getters for template
@@ -228,6 +238,94 @@ export class InstitucionRegisterComponent implements OnInit {
       });
   }
 
+  private cargarInstitucionParaEditar(id: string): void {
+    this.institucionService
+      .obtenerInstitucionPorId(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (inst) => {
+          this.form.patchValue({
+            nombre: inst.nombre,
+            sigla: inst.sigla,
+            maximaAutoridad: {
+              apellido: inst.maximaAutoridad?.apellido ?? '',
+              primerNombre: inst.maximaAutoridad?.primerNombre ?? '',
+              segundoNombre: inst.maximaAutoridad?.segundoNombre ?? '',
+              telefono: inst.maximaAutoridad?.telefono ?? '',
+              email: inst.maximaAutoridad?.email ?? '',
+            },
+            administradorInstitucional: {
+              apellido: inst.administradorInstitucional?.apellido ?? '',
+              primerNombre: inst.administradorInstitucional?.primerNombre ?? '',
+              segundoNombre: inst.administradorInstitucional?.segundoNombre ?? '',
+              telefono: inst.administradorInstitucional?.telefono ?? '',
+              email: inst.administradorInstitucional?.email ?? '',
+              cargo: inst.administradorInstitucional?.cargo ?? '',
+              ambito: inst.administradorInstitucional?.ambito ?? '',
+            },
+            sedeCentral: {
+              calle: inst.sedeCentral?.calle ?? '',
+              numero: inst.sedeCentral?.numero ?? '',
+              piso: inst.sedeCentral?.piso ?? '',
+              departamento: inst.sedeCentral?.departamento ?? '',
+              codigoPostal: inst.sedeCentral?.codigoPostal ?? '',
+            },
+          });
+
+          if (inst.logoUrl) {
+            this.previewUrl.set(inst.logoUrl);
+          }
+
+          const provId = inst.sedeCentral?.provinciaId;
+          const deptoId = inst.sedeCentral?.departamentoId;
+          const locId = inst.sedeCentral?.localidadId;
+
+          if (provId) {
+            this.form.get('sedeCentral.provinciaId')?.setValue(provId, { emitEvent: false });
+            this.loadingDepartamentos.set(true);
+            this.geografiaService
+              .obtenerDepartamentos(Number(provId))
+              .pipe(
+                finalize(() => this.loadingDepartamentos.set(false)),
+                takeUntilDestroyed(this.destroyRef)
+              )
+              .subscribe({
+                next: (deps) => {
+                  this.departamentos.set(deps);
+                  const deptoControl = this.form.get('sedeCentral.departamentoId');
+                  deptoControl?.enable();
+                  deptoControl?.setValue(deptoId ?? null, { emitEvent: false });
+
+                  if (deptoId) {
+                    this.loadingLocalidades.set(true);
+                    this.geografiaService
+                      .obtenerLocalidades(Number(deptoId))
+                      .pipe(
+                        finalize(() => this.loadingLocalidades.set(false)),
+                        takeUntilDestroyed(this.destroyRef)
+                      )
+                      .subscribe({
+                        next: (locs) => {
+                          this.localidades.set(locs);
+                          const locControl = this.form.get('sedeCentral.localidadId');
+                          locControl?.enable();
+                          locControl?.setValue(locId ?? null, { emitEvent: false });
+                        },
+                      });
+                  }
+                },
+              });
+          }
+        },
+        error: (err) => {
+          console.error('Error al cargar la institución:', err);
+          this.errorMessage.set(
+            'No se pudo cargar la información de la institución seleccionada.'
+          );
+        },
+      });
+  }
+
   // --- Manejo del logotipo ---
   onDragOver(event: DragEvent): void {
     event.preventDefault();
@@ -304,17 +402,20 @@ export class InstitucionRegisterComponent implements OnInit {
     this.successMessage.set(null);
 
     const file = this.selectedFile();
+    const editing = this.isEditing();
+    const hasExistingLogo = !!this.previewUrl();
 
-    // Validación según CU-ADM-01.1.1 (5.A: Campos obligatorios y logotipo)
-    if (this.form.invalid || !file) {
+    // En edición el logo es opcional si ya tiene uno previo
+    const logoValido = editing ? (!!file || hasExistingLogo) : !!file;
+
+    if (this.form.invalid || !logoValido) {
       this.form.markAllAsTouched();
-      if (!file) {
+      if (!logoValido) {
         this.fileError.set('Debe adjuntar el logotipo de la institución.');
       }
       this.errorMessage.set(
         'Debe completar todos los campos obligatorios y adjuntar un formato de imagen válido'
       );
-      // Scroll to top
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -356,23 +457,28 @@ export class InstitucionRegisterComponent implements OnInit {
 
     const formData = this.institucionService.crearRegistroFormData(requestData, file);
 
-    this.institucionService
-      .registrarInstitucion(formData)
+    const operation$ = editing
+      ? this.institucionService.actualizarInstitucion(this.institucionId()!, formData)
+      : this.institucionService.registrarInstitucion(formData);
+
+    operation$
       .pipe(
         finalize(() => this.submitting.set(false)),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
         next: () => {
-          this.successMessage.set('Institución registrada correctamente');
-          // Redirección automática a /admin/instituciones (Paso 8 del CU)
+          this.successMessage.set(
+            editing
+              ? 'Institución actualizada correctamente'
+              : 'Institución registrada correctamente'
+          );
           setTimeout(() => {
             void this.router.navigate(['/admin/instituciones']);
           }, 1500);
         },
         error: (err) => {
           if (err.status === 409) {
-            // 6.A Duplicidad
             this.errorMessage.set(
               'La institución ingresada ya se encuentra registrada en el sistema'
             );
@@ -380,7 +486,7 @@ export class InstitucionRegisterComponent implements OnInit {
             const backendMsg = err.error?.error;
             this.errorMessage.set(
               backendMsg ||
-                'Ocurrió un error al registrar la institución. Por favor, intente nuevamente.'
+                `Ocurrió un error al ${editing ? 'actualizar' : 'registrar'} la institución. Por favor, intente nuevamente.`
             );
           }
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -388,7 +494,7 @@ export class InstitucionRegisterComponent implements OnInit {
       });
   }
 
-  // --- 3.A Flujo alternativo: Cancelar ---
+  // --- Cancelar ---
   cancelar(): void {
     void this.router.navigate(['/admin/instituciones']);
   }

@@ -54,12 +54,34 @@ public class ElaborarPlanTrabajoService implements ElaborarPlanTrabajoUseCase {
             throw new DomainValidationException("El proceso de acreditación debe encontrarse en estado INICIADO o activo para elaborar su plan");
         }
 
-        // 2. Recuperar y actualizar RegistroConvocatoria (RG-001) con metadatos CONEAU ampliados
+        // 2. Recuperar y actualizar RegistroConvocatoria (RG-001) con todos los metadatos CONEAU de Grado
         RegistroConvocatoria registro = registroRepository.findByProcesoId(command.procesoId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el registro de convocatoria para el proceso ID: " + command.procesoId()));
 
-        registro.completarDatosConeau(command.rmEstandares(), command.faseEvaluacion(), command.fechaLimiteConeau());
+        registro.completarDatosRg001(
+                command.fechaInicio(),
+                command.fechaCierre(),
+                command.estadoCarrera(),
+                command.nroResolucionConeau(),
+                command.rmEstandares(),
+                command.areaDisciplinaria(),
+                command.modalidadCarrera(),
+                command.faseEvaluacion(),
+                command.fechaLimiteConeau()
+        );
         registroRepository.save(registro);
+
+        // Si el estado de la carrera (tipoProceso) fue actualizado explícitamente en el RG-001, sincronizar ProcesoAcreditacion
+        if (command.estadoCarrera() != null && !command.estadoCarrera().trim().isEmpty()) {
+            try {
+                TipoProcesoAcreditacion nuevoTipo = TipoProcesoAcreditacion.valueOf(command.estadoCarrera().trim().toUpperCase());
+                if (proceso.getTipoProceso() != nuevoTipo) {
+                    proceso.actualizarTipoProceso(nuevoTipo);
+                    procesoRepository.save(proceso);
+                }
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
 
         // 3. Recuperar PlanTrabajo
         PlanTrabajo plan = planTrabajoRepository.findByProcesoId(command.procesoId())

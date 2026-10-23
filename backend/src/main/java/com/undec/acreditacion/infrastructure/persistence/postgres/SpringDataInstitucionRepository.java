@@ -18,4 +18,6 @@ public interface SpringDataInstitucionRepository extends JpaRepository<Instituci
     Optional<InstitucionJpaEntity> findByNombreIgnoreCase(String nombre);
 
     Optional<InstitucionJpaEntity> findByNombre(String nombre);
+
+    Optional<InstitucionJpaEntity> findBySiglaIgnoreCase(String sigla);
 }

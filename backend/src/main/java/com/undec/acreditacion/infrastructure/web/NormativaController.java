@@ -284,6 +284,9 @@ public class NormativaController {
                 return userOpt.get().getId();
             }
         }
-        return UUID.fromString("00000000-0000-0000-0000-000000000001");
+        return userRepository.findByEmail("admin@undec.edu.ar")
+                .map(User::getId)
+                .orElseGet(() -> userRepository.findAll().stream().findFirst().map(User::getId)
+                        .orElse(UUID.fromString("00000000-0000-0000-0000-000000000001")));
     }
 }

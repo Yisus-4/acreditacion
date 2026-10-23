@@ -76,12 +76,19 @@ public class IniciarConvocatoriaService implements IniciarConvocatoriaUseCase {
         ProcesoAcreditacion procesoGuardado = procesoRepository.save(proceso);
 
         // 5. Crear y persistir RegistroConvocatoria (RG-001)
+        String modalidadRg001 = carrera.getModalidad() == ModalidadCarrera.DISTANCIA ? "A_DISTANCIA" : "PRESENCIAL";
         RegistroConvocatoria registro = RegistroConvocatoria.crear(
                 procesoGuardado.getId(),
                 command.nroResolucionConeau(),
                 command.fechaInicio(),
                 command.fechaCierre(),
-                command.observaciones()
+                command.observaciones(),
+                null,
+                carrera.getAreaDisciplinaria(),
+                modalidadRg001,
+                command.tipoProceso().name(),
+                FaseEvaluacion.PRIMERA_FASE,
+                null
         );
         registroRepository.save(registro);
 

@@ -117,7 +117,7 @@ class SolicitudNormativaCarreraTest {
     }
 
     @Test
-    @DisplayName("Observar exige fundamentación >= 10 caracteres y transiciona a OBSERVADA")
+    @DisplayName("Observar exige fundamentación no vacía y transiciona a OBSERVADA")
     void testObservar() {
         SolicitudNormativaCarrera sol = SolicitudNormativaCarrera.iniciar(UUID.randomUUID(), UUID.randomUUID());
         sol.solicitar(UUID.randomUUID(), "obs", 5, LocalDate.of(2026, 10, 15));
@@ -131,11 +131,47 @@ class SolicitudNormativaCarreraTest {
         );
         sol.enviarDefinitivo(UUID.randomUUID(), LocalDate.of(2026, 10, 20), docs, true, false);
 
-        assertThrows(NormativaValidationException.class, () -> sol.observar(UUID.randomUUID(), "Corta"));
+        assertThrows(NormativaValidationException.class, () -> sol.observar(UUID.randomUUID(), "   "));
+        assertThrows(NormativaValidationException.class, () -> sol.observar(UUID.randomUUID(), null));
 
-        sol.observar(UUID.randomUUID(), "El archivo de ordenanza no incluye los anexos de correlatividades.");
+        sol.observar(UUID.randomUUID(), "asd");
         assertEquals(EstadoSolicitudNormativa.OBSERVADA, sol.getEstado());
-        assertEquals("El archivo de ordenanza no incluye los anexos de correlatividades.", sol.getObservacionesRevision());
+        assertEquals("asd", sol.getObservacionesRevision());
+    }
+
+    @Test
+    @DisplayName("Subsanación mantiene estado OBSERVADA durante carga de borradores y bloquea reenvío si quedan documentos observados")
+    void testSubsanacionYReenvioBloqueaSiQuedanDocumentosObservados() {
+        SolicitudNormativaCarrera sol = SolicitudNormativaCarrera.iniciar(UUID.randomUUID(), UUID.randomUUID());
+        sol.solicitar(UUID.randomUUID(), "obs", 5, LocalDate.of(2026, 10, 15));
+        sol.iniciarCargaBorrador();
+
+        DocumentoNormativa d1 = DocumentoNormativa.crearBorrador(sol.getId(), sol.getProcesoId(), TipoDocumentoNormativa.CREACION_CARRERA, "a.pdf", "p", "application/pdf", 100, UUID.randomUUID());
+        DocumentoNormativa d2 = DocumentoNormativa.crearBorrador(sol.getId(), sol.getProcesoId(), TipoDocumentoNormativa.PLAN_DESARROLLO_CARRERA, "b.pdf", "p", "application/pdf", 100, UUID.randomUUID());
+        DocumentoNormativa d3 = DocumentoNormativa.crearBorrador(sol.getId(), sol.getProcesoId(), TipoDocumentoNormativa.ORDENANZA_PLAN_ESTUDIOS, "c.pdf", "p", "application/pdf", 100, UUID.randomUUID());
+        DocumentoNormativa d4 = DocumentoNormativa.crearBorrador(sol.getId(), sol.getProcesoId(), TipoDocumentoNormativa.RESOLUCION_DIRECTOR_CARRERA, "d.pdf", "p", "application/pdf", 100, UUID.randomUUID());
+        DocumentoNormativa d5 = DocumentoNormativa.crearBorrador(sol.getId(), sol.getProcesoId(), TipoDocumentoNormativa.RESOLUCION_COMISION_CURRICULAR, "e.pdf", "p", "application/pdf", 100, UUID.randomUUID());
+        List<DocumentoNormativa> docs = List.of(d1, d2, d3, d4, d5);
+
+        sol.enviarDefinitivo(UUID.randomUUID(), LocalDate.of(2026, 10, 20), docs, true, false);
+        sol.observar(UUID.randomUUID(), "Corregir documento de creación de carrera");
+        d1.marcarObservado("revisar algo");
+
+        // Durante subsanación, iniciarCargaBorrador mantiene el estado OBSERVADA
+        sol.iniciarCargaBorrador();
+        assertEquals(EstadoSolicitudNormativa.OBSERVADA, sol.getEstado());
+        assertEquals("Corregir documento de creación de carrera", sol.getObservacionesRevision());
+
+        // Si intenta reenviar sin haber reemplazado el documento observado, falla
+        assertThrows(NormativaValidationException.class, () ->
+            sol.enviarDefinitivo(UUID.randomUUID(), LocalDate.of(2026, 10, 21), docs, true, false)
+        );
+
+        // Una vez reemplazado/limpiada la observación del documento, permite reenviar y limpia observacionesRevision
+        d1.limpiarObservacion();
+        sol.enviarDefinitivo(UUID.randomUUID(), LocalDate.of(2026, 10, 21), docs, true, false);
+        assertEquals(EstadoSolicitudNormativa.ENVIADA_A_REVISION, sol.getEstado());
+        assertNull(sol.getObservacionesRevision());
     }
 
     @Test
