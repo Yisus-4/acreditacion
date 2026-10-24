@@ -187,6 +187,22 @@ export class ConvocatoriaDetalleComponent implements OnInit {
     return session.user.roleCodes.includes('CAREER_DIRECTOR');
   });
 
+  readonly esDirectorEscuela = computed(() => {
+    const session = this.auth.currentSession;
+    if (!session?.user?.roleCodes) return false;
+    return session.user.roleCodes.includes('SCHOOL_DIRECTOR');
+  });
+
+  readonly canConfirmarDe = computed(() => {
+    const session = this.auth.currentSession;
+    if (!session?.user?.roleCodes) return false;
+    return (
+      session.user.roleCodes.includes('ADMINISTRATOR') ||
+      session.user.roleCodes.includes('AEA') ||
+      session.user.roleCodes.includes('SCHOOL_DIRECTOR')
+    );
+  });
+
   readonly conteoInfo = computed(() => {
     return this.planTrabajo()?.actividades?.filter((a) => a.hoja === 'INFO').length ?? 0;
   });

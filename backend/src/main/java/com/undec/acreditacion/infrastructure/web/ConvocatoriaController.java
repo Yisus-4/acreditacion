@@ -122,7 +122,7 @@ public class ConvocatoriaController {
     }
 
     @PostMapping("/{id}/confirmar-de")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<ConvocatoriaDetalleResponse> confirmarConvocatoriaDirectorEscuela(
             @PathVariable UUID id,
             @RequestBody ConfirmarConvocatoriaDeRequest request
@@ -140,7 +140,7 @@ public class ConvocatoriaController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<List<ConvocatoriaResumenResponse>> listarConvocatorias(
             @RequestParam(required = false) UUID carreraId,
             @RequestParam(required = false) EstadoProcesoAcreditacion estado,
@@ -211,7 +211,7 @@ public class ConvocatoriaController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<ConvocatoriaDetalleResponse> obtenerPorId(@PathVariable UUID id) {
         Optional<Convocatoria> convOpt = convocatoriaEscuelaRepository.findById(id);
         if (convOpt.isPresent()) {
@@ -231,14 +231,14 @@ public class ConvocatoriaController {
     }
 
     @GetMapping("/{id}/plan-trabajo")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<PlanTrabajoResponse> obtenerPlanTrabajo(@PathVariable UUID id) {
         PlanTrabajo plan = consultarPlanTrabajoUseCase.obtenerPorProcesoId(id);
         return ResponseEntity.ok(mapearPlanTrabajoResponse(plan));
     }
 
     @GetMapping({"/{id}/plan-trabajo/plantilla", "/{id}/plantilla-plan"})
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<PlantillaPlanTrabajoDto> obtenerPlantillaPlanTrabajo(@PathVariable UUID id) {
         PlantillaPlanTrabajoDto plantilla = obtenerPlantillaPlanTrabajoUseCase.obtenerPorProcesoId(id);
         return ResponseEntity.ok(plantilla);

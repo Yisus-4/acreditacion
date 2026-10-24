@@ -191,7 +191,8 @@
               type="button"
               class="btn-confirmar-de-accion"
               (click)="confirmarSeleccionDirectorEscuela()"
-              [disabled]="guardandoConfirmacionDe()"
+              [disabled]="guardandoConfirmacionDe() || !canConfirmarDe()"
+              [title]="!canConfirmarDe() ? 'Acción restringida a la Dirección de Escuela o Administrador' : 'Confirmar carreras seleccionadas'"
             >
               @if (guardandoConfirmacionDe()) {
                 <span class="spinner-sm"></span> Confirmando carreras...
