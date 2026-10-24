@@ -122,11 +122,11 @@
           <!-- Alertas de Validación de Selección -->
           @if (!hasAtLeastOneCarreraSeleccionada()) {
             <p class="form-warning-inline">
-              ⚠️ Debe marcar al menos una carrera para incluirla en la convocatoria.
+              Debe marcar al menos una carrera para incluirla en la convocatoria.
             </p>
           } @else if (!hasAtLeastOneObligatoria()) {
             <p class="form-warning-inline">
-              ⚠️ Al menos una de las carreras seleccionadas debe tener marcado el check de <strong>Obligatoria</strong>.
+              Al menos una de las carreras seleccionadas debe tener marcado el check de <strong>Obligatoria</strong>.
             </p>
           }
         }

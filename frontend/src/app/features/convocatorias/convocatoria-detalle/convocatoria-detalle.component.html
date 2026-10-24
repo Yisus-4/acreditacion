@@ -45,39 +45,6 @@
             <div class="membrete-inferior">UNIVERSIDAD NACIONAL DE CHILECITO</div>
           </div>
         </div>
-
-        <div class="header-metadatos-bar">
-          <div class="meta-item-box">
-            <span class="meta-rotulo">Escuela:</span>
-            <span class="meta-valor">{{ c.unidadAcademicaNombre || c.carreraNombre }}</span>
-          </div>
-          <div class="meta-divisor"></div>
-          <div class="meta-item-box">
-            <span class="meta-rotulo">Tipo de Proceso:</span>
-            <span class="meta-valor">{{ c.tipoProceso === 'EN_FUNCIONAMIENTO' ? 'En Funcionamiento' : 'Nueva' }}</span>
-          </div>
-          <div class="meta-divisor"></div>
-          <div class="meta-item-box">
-            <span class="meta-rotulo">N° Res. CONEAU:</span>
-            <span class="meta-valor">{{ c.registroConvocatoria?.nroResolucionConeau || '—' }}</span>
-          </div>
-          <div class="meta-divisor"></div>
-          <div class="meta-item-box">
-            <span class="meta-rotulo">Plazo Oficial:</span>
-            <span class="meta-valor">{{ c.registroConvocatoria?.fechaInicio }} &rarr; {{ c.registroConvocatoria?.fechaCierre }}</span>
-          </div>
-          <div class="meta-divisor"></div>
-          <div class="meta-item-box">
-            <span class="meta-rotulo">Estado:</span>
-            <span
-              class="badge-estado-institucional"
-              [class.estado-iniciado]="c.estado === 'PENDIENTE_DIRECTOR_ESCUELA'"
-              [class.estado-autoevaluacion]="c.estado === 'CONFIRMADA_DIRECTOR_ESCUELA'"
-            >
-              {{ c.estado === 'PENDIENTE_DIRECTOR_ESCUELA' ? 'Pendiente Director de Escuela' : 'Confirmada por Director de Escuela' }}
-            </span>
-          </div>
-        </div>
       </header>
 
       @if (c.registroConvocatoria?.observaciones) {
@@ -90,7 +57,6 @@
         <!-- CASO 1: PENDIENTE DE CONFIRMACIÓN POR EL DIRECTOR DE ESCUELA -->
         <section class="seccion-de-card">
           <div class="seccion-de-header">
-            <div class="icono-flujo">📋</div>
             <div>
               <h2 class="seccion-de-titulo">Propuesta de Carreras para Acreditación (Sugerencia AEA)</h2>
               <p class="seccion-de-subtitulo">
@@ -99,12 +65,6 @@
                 las cuales deben ser remitidas a acreditar sin excepción.
               </p>
             </div>
-          </div>
-
-          <div class="aviso-orientacion-de">
-            <strong>Instrucciones para la Dirección de Escuela:</strong>
-            Revise y seleccione las carreras que confirma enviar a acreditar. Puede seleccionar varias o una sola, pero las carreras marcadas como
-            <span class="tag-obligatoria-mini">★ OBLIGATORIA</span> no pueden ser desmarcadas.
           </div>
 
           @if (errorConfirmacionDe()) {
@@ -156,7 +116,7 @@
                     <td>
                       @if (item.esObligatoria) {
                         <span class="badge-tag-obligatoria" title="Obligatoria por directriz institucional">
-                          ★ OBLIGATORIA
+                          OBLIGATORIA
                         </span>
                       } @else if (item.seleccionadaPorAea) {
                         <span class="badge-tag-sugerida" title="Sugerida por la AEA">
@@ -169,11 +129,11 @@
                     <td>
                       @if (estaCarreraSeleccionadaDe(item.carreraId)) {
                         <span class="decision-texto confirmada">
-                          ✓ Se enviará a acreditar
+                          Se enviará a acreditar
                         </span>
                       } @else {
                         <span class="decision-texto excluida">
-                          ✕ No se envía
+                          No se envía
                         </span>
                       }
                     </td>
@@ -184,9 +144,6 @@
           </div>
 
           <div class="seccion-de-footer">
-            <div class="footer-info">
-              Al confirmar, el sistema dará de alta formalmente el proceso de acreditación de cada carrera seleccionada junto con su Plan de Trabajo (PT-001) y Registro de Convocatoria (RG-001).
-            </div>
             <button
               type="button"
               class="btn-confirmar-de-accion"
@@ -207,7 +164,6 @@
         <!-- CASO 2: CONFIRMADA POR EL DIRECTOR DE ESCUELA (LISTA DE CARRERAS Y ACCIONES A FT-012) -->
         <section class="seccion-confirmadas-card">
           <div class="seccion-confirmadas-header">
-            <div class="icono-exito">🎓</div>
             <div>
               <h2 class="seccion-confirmadas-titulo">Carreras Confirmadas en Proceso de Acreditación</h2>
               <p class="seccion-confirmadas-subtitulo">
@@ -226,7 +182,7 @@
                     <h3 class="carrera-card-nombre">{{ carrera.carreraNombre }}</h3>
                   </div>
                   @if (carrera.esObligatoria) {
-                    <span class="badge-tag-obligatoria">★ OBLIGATORIA</span>
+                    <span class="badge-tag-obligatoria">OBLIGATORIA</span>
                   } @else {
                     <span class="badge-tag-sugerida">CONFIRMADA DE</span>
                   }
