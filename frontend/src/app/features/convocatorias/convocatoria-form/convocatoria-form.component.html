@@ -95,12 +95,8 @@
                     </td>
                     <td>
                       <label [for]="'check-carrera-' + item.carrera.id" class="carrera-label">
-                        <strong>{{ item.carrera.nombre }}</strong>
-                        @if (item.carrera.sigla) {
-                          <span class="carrera-sigla">({{ item.carrera.sigla }})</span>
-                        }
+                        <span class="carrera-nombre-texto">{{ item.carrera.nombre }}</span>
                       </label>
-                      <span class="carrera-subinfo">{{ item.carrera.areaDisciplinaria }}</span>
                     </td>
                     <td>
                       <span class="badge-modalidad">{{ item.carrera.modalidad }}</span>

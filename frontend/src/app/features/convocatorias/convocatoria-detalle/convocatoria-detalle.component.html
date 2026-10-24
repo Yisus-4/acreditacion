@@ -148,7 +148,6 @@
                     </td>
                     <td>
                       <div class="nombre-carrera-principal">{{ item.carreraNombre }}</div>
-                      <div class="sigla-sub">{{ item.carreraSigla || 'S/S' }} · Grado</div>
                     </td>
                     <td>
                       <span class="badge-modalidad">{{ item.modalidad || 'Presencial' }}</span>
@@ -224,7 +223,6 @@
                 <div class="carrera-card-top">
                   <div>
                     <h3 class="carrera-card-nombre">{{ carrera.carreraNombre }}</h3>
-                    <div class="carrera-card-sigla">{{ carrera.carreraSigla || 'S/S' }} · Grado</div>
                   </div>
                   @if (carrera.esObligatoria) {
                     <span class="badge-tag-obligatoria">★ OBLIGATORIA</span>
@@ -268,7 +266,7 @@
               <ul class="lista-excluidas">
                 @for (noConf of carrerasNoConfirmadasDe(); track noConf.carreraId) {
                   <li>
-                    <span class="nombre-excluida">{{ noConf.carreraNombre }} ({{ noConf.carreraSigla || 'S/S' }})</span>
+                    <span class="nombre-excluida">{{ noConf.carreraNombre }}</span>
                     <span class="motivo-excluida">— Decisión Dirección de Escuela (No remitida en esta convocatoria)</span>
                   </li>
                 }
