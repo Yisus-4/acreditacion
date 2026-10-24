@@ -38,6 +38,9 @@ public class UserJpaEntity {
     @Column(name = "es_sistema", nullable = false)
     private boolean systemUser;
 
+    @Column(name = "unidad_academica_id")
+    private UUID unidadAcademicaId;
+
     @Column(name = "creado_en", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -109,6 +112,14 @@ public class UserJpaEntity {
 
     public void setSystemUser(boolean systemUser) {
         this.systemUser = systemUser;
+    }
+
+    public UUID getUnidadAcademicaId() {
+        return unidadAcademicaId;
+    }
+
+    public void setUnidadAcademicaId(UUID unidadAcademicaId) {
+        this.unidadAcademicaId = unidadAcademicaId;
     }
 
     public Instant getCreatedAt() {

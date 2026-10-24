@@ -17,23 +17,36 @@ public final class User {
     private final Set<Role> roles = new LinkedHashSet<>();
     private boolean active;
     private final boolean systemUser;
+    private UUID unidadAcademicaId;
 
     public static User register(String username, String email, String passwordHash) {
         return new User(UUID.randomUUID(), username, email, passwordHash, false);
     }
 
+    public static User register(String username, String email, String passwordHash, UUID unidadAcademicaId) {
+        User user = new User(UUID.randomUUID(), username, email, passwordHash, false);
+        user.unidadAcademicaId = unidadAcademicaId;
+        return user;
+    }
+
     public static User rehydrate(UUID id, String username, String email, String passwordHash,
                                  boolean active, Set<Role> roles) {
-        return rehydrate(id, username, email, passwordHash, active, false, roles);
+        return rehydrate(id, username, email, passwordHash, active, false, null, roles);
     }
 
     public static User rehydrate(UUID id, String username, String email, String passwordHash,
                                  boolean active, boolean systemUser, Set<Role> roles) {
+        return rehydrate(id, username, email, passwordHash, active, systemUser, null, roles);
+    }
+
+    public static User rehydrate(UUID id, String username, String email, String passwordHash,
+                                 boolean active, boolean systemUser, UUID unidadAcademicaId, Set<Role> roles) {
         if (roles == null) {
             throw new DomainValidationException("User roles are required");
         }
         User user = new User(id, username, email, passwordHash, systemUser);
         user.active = active;
+        user.unidadAcademicaId = unidadAcademicaId;
         for (Role role : roles) {
             if (role == null) {
                 throw new DomainValidationException("User roles cannot contain null values");
@@ -80,6 +93,14 @@ public final class User {
 
     public boolean isSystemUser() {
         return systemUser;
+    }
+
+    public UUID getUnidadAcademicaId() {
+        return unidadAcademicaId;
+    }
+
+    public void assignUnidadAcademica(UUID unidadAcademicaId) {
+        this.unidadAcademicaId = unidadAcademicaId;
     }
 
     public Set<Role> getRoles() {

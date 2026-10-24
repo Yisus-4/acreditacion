@@ -55,6 +55,10 @@ public final class UpdateUserService implements UpdateUserUseCase {
             user.changePassword(passwordHasher.hash(command.optionalNewPassword()));
         }
 
+        if (command.unidadAcademicaId() != null) {
+            user.assignUnidadAcademica(command.unidadAcademicaId());
+        }
+
         if (command.roleCodes() != null) {
             Set<Role> roles = new LinkedHashSet<>();
             for (String code : command.roleCodes()) {

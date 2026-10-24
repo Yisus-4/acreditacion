@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -143,18 +144,109 @@ class ConvocatoriaControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("GET /api/convocatorias debe retornar 200 OK con listado")
+    @DisplayName("GET /api/convocatorias debe retornar 200 OK con listado de escuelas convocadas")
     void debeListarConvocatorias() throws Exception {
-        UUID carreraId = UUID.randomUUID();
-        ProcesoAcreditacion proceso = ProcesoAcreditacion.iniciar(
-                carreraId, "CONV-2026-ISI-01", "Convocatoria ISI 2026",
-                TipoProcesoAcreditacion.EN_FUNCIONAMIENTO, UUID.randomUUID()
+        UUID escuelaId = UUID.randomUUID();
+        ConvocatoriaCarreraItemDto carreraItem = new ConvocatoriaCarreraItemDto(
+                UUID.randomUUID(), UUID.randomUUID(), "Ingeniería en Sistemas de Información", "ISI",
+                "PRESENCIAL", "GRADO", "Computación", true, true, true, UUID.randomUUID(), "INICIADO"
         );
-        when(listarConvocatoriasUseCase.listar(any())).thenReturn(List.of(proceso));
+        ConvocatoriaEscuelaDetalleDto escuelaDetalle = new ConvocatoriaEscuelaDetalleDto(
+                UUID.randomUUID(), escuelaId, "Escuela de Ingeniería", "EI",
+                "CONV-2026-EI-01", "Convocatoria Escuela de Ingeniería",
+                TipoProcesoAcreditacion.EN_FUNCIONAMIENTO, "RESFC-2026-APN",
+                LocalDate.now(), LocalDate.now().plusMonths(6), EstadoConvocatoria.CONFIRMADA_DIRECTOR_ESCUELA,
+                "Obs", UUID.randomUUID(), null, null,
+                Instant.now(), Instant.now(), List.of(carreraItem)
+        );
+        when(consultarConvocatoriaEscuelaUseCase.listarTodas()).thenReturn(List.of(escuelaDetalle));
 
         mockMvc.perform(get("/api/convocatorias"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].codigo").value("CONV-2026-ISI-01"));
+                .andExpect(jsonPath("$[0].codigo").value("CONV-2026-EI-01"))
+                .andExpect(jsonPath("$[0].escuelaNombre").value("Escuela de Ingeniería"));
+    }
+
+    @Test
+    @DisplayName("GET /api/convocatorias debe filtrar convocatorias por escuela si el usuario es Director de Escuela")
+    void debeFiltrarConvocatoriasPorEscuelaSiEsDirectorDeEscuela() throws Exception {
+        UUID escuelaIngenieriaId = UUID.randomUUID();
+        UUID escuelaSocialesId = UUID.randomUUID();
+
+        ConvocatoriaEscuelaDetalleDto convEI = new ConvocatoriaEscuelaDetalleDto(
+                UUID.randomUUID(), escuelaIngenieriaId, "Escuela de Ingeniería", "EI",
+                "CONV-2026-EI-01", "Convocatoria EI", TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
+                "RES-EI", LocalDate.now(), LocalDate.now().plusMonths(6), EstadoConvocatoria.CONFIRMADA_DIRECTOR_ESCUELA,
+                "Obs", UUID.randomUUID(), null, null, Instant.now(), Instant.now(), Collections.emptyList()
+        );
+        ConvocatoriaEscuelaDetalleDto convSoc = new ConvocatoriaEscuelaDetalleDto(
+                UUID.randomUUID(), escuelaSocialesId, "Escuela de Ciencias Sociales", "ECSoc",
+                "CONV-2026-CS-01", "Convocatoria Sociales", TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
+                "RES-SOC", LocalDate.now(), LocalDate.now().plusMonths(6), EstadoConvocatoria.CONFIRMADA_DIRECTOR_ESCUELA,
+                "Obs", UUID.randomUUID(), null, null, Instant.now(), Instant.now(), Collections.emptyList()
+        );
+
+        when(consultarConvocatoriaEscuelaUseCase.listarTodas()).thenReturn(List.of(convEI, convSoc));
+
+        // Mock director de Escuela de Ingeniería
+        User directorEI = User.rehydrate(
+                UUID.randomUUID(), "director_ei", "de_ei@undec.edu.ar", "hash",
+                true, false, escuelaIngenieriaId,
+                java.util.Set.of(Role.custom(UUID.randomUUID(), "SCHOOL_DIRECTOR", "Director Escuela", "DE"))
+        );
+
+        org.springframework.security.core.Authentication auth = mock(org.springframework.security.core.Authentication.class);
+        when(auth.getPrincipal()).thenReturn("de_ei@undec.edu.ar");
+        when(auth.getAuthorities()).thenReturn(Collections.emptyList());
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+        when(userRepository.findByEmail("de_ei@undec.edu.ar")).thenReturn(Optional.of(directorEI));
+
+        try {
+            mockMvc.perform(get("/api/convocatorias"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].codigo").value("CONV-2026-EI-01"));
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    @DisplayName("GET /api/convocatorias/{id} debe retornar 403 Forbidden si Director de Escuela accede a otra escuela")
+    void debeRetornar403SiDirectorEscuelaAccedeAOtraEscuela() throws Exception {
+        UUID escuelaIngenieriaId = UUID.randomUUID();
+        UUID escuelaSocialesId = UUID.randomUUID();
+        UUID convSocialesId = UUID.randomUUID();
+
+        ConvocatoriaEscuelaDetalleDto convSoc = new ConvocatoriaEscuelaDetalleDto(
+                convSocialesId, escuelaSocialesId, "Escuela de Ciencias Sociales", "ECSoc",
+                "CONV-2026-CS-01", "Convocatoria Sociales", TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
+                "RES-SOC", LocalDate.now(), LocalDate.now().plusMonths(6), EstadoConvocatoria.CONFIRMADA_DIRECTOR_ESCUELA,
+                "Obs", UUID.randomUUID(), null, null, Instant.now(), Instant.now(), Collections.emptyList()
+        );
+
+        when(convocatoriaEscuelaRepository.findById(convSocialesId))
+                .thenReturn(Optional.of(mock(Convocatoria.class)));
+        when(consultarConvocatoriaEscuelaUseCase.obtenerPorId(convSocialesId)).thenReturn(convSoc);
+
+        User directorEI = User.rehydrate(
+                UUID.randomUUID(), "director_ei", "de_ei@undec.edu.ar", "hash",
+                true, false, escuelaIngenieriaId,
+                java.util.Set.of(Role.custom(UUID.randomUUID(), "SCHOOL_DIRECTOR", "Director Escuela", "DE"))
+        );
+
+        org.springframework.security.core.Authentication auth = mock(org.springframework.security.core.Authentication.class);
+        when(auth.getPrincipal()).thenReturn("de_ei@undec.edu.ar");
+        when(auth.getAuthorities()).thenReturn(Collections.emptyList());
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+        when(userRepository.findByEmail("de_ei@undec.edu.ar")).thenReturn(Optional.of(directorEI));
+
+        try {
+            mockMvc.perform(get("/api/convocatorias/" + convSocialesId))
+                    .andExpect(status().isForbidden());
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
     }
 
     @Test

@@ -29,6 +29,7 @@ public class UserPersistenceMapper {
                 entity.getPasswordHash(),
                 entity.isActive(),
                 entity.isSystemUser(),
+                entity.getUnidadAcademicaId(),
                 roles
         );
     }
@@ -47,6 +48,7 @@ public class UserPersistenceMapper {
                 user.isSystemUser(),
                 Instant.now()
         );
+        entity.setUnidadAcademicaId(user.getUnidadAcademicaId());
 
         if (user.getRoles() != null) {
             Set<RoleJpaEntity> roleEntities = user.getRoles().stream()

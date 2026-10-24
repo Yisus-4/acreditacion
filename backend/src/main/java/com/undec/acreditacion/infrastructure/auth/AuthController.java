@@ -59,7 +59,8 @@ public final class AuthController {
                 user.getId(),
                 user.getEmail(),
                 user.getUsername(),
-                roleCodes
+                roleCodes,
+                user.getUnidadAcademicaId()
         );
 
         return ResponseEntity.ok(new LoginResponse(userView, token, issuedAt));

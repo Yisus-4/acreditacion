@@ -12,7 +12,8 @@ public record UserResponse(
         String email,
         boolean active,
         boolean systemUser,
-        List<String> roleCodes
+        List<String> roleCodes,
+        UUID unidadAcademicaId
 ) {
     public static UserResponse fromDomain(User user) {
         List<String> codes = user.getRoles() != null
@@ -24,7 +25,8 @@ public record UserResponse(
                 user.getEmail(),
                 user.isActive(),
                 user.isSystemUser(),
-                codes
+                codes,
+                user.getUnidadAcademicaId()
         );
     }
 }

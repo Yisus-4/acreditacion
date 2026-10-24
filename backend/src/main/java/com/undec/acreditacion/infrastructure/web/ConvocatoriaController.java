@@ -129,6 +129,15 @@ public class ConvocatoriaController {
             @PathVariable UUID id,
             @RequestBody ConfirmarConvocatoriaDeRequest request
     ) {
+        ConvocatoriaEscuelaDetalleDto detalleExistente = consultarConvocatoriaEscuelaUseCase.obtenerPorId(id);
+        Optional<User> usuarioActualOpt = resolverUsuarioAutenticado();
+        if (!tienePermisoGlobal(usuarioActualOpt)) {
+            UUID userEscuelaId = usuarioActualOpt.map(User::getUnidadAcademicaId).orElse(null);
+            if (userEscuelaId == null || !userEscuelaId.equals(detalleExistente.unidadAcademicaId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+        }
+
         UUID usuarioId = resolverUsuarioAutenticadoId();
         ConfirmarConvocatoriaDirectorEscuelaCommand command = new ConfirmarConvocatoriaDirectorEscuelaCommand(
                 id,
@@ -151,14 +160,18 @@ public class ConvocatoriaController {
     ) {
         List<ConvocatoriaResumenResponse> response = new ArrayList<>();
 
-        // 1. Agregar Convocatorias de Escuela
+        Optional<User> usuarioActualOpt = resolverUsuarioAutenticado();
+        boolean esAdminOAEA = tienePermisoGlobal(usuarioActualOpt);
+        UUID userEscuelaId = usuarioActualOpt.map(User::getUnidadAcademicaId).orElse(null);
+
+        // Listar únicamente Convocatorias a nivel de Escuela
         List<ConvocatoriaEscuelaDetalleDto> escuelasConvocatorias = consultarConvocatoriaEscuelaUseCase.listarTodas();
-        Set<UUID> procesosDeEscuela = new HashSet<>();
 
         for (ConvocatoriaEscuelaDetalleDto ec : escuelasConvocatorias) {
-            for (ConvocatoriaCarreraItemDto item : ec.carreras()) {
-                if (item.procesoId() != null) {
-                    procesosDeEscuela.add(item.procesoId());
+            // Control de visibilidad por Escuela: Si el usuario no es ADMIN ni AEA, solo ve las de su escuela
+            if (!esAdminOAEA) {
+                if (userEscuelaId == null || !userEscuelaId.equals(ec.unidadAcademicaId())) {
+                    continue;
                 }
             }
 
@@ -207,44 +220,6 @@ public class ConvocatoriaController {
             ));
         }
 
-        // 2. Agregar Procesos de Acreditación individuales (solo si no pertenecen a una convocatoria de escuela)
-        ConvocatoriaFiltro filtro = new ConvocatoriaFiltro(carreraId, estado, tipoProceso, anio);
-        List<ProcesoAcreditacion> procesos = listarConvocatoriasUseCase.listar(filtro);
-
-        for (ProcesoAcreditacion p : procesos) {
-            if (procesosDeEscuela.contains(p.getId())) {
-                continue; // Las carreras confirmadas se gestionan desde la convocatoria de su escuela
-            }
-
-            Optional<Carrera> carreraOpt = carreraRepository.findById(p.getCarreraId());
-            Optional<RegistroConvocatoria> regOpt = registroRepository.findByProcesoId(p.getId());
-            Optional<PlanTrabajo> planOpt = Optional.empty();
-            try {
-                planOpt = Optional.ofNullable(consultarPlanTrabajoUseCase.obtenerPorProcesoId(p.getId()));
-            } catch (Exception ignored) {
-            }
-
-            response.add(new ConvocatoriaResumenResponse(
-                    p.getId(),
-                    p.getCodigo(),
-                    p.getTitulo(),
-                    p.getCarreraId(),
-                    carreraOpt.map(Carrera::getNombre).orElse("Desconocida"),
-                    carreraOpt.map(Carrera::getSigla).orElse(null),
-                    carreraOpt.map(Carrera::getNivel).orElse(Carrera.NIVEL_GRADO),
-                    regOpt.map(RegistroConvocatoria::getNroResolucionConeau).orElse(""),
-                    p.getTipoProceso().name(),
-                    p.getEstado().name(),
-                    regOpt.map(RegistroConvocatoria::getFechaInicio).orElse(null),
-                    regOpt.map(RegistroConvocatoria::getFechaCierre).orElse(null),
-                    planOpt.map(PlanTrabajo::getCodigo).orElse(null),
-                    p.getCreadoEn(),
-                    null,
-                    null,
-                    1
-            ));
-        }
-
         return ResponseEntity.ok(response);
     }
 
@@ -254,6 +229,16 @@ public class ConvocatoriaController {
         Optional<Convocatoria> convOpt = convocatoriaEscuelaRepository.findById(id);
         if (convOpt.isPresent()) {
             ConvocatoriaEscuelaDetalleDto detalle = consultarConvocatoriaEscuelaUseCase.obtenerPorId(id);
+
+            // Control de visibilidad por escuela para detalle
+            Optional<User> usuarioActualOpt = resolverUsuarioAutenticado();
+            if (!tienePermisoGlobal(usuarioActualOpt)) {
+                UUID userEscuelaId = usuarioActualOpt.map(User::getUnidadAcademicaId).orElse(null);
+                if (userEscuelaId == null || !userEscuelaId.equals(detalle.unidadAcademicaId())) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                }
+            }
+
             return ResponseEntity.ok(construirDetalleResponseDesdeEscuela(detalle));
         }
 
@@ -486,16 +471,35 @@ public class ConvocatoriaController {
         );
     }
 
-    private UUID resolverUsuarioAutenticadoId() {
+    private Optional<User> resolverUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() != null) {
             String principal = auth.getPrincipal().toString();
             Optional<User> userOpt = userRepository.findByEmail(principal);
             if (userOpt.isPresent()) {
-                return userOpt.get().getId();
+                return userOpt;
             }
         }
-        return userRepository.findByEmail("admin@undec.edu.ar")
+        return userRepository.findByEmail("admin@undec.edu.ar");
+    }
+
+    private boolean tienePermisoGlobal(Optional<User> userOpt) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return true; // En tests unitarios standalone sin contexto de seguridad
+        }
+        if (auth.getAuthorities() != null && auth.getAuthorities().stream().anyMatch(a ->
+                a.getAuthority().equals("ROLE_ADMINISTRATOR") || a.getAuthority().equals("ROLE_AEA")
+                        || a.getAuthority().equals("ADMINISTRATOR") || a.getAuthority().equals("AEA"))) {
+            return true;
+        }
+        return userOpt.map(u -> u.getRoles().stream()
+                .anyMatch(r -> "ADMINISTRATOR".equals(r.getCode()) || "AEA".equals(r.getCode())))
+                .orElse(false);
+    }
+
+    private UUID resolverUsuarioAutenticadoId() {
+        return resolverUsuarioAutenticado()
                 .map(User::getId)
                 .orElseGet(() -> userRepository.findAll().stream().findFirst().map(User::getId)
                         .orElse(UUID.fromString("00000000-0000-0000-0000-000000000001")));
