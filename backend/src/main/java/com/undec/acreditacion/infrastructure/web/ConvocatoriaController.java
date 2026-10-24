@@ -16,8 +16,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -151,7 +153,39 @@ public class ConvocatoriaController {
 
         // 1. Agregar Convocatorias de Escuela
         List<ConvocatoriaEscuelaDetalleDto> escuelasConvocatorias = consultarConvocatoriaEscuelaUseCase.listarTodas();
+        Set<UUID> procesosDeEscuela = new HashSet<>();
+
         for (ConvocatoriaEscuelaDetalleDto ec : escuelasConvocatorias) {
+            for (ConvocatoriaCarreraItemDto item : ec.carreras()) {
+                if (item.procesoId() != null) {
+                    procesosDeEscuela.add(item.procesoId());
+                }
+            }
+
+            // Aplicar filtros a las convocatorias de escuela si se especifican
+            if (carreraId != null) {
+                boolean incluyeCarrera = ec.carreras().stream()
+                        .anyMatch(item -> item.carreraId().equals(carreraId));
+                if (!incluyeCarrera) {
+                    continue;
+                }
+            }
+            if (estado != null) {
+                if (!ec.estado().name().equalsIgnoreCase(estado.name())) {
+                    continue;
+                }
+            }
+            if (tipoProceso != null) {
+                if (ec.tipoProceso() != tipoProceso) {
+                    continue;
+                }
+            }
+            if (anio != null) {
+                if (ec.fechaInicio().getYear() != anio) {
+                    continue;
+                }
+            }
+
             response.add(new ConvocatoriaResumenResponse(
                     ec.id(),
                     ec.codigo(),
@@ -173,11 +207,15 @@ public class ConvocatoriaController {
             ));
         }
 
-        // 2. Agregar Procesos de Acreditación individuales
+        // 2. Agregar Procesos de Acreditación individuales (solo si no pertenecen a una convocatoria de escuela)
         ConvocatoriaFiltro filtro = new ConvocatoriaFiltro(carreraId, estado, tipoProceso, anio);
         List<ProcesoAcreditacion> procesos = listarConvocatoriasUseCase.listar(filtro);
 
         for (ProcesoAcreditacion p : procesos) {
+            if (procesosDeEscuela.contains(p.getId())) {
+                continue; // Las carreras confirmadas se gestionan desde la convocatoria de su escuela
+            }
+
             Optional<Carrera> carreraOpt = carreraRepository.findById(p.getCarreraId());
             Optional<RegistroConvocatoria> regOpt = registroRepository.findByProcesoId(p.getId());
             Optional<PlanTrabajo> planOpt = Optional.empty();

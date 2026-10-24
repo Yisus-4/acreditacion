@@ -1859,12 +1859,14 @@
     }
 
     .badge-proceso-activo {
-      background: #dcfce7;
-      color: #166534;
-      font-weight: 700;
+      background: var(--color-primary-50, #f5f0f2);
+      color: var(--color-primary, #826170);
+      border: 1px solid rgba(130, 97, 112, 0.3);
+      font-weight: 600;
       font-size: 0.75rem;
-      padding: 0.15rem 0.5rem;
-      border-radius: 4px;
+      padding: 0.15rem 0.55rem;
+      border-radius: var(--radius-sm, 4px);
+      letter-spacing: 0.025em;
     }
   }
 }

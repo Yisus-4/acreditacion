@@ -178,14 +178,7 @@
             @for (carrera of carrerasConfirmadasDe(); track carrera.carreraId) {
               <div class="carrera-card-item">
                 <div class="carrera-card-top">
-                  <div>
-                    <h3 class="carrera-card-nombre">{{ carrera.carreraNombre }}</h3>
-                  </div>
-                  @if (carrera.esObligatoria) {
-                    <span class="badge-tag-obligatoria">OBLIGATORIA</span>
-                  } @else {
-                    <span class="badge-tag-sugerida">CONFIRMADA DE</span>
-                  }
+                  <h3 class="carrera-card-nombre">{{ carrera.carreraNombre }}</h3>
                 </div>
 
                 <div class="carrera-card-body">
