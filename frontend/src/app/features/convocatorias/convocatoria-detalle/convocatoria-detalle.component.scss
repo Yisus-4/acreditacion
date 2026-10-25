@@ -1547,6 +1547,18 @@
   gap: 0.65rem;
 }
 
+.estado-formalizacion-texto {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+}
+
+.estado-fecha-texto {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted, #64748b);
+  margin-left: 0.25rem;
+}
+
 .flujo-ft012-acciones {
   display: flex;
   align-items: center;

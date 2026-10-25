@@ -364,34 +364,21 @@
     @if (tabActiva() === 'ACTIVIDADES') {
       <div class="formalizacion-normativa-unificada">
         @let ft = fichaFt012();
-        @let act5 = actividadFormalizacionElectronica();
 
         <!-- BLOQUE 1: FORMALIZACIÓN ELECTRÓNICA -->
         <section class="card seccion-bloque-formalizacion">
           <div class="bloque-header-principal">
-            <div class="titulo-con-badge">
-              <span class="badge-bloque-institucional">Formalización Electrónica</span>
-              <h2 class="bloque-titulo-nombre">Formalización Electrónica de la Carrera</h2>
-            </div>
-            <p class="bloque-desc-texto">
-              Ficha oficial de formalización electrónica (Formulario FT-012) para CONEAU Global ATENEA.
-            </p>
+            <h2 class="bloque-titulo-nombre">Formalización Electrónica de la Carrera</h2>
           </div>
 
           <!-- Barra de Estado del Flujo FT-012 / ATENEA -->
           <div class="barra-flujo-ft012 card-inner">
             <div class="flujo-ft012-info">
               <span class="info-label">Estado de la Formalización:</span>
-              <span
-                class="badge-estado-pills"
-                [class.progreso]="ft.estado === 'SOLICITADA_A_DC' || ft.estado === 'BORRADOR' || ft.estado === 'REMITIDA_POR_DC'"
-                [class.completado]="ft.estado === 'FORMALIZADA_EN_CONEAU' || act5?.estado === 'COMPLETADA'"
-              >
-                {{ formatearEstadoFt012(ft.estado) }}
-              </span>
+              <span class="estado-formalizacion-texto">{{ formatearEstadoFt012(ft.estado) }}</span>
               @if (ft.fechaFormalizacionElectronica) {
-                <span class="chip-institucional">
-                  Formalizada el {{ ft.fechaFormalizacionElectronica | date:'dd-MM-yyyy' }}
+                <span class="estado-fecha-texto">
+                  (Formalizada el {{ ft.fechaFormalizacionElectronica | date:'dd-MM-yyyy' }})
                 </span>
               }
             </div>
