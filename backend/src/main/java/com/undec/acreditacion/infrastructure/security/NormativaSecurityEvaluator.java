@@ -24,6 +24,7 @@ public class NormativaSecurityEvaluator {
             return true;
         }
         return hasRole(auth, "CAREER_DIRECTOR")
+                || hasRole(auth, "SCHOOL_DIRECTOR")
                 || hasAuthority(auth, "NORMATIVA_SOLICITAR")
                 || hasAuthority(auth, "NORMATIVA_CARGAR_BORRADOR")
                 || hasAuthority(auth, "NORMATIVA_ENVIAR")
@@ -38,6 +39,7 @@ public class NormativaSecurityEvaluator {
             return true;
         }
         return hasRole(auth, "CAREER_DIRECTOR")
+                || hasRole(auth, "SCHOOL_DIRECTOR")
                 || hasAuthority(auth, "NORMATIVA_CARGAR_BORRADOR")
                 || hasAuthority(auth, "NORMATIVA_ENVIAR");
     }

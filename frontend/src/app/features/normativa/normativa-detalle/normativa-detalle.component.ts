@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Auth } from '../../../core/auth/auth';
@@ -29,7 +29,7 @@ import { ModalRevisarNormativaComponent } from '../modal-revisar-normativa/modal
   templateUrl: './normativa-detalle.component.html',
   styleUrls: ['./normativa-detalle.component.scss'],
 })
-export class NormativaDetalleComponent implements OnInit {
+export class NormativaDetalleComponent implements OnInit, OnChanges {
   private readonly normativaService = inject(NormativaService);
   private readonly auth = inject(Auth);
   private readonly route = inject(ActivatedRoute);
@@ -85,6 +85,12 @@ export class NormativaDetalleComponent implements OnInit {
       this.procesoId = this.route.snapshot.paramMap.get('id') || '';
     }
     if (this.procesoId) {
+      this.cargarDatos();
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['procesoId'] && !changes['procesoId'].isFirstChange() && this.procesoId) {
       this.cargarDatos();
     }
   }

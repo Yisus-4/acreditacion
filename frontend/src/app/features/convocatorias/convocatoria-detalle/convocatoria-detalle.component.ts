@@ -1,7 +1,8 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { Auth } from '../../../core/auth/auth';
 import { ConvocatoriaService } from '../../../core/convocatorias/convocatoria.service';
 import {
@@ -54,12 +55,14 @@ export interface EtapaProcesoInfo {
   templateUrl: './convocatoria-detalle.component.html',
   styleUrls: ['./convocatoria-detalle.component.scss'],
 })
-export class ConvocatoriaDetalleComponent implements OnInit {
+export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly convocatoriaService = inject(ConvocatoriaService);
   private readonly normativaService = inject(NormativaService);
   private readonly auth = inject(Auth);
+  private routeSub?: Subscription;
+  private idCargadoActualmente: string | null = null;
 
   readonly today = new Date().toISOString().split('T')[0];
   readonly fuentesInteresCatalogo = FUENTES_DOCUMENTACION_INTERES_CATALOGO;
@@ -387,15 +390,32 @@ export class ConvocatoriaDetalleComponent implements OnInit {
     if (!this.canManage() && this.tabActiva() === 'SEGUIMIENTO') {
       this.tabActiva.set('ACTIVIDADES');
     }
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.cargarDatos(id);
-    }
+    this.routeSub = this.route.paramMap.subscribe((params) => {
+      const id = params.get('id');
+      if (id) {
+        this.cargarDatos(id);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.routeSub?.unsubscribe();
+  }
+
+  irAFormalizar(procesoId: string): void {
+    this.cargarDatos(procesoId);
+    void this.router.navigate(['/acreditacion/convocatorias', procesoId]);
   }
 
   cargarDatos(id: string): void {
+    if (this.idCargadoActualmente === id && this.convocatoria()) {
+      return;
+    }
+    this.idCargadoActualmente = id;
     this.loading.set(true);
     this.error.set(null);
+    this.convocatoria.set(null);
+    this.planTrabajo.set(null);
 
     this.convocatoriaService.obtenerConvocatoria(id).subscribe({
       next: (conv) => {
@@ -425,6 +445,7 @@ export class ConvocatoriaDetalleComponent implements OnInit {
         this.cargarFichaFormalizacion(id);
       },
       error: (err) => {
+        this.idCargadoActualmente = null;
         this.error.set(err?.error?.error || 'No fue posible cargar el detalle de la convocatoria.');
         this.loading.set(false);
       },

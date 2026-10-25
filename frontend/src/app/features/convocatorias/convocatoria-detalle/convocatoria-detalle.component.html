@@ -198,10 +198,14 @@
 
                 <div class="carrera-card-footer">
                   @if (carrera.procesoId) {
-                    <a [routerLink]="['/acreditacion/convocatorias', carrera.procesoId]" class="btn-ir-actividades">
+                    <button
+                      type="button"
+                      class="btn-ir-actividades"
+                      (click)="irAFormalizar(carrera.procesoId)"
+                    >
                       <span>Formalizar</span>
                       <span class="flecha">&rarr;</span>
-                    </a>
+                    </button>
                   } @else {
                     <span class="texto-sin-proceso">Proceso en inicialización...</span>
                   }
