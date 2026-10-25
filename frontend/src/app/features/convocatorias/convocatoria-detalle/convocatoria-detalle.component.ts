@@ -92,7 +92,16 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
 
   readonly esConvocatoriaEscuela = computed(() => {
     const c = this.convocatoria();
-    return !!c && (!!c.unidadAcademicaId || (c.carrerasPropuestas && c.carrerasPropuestas.length > 0));
+    if (!c) return false;
+    // Si la entidad tiene carreraId, es indudablemente el proceso de una carrera individual
+    if (c.carreraId) return false;
+    // Convocatoria a nivel de Escuela
+    return (
+      !!c.unidadAcademicaId ||
+      (c.carrerasPropuestas && c.carrerasPropuestas.length > 0) ||
+      c.estado === 'PENDIENTE_DIRECTOR_ESCUELA' ||
+      c.estado === 'CONFIRMADA_DIRECTOR_ESCUELA'
+    );
   });
 
   readonly carrerasPropuestas = computed(() => {

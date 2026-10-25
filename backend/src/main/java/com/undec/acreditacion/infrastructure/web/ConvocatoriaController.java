@@ -442,7 +442,7 @@ public class ConvocatoriaController {
                 regResponse,
                 planResponse,
                 actividadesDetalle,
-                escuelaId,
+                null,
                 escuelaNombre,
                 escuelaSigla,
                 null,
