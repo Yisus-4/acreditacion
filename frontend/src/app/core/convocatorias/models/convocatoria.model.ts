@@ -114,6 +114,9 @@ export interface ConvocatoriaDetalle {
   unidadAcademicaId?: string;
   unidadAcademicaNombre?: string;
   unidadAcademicaSigla?: string;
+  convocatoriaEscuelaId?: string;
+  convocatoriaEscuelaCodigo?: string;
+  convocatoriaEscuelaTitulo?: string;
   confirmadoPorDe?: string;
   confirmadoPorDeEn?: string;
   carrerasPropuestas?: ConvocatoriaCarreraItem[];

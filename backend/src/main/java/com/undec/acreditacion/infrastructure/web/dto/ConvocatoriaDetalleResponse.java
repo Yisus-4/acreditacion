@@ -27,7 +27,10 @@ public record ConvocatoriaDetalleResponse(
         String unidadAcademicaSigla,
         UUID confirmadoPorDe,
         Instant confirmadoPorDeEn,
-        List<ConvocatoriaCarreraItemDto> carrerasPropuestas
+        List<ConvocatoriaCarreraItemDto> carrerasPropuestas,
+        UUID convocatoriaEscuelaId,
+        String convocatoriaEscuelaCodigo,
+        String convocatoriaEscuelaTitulo
 ) {
     public ConvocatoriaDetalleResponse(UUID id,
                                        String codigo,
@@ -43,7 +46,7 @@ public record ConvocatoriaDetalleResponse(
                                        RegistroConvocatoriaResponse registroConvocatoria,
                                        PlanTrabajoResumenResponse planTrabajo) {
         this(id, codigo, titulo, carreraId, carreraNombre, carreraSigla, nivel, tipoProceso, estado, creadoEn, creadoPor,
-             registroConvocatoria, planTrabajo, Collections.emptyList(), null, null, null, null, null, Collections.emptyList());
+             registroConvocatoria, planTrabajo, Collections.emptyList(), null, null, null, null, null, Collections.emptyList(), null, null, null);
     }
 
     public ConvocatoriaDetalleResponse(UUID id,
@@ -61,6 +64,6 @@ public record ConvocatoriaDetalleResponse(
                                        PlanTrabajoResumenResponse planTrabajo,
                                        List<ActividadDetalleResponse> actividades) {
         this(id, codigo, titulo, carreraId, carreraNombre, carreraSigla, nivel, tipoProceso, estado, creadoEn, creadoPor,
-             registroConvocatoria, planTrabajo, actividades, null, null, null, null, null, Collections.emptyList());
+             registroConvocatoria, planTrabajo, actividades, null, null, null, null, null, Collections.emptyList(), null, null, null);
     }
 }

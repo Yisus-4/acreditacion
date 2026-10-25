@@ -3,6 +3,12 @@
     <a routerLink="/dashboard">Inicio</a>
     <span class="separator">/</span>
     <a routerLink="/acreditacion/convocatorias">Convocatorias</a>
+    @if (convocatoria()?.convocatoriaEscuelaId) {
+      <span class="separator">/</span>
+      <a [routerLink]="['/acreditacion/convocatorias', convocatoria()!.convocatoriaEscuelaId]">
+        {{ convocatoria()?.unidadAcademicaNombre || convocatoria()?.convocatoriaEscuelaTitulo || 'Escuela' }}
+      </a>
+    }
     <span class="separator">/</span>
     <span class="current">{{ convocatoria()?.codigo || 'Detalle' }}</span>
   </nav>
@@ -43,6 +49,11 @@
               {{ c.unidadAcademicaNombre || c.carreraNombre }} <span class="separador-codigo">·</span> <span class="codigo-convocatoria">{{ c.codigo }}</span>
             </h1>
             <div class="membrete-inferior">UNIVERSIDAD NACIONAL DE CHILECITO</div>
+          </div>
+          <div class="header-acciones">
+            <a routerLink="/acreditacion/convocatorias" class="btn-volver-link">
+              &larr; Volver a Convocatorias
+            </a>
           </div>
         </div>
       </header>
@@ -245,8 +256,17 @@
           </h1>
           <div class="membrete-inferior">UNIVERSIDAD NACIONAL DE CHILECITO</div>
         </div>
-        @if (canManage()) {
-          <div class="header-acciones">
+        <div class="header-acciones">
+          @if (c.convocatoriaEscuelaId) {
+            <a [routerLink]="['/acreditacion/convocatorias', c.convocatoriaEscuelaId]" class="btn-volver-link">
+              &larr; Volver a Carreras de la Escuela
+            </a>
+          } @else {
+            <a routerLink="/acreditacion/convocatorias" class="btn-volver-link">
+              &larr; Volver a Convocatorias
+            </a>
+          }
+          @if (canManage()) {
             <button
               type="button"
               class="btn-reiniciar-convocatoria"
@@ -265,8 +285,8 @@
                 <span>Reiniciar Convocatoria</span>
               }
             </button>
-          </div>
-        }
+          }
+        </div>
       </div>
 
       <div class="header-metadatos-bar">

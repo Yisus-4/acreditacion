@@ -1,0 +1,112 @@
+.app-global-header {
+  background-color: var(--color-surface, #ffffff);
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  padding: 0.65rem 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+
+  &__brand {
+    display: flex;
+    align-items: center;
+
+    .brand-link {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      text-decoration: none;
+      color: inherit;
+
+      &:hover .app-global-header__title {
+        color: var(--color-primary, #826170);
+      }
+    }
+  }
+
+  &__logo {
+    object-fit: contain;
+    height: 38px;
+    width: auto;
+  }
+
+  &__title-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-primary-dark, #2b2b2b);
+    line-height: 1.2;
+    transition: color 0.15s;
+  }
+
+  &__subtitle {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #64748b);
+  }
+
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+
+  &__name {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--color-text, #1e293b);
+  }
+
+  &__roles {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+}
+
+.role-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  background-color: var(--color-primary-tint, #f5f3f4);
+  color: var(--color-primary, #826170);
+  border: 1px solid rgba(130, 97, 112, 0.25);
+  border-radius: 4px;
+}
+
+.btn-logout {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--color-danger, #dc2626);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+  }
+}
+
+.app-main-content {
+  flex: 1;
+}

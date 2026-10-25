@@ -9,4 +9,7 @@ import java.util.UUID;
 public interface SpringDataConvocatoriaRepository extends JpaRepository<ConvocatoriaJpaEntity, UUID> {
     @Query("SELECT COUNT(c) FROM ConvocatoriaJpaEntity c WHERE EXTRACT(YEAR FROM c.fechaInicio) = :anio")
     long countByAnio(@Param("anio") int anio);
+
+    @Query("SELECT c FROM ConvocatoriaJpaEntity c JOIN c.carreras cc WHERE cc.procesoId = :procesoId")
+    java.util.Optional<ConvocatoriaJpaEntity> findByProcesoId(@Param("procesoId") UUID procesoId);
 }

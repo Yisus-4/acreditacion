@@ -50,6 +50,7 @@ class ConvocatoriaControllerIntegrationTest {
     private RegistroConvocatoriaRepositoryPort registroRepository;
     private CarreraRepositoryPort carreraRepository;
     private DocumentoAcreditacionRepositoryPort documentoRepository;
+    private com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort unidadAcademicaRepository;
     private UserRepository userRepository;
     private ObjectMapper objectMapper;
 
@@ -69,6 +70,7 @@ class ConvocatoriaControllerIntegrationTest {
         registroRepository = mock(RegistroConvocatoriaRepositoryPort.class);
         carreraRepository = mock(CarreraRepositoryPort.class);
         documentoRepository = mock(DocumentoAcreditacionRepositoryPort.class);
+        unidadAcademicaRepository = mock(com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort.class);
         userRepository = mock(UserRepository.class);
 
         objectMapper = new ObjectMapper();
@@ -89,6 +91,7 @@ class ConvocatoriaControllerIntegrationTest {
                 registroRepository,
                 carreraRepository,
                 documentoRepository,
+                unidadAcademicaRepository,
                 userRepository
         );
 

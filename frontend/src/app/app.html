@@ -1,1 +1,35 @@
-<router-outlet />
+@if (user()) {
+  <header class="app-global-header">
+    <div class="app-global-header__brand">
+      <a routerLink="/dashboard" class="brand-link" title="Ir al Panel Principal">
+        <img
+          class="app-global-header__logo"
+          src="/assets/images/UNdeC_ISOLOGO_EMBLEMA-_1_.webp"
+          alt="UNdeC Logo"
+        />
+        <div class="app-global-header__title-group">
+          <span class="app-global-header__title">Sistema de Acreditación UNdeC</span>
+          <span class="app-global-header__subtitle">Universidad Nacional de Chilecito</span>
+        </div>
+      </a>
+    </div>
+
+    <div class="app-global-header__user">
+      <div class="user-info">
+        <span class="user-info__name">{{ user()?.displayName || user()?.email }}</span>
+        <div class="user-info__roles">
+          @for (role of user()?.roleCodes || []; track role) {
+            <span class="role-badge">{{ role }}</span>
+          }
+        </div>
+      </div>
+      <button class="btn-logout" (click)="onSignOut()" type="button" title="Cerrar sesión actual">
+        Cerrar sesión
+      </button>
+    </div>
+  </header>
+}
+
+<main class="app-main-content">
+  <router-outlet />
+</main>

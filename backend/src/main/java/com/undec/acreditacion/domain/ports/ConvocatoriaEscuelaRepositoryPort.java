@@ -9,6 +9,7 @@ import java.util.UUID;
 public interface ConvocatoriaEscuelaRepositoryPort {
     Convocatoria save(Convocatoria convocatoria);
     Optional<Convocatoria> findById(UUID id);
+    Optional<Convocatoria> findByProcesoId(UUID procesoId);
     List<Convocatoria> findAll();
     long countByAnio(int anio);
     void deleteById(UUID id);

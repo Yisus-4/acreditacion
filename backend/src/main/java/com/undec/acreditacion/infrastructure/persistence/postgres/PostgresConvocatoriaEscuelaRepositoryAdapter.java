@@ -38,6 +38,11 @@ public class PostgresConvocatoriaEscuelaRepositoryAdapter implements Convocatori
     }
 
     @Override
+    public Optional<Convocatoria> findByProcesoId(UUID procesoId) {
+        return springDataRepository.findByProcesoId(procesoId).map(mapper::toDomain);
+    }
+
+    @Override
     public List<Convocatoria> findAll() {
         return springDataRepository.findAll().stream()
                 .map(mapper::toDomain)

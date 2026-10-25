@@ -6,6 +6,7 @@ import com.undec.acreditacion.domain.entities.*;
 import com.undec.acreditacion.domain.ports.CarreraRepositoryPort;
 import com.undec.acreditacion.domain.ports.DocumentoAcreditacionRepositoryPort;
 import com.undec.acreditacion.domain.ports.RegistroConvocatoriaRepositoryPort;
+import com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort;
 import com.undec.acreditacion.infrastructure.web.dto.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +42,7 @@ public class ConvocatoriaController {
     private final RegistroConvocatoriaRepositoryPort registroRepository;
     private final CarreraRepositoryPort carreraRepository;
     private final DocumentoAcreditacionRepositoryPort documentoRepository;
+    private final UnidadAcademicaRepositoryPort unidadAcademicaRepository;
     private final UserRepository userRepository;
 
     public ConvocatoriaController(
@@ -58,6 +60,7 @@ public class ConvocatoriaController {
             RegistroConvocatoriaRepositoryPort registroRepository,
             CarreraRepositoryPort carreraRepository,
             DocumentoAcreditacionRepositoryPort documentoRepository,
+            UnidadAcademicaRepositoryPort unidadAcademicaRepository,
             UserRepository userRepository) {
         this.iniciarConvocatoriaUseCase = iniciarConvocatoriaUseCase;
         this.iniciarConvocatoriaEscuelaUseCase = iniciarConvocatoriaEscuelaUseCase;
@@ -73,6 +76,7 @@ public class ConvocatoriaController {
         this.registroRepository = registroRepository;
         this.carreraRepository = carreraRepository;
         this.documentoRepository = documentoRepository;
+        this.unidadAcademicaRepository = unidadAcademicaRepository;
         this.userRepository = userRepository;
     }
 
@@ -411,6 +415,18 @@ public class ConvocatoriaController {
                 .map(p -> mapearPlanTrabajoResponse(p).actividades())
                 .orElse(Collections.emptyList());
 
+        Optional<Convocatoria> convEscuelaOpt = convocatoriaEscuelaRepository.findByProcesoId(proceso.getId());
+        UUID escConvId = convEscuelaOpt.map(Convocatoria::getId).orElse(null);
+        String escConvCodigo = convEscuelaOpt.map(Convocatoria::getCodigo).orElse(null);
+        String escConvTitulo = convEscuelaOpt.map(Convocatoria::getTitulo).orElse(null);
+        UUID escuelaId = convEscuelaOpt.map(Convocatoria::getUnidadAcademicaId).orElse(null);
+        String escuelaNombre = escuelaId != null
+                ? unidadAcademicaRepository.findById(escuelaId).map(UnidadAcademica::getNombre).orElse(null)
+                : null;
+        String escuelaSigla = escuelaId != null
+                ? unidadAcademicaRepository.findById(escuelaId).map(UnidadAcademica::getSigla).orElse(null)
+                : null;
+
         return new ConvocatoriaDetalleResponse(
                 proceso.getId(),
                 proceso.getCodigo(),
@@ -425,7 +441,16 @@ public class ConvocatoriaController {
                 proceso.getCreadoPor(),
                 regResponse,
                 planResponse,
-                actividadesDetalle
+                actividadesDetalle,
+                escuelaId,
+                escuelaNombre,
+                escuelaSigla,
+                null,
+                null,
+                Collections.emptyList(),
+                escConvId,
+                escConvCodigo,
+                escConvTitulo
         );
     }
 
@@ -467,7 +492,10 @@ public class ConvocatoriaController {
                 d.unidadAcademicaSigla(),
                 d.confirmadoPorDe(),
                 d.confirmadoPorDeEn(),
-                d.carreras()
+                d.carreras(),
+                null,
+                null,
+                null
         );
     }
 
