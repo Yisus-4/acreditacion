@@ -25,7 +25,7 @@ public class FichaFormalizacionFt012JpaEntity {
     private String modalidadDictado = "PRESENCIAL";
 
     @Column(name = "estado", nullable = false, length = 50)
-    private String estado = "PENDIENTE_SOLICITUD";
+    private String estado = "BORRADOR";
 
     // 1. Información institucional
     @Column(name = "institucion_universitaria", nullable = false, length = 200)

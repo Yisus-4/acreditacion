@@ -377,16 +377,6 @@
             </div>
 
             <div class="flujo-ft012-acciones">
-              @if (canManage() && ft.estado === 'PENDIENTE_SOLICITUD') {
-                <button
-                  type="button"
-                  class="btn-secundario-accion"
-                  [disabled]="solicitandoFt012()"
-                  (click)="solicitarFt012ADireccionCarrera()"
-                >
-                  {{ solicitandoFt012() ? 'Solicitando...' : 'Solicitar Ficha FT-012 a Dirección de Carrera' }}
-                </button>
-              }
               @if (ft.comprobanteNombre || ft.estado === 'FORMALIZADA_EN_CONEAU') {
                 <button type="button" class="btn-descargar-acta" (click)="descargarComprobanteConeau()">
                   <svg class="icon-svg-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -688,11 +678,10 @@
         <section class="card seccion-bloque-normativa mt-lg">
           <div class="bloque-header-principal">
             <div class="titulo-con-badge">
-              <span class="badge-bloque-institucional">Normativa</span>
               <h2 class="bloque-titulo-nombre">Documentos de la Normativa de la Carrera</h2>
             </div>
             <p class="bloque-desc-texto">
-              Presentación de los actos administrativos y ordenanzas de la carrera solicitados por AEA para su auditoría y dictamen.
+              Presentación de los actos administrativos y ordenanzas de la carrera para su verificación técnica y dictamen formal de AEA.
             </p>
           </div>
 

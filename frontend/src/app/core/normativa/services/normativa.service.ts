@@ -34,7 +34,7 @@ export class NormativaService {
   readonly puedeEnviar = computed(() => {
     const d = this.detalle();
     if (!d) return false;
-    const estadosPermitidos = ['SOLICITADA', 'EN_CARGA_BORRADOR', 'OBSERVADA'];
+    const estadosPermitidos = ['SOLICITADA', 'EN_CARGA_BORRADOR', 'OBSERVADA', 'PENDIENTE_SOLICITUD'];
     return (
       estadosPermitidos.includes(d.estado) &&
       d.porcentajeAvance >= 100 &&

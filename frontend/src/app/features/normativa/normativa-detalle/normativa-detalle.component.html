@@ -25,53 +25,19 @@
               &larr; Volver a la Convocatoria
             </a>
           </div>
+          <div class="title-with-badge">
+            <h2 class="normativa-title">Gestionar normativa de la carrera</h2>
+          </div>
+          <p class="normativa-sub">
+            Recopilación de documentación solicitada a Dirección de Carrera, verificación técnica y dictamen formal (Ámbito: <strong>GRADO</strong>).
+          </p>
         }
-        <div class="title-with-badge">
-          <span class="badge-actividad-id">Actividad 2 · Hoja INFO</span>
-          <h2 class="normativa-title">Gestionar normativa de la carrera</h2>
-        </div>
-        <p class="normativa-sub">
-          Recopilación de documentación solicitada por AEA a Dirección de Carrera, verificación técnica y dictamen formal (Ámbito: <strong>GRADO</strong>). Plazo oficial: 5 días hábiles.
-        </p>
 
-        <!-- Indicador de Plazo y Estado -->
+        <!-- Progreso de la Matriz Normativa -->
         @if (detalle()) {
           @let d = detalle()!;
-          <div class="plazo-status-bar">
-            <div class="status-item">
-              <span class="status-label">Estado de la Solicitud:</span>
-              <span
-                class="badge-estado"
-                [class.st-ejecucion]="d.estado === 'EN_CARGA_BORRADOR' || d.estado === 'SOLICITADA'"
-                [class.st-revision]="d.estado === 'ENVIADA_A_REVISION'"
-                [class.st-observada]="d.estado === 'OBSERVADA'"
-                [class.st-completada]="d.estado === 'COMPLETADA'"
-              >
-                {{ formatearEstado(d.estado) }}
-              </span>
-            </div>
-
-            @if (d.badgePlazo) {
-              <div class="status-item">
-                <span class="status-label">Cumplimiento de Plazo:</span>
-                <span class="badge-plazo" [ngClass]="d.badgePlazo.cssClass">
-                  {{ d.badgePlazo.etiqueta }} ({{ d.badgePlazo.diasRestantes }} días hábiles)
-                </span>
-              </div>
-            }
-
-            @if (d.fechaLimiteEntrega) {
-              <div class="status-item">
-                <span class="status-label">Fecha Límite:</span>
-                <span class="font-mono">{{ d.fechaLimiteEntrega | date:'dd/MM/yyyy' }}</span>
-              </div>
-            }
-          </div>
-
-          <!-- Barra de Progreso de la Matriz Normativa -->
           <div class="progress-section">
             <div class="progress-labels">
-              <span class="progress-title">Cumplimiento de Matriz Requerida:</span>
               <span class="progress-value">
                 <strong>{{ d.documentosCargados }}</strong> de <strong>{{ d.documentosRequeridos }}</strong> documentos requeridos
                 ({{ d.porcentajeAvance | number:'1.0-0' }}%)
@@ -90,24 +56,13 @@
 
       <!-- Barra de Acciones Principales -->
       <div class="header-actions">
-        @if (!detalle() || detalle()?.estado === 'PENDIENTE_SOLICITUD') {
-          <button
-            type="button"
-            class="btn-primary"
-            [disabled]="actionLoading()"
-            (click)="abrirModalSolicitar()"
-          >
-            Iniciar Solicitud de Normativa
-          </button>
-        }
-
         @if (puedeEditarBorradores()) {
           <button
             type="button"
             class="btn-send-definitiva"
             [disabled]="!puedeEnviar() || actionLoading()"
             (click)="onEnviarDefinitiva()"
-            title="Enviar la documentación a revisión formal por AEA"
+            title="Enviar la documentación a revisión formal por AEA una vez cargados todos los documentos obligatorios"
           >
             @if (esObservada() || detalle()?.observacionesRevision) {
               Reenviar Documentación Corregida a AEA

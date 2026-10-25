@@ -225,7 +225,8 @@ public class FormalizacionController {
             return ResponseEntity.ok(mapearFichaResponse(fichaOpt.get()));
         }
         FichaFormalizacionFt012JpaEntity inicial = construirFichaInicialConDefaultsUndec(procesoId);
-        return ResponseEntity.ok(mapearFichaResponse(inicial));
+        FichaFormalizacionFt012JpaEntity guardada = fichaRepository.save(inicial);
+        return ResponseEntity.ok(mapearFichaResponse(guardada));
     }
 
     @PostMapping("/formalizacion/solicitar")
@@ -453,7 +454,7 @@ public class FormalizacionController {
         entity.setId(UUID.randomUUID());
         entity.setProcesoId(procesoId);
         entity.setModalidadDictado(modalidad);
-        entity.setEstado("PENDIENTE_SOLICITUD");
+        entity.setEstado("BORRADOR");
         entity.setInstitucionUniversitaria("Universidad Nacional de Chilecito");
         entity.setAutoridadApellido("Salcedo");
         entity.setAutoridadPrimerNombre("César");

@@ -1038,15 +1038,14 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   formatearEstadoFt012(estado?: string | null): string {
     switch (estado) {
       case 'SOLICITADA_A_DC':
-        return 'SOLICITADA A DC';
       case 'BORRADOR':
-        return 'BORRADOR EN CARGA';
+        return 'BORRADOR EN CARGA (DC)';
       case 'REMITIDA_POR_DC':
-        return 'REMITIDA POR DC';
+        return 'REMITIDA POR DC (PENDIENTE CONEAU)';
       case 'FORMALIZADA_EN_CONEAU':
         return 'FORMALIZADA EN CONEAU';
       default:
-        return 'PENDIENTE DE SOLICITUD';
+        return 'HABILITADA PARA CARGA (DC)';
     }
   }
 

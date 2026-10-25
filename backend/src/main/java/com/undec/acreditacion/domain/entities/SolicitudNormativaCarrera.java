@@ -92,6 +92,14 @@ public final class SolicitudNormativaCarrera {
         );
     }
 
+    public void habilitarCargaDirecta() {
+        this.estado = EstadoSolicitudNormativa.EN_CARGA_BORRADOR;
+        if (this.fechaSolicitud == null) {
+            this.fechaSolicitud = Instant.now();
+        }
+        this.actualizadoEn = Instant.now();
+    }
+
     public void solicitar(UUID usuarioAeaId, String observaciones, int diasHabiles, LocalDate fechaInicioCalculo) {
         if (this.estado != EstadoSolicitudNormativa.PENDIENTE_SOLICITUD) {
             throw new EstadoInvalidoException("La solicitud ya fue emitida previamente (estado: " + this.estado + ")");
@@ -128,7 +136,8 @@ public final class SolicitudNormativaCarrera {
     ) {
         if (this.estado != EstadoSolicitudNormativa.EN_CARGA_BORRADOR 
             && this.estado != EstadoSolicitudNormativa.OBSERVADA 
-            && this.estado != EstadoSolicitudNormativa.SOLICITADA) {
+            && this.estado != EstadoSolicitudNormativa.SOLICITADA
+            && this.estado != EstadoSolicitudNormativa.PENDIENTE_SOLICITUD) {
             throw new EstadoInvalidoException("No se puede enviar la solicitud definitiva en estado: " + this.estado);
         }
 

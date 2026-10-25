@@ -74,7 +74,11 @@ public class GuardarDocumentoBorradorService implements GuardarDocumentoBorrador
             throw new EstadoInvalidoException("No se pueden subir documentos cuando la solicitud está en revisión o completada");
         }
 
-        solicitud.iniciarCargaBorrador();
+        if (solicitud.getEstado() == EstadoSolicitudNormativa.PENDIENTE_SOLICITUD) {
+            solicitud.habilitarCargaDirecta();
+        } else {
+            solicitud.iniciarCargaBorrador();
+        }
         solicitudRepository.save(solicitud);
 
         String siglaCarrera = carreraRepository.findById(proceso.getCarreraId())

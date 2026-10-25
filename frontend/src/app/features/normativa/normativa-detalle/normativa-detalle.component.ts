@@ -67,8 +67,8 @@ export class NormativaDetalleComponent implements OnInit, OnChanges {
 
   readonly puedeEditarBorradores = computed(() => {
     const d = this.detalle();
-    if (!d) return false;
-    const estadosEditables = ['SOLICITADA', 'EN_CARGA_BORRADOR', 'OBSERVADA'];
+    if (!d) return true;
+    const estadosEditables = ['SOLICITADA', 'EN_CARGA_BORRADOR', 'OBSERVADA', 'PENDIENTE_SOLICITUD'];
     return estadosEditables.includes(d.estado);
   });
 
