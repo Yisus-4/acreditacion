@@ -429,6 +429,7 @@
                 <label class="label-inst">Modalidad de dictado *:</label>
                 <select
                   class="input-inst"
+                  [disabled]="!puedeEditarFt012()"
                   [ngModel]="ft.modalidadDictado"
                   (ngModelChange)="actualizarCampoFt012('modalidadDictado', $event)"
                 >
@@ -438,33 +439,47 @@
               </div>
             </div>
 
+            @if (esFt012Enviada()) {
+              <div class="alerta-solo-lectura-institucional mt-md">
+                <svg class="icon-svg-sm" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span>
+                  La Ficha de Formalización (FT-012) ha sido remitida formalmente a la AEA. La posibilidad de realizar modificaciones se encuentra cerrada para la Dirección de Carrera.
+                  @if (canManage()) {
+                    (Modo edición habilitado exclusivamente para usuario AEA).
+                  }
+                </span>
+              </div>
+            }
+
             <!-- Sección 1: Datos de la Institución -->
             <div class="bloque-seccion-interna">
               <h4 class="titulo-seccion-ft012">1. Datos de la Institución</h4>
               <div class="form-row-grid-3">
                 <div class="campo-form">
                   <label class="label-inst">Institución Universitaria *</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.institucionUniversitaria" (ngModelChange)="actualizarCampoFt012('institucionUniversitaria', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.institucionUniversitaria" (ngModelChange)="actualizarCampoFt012('institucionUniversitaria', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Autoridad — Apellido *</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.autoridadApellido" (ngModelChange)="actualizarCampoFt012('autoridadApellido', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.autoridadApellido" (ngModelChange)="actualizarCampoFt012('autoridadApellido', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Autoridad — Primer Nombre *</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.autoridadPrimerNombre" (ngModelChange)="actualizarCampoFt012('autoridadPrimerNombre', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.autoridadPrimerNombre" (ngModelChange)="actualizarCampoFt012('autoridadPrimerNombre', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Autoridad — Segundo Nombre</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.autoridadSegundoNombre" (ngModelChange)="actualizarCampoFt012('autoridadSegundoNombre', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.autoridadSegundoNombre" (ngModelChange)="actualizarCampoFt012('autoridadSegundoNombre', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Autoridad — Correo Electrónico *</label>
-                  <input type="email" class="input-inst" [ngModel]="ft.autoridadCorreo" (ngModelChange)="actualizarCampoFt012('autoridadCorreo', $event)" />
+                  <input type="email" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.autoridadCorreo" (ngModelChange)="actualizarCampoFt012('autoridadCorreo', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Autoridad — Teléfono</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.autoridadTelefono" (ngModelChange)="actualizarCampoFt012('autoridadTelefono', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.autoridadTelefono" (ngModelChange)="actualizarCampoFt012('autoridadTelefono', $event)" />
                 </div>
               </div>
 
@@ -473,35 +488,35 @@
                 <div class="form-row-grid-4">
                   <div class="campo-form">
                     <label class="label-inst">Unidad Académica *</label>
-                    <input type="text" class="input-inst" [ngModel]="ft.unidadAcademica" (ngModelChange)="actualizarCampoFt012('unidadAcademica', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.unidadAcademica" (ngModelChange)="actualizarCampoFt012('unidadAcademica', $event)" />
                   </div>
                   <div class="campo-form">
                     <label class="label-inst">Calle *</label>
-                    <input type="text" class="input-inst" [ngModel]="ft.sedeCalle" (ngModelChange)="actualizarCampoFt012('sedeCalle', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.sedeCalle" (ngModelChange)="actualizarCampoFt012('sedeCalle', $event)" />
                   </div>
                   <div class="campo-form">
                     <label class="label-inst">Número *</label>
-                    <input type="text" class="input-inst" [ngModel]="ft.sedeNumero" (ngModelChange)="actualizarCampoFt012('sedeNumero', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.sedeNumero" (ngModelChange)="actualizarCampoFt012('sedeNumero', $event)" />
                   </div>
                   <div class="campo-form">
                     <label class="label-inst">Código Postal *</label>
-                    <input type="text" class="input-inst" [ngModel]="ft.sedeCodigoPostal" (ngModelChange)="actualizarCampoFt012('sedeCodigoPostal', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.sedeCodigoPostal" (ngModelChange)="actualizarCampoFt012('sedeCodigoPostal', $event)" />
                   </div>
                   <div class="campo-form">
                     <label class="label-inst">Provincia *</label>
-                    <input type="text" class="input-inst" [ngModel]="ft.sedeProvincia" (ngModelChange)="actualizarCampoFt012('sedeProvincia', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.sedeProvincia" (ngModelChange)="actualizarCampoFt012('sedeProvincia', $event)" />
                   </div>
                   <div class="campo-form">
                     <label class="label-inst">Localidad *</label>
-                    <input type="text" class="input-inst" [ngModel]="ft.sedeLocalidad" (ngModelChange)="actualizarCampoFt012('sedeLocalidad', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.sedeLocalidad" (ngModelChange)="actualizarCampoFt012('sedeLocalidad', $event)" />
                   </div>
                   <div class="campo-form">
                     <label class="label-inst">Departamento / Partido</label>
-                    <input type="text" class="input-inst" [ngModel]="ft.sedeDepartamentoPartido" (ngModelChange)="actualizarCampoFt012('sedeDepartamentoPartido', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.sedeDepartamentoPartido" (ngModelChange)="actualizarCampoFt012('sedeDepartamentoPartido', $event)" />
                   </div>
                   <div class="campo-form">
                     <label class="label-inst">Piso / Dpto.</label>
-                    <input type="text" class="input-inst" placeholder="S/N" [ngModel]="ft.sedePiso" (ngModelChange)="actualizarCampoFt012('sedePiso', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" placeholder="S/N" [ngModel]="ft.sedePiso" (ngModelChange)="actualizarCampoFt012('sedePiso', $event)" />
                   </div>
                 </div>
               </div>
@@ -511,27 +526,27 @@
                 <div class="form-row-grid-3">
                   <div class="campo-form">
                     <label class="label-inst">Apellido *</label>
-                    <input type="text" class="input-inst" [ngModel]="ft.nexoApellido" (ngModelChange)="actualizarCampoFt012('nexoApellido', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.nexoApellido" (ngModelChange)="actualizarCampoFt012('nexoApellido', $event)" />
                   </div>
                   <div class="campo-form">
                     <label class="label-inst">Primer Nombre *</label>
-                    <input type="text" class="input-inst" [ngModel]="ft.nexoPrimerNombre" (ngModelChange)="actualizarCampoFt012('nexoPrimerNombre', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.nexoPrimerNombre" (ngModelChange)="actualizarCampoFt012('nexoPrimerNombre', $event)" />
                   </div>
                   <div class="campo-form">
                     <label class="label-inst">Segundo Nombre</label>
-                    <input type="text" class="input-inst" [ngModel]="ft.nexoSegundoNombre" (ngModelChange)="actualizarCampoFt012('nexoSegundoNombre', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.nexoSegundoNombre" (ngModelChange)="actualizarCampoFt012('nexoSegundoNombre', $event)" />
                   </div>
                   <div class="campo-form">
                     <label class="label-inst">Cargo *</label>
-                    <input type="text" class="input-inst" [ngModel]="ft.nexoCargo" (ngModelChange)="actualizarCampoFt012('nexoCargo', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.nexoCargo" (ngModelChange)="actualizarCampoFt012('nexoCargo', $event)" />
                   </div>
                   <div class="campo-form">
                     <label class="label-inst">Teléfono</label>
-                    <input type="text" class="input-inst" [ngModel]="ft.nexoTelefono" (ngModelChange)="actualizarCampoFt012('nexoTelefono', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.nexoTelefono" (ngModelChange)="actualizarCampoFt012('nexoTelefono', $event)" />
                   </div>
                   <div class="campo-form">
                     <label class="label-inst">Correo Electrónico *</label>
-                    <input type="email" class="input-inst" [ngModel]="ft.nexoCorreo" (ngModelChange)="actualizarCampoFt012('nexoCorreo', $event)" />
+                    <input type="email" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.nexoCorreo" (ngModelChange)="actualizarCampoFt012('nexoCorreo', $event)" />
                   </div>
                 </div>
               </div>
@@ -543,20 +558,20 @@
               <div class="form-row-grid-3">
                 <div class="campo-form">
                   <label class="label-inst">Nombre de la Carrera *</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.carreraNombre" (ngModelChange)="actualizarCampoFt012('carreraNombre', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.carreraNombre" (ngModelChange)="actualizarCampoFt012('carreraNombre', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Título Asimilado *</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.tituloAsimilado" (ngModelChange)="actualizarCampoFt012('tituloAsimilado', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.tituloAsimilado" (ngModelChange)="actualizarCampoFt012('tituloAsimilado', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Año de Inicio del Dictado</label>
-                  <input type="number" class="input-inst" placeholder="Ej: 2010" [ngModel]="ft.anioInicioDictado" (ngModelChange)="actualizarCampoFt012('anioInicioDictado', $event)" />
+                  <input type="number" class="input-inst" [disabled]="!puedeEditarFt012()" placeholder="Ej: 2010" [ngModel]="ft.anioInicioDictado" (ngModelChange)="actualizarCampoFt012('anioInicioDictado', $event)" />
                 </div>
                 @if (ft.modalidadDictado === 'A_DISTANCIA') {
                   <div class="campo-form">
                     <label class="label-inst">Carga Horaria No Presencial (Opción Pedagógica a Distancia)</label>
-                    <input type="text" class="input-inst" placeholder="Ej: 100% / Horas a distancia" [ngModel]="ft.cargaHorariaNoPresencial" (ngModelChange)="actualizarCampoFt012('cargaHorariaNoPresencial', $event)" />
+                    <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" placeholder="Ej: 100% / Horas a distancia" [ngModel]="ft.cargaHorariaNoPresencial" (ngModelChange)="actualizarCampoFt012('cargaHorariaNoPresencial', $event)" />
                   </div>
                 }
               </div>
@@ -568,19 +583,19 @@
               <div class="form-row-grid-3">
                 <div class="campo-form">
                   <label class="label-inst">Apellido *</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.responsableApellido" (ngModelChange)="actualizarCampoFt012('responsableApellido', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.responsableApellido" (ngModelChange)="actualizarCampoFt012('responsableApellido', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Primer Nombre *</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.responsablePrimerNombre" (ngModelChange)="actualizarCampoFt012('responsablePrimerNombre', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.responsablePrimerNombre" (ngModelChange)="actualizarCampoFt012('responsablePrimerNombre', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Segundo Nombre</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.responsableSegundoNombre" (ngModelChange)="actualizarCampoFt012('responsableSegundoNombre', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.responsableSegundoNombre" (ngModelChange)="actualizarCampoFt012('responsableSegundoNombre', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Cargo *</label>
-                  <select class="input-inst" [ngModel]="ft.responsableCargo" (ngModelChange)="actualizarCampoFt012('responsableCargo', $event)">
+                  <select class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.responsableCargo" (ngModelChange)="actualizarCampoFt012('responsableCargo', $event)">
                     <option value="">Seleccione cargo...</option>
                     <option value="Director">Director</option>
                     <option value="Coordinador">Coordinador</option>
@@ -588,11 +603,11 @@
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Teléfono</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.responsableTelefono" (ngModelChange)="actualizarCampoFt012('responsableTelefono', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.responsableTelefono" (ngModelChange)="actualizarCampoFt012('responsableTelefono', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Correo Electrónico *</label>
-                  <input type="email" class="input-inst" [ngModel]="ft.responsableCorreo" (ngModelChange)="actualizarCampoFt012('responsableCorreo', $event)" />
+                  <input type="email" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.responsableCorreo" (ngModelChange)="actualizarCampoFt012('responsableCorreo', $event)" />
                 </div>
               </div>
             </div>
@@ -603,102 +618,48 @@
               <div class="form-row-grid-3">
                 <div class="campo-form">
                   <label class="label-inst">Apellido *</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.coordinadorCaApellido" (ngModelChange)="actualizarCampoFt012('coordinadorCaApellido', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.coordinadorCaApellido" (ngModelChange)="actualizarCampoFt012('coordinadorCaApellido', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Primer Nombre *</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.coordinadorCaPrimerNombre" (ngModelChange)="actualizarCampoFt012('coordinadorCaPrimerNombre', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.coordinadorCaPrimerNombre" (ngModelChange)="actualizarCampoFt012('coordinadorCaPrimerNombre', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Segundo Nombre</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.coordinadorCaSegundoNombre" (ngModelChange)="actualizarCampoFt012('coordinadorCaSegundoNombre', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.coordinadorCaSegundoNombre" (ngModelChange)="actualizarCampoFt012('coordinadorCaSegundoNombre', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Teléfono</label>
-                  <input type="text" class="input-inst" [ngModel]="ft.coordinadorCaTelefono" (ngModelChange)="actualizarCampoFt012('coordinadorCaTelefono', $event)" />
+                  <input type="text" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.coordinadorCaTelefono" (ngModelChange)="actualizarCampoFt012('coordinadorCaTelefono', $event)" />
                 </div>
                 <div class="campo-form">
                   <label class="label-inst">Correo Electrónico *</label>
-                  <input type="email" class="input-inst" [ngModel]="ft.coordinadorCaCorreo" (ngModelChange)="actualizarCampoFt012('coordinadorCaCorreo', $event)" />
+                  <input type="email" class="input-inst" [disabled]="!puedeEditarFt012()" [ngModel]="ft.coordinadorCaCorreo" (ngModelChange)="actualizarCampoFt012('coordinadorCaCorreo', $event)" />
                 </div>
               </div>
             </div>
 
-            <div class="acciones-ft012-bar">
-              <button
-                type="button"
-                class="btn-secundario-accion"
-                [disabled]="guardandoFt012()"
-                (click)="guardarORemitirFt012(false)"
-              >
-                {{ guardandoFt012() ? 'Guardando...' : 'Guardar Borrador FT-012' }}
-              </button>
-              <button
-                type="button"
-                class="btn-primario-accion"
-                [disabled]="guardandoFt012()"
-                (click)="guardarORemitirFt012(true)"
-              >
-                {{ guardandoFt012() ? 'Remitiendo...' : 'Remitir Ficha FT-012 Completa a AEA' }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Bloque Exclusivo AEA: Formalización en CONEAU Global ATENEA y Comprobante PDF -->
-          @if (canManage()) {
-            <div class="actividad-cuerpo-info card-inner mt-md bloque-atenea-aea">
-              <h3 class="subtitulo-bloque">Formalización Electrónica en CONEAU Global ATENEA (Ejecución AEA · IT-002 Ap. 3.2)</h3>
-              <p class="ayuda-bloque">
-                Una vez formalizada la participación en CONEAU Global ATENEA, registre la fecha oficial (se actualizará automáticamente en el RG-001) y adjunte el comprobante PDF generado por el sistema para su puesta a disposición de la Dirección de Carrera.
-              </p>
-
-              <div class="form-row-grid-2">
-                <div class="campo-form">
-                  <label class="label-inst" for="fechaFormAct6">Fecha de Formalización Electrónica (RG-001) *</label>
-                  <input
-                    id="fechaFormAct6"
-                    type="date"
-                    class="input-inst"
-                    [max]="today"
-                    [ngModel]="fechaFormalizacionAct6()"
-                    (ngModelChange)="fechaFormalizacionAct6.set($event)"
-                  />
-                </div>
-                <div class="campo-form">
-                  <label class="label-inst">Comprobante de Formalización CONEAU Global (PDF) *</label>
-                  <input
-                    type="file"
-                    class="input-inst-file"
-                    accept=".pdf"
-                    (change)="onArchivoComprobanteAct6Selected($event)"
-                  />
-                </div>
-              </div>
-
-              <div class="campo-form mt-xs">
-                <label class="label-inst" for="obsAct6">Observaciones de Formalización y Remisión a DC</label>
-                <textarea
-                  id="obsAct6"
-                  rows="2"
-                  class="textarea-inst"
-                  placeholder="Observaciones adicionales sobre el alta del usuario Responsable de Carrera y Coordinador del Comité de Autoevaluación en CONEAU Global..."
-                  [ngModel]="observacionesFormalizacionAct6()"
-                  (ngModelChange)="observacionesFormalizacionAct6.set($event)"
-                ></textarea>
-              </div>
-
-              <div class="actividad-acciones-footer">
+            @if (puedeEditarFt012()) {
+              <div class="acciones-ft012-bar">
+                <button
+                  type="button"
+                  class="btn-secundario-accion"
+                  [disabled]="guardandoFt012()"
+                  (click)="guardarORemitirFt012(false)"
+                >
+                  {{ guardandoFt012() ? 'Guardando...' : 'Guardar Borrador FT-012' }}
+                </button>
                 <button
                   type="button"
                   class="btn-primario-accion"
-                  [disabled]="formalizandoAct6()"
-                  (click)="registrarFormalizacionConeauGlobal()"
+                  [disabled]="guardandoFt012()"
+                  (click)="guardarORemitirFt012(true)"
                 >
-                  {{ formalizandoAct6() ? 'Registrando formalización...' : 'Registrar Formalización CONEAU Global y Remitir Comprobante PDF' }}
+                  {{ guardandoFt012() ? 'Remitiendo...' : 'Remitir Ficha FT-012 Completa a AEA' }}
                 </button>
               </div>
-            </div>
-          }
+            }
+          </div>
         </section>
 
         <!-- BLOQUE 2: NORMATIVA DE LA CARRERA -->
@@ -719,9 +680,33 @@
               [procesoCodigo]="c.codigo"
               [carreraNombre]="c.carreraNombre || ''"
               [embedded]="true"
+              (normativaActualizada)="onNormativaActualizada()"
             ></app-normativa-detalle>
           </div>
         </section>
+
+        @if (planTrabajoDesbloqueado()) {
+          <div class="banner-siguiente-etapa-desbloqueada mt-lg">
+            <div class="banner-siguiente-contenido">
+              <svg class="icon-svg-success" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              <div class="banner-siguiente-textos">
+                <h3 class="banner-siguiente-titulo">¡Etapa de Formalización y Normativa completada exitosamente!</h3>
+                <p class="banner-siguiente-desc">
+                  La Ficha FT-012 y la verificación de la normativa han sido registradas. La siguiente etapa (Formulario RG-001 y Plan de Trabajo) ha quedado habilitada para su formulación.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn-avanzar-siguiente-etapa"
+              (click)="seleccionarTab('PLAN_TRABAJO')"
+            >
+              Continuar a Carga del RG-001 y Plan de Trabajo &rarr;
+            </button>
+          </div>
+        }
       </div>
     }
 

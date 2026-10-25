@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges, computed, inject, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Auth } from '../../../core/auth/auth';
@@ -39,6 +39,7 @@ export class NormativaDetalleComponent implements OnInit, OnChanges {
   @Input() procesoCodigo = '';
   @Input() carreraNombre = '';
   @Input() embedded = false;
+  @Output() normativaActualizada = new EventEmitter<void>();
 
   readonly vistaActiva = signal<'BANDEJA' | 'HOJA_INFO'>('BANDEJA');
   readonly modalSolicitarAbierto = signal<boolean>(false);
@@ -164,6 +165,7 @@ export class NormativaDetalleComponent implements OnInit, OnChanges {
     this.normativaService.enviarDefinitiva(this.procesoId).subscribe({
       next: () => {
         this.mostrarAlerta('success', 'Normativa enviada formalmente a revisión por AEA.');
+        this.normativaActualizada.emit();
       },
       error: (err) => {
         this.mostrarAlerta('error', err?.error?.error || 'Error al enviar la normativa definitiva.');
@@ -191,6 +193,7 @@ export class NormativaDetalleComponent implements OnInit, OnChanges {
             ? 'Normativa aprobada exitosamente. La Actividad 2 ha sido completada.'
             : 'Observaciones emitidas y enviadas al usuario asignado (Dirección de Carrera) para subsanación.';
         this.mostrarAlerta('success', msg);
+        this.normativaActualizada.emit();
       },
       error: (err) => {
         const msg = err?.error?.error || err?.error?.message || 'Error al dictaminar sobre la normativa.';

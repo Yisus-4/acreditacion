@@ -270,6 +270,13 @@ public class FormalizacionController {
         FichaFormalizacionFt012JpaEntity entity = fichaRepository.findByProcesoId(procesoId)
                 .orElseGet(() -> construirFichaInicialConDefaultsUndec(procesoId));
 
+        Optional<User> usuarioActualOpt = resolverUsuarioAutenticado();
+        boolean esAdminOAEA = tienePermisoGlobal(usuarioActualOpt);
+        boolean yaEnviada = "REMITIDA_POR_DC".equals(entity.getEstado()) || "FORMALIZADA_EN_CONEAU".equals(entity.getEstado());
+        if (yaEnviada && !esAdminOAEA) {
+            throw new DomainValidationException("La Ficha FT-012 ya ha sido remitida. Solo el Área de Evaluación y Acreditación (AEA) puede modificar los datos remitidos.");
+        }
+
         aplicarCambiosFicha(entity, request);
 
         boolean enviar = Boolean.TRUE.equals(request.enviar());
@@ -732,16 +739,35 @@ public class FormalizacionController {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-    private UUID resolverUsuarioAutenticadoId() {
+    private Optional<User> resolverUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() != null) {
             String principal = auth.getPrincipal().toString();
             Optional<User> userOpt = userRepository.findByEmail(principal);
             if (userOpt.isPresent()) {
-                return userOpt.get().getId();
+                return userOpt;
             }
         }
-        return userRepository.findByEmail("admin@undec.edu.ar")
+        return userRepository.findByEmail("admin@undec.edu.ar");
+    }
+
+    private boolean tienePermisoGlobal(Optional<User> userOpt) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return true;
+        }
+        if (auth.getAuthorities() != null && auth.getAuthorities().stream().anyMatch(a ->
+                a.getAuthority().equals("ROLE_ADMINISTRATOR") || a.getAuthority().equals("ROLE_AEA")
+                        || a.getAuthority().equals("ADMINISTRATOR") || a.getAuthority().equals("AEA"))) {
+            return true;
+        }
+        return userOpt.map(u -> u.getRoles().stream()
+                .anyMatch(r -> "ADMINISTRATOR".equals(r.getCode()) || "AEA".equals(r.getCode())))
+                .orElse(false);
+    }
+
+    private UUID resolverUsuarioAutenticadoId() {
+        return resolverUsuarioAutenticado()
                 .map(User::getId)
                 .orElseGet(() -> userRepository.findAll().stream().findFirst().map(User::getId)
                         .orElse(UUID.fromString("00000000-0000-0000-0000-000000000001")));

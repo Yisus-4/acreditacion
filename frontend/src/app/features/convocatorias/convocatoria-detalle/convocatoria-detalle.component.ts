@@ -237,11 +237,23 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     'Autoridad Institucional',
   ];
 
-  readonly planTrabajoDesbloqueado = computed(() => {
+  readonly esFt012Enviada = computed(() => {
     const ft = this.fichaFt012();
-    const ftOk = ft.estado === 'REMITIDA_POR_DC' || ft.estado === 'FORMALIZADA_EN_CONEAU' || !!ft.remitidoEn;
+    return ft.estado === 'REMITIDA_POR_DC' || ft.estado === 'FORMALIZADA_EN_CONEAU' || !!ft.remitidoEn;
+  });
+
+  readonly puedeEditarFt012 = computed(() => {
+    if (this.esFt012Enviada()) {
+      return this.canManage(); // Solo AEA o ADMINISTRATOR pueden editar una vez remitida
+    }
+    return true; // DC y otros pueden editar mientras esté en borrador
+  });
+
+  readonly planTrabajoDesbloqueado = computed(() => {
+    const ftOk = this.esFt012Enviada();
     const norm = this.normativaDetalle();
-    const normOk = norm?.estado === 'COMPLETADA';
+    const actNorm = this.actividadNormativa();
+    const normOk = norm?.estado === 'COMPLETADA' || actNorm?.estado === 'COMPLETADA' || this.actividad2Completa();
     return ftOk && normOk;
   });
 
@@ -530,8 +542,8 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     void this.router.navigate(['/acreditacion/convocatorias', procesoId]);
   }
 
-  cargarDatos(id: string): void {
-    if (this.idCargadoActualmente === id && this.convocatoria()) {
+  cargarDatos(id: string, autoAvanzar: boolean = false): void {
+    if (this.idCargadoActualmente === id && this.convocatoria() && !autoAvanzar) {
       return;
     }
     this.idCargadoActualmente = id;
@@ -578,7 +590,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
           },
           error: () => this.actualizarFocoPorDefecto(),
         });
-        this.cargarFichaFormalizacion(id);
+        this.cargarFichaFormalizacion(id, autoAvanzar);
       },
       error: (err) => {
         this.idCargadoActualmente = null;
@@ -674,7 +686,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     }
   }
 
-  cargarFichaFormalizacion(procesoId: string): void {
+  cargarFichaFormalizacion(procesoId: string, autoAvanzar: boolean = false): void {
     this.convocatoriaService.obtenerFormalizacion(procesoId).subscribe({
       next: (ficha) => {
         this.fichaFt012.set({
@@ -692,9 +704,23 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
           this.observacionesFormalizacionAct6.set(ficha.observaciones);
         }
         this.actualizarFocoPorDefecto();
+
+        // Si la etapa de formalización y normativa está completada, avanzar a la carga del RG-001 y Plan de Trabajo
+        if (autoAvanzar || (!this.focoSeleccionadoManualmente && this.tabActiva() === 'ACTIVIDADES')) {
+          if (this.planTrabajoDesbloqueado() && !this.actividadPlanFinalizada()) {
+            this.tabActiva.set('PLAN_TRABAJO');
+          }
+        }
       },
       error: () => {},
     });
+  }
+
+  onNormativaActualizada(): void {
+    const c = this.convocatoria();
+    if (c) {
+      this.cargarDatos(c.id, true);
+    }
   }
 
   private actualizarFocoPorDefecto(): void {
@@ -1004,10 +1030,10 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
           this.fichaFt012.set(ficha);
           this.bannerExitoPlan.set(
             enviar
-              ? 'La Ficha de Formalización Electrónica (FT-012) ha sido remitida completa al Área de Evaluación y Acreditación (AEA).'
+              ? 'La Ficha de Formalización Electrónica (FT-012) ha sido remitida completa al Área de Evaluación y Acreditación (AEA). La posibilidad de modificar los datos se encuentra cerrada para la Dirección de Carrera.'
               : 'El borrador de la Ficha FT-012 fue guardado correctamente.'
           );
-          this.cargarDatos(c.id);
+          this.cargarDatos(c.id, enviar);
         },
         error: (err) => {
           this.guardandoFt012.set(false);
