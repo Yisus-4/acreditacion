@@ -158,7 +158,8 @@ public class ConvocatoriaController {
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<List<ConvocatoriaResumenResponse>> listarConvocatorias(
             @RequestParam(required = false) UUID carreraId,
-            @RequestParam(required = false) EstadoProcesoAcreditacion estado,
+            @RequestParam(required = false) UUID unidadAcademicaId,
+            @RequestParam(required = false) String estado,
             @RequestParam(required = false) TipoProcesoAcreditacion tipoProceso,
             @RequestParam(required = false) Integer anio
     ) {
@@ -180,6 +181,11 @@ public class ConvocatoriaController {
             }
 
             // Aplicar filtros a las convocatorias de escuela si se especifican
+            if (unidadAcademicaId != null) {
+                if (!unidadAcademicaId.equals(ec.unidadAcademicaId())) {
+                    continue;
+                }
+            }
             if (carreraId != null) {
                 boolean incluyeCarrera = ec.carreras().stream()
                         .anyMatch(item -> item.carreraId().equals(carreraId));
@@ -187,8 +193,8 @@ public class ConvocatoriaController {
                     continue;
                 }
             }
-            if (estado != null) {
-                if (!ec.estado().name().equalsIgnoreCase(estado.name())) {
+            if (estado != null && !estado.isBlank()) {
+                if (!ec.estado().name().equalsIgnoreCase(estado)) {
                     continue;
                 }
             }

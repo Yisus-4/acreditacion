@@ -4,8 +4,8 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Auth } from '../../../core/auth/auth';
 import { ConvocatoriaService } from '../../../core/convocatorias/convocatoria.service';
-import { ConvocatoriaResumen, EstadoProceso } from '../../../core/convocatorias/models/convocatoria.model';
-import { EstructuraService, CarreraResponse } from '../../../core/estructura/estructura.service';
+import { ConvocatoriaResumen } from '../../../core/convocatorias/models/convocatoria.model';
+import { EstructuraService, UnidadAcademicaResponse } from '../../../core/estructura/estructura.service';
 
 @Component({
   selector: 'app-convocatoria-list',
@@ -20,11 +20,11 @@ export class ConvocatoriaListComponent implements OnInit {
   private readonly auth = inject(Auth);
 
   readonly convocatorias = signal<ConvocatoriaResumen[]>([]);
-  readonly carreras = signal<CarreraResponse[]>([]);
+  readonly escuelas = signal<UnidadAcademicaResponse[]>([]);
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
 
-  readonly filtroCarreraId = signal<string>('');
+  readonly filtroEscuelaId = signal<string>('');
   readonly filtroEstado = signal<string>('');
   readonly filtroAnio = signal<string>('');
 
@@ -35,13 +35,13 @@ export class ConvocatoriaListComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.cargarCarreras();
+    this.cargarEscuelas();
     this.cargarConvocatorias();
   }
 
-  cargarCarreras(): void {
-    this.estructuraService.listarCarreras().subscribe({
-      next: (carreras) => this.carreras.set(carreras.filter((c) => c.activo)),
+  cargarEscuelas(): void {
+    this.estructuraService.listarUnidadesAcademicas().subscribe({
+      next: (escuelas) => this.escuelas.set(escuelas.filter((e) => e.activo)),
       error: () => {},
     });
   }
@@ -51,11 +51,11 @@ export class ConvocatoriaListComponent implements OnInit {
     this.error.set(null);
 
     const filtro: any = {};
-    if (this.filtroCarreraId()) {
-      filtro.carreraId = this.filtroCarreraId();
+    if (this.filtroEscuelaId()) {
+      filtro.unidadAcademicaId = this.filtroEscuelaId();
     }
     if (this.filtroEstado()) {
-      filtro.estado = this.filtroEstado() as EstadoProceso;
+      filtro.estado = this.filtroEstado();
     }
     if (this.filtroAnio()) {
       const parsedAnio = parseInt(this.filtroAnio(), 10);
@@ -77,7 +77,7 @@ export class ConvocatoriaListComponent implements OnInit {
   }
 
   limpiarFiltros(): void {
-    this.filtroCarreraId.set('');
+    this.filtroEscuelaId.set('');
     this.filtroEstado.set('');
     this.filtroAnio.set('');
     this.cargarConvocatorias();

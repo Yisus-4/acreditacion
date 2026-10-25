@@ -24,31 +24,29 @@
   <!-- Barra de Filtros -->
   <div class="filter-card">
     <div class="filter-group">
-      <label for="filtroCarrera">Carrera de Grado</label>
+      <label for="filtroEscuela">Escuela / Unidad Académica</label>
       <select
-        id="filtroCarrera"
-        [ngModel]="filtroCarreraId()"
-        (ngModelChange)="filtroCarreraId.set($event); cargarConvocatorias()"
+        id="filtroEscuela"
+        [ngModel]="filtroEscuelaId()"
+        (ngModelChange)="filtroEscuelaId.set($event); cargarConvocatorias()"
       >
-        <option value="">Todas las carreras</option>
-        @for (carrera of carreras(); track carrera.id) {
-          <option [value]="carrera.id">{{ carrera.nombre }} ({{ carrera.sigla || 'S/S' }})</option>
+        <option value="">Todas las escuelas</option>
+        @for (escuela of escuelas(); track escuela.id) {
+          <option [value]="escuela.id">{{ escuela.nombre }} ({{ escuela.sigla || 'S/S' }})</option>
         }
       </select>
     </div>
 
     <div class="filter-group">
-      <label for="filtroEstado">Estado del Proceso</label>
+      <label for="filtroEstado">Estado de la Convocatoria</label>
       <select
         id="filtroEstado"
         [ngModel]="filtroEstado()"
         (ngModelChange)="filtroEstado.set($event); cargarConvocatorias()"
       >
         <option value="">Todos los estados</option>
-        <option value="INICIADO">INICIADO</option>
-        <option value="EN_AUTOEVALUACION">EN AUTOEVALUACIÓN</option>
-        <option value="FINALIZADO">FINALIZADO</option>
-        <option value="CANCELADO">CANCELADO</option>
+        <option value="PENDIENTE_DIRECTOR_ESCUELA">Pendiente Director de Escuela</option>
+        <option value="CONFIRMADA_DIRECTOR_ESCUELA">Confirmada Director de Escuela</option>
       </select>
     </div>
 
@@ -85,7 +83,7 @@
       <div class="empty-state">
         <p class="empty-title">No se encontraron convocatorias</p>
         <p class="empty-subtitle">
-          No hay procesos de acreditación registrados con los filtros seleccionados.
+          No hay convocatorias de acreditación registradas para las escuelas con los filtros seleccionados.
         </p>
         @if (canCreate()) {
           <a routerLink="/acreditacion/convocatorias/nueva" class="btn-primary">

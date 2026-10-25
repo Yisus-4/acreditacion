@@ -26,6 +26,9 @@ export class ConvocatoriaService {
   listarConvocatorias(filtro?: ConvocatoriaFiltro): Observable<ConvocatoriaResumen[]> {
     let params = new HttpParams();
     if (filtro) {
+      if (filtro.unidadAcademicaId) {
+        params = params.set('unidadAcademicaId', filtro.unidadAcademicaId);
+      }
       if (filtro.carreraId) {
         params = params.set('carreraId', filtro.carreraId);
       }

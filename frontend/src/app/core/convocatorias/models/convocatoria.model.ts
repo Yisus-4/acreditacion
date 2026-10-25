@@ -13,7 +13,8 @@ export type TipoDocumento =
 
 export interface ConvocatoriaFiltro {
   carreraId?: string;
-  estado?: EstadoProceso;
+  unidadAcademicaId?: string;
+  estado?: EstadoProceso | string;
   tipoProceso?: TipoProceso;
   anio?: number;
 }
