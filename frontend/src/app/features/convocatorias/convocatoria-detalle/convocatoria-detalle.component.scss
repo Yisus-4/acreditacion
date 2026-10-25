@@ -2061,4 +2061,491 @@
   }
 }
 
+/* ── Estilos Pestaña: Plan de Trabajo y RG-001 ── */
+.badge-tab-bloqueada {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.badge-tab-finalizada {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.plan-trabajo-rg001-unificado {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  margin-top: 1.25rem;
+}
+
+/* Panel Actividad Bloqueada */
+.panel-actividad-bloqueada {
+  padding: 2.25rem 2rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+
+  .bloqueo-header {
+    display: flex;
+    gap: 1.25rem;
+    align-items: flex-start;
+  }
+
+  .icono-bloqueo-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    .icon-svg-bloqueo {
+      width: 24px;
+      height: 24px;
+      color: #64748b;
+    }
+  }
+
+  .bloqueo-etiqueta-superior {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+  }
+
+  .bloqueo-titulo {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .bloqueo-descripcion {
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .requisitos-bloqueo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .req-bloqueo-card {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1.25rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+
+    &.req-cumplido {
+      border-color: #bbf7d0;
+      background: #fcfdfd;
+    }
+
+    .req-icono {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .icon-svg-ok {
+        width: 22px;
+        height: 22px;
+        color: #16a34a;
+      }
+      .icon-svg-pend {
+        width: 22px;
+        height: 22px;
+        color: #94a3b8;
+      }
+    }
+
+    .req-titulo {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 0.25rem 0;
+    }
+
+    .req-detalle {
+      font-size: 0.8125rem;
+      color: #64748b;
+      margin: 0 0 0.5rem 0;
+      line-height: 1.4;
+    }
+
+    .badge-req-estado {
+      display: inline-block;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+  }
+
+  .bloqueo-footer {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+/* Banner superior de actividad finalizada */
+.banner-actividad-finalizada-superior {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: var(--radius-sm);
+
+  .icon-svg-ok {
+    width: 24px;
+    height: 24px;
+    color: #16a34a;
+    flex-shrink: 0;
+  }
+
+  .banner-actividad-textos {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+
+    strong {
+      font-size: 0.9375rem;
+      color: #166534;
+    }
+    span {
+      font-size: 0.8125rem;
+      color: #15803d;
+    }
+  }
+}
+
+/* Secciones de formulario y cronograma */
+.seccion-bloque-rg001,
+.seccion-bloque-plantrabajo,
+.seccion-bloque-finalizar {
+  padding: 1.5rem 1.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.header-titulo-estado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+
+  .bloque-titulo-nombre {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+}
+
+.badge-estado-envio {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+
+  &.badge-borrador {
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+  }
+
+  &.badge-enviado {
+    color: #0369a1;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+  }
+}
+
+.alerta-solo-lectura-institucional {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  color: #334155;
+  margin-bottom: 1rem;
+
+  .icon-svg-sm {
+    width: 18px;
+    height: 18px;
+    color: #64748b;
+    flex-shrink: 0;
+  }
+}
+
+/* Tabla del Cronograma */
+.campo-fecha-limite-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .label-inst-sm {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #475569;
+    white-space: nowrap;
+  }
+  .input-inst-sm {
+    padding: 0.35rem 0.6rem;
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius-sm);
+    font-size: 0.8125rem;
+    background: #ffffff;
+  }
+}
+
+.table-cronograma-plan {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+
+  thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    text-align: left;
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+  }
+
+  .col-num {
+    width: 40px;
+    text-align: center;
+    color: #94a3b8;
+    font-weight: 600;
+  }
+
+  .col-cod {
+    width: 80px;
+    code {
+      font-size: 0.75rem;
+      color: #0f172a;
+      background: #f1f5f9;
+      padding: 0.15rem 0.35rem;
+      border-radius: 3px;
+    }
+  }
+
+  .col-hoja {
+    width: 90px;
+  }
+
+  .badge-hoja-coneau {
+    background: #fef3c7 !important;
+    color: #92400e !important;
+    border-color: #fde68a !important;
+  }
+
+  .col-nombre {
+    font-weight: 500;
+    color: #1e293b;
+    min-width: 220px;
+  }
+
+  .col-fecha {
+    width: 145px;
+  }
+
+  .col-resp {
+    min-width: 180px;
+  }
+
+  .col-prio {
+    width: 95px;
+  }
+
+  .input-inst-cell,
+  .select-inst-cell {
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8125rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #1e293b;
+
+    &:disabled {
+      background: #f8fafc;
+      color: #64748b;
+      cursor: not-allowed;
+    }
+  }
+}
+
+/* Requisitos y acción de finalización */
+.requisitos-finalizacion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.requisito-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+
+  &.requisito-cumplido {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+
+  .requisito-check {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .icon-svg-ok {
+      width: 20px;
+      height: 20px;
+      color: #16a34a;
+    }
+
+    .dot-incompleto {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #cbd5e1;
+    }
+  }
+
+  .requisito-texto {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+
+    strong {
+      font-size: 0.875rem;
+      color: #1e293b;
+    }
+    span {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+  }
+}
+
+.finalizar-acciones-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+
+  .btn-finalizar-actividad-troncal {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.75rem;
+    background: #16a34a;
+    color: #ffffff;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: background 0.2s;
+
+    &:hover:not(:disabled) {
+      background: #15803d;
+    }
+
+    &:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+      opacity: 0.65;
+      box-shadow: none;
+    }
+  }
+
+  .ayuda-finalizar-incompleto {
+    font-size: 0.8125rem;
+    color: #64748b;
+    font-style: italic;
+  }
+
+  .banner-actividad-finalizada {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1.25rem;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: var(--radius-sm);
+    color: #166534;
+    font-weight: 500;
+    font-size: 0.875rem;
+
+    .icon-svg-ok {
+      width: 20px;
+      height: 20px;
+      color: #16a34a;
+      flex-shrink: 0;
+    }
+  }
+}
+
 

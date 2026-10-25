@@ -10,9 +10,12 @@ import {
   DocumentoInteresDto,
   ElaborarPlanTrabajoRequest,
   FichaFormalizacionFt012Dto,
+  GuardarCronogramaPlanRequest,
+  GuardarRg001Request,
   IniciarConvocatoriaRequest,
   PlanTrabajoDto,
   PlantillaPlanTrabajoDto,
+  RegistroConvocatoria,
 } from './models/convocatoria.model';
 
 export * from './models/convocatoria.model';
@@ -213,6 +216,27 @@ export class ConvocatoriaService {
     return this.http.get(`/api/convocatorias/${procesoId}/formalizacion/comprobante`, {
       responseType: 'blob',
     });
+  }
+
+  // Actividad 2 / Nueva Estructura: Formulario RG-001 y Plan de Trabajo independientes
+  guardarRg001Borrador(procesoId: string, request: GuardarRg001Request): Observable<RegistroConvocatoria> {
+    return this.http.post<RegistroConvocatoria>(`/api/convocatorias/${procesoId}/rg001/borrador`, request);
+  }
+
+  enviarRg001(procesoId: string, request: GuardarRg001Request): Observable<RegistroConvocatoria> {
+    return this.http.post<RegistroConvocatoria>(`/api/convocatorias/${procesoId}/rg001/enviar`, request);
+  }
+
+  guardarPlanTrabajoBorrador(procesoId: string, request: GuardarCronogramaPlanRequest): Observable<PlanTrabajoDto> {
+    return this.http.post<PlanTrabajoDto>(`/api/convocatorias/${procesoId}/plan-trabajo/borrador`, request);
+  }
+
+  enviarPlanTrabajo(procesoId: string, request: GuardarCronogramaPlanRequest): Observable<PlanTrabajoDto> {
+    return this.http.post<PlanTrabajoDto>(`/api/convocatorias/${procesoId}/plan-trabajo/enviar`, request);
+  }
+
+  finalizarActividadPlanTrabajo(procesoId: string): Observable<ConvocatoriaDetalle> {
+    return this.http.post<ConvocatoriaDetalle>(`/api/convocatorias/${procesoId}/plan-trabajo/finalizar-actividad`, {});
   }
 }
 

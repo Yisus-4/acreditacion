@@ -28,6 +28,7 @@ public class PlanTrabajoPersistenceMapper {
                 entity.getCodigo(),
                 TipoPlanTrabajo.valueOf(entity.getTipo()),
                 EstadoPlanTrabajo.valueOf(entity.getEstado()),
+                entity.getEstadoEnvio() != null ? entity.getEstadoEnvio() : "BORRADOR",
                 entity.getCreadoEn(),
                 entity.getActualizadoEn(),
                 actividades
@@ -44,6 +45,7 @@ public class PlanTrabajoPersistenceMapper {
         entity.setCodigo(domain.getCodigo());
         entity.setTipo(domain.getTipo().name());
         entity.setEstado(domain.getEstado().name());
+        entity.setEstadoEnvio(domain.getEstadoEnvio());
         entity.setCreadoEn(domain.getCreadoEn());
         entity.setActualizadoEn(domain.getActualizadoEn());
         return entity;

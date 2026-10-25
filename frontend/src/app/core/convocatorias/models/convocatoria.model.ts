@@ -64,6 +64,7 @@ export interface RegistroConvocatoria {
   faseEvaluacion?: 'PRIMERA_FASE' | 'SEGUNDA_FASE' | 'NUEVO_CICLO' | 'SEGUIMIENTO';
   fechaLimitePresentacionConeau?: string;
   fechaFormalizacionElectronica?: string;
+  estadoRg001?: 'BORRADOR' | 'ENVIADO' | string;
   creadoEn: string;
   actualizadoEn: string;
 }
@@ -75,6 +76,7 @@ export interface PlanTrabajoResumen {
   codigo: string;
   tipo: TipoPlanTrabajo;
   estado: EstadoPlanTrabajo;
+  estadoEnvio?: 'BORRADOR' | 'ENVIADO' | string;
   actividadesCount: number;
 }
 
@@ -380,6 +382,7 @@ export interface PlanTrabajoDto {
   codigo: string;
   tipo: TipoPlanTrabajo;
   estado: EstadoPlanTrabajo;
+  estadoEnvio?: 'BORRADOR' | 'ENVIADO' | string;
   actividades: ActividadPlanTrabajoDto[];
 }
 
@@ -425,6 +428,24 @@ export interface ElaborarPlanTrabajoRequest {
   modalidadCarrera?: 'PRESENCIAL' | 'A_DISTANCIA' | string;
   faseEvaluacion: FaseEvaluacion;
   fechaLimitePresentacionConeau: string;
+  fechaLimiteConeau?: string;
+  actividades: ItemActividadPlanRequest[];
+}
+
+export interface GuardarRg001Request {
+  nroResolucionConeau?: string;
+  fechaInicio?: string;
+  fechaCierre?: string;
+  fechaLimitePresentacionConeau?: string;
+  rmEstandares?: string;
+  areaDisciplinaria?: string;
+  modalidadCarrera?: 'PRESENCIAL' | 'A_DISTANCIA' | string;
+  estadoCarrera?: 'NUEVA' | 'EN_FUNCIONAMIENTO' | string;
+  faseEvaluacion?: 'PRIMERA_FASE' | 'SEGUNDA_FASE' | 'NUEVO_CICLO' | 'SEGUIMIENTO' | string;
+  observaciones?: string;
+}
+
+export interface GuardarCronogramaPlanRequest {
   fechaLimiteConeau?: string;
   actividades: ItemActividadPlanRequest[];
 }

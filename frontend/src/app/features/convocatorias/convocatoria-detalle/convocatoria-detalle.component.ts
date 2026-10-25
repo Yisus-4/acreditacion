@@ -13,6 +13,9 @@ import {
   DocumentoInteresDto,
   FichaFormalizacionFt012Dto,
   FUENTES_DOCUMENTACION_INTERES_CATALOGO,
+  GuardarCronogramaPlanRequest,
+  GuardarRg001Request,
+  ItemActividadPlanRequest,
   PlanTrabajoDto,
 } from '../../../core/convocatorias/models/convocatoria.model';
 import { CompletarActividadModalComponent } from '../completar-actividad-modal/completar-actividad-modal.component';
@@ -72,7 +75,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
 
-  readonly tabActiva = signal<'ACTIVIDADES' | 'SEGUIMIENTO' | 'FICHA'>('ACTIVIDADES');
+  readonly tabActiva = signal<'ACTIVIDADES' | 'PLAN_TRABAJO' | 'SEGUIMIENTO' | 'FICHA'>('ACTIVIDADES');
   readonly actividadFoco = signal<string>('1.1');
   private focoSeleccionadoManualmente = false;
   readonly reiniciando = signal<boolean>(false);
@@ -186,6 +189,117 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly formalizandoAct6 = signal<boolean>(false);
 
   readonly normativaDetalle = this.normativaService.detalle;
+
+  // =========================================================================
+  // Estado Pestaña 2: Plan de Trabajo y Formulario RG-001
+  // =========================================================================
+  readonly rg001Data = signal<GuardarRg001Request>({
+    nroResolucionConeau: '',
+    fechaInicio: '',
+    fechaCierre: '',
+    fechaLimitePresentacionConeau: '',
+    rmEstandares: '',
+    areaDisciplinaria: 'Informática / Sistemas',
+    modalidadCarrera: 'PRESENCIAL',
+    estadoCarrera: 'EN_FUNCIONAMIENTO',
+    faseEvaluacion: 'PRIMERA_FASE',
+    observaciones: '',
+  });
+  readonly guardandoRg001Borrador = signal<boolean>(false);
+  readonly enviandoRg001 = signal<boolean>(false);
+
+  readonly cronogramaActividades = signal<ItemActividadPlanRequest[]>([]);
+  readonly fechaLimiteConeauPlan = signal<string>('');
+  readonly cargandoPlantillaPlan = signal<boolean>(false);
+  readonly guardandoPlanBorrador = signal<boolean>(false);
+  readonly enviandoPlan = signal<boolean>(false);
+  readonly finalizandoActividadPlan = signal<boolean>(false);
+  readonly filtroHojaPlan = signal<'TODAS' | 'INFO' | 'CONEAU'>('TODAS');
+
+  readonly areasDisciplinariasSugeridas: string[] = [
+    'Ingeniería',
+    'Informática / Sistemas',
+    'Ciencias de la Salud',
+    'Ciencias Agrarias',
+    'Ciencias Aplicadas',
+    'Ciencias Económicas',
+    'Ciencias Básicas',
+    'Ciencias Humanas y Sociales',
+  ];
+
+  readonly rolesDisponibles: string[] = [
+    'Área de Evaluación y Acreditación (AEA)',
+    'Dirección de Carrera',
+    'Comisión Curricular',
+    'Secretaría Académica / Técnica',
+    'Comité de Autoevaluación',
+    'Docentes / Proveedores de Información',
+    'Autoridad Institucional',
+  ];
+
+  readonly planTrabajoDesbloqueado = computed(() => {
+    const ft = this.fichaFt012();
+    const ftOk = ft.estado === 'REMITIDA_POR_DC' || ft.estado === 'FORMALIZADA_EN_CONEAU' || !!ft.remitidoEn;
+    const norm = this.normativaDetalle();
+    const normOk = norm?.estado === 'COMPLETADA';
+    return ftOk && normOk;
+  });
+
+  readonly estadoRg001 = computed(() => {
+    return this.convocatoria()?.registroConvocatoria?.estadoRg001 || 'BORRADOR';
+  });
+
+  readonly esRg001Enviado = computed(() => {
+    return this.estadoRg001() === 'ENVIADO';
+  });
+
+  readonly puedeEditarRg001 = computed(() => {
+    if (!this.planTrabajoDesbloqueado()) return false;
+    if (!this.esRg001Enviado()) return true;
+    return this.canManage();
+  });
+
+  readonly estadoEnvioPlan = computed(() => {
+    return this.planTrabajo()?.estadoEnvio || this.convocatoria()?.planTrabajo?.estadoEnvio || 'BORRADOR';
+  });
+
+  readonly esPlanEnviado = computed(() => {
+    return this.estadoEnvioPlan() === 'ENVIADO';
+  });
+
+  readonly puedeEditarPlan = computed(() => {
+    if (!this.planTrabajoDesbloqueado()) return false;
+    if (!this.esPlanEnviado()) return true;
+    return this.canManage();
+  });
+
+  readonly actividadPlanFinalizada = computed(() => {
+    const act = this.actividadElaborarPlan();
+    return act?.estado === 'COMPLETADA';
+  });
+
+  readonly puedeFinalizarActividadPlan = computed(() => {
+    return this.esRg001Enviado() && this.esPlanEnviado() && !this.actividadPlanFinalizada();
+  });
+
+  readonly conteoPlanInfo = computed(() => {
+    return this.cronogramaActividades().filter((a) => a.hoja === 'INFO').length;
+  });
+
+  readonly conteoPlanConeau = computed(() => {
+    return this.cronogramaActividades().filter((a) => a.hoja === 'CONEAU').length;
+  });
+
+  readonly conteoPlanTotal = computed(() => {
+    return this.cronogramaActividades().length;
+  });
+
+  readonly cronogramaActividadesFiltradas = computed(() => {
+    const hoja = this.filtroHojaPlan();
+    const acts = this.cronogramaActividades();
+    if (hoja === 'TODAS') return acts;
+    return acts.filter((a) => a.hoja === hoja);
+  });
 
   readonly canManage = computed(() => {
     const session = this.auth.currentSession;
@@ -443,12 +557,25 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
             this.planTrabajo.set(plan);
             this.sincronizarEstadosActividades456();
             this.actualizarFocoPorDefecto();
+            this.inicializarRg001YPlan(conv, plan);
             this.loading.set(false);
           },
-          error: () => this.loading.set(false),
+          error: () => {
+            this.inicializarRg001YPlan(conv, null);
+            this.loading.set(false);
+          },
         });
         this.normativaService.obtenerDetalle(id).subscribe({
-          next: () => this.actualizarFocoPorDefecto(),
+          next: () => {
+            this.actualizarFocoPorDefecto();
+            if (!this.rg001Data().rmEstandares) {
+              const normDocs = this.normativaDetalle()?.documentos || [];
+              const rmDoc = normDocs.find((d) => d.nombreOriginal.toLowerCase().includes('rm'));
+              if (rmDoc) {
+                this.actualizarCampoRg001('rmEstandares', rmDoc.nombreOriginal);
+              }
+            }
+          },
           error: () => this.actualizarFocoPorDefecto(),
         });
         this.cargarFichaFormalizacion(id);
@@ -1032,12 +1159,225 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     });
   }
 
-  seleccionarTab(tab: 'ACTIVIDADES' | 'SEGUIMIENTO' | 'FICHA'): void {
+  seleccionarTab(tab: 'ACTIVIDADES' | 'PLAN_TRABAJO' | 'SEGUIMIENTO' | 'FICHA'): void {
     if (tab === 'SEGUIMIENTO' && !this.canManage()) {
       this.tabActiva.set('ACTIVIDADES');
       return;
     }
     this.tabActiva.set(tab);
+  }
+
+  // =========================================================================
+  // Métodos Actividad 3: Formulario RG-001 y Plan de Trabajo (PT-001)
+  // =========================================================================
+
+  private inicializarRg001YPlan(conv: ConvocatoriaDetalle, plan: PlanTrabajoDto | null): void {
+    const reg = conv.registroConvocatoria;
+    const today = new Date().toISOString().split('T')[0];
+    const fechaIni = reg?.fechaInicio || today;
+    const fechaCie = reg?.fechaCierre || today;
+    const fechaLim = reg?.fechaLimitePresentacionConeau || fechaCie;
+
+    let rmSugerida = reg?.rmEstandares || '';
+    if (!rmSugerida) {
+      const normDocs = this.normativaDetalle()?.documentos || [];
+      const rmDoc = normDocs.find((d) => d.nombreOriginal.toLowerCase().includes('rm'));
+      if (rmDoc) rmSugerida = rmDoc.nombreOriginal;
+    }
+
+    this.rg001Data.set({
+      nroResolucionConeau: reg?.nroResolucionConeau || '',
+      fechaInicio: fechaIni,
+      fechaCierre: fechaCie,
+      fechaLimitePresentacionConeau: fechaLim,
+      rmEstandares: rmSugerida,
+      areaDisciplinaria: reg?.areaDisciplinaria || 'Informática / Sistemas',
+      modalidadCarrera: reg?.modalidadCarrera === 'DISTANCIA' ? 'A_DISTANCIA' : reg?.modalidadCarrera || 'PRESENCIAL',
+      estadoCarrera: reg?.estadoCarrera || conv.tipoProceso || 'EN_FUNCIONAMIENTO',
+      faseEvaluacion: reg?.faseEvaluacion || 'PRIMERA_FASE',
+      observaciones: reg?.observaciones || '',
+    });
+
+    this.fechaLimiteConeauPlan.set(fechaLim);
+
+    // Cargar cronograma de actividades
+    const actsPlan = plan?.actividades || [];
+    const existentes = actsPlan.filter((a) => a.numeroOrden >= 3);
+    if (existentes.length >= 10) {
+      const items: ItemActividadPlanRequest[] = existentes
+        .sort((a, b) => a.numeroOrden - b.numeroOrden)
+        .map((a) => ({
+          numeroOrden: a.numeroOrden,
+          codigoActividad: a.codigoActividad,
+          nombre: a.nombre,
+          hoja: a.hoja || 'INFO',
+          fechaInicioEstimada: a.fechaInicioEstimada || fechaIni,
+          fechaFinEstimada: a.fechaFinEstimada || fechaLim,
+          responsable: a.responsable || 'Área de Evaluación y Acreditación (AEA)',
+          prioridad: a.prioridad || 'MEDIA',
+        }));
+      this.cronogramaActividades.set(items);
+    } else {
+      this.cargandoPlantillaPlan.set(true);
+      this.convocatoriaService.getPlantillaPlanTrabajo(conv.id).subscribe({
+        next: (plantilla) => {
+          const pItems = plantilla.actividades ?? [
+            ...(plantilla.actividadesInfo ?? []),
+            ...(plantilla.actividadesConeau ?? []),
+          ];
+          const items: ItemActividadPlanRequest[] = pItems.map((item, idx) => ({
+            numeroOrden: item.numeroOrden ?? item.ordenSugerido ?? idx + 3,
+            codigoActividad: item.codigoActividad,
+            nombre: item.nombre,
+            hoja: item.hoja,
+            fechaInicioEstimada: fechaIni,
+            fechaFinEstimada: fechaLim,
+            responsable: item.responsableSugerido || 'Área de Evaluación y Acreditación (AEA)',
+            prioridad: item.prioridadSugerida || 'MEDIA',
+          }));
+          this.cronogramaActividades.set(items);
+          this.cargandoPlantillaPlan.set(false);
+        },
+        error: () => this.cargandoPlantillaPlan.set(false),
+      });
+    }
+  }
+
+  actualizarCampoRg001(campo: keyof GuardarRg001Request, valor: any): void {
+    this.rg001Data.update((prev) => ({
+      ...prev,
+      [campo]: valor,
+    }));
+  }
+
+  actualizarActividadCronograma(indexEnFiltradas: number, campo: keyof ItemActividadPlanRequest, valor: any): void {
+    const act = this.cronogramaActividadesFiltradas()[indexEnFiltradas];
+    if (!act) return;
+    const indexReal = this.cronogramaActividades().findIndex((a) => a.codigoActividad === act.codigoActividad);
+    if (indexReal === -1) return;
+    this.cronogramaActividades.update((prev) => {
+      const clon = [...prev];
+      clon[indexReal] = {
+        ...clon[indexReal],
+        [campo]: valor,
+      };
+      return clon;
+    });
+  }
+
+  cambiarFiltroHojaPlan(hoja: 'TODAS' | 'INFO' | 'CONEAU'): void {
+    this.filtroHojaPlan.set(hoja);
+  }
+
+  guardarRg001Borrador(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    this.guardandoRg001Borrador.set(true);
+    this.convocatoriaService.guardarRg001Borrador(c.id, this.rg001Data()).subscribe({
+      next: (regActualizado) => {
+        this.guardandoRg001Borrador.set(false);
+        this.convocatoria.update((prev) => prev ? { ...prev, registroConvocatoria: regActualizado } : null);
+        this.bannerExitoPlan.set('El borrador del Formulario RG-001 ha sido guardado exitosamente.');
+      },
+      error: (err) => {
+        this.guardandoRg001Borrador.set(false);
+        alert(err?.error?.error || 'No fue posible guardar el borrador del Formulario RG-001.');
+      },
+    });
+  }
+
+  enviarRg001(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    const data = this.rg001Data();
+    if (!data.rmEstandares || !data.rmEstandares.trim()) {
+      alert('La Resolución Ministerial que fija los estándares (RM Estándares) es requerida.');
+      return;
+    }
+    if (!data.fechaLimitePresentacionConeau) {
+      alert('La Fecha Límite de Presentación ante CONEAU es requerida.');
+      return;
+    }
+    this.enviandoRg001.set(true);
+    this.convocatoriaService.enviarRg001(c.id, data).subscribe({
+      next: (regActualizado) => {
+        this.enviandoRg001.set(false);
+        this.convocatoria.update((prev) => prev ? { ...prev, registroConvocatoria: regActualizado } : null);
+        this.bannerExitoPlan.set('El Formulario RG-001 ha sido enviado formalmente. Ahora solo puede ser modificado por usuarios AEA.');
+      },
+      error: (err) => {
+        this.enviandoRg001.set(false);
+        alert(err?.error?.error || 'No fue posible enviar el Formulario RG-001.');
+      },
+    });
+  }
+
+  guardarPlanTrabajoBorrador(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    this.guardandoPlanBorrador.set(true);
+    const req: GuardarCronogramaPlanRequest = {
+      fechaLimiteConeau: this.fechaLimiteConeauPlan() || this.rg001Data().fechaLimitePresentacionConeau,
+      actividades: this.cronogramaActividades(),
+    };
+    this.convocatoriaService.guardarPlanTrabajoBorrador(c.id, req).subscribe({
+      next: (planActualizado) => {
+        this.guardandoPlanBorrador.set(false);
+        this.planTrabajo.set(planActualizado);
+        this.bannerExitoPlan.set('El borrador del Plan de Trabajo (PT-001) ha sido guardado exitosamente.');
+      },
+      error: (err) => {
+        this.guardandoPlanBorrador.set(false);
+        alert(err?.error?.error || 'No fue posible guardar el borrador del Plan de Trabajo.');
+      },
+    });
+  }
+
+  enviarPlanTrabajo(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    if (this.cronogramaActividades().length === 0) {
+      alert('El cronograma del Plan de Trabajo debe tener al menos una actividad.');
+      return;
+    }
+    this.enviandoPlan.set(true);
+    const req: GuardarCronogramaPlanRequest = {
+      fechaLimiteConeau: this.fechaLimiteConeauPlan() || this.rg001Data().fechaLimitePresentacionConeau,
+      actividades: this.cronogramaActividades(),
+    };
+    this.convocatoriaService.enviarPlanTrabajo(c.id, req).subscribe({
+      next: (planActualizado) => {
+        this.enviandoPlan.set(false);
+        this.planTrabajo.set(planActualizado);
+        this.bannerExitoPlan.set('El Plan de Trabajo ha sido enviado formalmente. Ahora solo puede ser modificado por usuarios AEA.');
+      },
+      error: (err) => {
+        this.enviandoPlan.set(false);
+        alert(err?.error?.error || 'No fue posible enviar el Plan de Trabajo.');
+      },
+    });
+  }
+
+  finalizarActividadElaboracionPlan(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    if (!this.puedeFinalizarActividadPlan()) {
+      alert('Para finalizar la actividad, tanto el Formulario RG-001 como el Plan de Trabajo deben estar en estado ENVIADO.');
+      return;
+    }
+    this.finalizandoActividadPlan.set(true);
+    this.convocatoriaService.finalizarActividadPlanTrabajo(c.id).subscribe({
+      next: (detalleActualizado) => {
+        this.finalizandoActividadPlan.set(false);
+        this.convocatoria.set(detalleActualizado);
+        this.bannerExitoPlan.set('¡Actividad Finalizada! La elaboración del Plan de Trabajo y Formulario RG-001 ha quedado formalmente completada.');
+        this.cargarDatos(c.id);
+      },
+      error: (err) => {
+        this.finalizandoActividadPlan.set(false);
+        alert(err?.error?.error || 'No fue posible finalizar la actividad.');
+      },
+    });
   }
 
   formatearEstadoSolicitud(estado?: string | null): string {

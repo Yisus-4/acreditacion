@@ -19,6 +19,7 @@ public final class PlanTrabajo {
     private final String codigo;
     private final TipoPlanTrabajo tipo;
     private EstadoPlanTrabajo estado;
+    private String estadoEnvio = "BORRADOR";
     private final Instant creadoEn;
     private Instant actualizadoEn;
     private final List<ActividadPlanTrabajo> actividades = new ArrayList<>();
@@ -49,7 +50,21 @@ public final class PlanTrabajo {
                                         Instant creadoEn,
                                         Instant actualizadoEn,
                                         List<ActividadPlanTrabajo> actividades) {
-        return new PlanTrabajo(
+        return rehydrate(
+                id, procesoId, codigo, tipo, estado, "BORRADOR", creadoEn, actualizadoEn, actividades
+        );
+    }
+
+    public static PlanTrabajo rehydrate(UUID id,
+                                        UUID procesoId,
+                                        String codigo,
+                                        TipoPlanTrabajo tipo,
+                                        EstadoPlanTrabajo estado,
+                                        String estadoEnvio,
+                                        Instant creadoEn,
+                                        Instant actualizadoEn,
+                                        List<ActividadPlanTrabajo> actividades) {
+        PlanTrabajo plan = new PlanTrabajo(
                 id,
                 procesoId,
                 codigo,
@@ -59,6 +74,8 @@ public final class PlanTrabajo {
                 actualizadoEn,
                 actividades
         );
+        plan.setEstadoEnvio(estadoEnvio);
+        return plan;
     }
 
     public PlanTrabajo(UUID id,
@@ -447,6 +464,61 @@ public final class PlanTrabajo {
 
     public EstadoPlanTrabajo getEstado() {
         return estado;
+    }
+
+    public String getEstadoEnvio() {
+        return estadoEnvio != null ? estadoEnvio : "BORRADOR";
+    }
+
+    public void setEstadoEnvio(String estadoEnvio) {
+        this.estadoEnvio = estadoEnvio != null ? estadoEnvio : "BORRADOR";
+    }
+
+    public void marcarComoBorrador() {
+        this.estadoEnvio = "BORRADOR";
+        this.actualizadoEn = Instant.now();
+    }
+
+    public void marcarComoEnviado() {
+        this.estadoEnvio = "ENVIADO";
+        this.actualizadoEn = Instant.now();
+    }
+
+    public boolean isEnviado() {
+        return "ENVIADO".equalsIgnoreCase(this.estadoEnvio);
+    }
+
+    public void guardarCronograma(List<ActividadPlanTrabajo> cronograma,
+                                  LocalDate fechaLimiteConeau,
+                                  boolean enviar) {
+        if (this.estado != EstadoPlanTrabajo.ACTIVO) {
+            throw new DomainValidationException("No se puede modificar el cronograma en un plan finalizado");
+        }
+        establecerCronogramaTentativo(cronograma, fechaLimiteConeau, null);
+        this.estadoEnvio = enviar ? "ENVIADO" : "BORRADOR";
+        this.actualizadoEn = Instant.now();
+    }
+
+    public void finalizarActividadElaboracionPlan(UUID usuarioId) {
+        if (this.estado != EstadoPlanTrabajo.ACTIVO) {
+            throw new DomainValidationException("No se puede finalizar la actividad en un plan finalizado");
+        }
+        Optional<ActividadPlanTrabajo> act2Opt = this.actividades.stream()
+                .filter(a -> ActividadPlanTrabajo.CODIGO_ACT_02.equals(a.getCodigoActividad()))
+                .findFirst();
+
+        ActividadPlanTrabajo act2;
+        if (act2Opt.isPresent()) {
+            act2 = act2Opt.get();
+        } else {
+            act2 = ActividadPlanTrabajo.crearActividadElaborarPlan(this.id);
+            this.actividades.add(act2);
+        }
+
+        if (usuarioId != null && act2.getEstado() != EstadoActividad.COMPLETADA) {
+            act2.completar(usuarioId);
+        }
+        this.actualizadoEn = Instant.now();
     }
 
     public Instant getCreadoEn() {

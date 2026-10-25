@@ -9,6 +9,15 @@ public record PlanTrabajoResponse(
         String codigo,
         String tipo,
         String estado,
+        String estadoEnvio,
         List<ActividadDetalleResponse> actividades
 ) {
+    public PlanTrabajoResponse(UUID id,
+                               UUID procesoId,
+                               String codigo,
+                               String tipo,
+                               String estado,
+                               List<ActividadDetalleResponse> actividades) {
+        this(id, procesoId, codigo, tipo, estado, "BORRADOR", actividades);
+    }
 }

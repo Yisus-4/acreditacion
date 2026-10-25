@@ -17,9 +17,42 @@ public record RegistroConvocatoriaResponse(
         String faseEvaluacion,
         LocalDate fechaLimitePresentacionConeau,
         LocalDate fechaFormalizacionElectronica,
+        String estadoRg001,
         Instant creadoEn,
         Instant actualizadoEn
 ) {
+    public RegistroConvocatoriaResponse(UUID id,
+                                       String nroResolucionConeau,
+                                       LocalDate fechaInicio,
+                                       LocalDate fechaCierre,
+                                       String observaciones,
+                                       String rmEstandares,
+                                       String areaDisciplinaria,
+                                       String modalidadCarrera,
+                                       String estadoCarrera,
+                                       String faseEvaluacion,
+                                       LocalDate fechaLimitePresentacionConeau,
+                                       LocalDate fechaFormalizacionElectronica,
+                                       Instant creadoEn,
+                                       Instant actualizadoEn) {
+        this(
+                id,
+                nroResolucionConeau,
+                fechaInicio,
+                fechaCierre,
+                observaciones,
+                rmEstandares,
+                areaDisciplinaria,
+                modalidadCarrera,
+                estadoCarrera,
+                faseEvaluacion,
+                fechaLimitePresentacionConeau,
+                fechaFormalizacionElectronica,
+                "BORRADOR",
+                creadoEn,
+                actualizadoEn
+        );
+    }
     public RegistroConvocatoriaResponse(UUID id,
                                        String nroResolucionConeau,
                                        LocalDate fechaInicio,

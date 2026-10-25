@@ -339,6 +339,26 @@
         <span class="tab-label">Formalización y Normativa</span>
       </button>
 
+      <button
+        type="button"
+        role="tab"
+        class="tab-nav-btn"
+        [class.active]="tabActiva() === 'PLAN_TRABAJO'"
+        [attr.aria-selected]="tabActiva() === 'PLAN_TRABAJO'"
+        (click)="seleccionarTab('PLAN_TRABAJO')"
+      >
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4" />
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg>
+        <span class="tab-label">Plan de Trabajo y RG-001</span>
+        @if (!planTrabajoDesbloqueado()) {
+          <span class="badge-tab-bloqueada">Bloqueada</span>
+        } @else if (actividadPlanFinalizada()) {
+          <span class="badge-tab-finalizada">Completada</span>
+        }
+      </button>
+
       @if (canManage()) {
         <button
           type="button"
@@ -702,6 +722,531 @@
             ></app-normativa-detalle>
           </div>
         </section>
+      </div>
+    }
+
+    <!-- PESTAÑA: PLAN DE TRABAJO (PT-001) Y FORMULARIO RG-001 -->
+    @if (tabActiva() === 'PLAN_TRABAJO') {
+      <div class="plan-trabajo-rg001-unificado">
+        @let ft = fichaFt012();
+
+        @if (!planTrabajoDesbloqueado()) {
+          <!-- VISTA ACTIVIDAD BLOQUEADA -->
+          <div class="card panel-actividad-bloqueada">
+            <div class="bloqueo-header">
+              <div class="icono-bloqueo-box">
+                <svg class="icon-svg-bloqueo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </div>
+              <div class="bloqueo-textos">
+                <div class="bloqueo-etiqueta-superior">Condición Institucional Previa</div>
+                <h2 class="bloqueo-titulo">Actividad Bloqueada: Elaboración del Plan de Trabajo y RG-001</h2>
+                <p class="bloqueo-descripcion">
+                  Para acceder a la carga del Formulario RG-001 y del cronograma del Plan de Trabajo (PT-001),
+                  deben cumplirse previamente los siguientes dos requisitos obligatorios en la etapa de Formalización:
+                </p>
+              </div>
+            </div>
+
+            <div class="requisitos-bloqueo-grid mt-md">
+              <div class="req-bloqueo-card" [class.req-cumplido]="ft.estado === 'REMITIDA_POR_DC' || ft.estado === 'FORMALIZADA_EN_CONEAU' || ft.remitidoEn">
+                <div class="req-icono">
+                  @if (ft.estado === 'REMITIDA_POR_DC' || ft.estado === 'FORMALIZADA_EN_CONEAU' || ft.remitidoEn) {
+                    <svg class="icon-svg-ok" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                  } @else {
+                    <svg class="icon-svg-pend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                  }
+                </div>
+                <div class="req-info">
+                  <h4 class="req-titulo">1. Ficha Oficial de Formalización (FT-012)</h4>
+                  <p class="req-detalle">La Dirección de Carrera debe completar y remitir la ficha oficial a AEA.</p>
+                  <span class="badge-req-estado">{{ formatearEstadoFt012(ft.estado) }}</span>
+                </div>
+              </div>
+
+              <div class="req-bloqueo-card" [class.req-cumplido]="normativaDetalle()?.estado === 'COMPLETADA'">
+                <div class="req-icono">
+                  @if (normativaDetalle()?.estado === 'COMPLETADA') {
+                    <svg class="icon-svg-ok" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                  } @else {
+                    <svg class="icon-svg-pend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                  }
+                </div>
+                <div class="req-info">
+                  <h4 class="req-titulo">2. Normativa de la Carrera Verificada</h4>
+                  <p class="req-detalle">Los documentos probatorios de la normativa deben ser verificados y aprobados por la AEA.</p>
+                  <span class="badge-req-estado">{{ formatearEstadoSolicitud(normativaDetalle()?.estado) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="bloqueo-footer mt-lg">
+              <button type="button" class="btn-primario-accion" (click)="seleccionarTab('ACTIVIDADES')">
+                &larr; Ir a Formalización y Normativa
+              </button>
+            </div>
+          </div>
+        } @else {
+          <!-- VISTA ACTIVIDAD DESBLOQUEADA: FORMULARIO RG-001 Y PLAN DE TRABAJO -->
+          <div class="plan-trabajo-desbloqueado-seccion">
+
+            @if (actividadPlanFinalizada()) {
+              <div class="banner-actividad-finalizada-superior mb-md">
+                <svg class="icon-svg-ok" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <div class="banner-actividad-textos">
+                  <strong>Actividad Finalizada: Elaboración del Plan de Trabajo y Formulario RG-001</strong>
+                  <span>El cronograma institucional del Plan de Trabajo y los metadatos del Formulario RG-001 se encuentran formalmente completados y vigentes.</span>
+                </div>
+              </div>
+            }
+
+            <!-- ============================================================= -->
+            <!-- BLOQUE 1: [carga formulario rg-001]                           -->
+            <!-- ============================================================= -->
+            <section class="card seccion-bloque-rg001">
+              <div class="bloque-header-principal">
+                <div class="header-titulo-estado">
+                  <h2 class="bloque-titulo-nombre">[carga formulario rg-001] Formulario Oficial RG-001</h2>
+                  <span
+                    class="badge-estado-envio"
+                    [class.badge-enviado]="esRg001Enviado()"
+                    [class.badge-borrador]="!esRg001Enviado()"
+                  >
+                    {{ esRg001Enviado() ? 'ENVIADO' : 'BORRADOR' }}
+                  </span>
+                </div>
+                <p class="bloque-desc-texto">
+                  Metadatos institucionales y de la carrera requeridos para el Registro de Convocatoria CONEAU (RG-001).
+                </p>
+              </div>
+
+              @if (esRg001Enviado() && !canManage()) {
+                <div class="alerta-solo-lectura-institucional">
+                  <svg class="icon-svg-sm" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                  </svg>
+                  <span>El formulario RG-001 ha sido enviado formalmente. Solo el personal del Área de Evaluación y Acreditación (AEA) está facultado para modificar estos datos.</span>
+                </div>
+              }
+
+              <div class="card-inner mt-md">
+                <div class="form-row-grid-3">
+                  <div class="campo-form">
+                    <label class="label-inst">N° de Resolución CONEAU de Convocatoria</label>
+                    <input
+                      type="text"
+                      class="input-inst"
+                      [disabled]="!puedeEditarRg001()"
+                      placeholder="Ej: RESFC-2024-123-APN-CONEAU#ME"
+                      [ngModel]="rg001Data().nroResolucionConeau"
+                      (ngModelChange)="actualizarCampoRg001('nroResolucionConeau', $event)"
+                    />
+                  </div>
+
+                  <div class="campo-form">
+                    <label class="label-inst">Resolución Ministerial (RM Estándares) *</label>
+                    <input
+                      type="text"
+                      class="input-inst"
+                      [disabled]="!puedeEditarRg001()"
+                      placeholder="Ej: RM N° 1254/2018"
+                      [ngModel]="rg001Data().rmEstandares"
+                      (ngModelChange)="actualizarCampoRg001('rmEstandares', $event)"
+                    />
+                  </div>
+
+                  <div class="campo-form">
+                    <label class="label-inst">Área Disciplinaria *</label>
+                    <select
+                      class="input-inst"
+                      [disabled]="!puedeEditarRg001()"
+                      [ngModel]="rg001Data().areaDisciplinaria"
+                      (ngModelChange)="actualizarCampoRg001('areaDisciplinaria', $event)"
+                    >
+                      @for (area of areasDisciplinariasSugeridas; track area) {
+                        <option [value]="area">{{ area }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="campo-form">
+                    <label class="label-inst">Modalidad de la Carrera *</label>
+                    <select
+                      class="input-inst"
+                      [disabled]="!puedeEditarRg001()"
+                      [ngModel]="rg001Data().modalidadCarrera"
+                      (ngModelChange)="actualizarCampoRg001('modalidadCarrera', $event)"
+                    >
+                      <option value="PRESENCIAL">Presencial</option>
+                      <option value="A_DISTANCIA">A distancia</option>
+                    </select>
+                  </div>
+
+                  <div class="campo-form">
+                    <label class="label-inst">Estado de la Carrera *</label>
+                    <select
+                      class="input-inst"
+                      [disabled]="!puedeEditarRg001()"
+                      [ngModel]="rg001Data().estadoCarrera"
+                      (ngModelChange)="actualizarCampoRg001('estadoCarrera', $event)"
+                    >
+                      <option value="EN_FUNCIONAMIENTO">En Funcionamiento</option>
+                      <option value="NUEVA">Nueva</option>
+                    </select>
+                  </div>
+
+                  <div class="campo-form">
+                    <label class="label-inst">Fase de Evaluación *</label>
+                    <select
+                      class="input-inst"
+                      [disabled]="!puedeEditarRg001()"
+                      [ngModel]="rg001Data().faseEvaluacion"
+                      (ngModelChange)="actualizarCampoRg001('faseEvaluacion', $event)"
+                    >
+                      <option value="PRIMERA_FASE">Primera Fase</option>
+                      <option value="SEGUNDA_FASE">Segunda Fase</option>
+                      <option value="NUEVO_CICLO">Nuevo Ciclo</option>
+                      <option value="SEGUIMIENTO">Seguimiento</option>
+                    </select>
+                  </div>
+
+                  <div class="campo-form">
+                    <label class="label-inst">Fecha Límite Presentación CONEAU *</label>
+                    <input
+                      type="date"
+                      class="input-inst"
+                      [disabled]="!puedeEditarRg001()"
+                      [ngModel]="rg001Data().fechaLimitePresentacionConeau"
+                      (ngModelChange)="actualizarCampoRg001('fechaLimitePresentacionConeau', $event)"
+                    />
+                  </div>
+
+                  <div class="campo-form">
+                    <label class="label-inst">Fecha de Inicio de Convocatoria</label>
+                    <input
+                      type="date"
+                      class="input-inst"
+                      [disabled]="!puedeEditarRg001()"
+                      [ngModel]="rg001Data().fechaInicio"
+                      (ngModelChange)="actualizarCampoRg001('fechaInicio', $event)"
+                    />
+                  </div>
+
+                  <div class="campo-form">
+                    <label class="label-inst">Fecha de Cierre de Convocatoria</label>
+                    <input
+                      type="date"
+                      class="input-inst"
+                      [disabled]="!puedeEditarRg001()"
+                      [ngModel]="rg001Data().fechaCierre"
+                      (ngModelChange)="actualizarCampoRg001('fechaCierre', $event)"
+                    />
+                  </div>
+                </div>
+
+                <div class="campo-form mt-md">
+                  <label class="label-inst">Observaciones Institucionales RG-001</label>
+                  <textarea
+                    rows="2"
+                    class="textarea-inst"
+                    [disabled]="!puedeEditarRg001()"
+                    placeholder="Observaciones de la carrera o de la convocatoria..."
+                    [ngModel]="rg001Data().observaciones"
+                    (ngModelChange)="actualizarCampoRg001('observaciones', $event)"
+                  ></textarea>
+                </div>
+
+                @if (puedeEditarRg001()) {
+                  <div class="acciones-form-bar mt-md">
+                    <button
+                      type="button"
+                      class="btn-secundario-accion"
+                      [disabled]="guardandoRg001Borrador()"
+                      (click)="guardarRg001Borrador()"
+                    >
+                      {{ guardandoRg001Borrador() ? 'Guardando...' : 'Guardar Borrador RG-001' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-primario-accion"
+                      [disabled]="enviandoRg001()"
+                      (click)="enviarRg001()"
+                    >
+                      {{ enviandoRg001() ? 'Enviando...' : 'Enviar Formulario RG-001' }}
+                    </button>
+                  </div>
+                }
+              </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- BLOQUE 2: [cargar plan de trabajo]                            -->
+            <!-- ============================================================= -->
+            <section class="card seccion-bloque-plantrabajo mt-lg">
+              <div class="bloque-header-principal">
+                <div class="header-titulo-estado">
+                  <h2 class="bloque-titulo-nombre">[cargar plan de trabajo] Plan de Trabajo (PT-001)</h2>
+                  <span
+                    class="badge-estado-envio"
+                    [class.badge-enviado]="esPlanEnviado()"
+                    [class.badge-borrador]="!esPlanEnviado()"
+                  >
+                    {{ esPlanEnviado() ? 'ENVIADO' : 'BORRADOR' }}
+                  </span>
+                </div>
+                <p class="bloque-desc-texto">
+                  Cronograma tentativo de actividades para el proceso de acreditación de la carrera (Hoja INFO y Hoja CONEAU).
+                </p>
+              </div>
+
+              @if (esPlanEnviado() && !canManage()) {
+                <div class="alerta-solo-lectura-institucional">
+                  <svg class="icon-svg-sm" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                  </svg>
+                  <span>El Plan de Trabajo ha sido enviado formalmente. Solo el personal del Área de Evaluación y Acreditación (AEA) está facultado para modificar el cronograma.</span>
+                </div>
+              }
+
+              <div class="card-inner mt-md">
+                <div class="supervision-toolbar">
+                  <div class="tab-filters">
+                    <button
+                      type="button"
+                      class="tab-btn"
+                      [class.active]="filtroHojaPlan() === 'TODAS'"
+                      (click)="cambiarFiltroHojaPlan('TODAS')"
+                    >
+                      Todas <span class="tab-counter">{{ conteoPlanTotal() }}</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="tab-btn"
+                      [class.active]="filtroHojaPlan() === 'INFO'"
+                      (click)="cambiarFiltroHojaPlan('INFO')"
+                    >
+                      Hoja INFO <span class="tab-counter">{{ conteoPlanInfo() }}</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="tab-btn"
+                      [class.active]="filtroHojaPlan() === 'CONEAU'"
+                      (click)="cambiarFiltroHojaPlan('CONEAU')"
+                    >
+                      Hoja CONEAU <span class="tab-counter">{{ conteoPlanConeau() }}</span>
+                    </button>
+                  </div>
+
+                  <div class="campo-fecha-limite-inline">
+                    <label class="label-inst-sm">Fecha Límite CONEAU:</label>
+                    <input
+                      type="date"
+                      class="input-inst-sm"
+                      [disabled]="!puedeEditarPlan()"
+                      [ngModel]="fechaLimiteConeauPlan()"
+                      (ngModelChange)="fechaLimiteConeauPlan.set($event)"
+                    />
+                  </div>
+                </div>
+
+                @if (cargandoPlantillaPlan()) {
+                  <div class="loading-state-sm">
+                    <span class="spinner-sm"></span>
+                    <span>Cargando actividades sugeridas del Plan de Trabajo...</span>
+                  </div>
+                } @else {
+                  <div class="table-responsive mt-md">
+                    <table class="table-cronograma-plan">
+                      <thead>
+                        <tr>
+                          <th class="col-num">N°</th>
+                          <th class="col-cod">Código</th>
+                          <th class="col-hoja">Hoja</th>
+                          <th>Actividad</th>
+                          <th class="col-fecha">Inicio Estimado</th>
+                          <th class="col-fecha">Fin Estimado</th>
+                          <th class="col-resp">Responsable</th>
+                          <th class="col-prio">Prioridad</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (act of cronogramaActividadesFiltradas(); track act.codigoActividad; let idx = $index) {
+                          <tr>
+                            <td class="col-num">{{ act.numeroOrden }}</td>
+                            <td class="col-cod"><code>{{ act.codigoActividad }}</code></td>
+                            <td class="col-hoja">
+                              <span class="badge-hoja" [class.badge-hoja-coneau]="act.hoja === 'CONEAU'">
+                                {{ act.hoja }}
+                              </span>
+                            </td>
+                            <td class="col-nombre">{{ act.nombre }}</td>
+                            <td class="col-fecha">
+                              <input
+                                type="date"
+                                class="input-inst-cell"
+                                [disabled]="!puedeEditarPlan()"
+                                [ngModel]="act.fechaInicioEstimada"
+                                (ngModelChange)="actualizarActividadCronograma(idx, 'fechaInicioEstimada', $event)"
+                              />
+                            </td>
+                            <td class="col-fecha">
+                              <input
+                                type="date"
+                                class="input-inst-cell"
+                                [disabled]="!puedeEditarPlan()"
+                                [ngModel]="act.fechaFinEstimada"
+                                (ngModelChange)="actualizarActividadCronograma(idx, 'fechaFinEstimada', $event)"
+                              />
+                            </td>
+                            <td class="col-resp">
+                              <select
+                                class="select-inst-cell"
+                                [disabled]="!puedeEditarPlan()"
+                                [ngModel]="act.responsable"
+                                (ngModelChange)="actualizarActividadCronograma(idx, 'responsable', $event)"
+                              >
+                                @for (rol of rolesDisponibles; track rol) {
+                                  <option [value]="rol">{{ rol }}</option>
+                                }
+                              </select>
+                            </td>
+                            <td class="col-prio">
+                              <select
+                                class="select-inst-cell"
+                                [disabled]="!puedeEditarPlan()"
+                                [ngModel]="act.prioridad"
+                                (ngModelChange)="actualizarActividadCronograma(idx, 'prioridad', $event)"
+                              >
+                                <option value="ALTA">Alta</option>
+                                <option value="MEDIA">Media</option>
+                                <option value="BAJA">Baja</option>
+                              </select>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+
+                  @if (puedeEditarPlan()) {
+                    <div class="acciones-form-bar mt-md">
+                      <button
+                        type="button"
+                        class="btn-secundario-accion"
+                        [disabled]="guardandoPlanBorrador()"
+                        (click)="guardarPlanTrabajoBorrador()"
+                      >
+                        {{ guardandoPlanBorrador() ? 'Guardando...' : 'Guardar Borrador del Plan' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-primario-accion"
+                        [disabled]="enviandoPlan()"
+                        (click)="enviarPlanTrabajo()"
+                      >
+                        {{ enviandoPlan() ? 'Enviando...' : 'Enviar Plan de Trabajo' }}
+                      </button>
+                    </div>
+                  }
+                }
+              </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- BLOQUE 3: Finalizar Actividad (cuando ambos fueron enviados)  -->
+            <!-- ============================================================= -->
+            <section class="card seccion-bloque-finalizar mt-lg">
+              <div class="bloque-header-principal">
+                <h2 class="bloque-titulo-nombre">Finalización de la Actividad: Elaboración del Plan de Trabajo y RG-001</h2>
+                <p class="bloque-desc-texto">
+                  Una vez enviados tanto el Formulario RG-001 como el Plan de Trabajo (PT-001), podrá dar por concluida formalmente la actividad.
+                </p>
+              </div>
+
+              <div class="card-inner mt-md">
+                <div class="requisitos-finalizacion-grid">
+                  <div class="requisito-item" [class.requisito-cumplido]="esRg001Enviado()">
+                    <div class="requisito-check">
+                      @if (esRg001Enviado()) {
+                        <svg class="icon-svg-ok" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                      } @else {
+                        <span class="dot-incompleto"></span>
+                      }
+                    </div>
+                    <div class="requisito-texto">
+                      <strong>Formulario RG-001:</strong>
+                      <span>{{ esRg001Enviado() ? 'Enviado formalmente' : 'Pendiente de envío (Guardado como Borrador o sin completar)' }}</span>
+                    </div>
+                  </div>
+
+                  <div class="requisito-item" [class.requisito-cumplido]="esPlanEnviado()">
+                    <div class="requisito-check">
+                      @if (esPlanEnviado()) {
+                        <svg class="icon-svg-ok" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                      } @else {
+                        <span class="dot-incompleto"></span>
+                      }
+                    </div>
+                    <div class="requisito-texto">
+                      <strong>Plan de Trabajo (PT-001):</strong>
+                      <span>{{ esPlanEnviado() ? 'Enviado formalmente' : 'Pendiente de envío (Guardado como Borrador o sin completar)' }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="finalizar-acciones-bar mt-lg">
+                  @if (actividadPlanFinalizada()) {
+                    <div class="banner-actividad-finalizada">
+                      <svg class="icon-svg-ok" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                      </svg>
+                      <span>Actividad Finalizada. El Plan de Trabajo institucional y el RG-001 se encuentran formalmente completados y vigentes.</span>
+                    </div>
+                  } @else {
+                    <button
+                      type="button"
+                      class="btn-finalizar-actividad-troncal"
+                      [disabled]="!puedeFinalizarActividadPlan() || finalizandoActividadPlan()"
+                      (click)="finalizarActividadElaboracionPlan()"
+                    >
+                      @if (finalizandoActividadPlan()) {
+                        <span class="spinner-sm"></span>
+                        <span>Finalizando actividad...</span>
+                      } @else {
+                        <span>Finalizar Actividad</span>
+                      }
+                    </button>
+                    @if (!puedeFinalizarActividadPlan()) {
+                      <span class="ayuda-finalizar-incompleto">
+                        Debe enviar ambos formularios (RG-001 y Plan de Trabajo) para habilitar la finalización formal de la actividad.
+                      </span>
+                    }
+                  }
+                </div>
+              </div>
+            </section>
+          </div>
+        }
       </div>
     }
 

@@ -54,6 +54,9 @@ public class RegistroConvocatoriaJpaEntity {
     @Column(name = "fecha_formalizacion_electronica")
     private LocalDate fechaFormalizacionElectronica;
 
+    @Column(name = "estado_rg001", length = 30, nullable = false)
+    private String estadoRg001 = "BORRADOR";
+
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
 
@@ -165,6 +168,14 @@ public class RegistroConvocatoriaJpaEntity {
 
     public void setFechaFormalizacionElectronica(LocalDate fechaFormalizacionElectronica) {
         this.fechaFormalizacionElectronica = fechaFormalizacionElectronica;
+    }
+
+    public String getEstadoRg001() {
+        return estadoRg001;
+    }
+
+    public void setEstadoRg001(String estadoRg001) {
+        this.estadoRg001 = estadoRg001 != null ? estadoRg001 : "BORRADOR";
     }
 
     public Instant getCreadoEn() {

@@ -5,6 +5,8 @@ import com.undec.acreditacion.application.output.UserRepository;
 import com.undec.acreditacion.domain.entities.*;
 import com.undec.acreditacion.domain.ports.CarreraRepositoryPort;
 import com.undec.acreditacion.domain.ports.DocumentoAcreditacionRepositoryPort;
+import com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort;
+import com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort;
 import com.undec.acreditacion.domain.ports.RegistroConvocatoriaRepositoryPort;
 import com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort;
 import com.undec.acreditacion.infrastructure.web.dto.*;
@@ -15,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -43,6 +46,8 @@ public class ConvocatoriaController {
     private final CarreraRepositoryPort carreraRepository;
     private final DocumentoAcreditacionRepositoryPort documentoRepository;
     private final UnidadAcademicaRepositoryPort unidadAcademicaRepository;
+    private final PlanTrabajoRepositoryPort planTrabajoRepository;
+    private final ProcesoAcreditacionRepositoryPort procesoRepository;
     private final UserRepository userRepository;
 
     public ConvocatoriaController(
@@ -61,6 +66,8 @@ public class ConvocatoriaController {
             CarreraRepositoryPort carreraRepository,
             DocumentoAcreditacionRepositoryPort documentoRepository,
             UnidadAcademicaRepositoryPort unidadAcademicaRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            ProcesoAcreditacionRepositoryPort procesoRepository,
             UserRepository userRepository) {
         this.iniciarConvocatoriaUseCase = iniciarConvocatoriaUseCase;
         this.iniciarConvocatoriaEscuelaUseCase = iniciarConvocatoriaEscuelaUseCase;
@@ -77,6 +84,8 @@ public class ConvocatoriaController {
         this.carreraRepository = carreraRepository;
         this.documentoRepository = documentoRepository;
         this.unidadAcademicaRepository = unidadAcademicaRepository;
+        this.planTrabajoRepository = planTrabajoRepository;
+        this.procesoRepository = procesoRepository;
         this.userRepository = userRepository;
     }
 
@@ -317,6 +326,186 @@ public class ConvocatoriaController {
         return ResponseEntity.ok(mapearPlanTrabajoResponse(plan));
     }
 
+    @PostMapping("/{id}/rg001/borrador")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    public ResponseEntity<RegistroConvocatoriaResponse> guardarRg001Borrador(
+            @PathVariable UUID id,
+            @RequestBody GuardarRg001Request request
+    ) {
+        return guardarRg001(id, request, false);
+    }
+
+    @PostMapping("/{id}/rg001/enviar")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    public ResponseEntity<RegistroConvocatoriaResponse> enviarRg001(
+            @PathVariable UUID id,
+            @RequestBody GuardarRg001Request request
+    ) {
+        return guardarRg001(id, request, true);
+    }
+
+    private ResponseEntity<RegistroConvocatoriaResponse> guardarRg001(UUID procesoId, GuardarRg001Request request, boolean enviar) {
+        RegistroConvocatoria registro = registroRepository.findByProcesoId(procesoId)
+                .orElseThrow(() -> new com.undec.acreditacion.domain.exceptions.ResourceNotFoundException(
+                        "No se encontró el registro de convocatoria para el proceso ID: " + procesoId));
+
+        Optional<User> usuarioActualOpt = resolverUsuarioAutenticado();
+        boolean esAdminOAEA = tienePermisoGlobal(usuarioActualOpt);
+
+        if (registro.isEnviado() && !esAdminOAEA) {
+            throw new com.undec.acreditacion.domain.exceptions.DomainValidationException(
+                    "Solo el usuario del Área de Evaluación y Acreditación (AEA) puede modificar los datos del formulario RG-001 una vez enviados.");
+        }
+
+        if (request != null) {
+            FaseEvaluacion fase = null;
+            if (request.faseEvaluacion() != null && !request.faseEvaluacion().isBlank()) {
+                try {
+                    fase = FaseEvaluacion.valueOf(request.faseEvaluacion().trim());
+                } catch (IllegalArgumentException ignored) {}
+            }
+            registro.completarDatosRg001(
+                    request.fechaInicio(),
+                    request.fechaCierre(),
+                    request.estadoCarrera(),
+                    request.nroResolucionConeau(),
+                    request.rmEstandares(),
+                    request.areaDisciplinaria(),
+                    request.modalidadCarrera(),
+                    fase,
+                    request.fechaLimitePresentacionConeau()
+            );
+
+            // Sincronizar proceso si estadoCarrera cambió
+            if (request.estadoCarrera() != null && !request.estadoCarrera().isBlank()) {
+                try {
+                    TipoProcesoAcreditacion nuevoTipo = TipoProcesoAcreditacion.valueOf(request.estadoCarrera().trim().toUpperCase());
+                    procesoRepository.findById(procesoId).ifPresent(p -> {
+                        if (p.getTipoProceso() != nuevoTipo) {
+                            p.actualizarTipoProceso(nuevoTipo);
+                            procesoRepository.save(p);
+                        }
+                    });
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+
+        if (enviar) {
+            registro.marcarComoEnviado();
+        } else {
+            registro.marcarComoBorrador();
+        }
+        RegistroConvocatoria guardado = registroRepository.save(registro);
+
+        return ResponseEntity.ok(new RegistroConvocatoriaResponse(
+                guardado.getId(),
+                guardado.getNroResolucionConeau() != null ? guardado.getNroResolucionConeau() : "",
+                guardado.getFechaInicio(),
+                guardado.getFechaCierre(),
+                guardado.getObservaciones(),
+                guardado.getRmEstandares(),
+                guardado.getAreaDisciplinaria(),
+                guardado.getModalidadCarrera(),
+                guardado.getEstadoCarrera(),
+                guardado.getFaseEvaluacion() != null ? guardado.getFaseEvaluacion().name() : FaseEvaluacion.PRIMERA_FASE.name(),
+                guardado.getFechaLimitePresentacionConeau(),
+                guardado.getFechaFormalizacionElectronica(),
+                guardado.getEstadoRg001(),
+                guardado.getCreadoEn(),
+                guardado.getActualizadoEn()
+        ));
+    }
+
+    @PostMapping("/{id}/plan-trabajo/borrador")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    public ResponseEntity<PlanTrabajoResponse> guardarPlanTrabajoBorrador(
+            @PathVariable UUID id,
+            @RequestBody GuardarCronogramaPlanRequest request
+    ) {
+        return guardarPlanTrabajo(id, request, false);
+    }
+
+    @PostMapping("/{id}/plan-trabajo/enviar")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    public ResponseEntity<PlanTrabajoResponse> enviarPlanTrabajo(
+            @PathVariable UUID id,
+            @RequestBody GuardarCronogramaPlanRequest request
+    ) {
+        return guardarPlanTrabajo(id, request, true);
+    }
+
+    private ResponseEntity<PlanTrabajoResponse> guardarPlanTrabajo(UUID procesoId, GuardarCronogramaPlanRequest request, boolean enviar) {
+        PlanTrabajo plan = planTrabajoRepository.findByProcesoId(procesoId)
+                .orElseThrow(() -> new com.undec.acreditacion.domain.exceptions.ResourceNotFoundException(
+                        "No se encontró el plan de trabajo para el proceso ID: " + procesoId));
+
+        Optional<User> usuarioActualOpt = resolverUsuarioAutenticado();
+        boolean esAdminOAEA = tienePermisoGlobal(usuarioActualOpt);
+
+        if (plan.isEnviado() && !esAdminOAEA) {
+            throw new com.undec.acreditacion.domain.exceptions.DomainValidationException(
+                    "Solo el usuario del Área de Evaluación y Acreditación (AEA) puede modificar el Plan de Trabajo una vez enviado.");
+        }
+
+        List<ActividadPlanTrabajo> actividadesCronograma = new ArrayList<>();
+        if (request != null && request.actividades() != null) {
+            int ordenIdx = 3;
+            for (ItemActividadPlanRequest item : request.actividades()) {
+                ActividadPlanTrabajo act = ActividadPlanTrabajo.crearActividadCronograma(
+                        plan.getId(),
+                        item.numeroOrden() > 0 ? item.numeroOrden() : ordenIdx++,
+                        item.codigoActividad() != null ? item.codigoActividad().trim() : "ACT-" + ordenIdx,
+                        item.nombre() != null ? item.nombre().trim() : "Actividad",
+                        item.hoja(),
+                        item.fechaInicioEstimada(),
+                        item.fechaFinEstimada(),
+                        item.responsable() != null ? item.responsable().trim() : "Responsable",
+                        item.prioridad()
+                );
+                actividadesCronograma.add(act);
+            }
+        }
+
+        LocalDate fechaLimite = request != null ? request.fechaLimiteConeau() : null;
+        if (fechaLimite == null) {
+            fechaLimite = registroRepository.findByProcesoId(procesoId)
+                    .map(RegistroConvocatoria::getFechaLimitePresentacionConeau)
+                    .orElse(null);
+        }
+
+        plan.guardarCronograma(actividadesCronograma, fechaLimite, enviar);
+        PlanTrabajo guardado = planTrabajoRepository.save(plan);
+
+        return ResponseEntity.ok(mapearPlanTrabajoResponse(guardado));
+    }
+
+    @PostMapping("/{id}/plan-trabajo/finalizar-actividad")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    public ResponseEntity<ConvocatoriaDetalleResponse> finalizarActividadPlanTrabajo(@PathVariable UUID id) {
+        RegistroConvocatoria registro = registroRepository.findByProcesoId(id)
+                .orElseThrow(() -> new com.undec.acreditacion.domain.exceptions.ResourceNotFoundException(
+                        "No se encontró el registro de convocatoria para el proceso ID: " + id));
+        PlanTrabajo plan = planTrabajoRepository.findByProcesoId(id)
+                .orElseThrow(() -> new com.undec.acreditacion.domain.exceptions.ResourceNotFoundException(
+                        "No se encontró el plan de trabajo para el proceso ID: " + id));
+
+        if (!registro.isEnviado()) {
+            throw new com.undec.acreditacion.domain.exceptions.DomainValidationException(
+                    "No se puede finalizar la actividad: el formulario RG-001 debe ser enviado previamente.");
+        }
+        if (!plan.isEnviado()) {
+            throw new com.undec.acreditacion.domain.exceptions.DomainValidationException(
+                    "No se puede finalizar la actividad: el Plan de Trabajo debe ser enviado previamente.");
+        }
+
+        UUID usuarioId = resolverUsuarioAutenticadoId();
+        plan.finalizarActividadElaboracionPlan(usuarioId);
+        planTrabajoRepository.save(plan);
+
+        ProcesoAcreditacion proceso = consultarConvocatoriaUseCase.obtenerPorId(id);
+        return ResponseEntity.ok(construirDetalleResponse(proceso));
+    }
+
     private PlanTrabajoResponse mapearPlanTrabajoResponse(PlanTrabajo plan) {
         List<ActividadDetalleResponse> actividadesResponse = new ArrayList<>();
         for (ActividadPlanTrabajo act : plan.getActividades()) {
@@ -374,6 +563,7 @@ public class ConvocatoriaController {
                 plan.getCodigo(),
                 plan.getTipo().name(),
                 plan.getEstado().name(),
+                plan.getEstadoEnvio() != null ? plan.getEstadoEnvio() : "BORRADOR",
                 actividadesResponse
         );
     }
@@ -405,6 +595,7 @@ public class ConvocatoriaController {
                 r.getFaseEvaluacion() != null ? r.getFaseEvaluacion().name() : FaseEvaluacion.PRIMERA_FASE.name(),
                 r.getFechaLimitePresentacionConeau(),
                 r.getFechaFormalizacionElectronica(),
+                r.getEstadoRg001() != null ? r.getEstadoRg001() : "BORRADOR",
                 r.getCreadoEn(),
                 r.getActualizadoEn()
         )).orElse(null);
@@ -414,6 +605,7 @@ public class ConvocatoriaController {
                 p.getCodigo(),
                 p.getTipo().name(),
                 p.getEstado().name(),
+                p.getEstadoEnvio() != null ? p.getEstadoEnvio() : "BORRADOR",
                 p.getActividades().size()
         )).orElse(null);
 
@@ -474,6 +666,7 @@ public class ConvocatoriaController {
                 FaseEvaluacion.PRIMERA_FASE.name(),
                 null,
                 null,
+                "BORRADOR",
                 d.creadoEn(),
                 d.actualizadoEn()
         );

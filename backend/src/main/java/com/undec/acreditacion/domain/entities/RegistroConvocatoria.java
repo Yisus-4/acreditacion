@@ -22,6 +22,7 @@ public final class RegistroConvocatoria {
     private FaseEvaluacion faseEvaluacion;
     private LocalDate fechaLimitePresentacionConeau;
     private LocalDate fechaFormalizacionElectronica;
+    private String estadoRg001 = "BORRADOR";
     private final Instant creadoEn;
     private Instant actualizadoEn;
 
@@ -175,7 +176,29 @@ public final class RegistroConvocatoria {
                                                  LocalDate fechaLimitePresentacionConeau,
                                                  Instant creadoEn,
                                                  Instant actualizadoEn) {
-        return new RegistroConvocatoria(
+        return rehydrate(
+                id, procesoId, nroResolucionConeau, fechaInicio, fechaCierre, observaciones,
+                rmEstandares, areaDisciplinaria, modalidadCarrera, estadoCarrera, faseEvaluacion,
+                fechaLimitePresentacionConeau, "BORRADOR", creadoEn, actualizadoEn
+        );
+    }
+
+    public static RegistroConvocatoria rehydrate(UUID id,
+                                                 UUID procesoId,
+                                                 String nroResolucionConeau,
+                                                 LocalDate fechaInicio,
+                                                 LocalDate fechaCierre,
+                                                 String observaciones,
+                                                 String rmEstandares,
+                                                 String areaDisciplinaria,
+                                                 String modalidadCarrera,
+                                                 String estadoCarrera,
+                                                 FaseEvaluacion faseEvaluacion,
+                                                 LocalDate fechaLimitePresentacionConeau,
+                                                 String estadoRg001,
+                                                 Instant creadoEn,
+                                                 Instant actualizadoEn) {
+        RegistroConvocatoria reg = new RegistroConvocatoria(
                 id,
                 procesoId,
                 nroResolucionConeau,
@@ -191,6 +214,8 @@ public final class RegistroConvocatoria {
                 creadoEn,
                 actualizadoEn
         );
+        reg.setEstadoRg001(estadoRg001);
+        return reg;
     }
 
     public RegistroConvocatoria(UUID id,
@@ -438,6 +463,28 @@ public final class RegistroConvocatoria {
 
     public LocalDate getFechaLimitePresentacionConeau() {
         return fechaLimitePresentacionConeau;
+    }
+
+    public String getEstadoRg001() {
+        return estadoRg001 != null ? estadoRg001 : "BORRADOR";
+    }
+
+    public void setEstadoRg001(String estadoRg001) {
+        this.estadoRg001 = estadoRg001 != null ? estadoRg001 : "BORRADOR";
+    }
+
+    public boolean isEnviado() {
+        return "ENVIADO".equalsIgnoreCase(this.estadoRg001);
+    }
+
+    public void marcarComoEnviado() {
+        this.estadoRg001 = "ENVIADO";
+        this.actualizadoEn = Instant.now();
+    }
+
+    public void marcarComoBorrador() {
+        this.estadoRg001 = "BORRADOR";
+        this.actualizadoEn = Instant.now();
     }
 
     public Instant getCreadoEn() {

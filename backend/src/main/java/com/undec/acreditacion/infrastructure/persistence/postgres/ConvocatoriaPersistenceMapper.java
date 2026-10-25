@@ -61,6 +61,7 @@ public class ConvocatoriaPersistenceMapper {
                 entity.getEstadoCarrera(),
                 fase,
                 entity.getFechaLimitePresentacionConeau(),
+                entity.getEstadoRg001() != null ? entity.getEstadoRg001() : "BORRADOR",
                 entity.getCreadoEn(),
                 entity.getActualizadoEn()
         );
@@ -88,6 +89,7 @@ public class ConvocatoriaPersistenceMapper {
         entity.setFaseEvaluacion(domain.getFaseEvaluacion() != null ? domain.getFaseEvaluacion().name() : FaseEvaluacion.PRIMERA_FASE.name());
         entity.setFechaLimitePresentacionConeau(domain.getFechaLimitePresentacionConeau());
         entity.setFechaFormalizacionElectronica(domain.getFechaFormalizacionElectronica());
+        entity.setEstadoRg001(domain.getEstadoRg001());
         entity.setCreadoEn(domain.getCreadoEn());
         entity.setActualizadoEn(domain.getActualizadoEn());
         return entity;

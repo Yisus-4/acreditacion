@@ -29,6 +29,9 @@ public class PlanTrabajoJpaEntity {
     @Column(name = "estado", nullable = false, length = 50)
     private String estado;
 
+    @Column(name = "estado_envio", nullable = false, length = 30)
+    private String estadoEnvio = "BORRADOR";
+
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
 
@@ -76,6 +79,14 @@ public class PlanTrabajoJpaEntity {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public String getEstadoEnvio() {
+        return estadoEnvio;
+    }
+
+    public void setEstadoEnvio(String estadoEnvio) {
+        this.estadoEnvio = estadoEnvio != null ? estadoEnvio : "BORRADOR";
     }
 
     public Instant getCreadoEn() {

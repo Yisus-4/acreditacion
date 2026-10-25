@@ -10,6 +10,7 @@ import com.undec.acreditacion.domain.ports.CarreraRepositoryPort;
 import com.undec.acreditacion.domain.ports.DocumentoAcreditacionRepositoryPort;
 import com.undec.acreditacion.domain.ports.RegistroConvocatoriaRepositoryPort;
 import com.undec.acreditacion.infrastructure.web.dto.ElaborarPlanTrabajoRequest;
+import com.undec.acreditacion.infrastructure.web.dto.GuardarRg001Request;
 import com.undec.acreditacion.infrastructure.web.dto.IniciarConvocatoriaRequest;
 import com.undec.acreditacion.infrastructure.web.dto.ItemActividadPlanRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +52,8 @@ class ConvocatoriaControllerIntegrationTest {
     private CarreraRepositoryPort carreraRepository;
     private DocumentoAcreditacionRepositoryPort documentoRepository;
     private com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort unidadAcademicaRepository;
+    private com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort planTrabajoRepository;
+    private com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort procesoRepository;
     private UserRepository userRepository;
     private ObjectMapper objectMapper;
 
@@ -71,6 +74,8 @@ class ConvocatoriaControllerIntegrationTest {
         carreraRepository = mock(CarreraRepositoryPort.class);
         documentoRepository = mock(DocumentoAcreditacionRepositoryPort.class);
         unidadAcademicaRepository = mock(com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort.class);
+        planTrabajoRepository = mock(com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort.class);
+        procesoRepository = mock(com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort.class);
         userRepository = mock(UserRepository.class);
 
         objectMapper = new ObjectMapper();
@@ -92,6 +97,8 @@ class ConvocatoriaControllerIntegrationTest {
                 carreraRepository,
                 documentoRepository,
                 unidadAcademicaRepository,
+                planTrabajoRepository,
+                procesoRepository,
                 userRepository
         );
 
@@ -393,6 +400,72 @@ class ConvocatoriaControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("La fecha límite CONEAU no puede ser anterior a la fecha de cierre"));
+    }
+
+    @Test
+    @DisplayName("POST /api/convocatorias/{id}/rg001/borrador debe guardar metadatos en borrador")
+    void debeGuardarRg001Borrador() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        RegistroConvocatoria reg = RegistroConvocatoria.crear(
+                procesoId, "RESFC-2026-APN", LocalDate.now(), LocalDate.now().plusMonths(6), "Obs"
+        );
+        when(registroRepository.findByProcesoId(procesoId)).thenReturn(Optional.of(reg));
+        when(registroRepository.save(any(RegistroConvocatoria.class))).thenAnswer(i -> i.getArgument(0));
+
+        GuardarRg001Request request = new GuardarRg001Request(
+                "RESFC-2026-APN", LocalDate.now(), LocalDate.now().plusMonths(3),
+                LocalDate.now().plusMonths(6), "RM 1254/18", "Informática",
+                "PRESENCIAL", "EN_FUNCIONAMIENTO", "PRIMERA_FASE", "Obs actualizadas"
+        );
+
+        mockMvc.perform(post("/api/convocatorias/{id}/rg001/borrador", procesoId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estadoRg001").value("BORRADOR"))
+                .andExpect(jsonPath("$.rmEstandares").value("RM 1254/18"));
+    }
+
+    @Test
+    @DisplayName("POST /api/convocatorias/{id}/rg001/enviar debe marcar RG-001 como ENVIADO")
+    void debeEnviarRg001() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        RegistroConvocatoria reg = RegistroConvocatoria.crear(
+                procesoId, "RESFC-2026-APN", LocalDate.now(), LocalDate.now().plusMonths(6), "Obs"
+        );
+        when(registroRepository.findByProcesoId(procesoId)).thenReturn(Optional.of(reg));
+        when(registroRepository.save(any(RegistroConvocatoria.class))).thenAnswer(i -> i.getArgument(0));
+
+        GuardarRg001Request request = new GuardarRg001Request(
+                "RESFC-2026-APN", LocalDate.now(), LocalDate.now().plusMonths(3),
+                LocalDate.now().plusMonths(6), "RM 1254/18", "Informática",
+                "PRESENCIAL", "EN_FUNCIONAMIENTO", "PRIMERA_FASE", "Obs actualizadas"
+        );
+
+        mockMvc.perform(post("/api/convocatorias/{id}/rg001/enviar", procesoId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estadoRg001").value("ENVIADO"));
+    }
+
+    @Test
+    @DisplayName("POST /api/convocatorias/{id}/plan-trabajo/finalizar-actividad debe responder 400 si RG-001 o Plan no están enviados")
+    void debeFallarFinalizarActividadSiNoEstanEnviadosAmbos() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        RegistroConvocatoria reg = RegistroConvocatoria.crear(
+                procesoId, "RESFC-2026-APN", LocalDate.now(), LocalDate.now().plusMonths(6), "Obs"
+        );
+        reg.marcarComoBorrador();
+        PlanTrabajo plan = PlanTrabajo.inicializar(procesoId, "PT-001-TEST", TipoPlanTrabajo.PT_001_ACREDITACION);
+        plan.marcarComoBorrador();
+
+        when(registroRepository.findByProcesoId(procesoId)).thenReturn(Optional.of(reg));
+        when(planTrabajoRepository.findByProcesoId(procesoId)).thenReturn(Optional.of(plan));
+
+        mockMvc.perform(post("/api/convocatorias/{id}/plan-trabajo/finalizar-actividad", procesoId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("No se puede finalizar la actividad: el formulario RG-001 debe ser enviado previamente."));
     }
 
     @Test
