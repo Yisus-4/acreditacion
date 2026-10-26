@@ -40,14 +40,6 @@ public class ConsultarPlanTrabajoService implements ConsultarPlanTrabajoUseCase 
             modificado = true;
         }
 
-        // Eliminar Actividad 5 obsoleta de planes existentes
-        boolean teniaActividad05 = plan.eliminarActividadSiExiste("ACT-05-VERIFICAR-INFO-INSTITUCIONAL")
-                || plan.eliminarActividadSiExiste("1.7")
-                || plan.eliminarActividadSiExiste("información institucional precargada");
-        if (teniaActividad05) {
-            modificado = true;
-        }
-
         boolean tieneActividad06 = plan.getActividades().stream().anyMatch(PlanTrabajo::esActividadFormalizacionElectronica);
         if (!tieneActividad06) {
             ActividadPlanTrabajo actividad06 = ActividadPlanTrabajo.crearActividadFormalizacionElectronica(plan.getId());

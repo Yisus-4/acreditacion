@@ -6,13 +6,11 @@ import { NormativaService } from '../../../core/normativa/services/normativa.ser
 import {
   METADATOS_DOCUMENTOS_NORMATIVA,
   RevisarNormativaRequest,
-  SolicitarNormativaRequest,
   TipoDocumentoNormativa,
   formatearEstadoNormativa,
 } from '../../../core/normativa/models/normativa.model';
 import { BandejaCargaNormativaComponent } from '../bandeja-carga-normativa/bandeja-carga-normativa.component';
 import { HojaInfoTabularComponent } from '../hoja-info-tabular/hoja-info-tabular.component';
-import { ModalSolicitarNormativaComponent } from '../modal-solicitar-normativa/modal-solicitar-normativa.component';
 import { ModalRevisarNormativaComponent } from '../modal-revisar-normativa/modal-revisar-normativa.component';
 
 @Component({
@@ -23,7 +21,6 @@ import { ModalRevisarNormativaComponent } from '../modal-revisar-normativa/modal
     RouterLink,
     BandejaCargaNormativaComponent,
     HojaInfoTabularComponent,
-    ModalSolicitarNormativaComponent,
     ModalRevisarNormativaComponent,
   ],
   templateUrl: './normativa-detalle.component.html',
@@ -42,7 +39,6 @@ export class NormativaDetalleComponent implements OnInit, OnChanges {
   @Output() normativaActualizada = new EventEmitter<void>();
 
   readonly vistaActiva = signal<'BANDEJA' | 'HOJA_INFO'>('BANDEJA');
-  readonly modalSolicitarAbierto = signal<boolean>(false);
   readonly modalRevisarAbierto = signal<boolean>(false);
   readonly errorRevision = signal<string | null>(null);
   readonly alertMensaje = signal<{ tipo: 'success' | 'error'; texto: string } | null>(null);
@@ -109,26 +105,6 @@ export class NormativaDetalleComponent implements OnInit, OnChanges {
 
   cambiarVista(vista: 'BANDEJA' | 'HOJA_INFO'): void {
     this.vistaActiva.set(vista);
-  }
-
-  abrirModalSolicitar(): void {
-    this.modalSolicitarAbierto.set(true);
-  }
-
-  cerrarModalSolicitar(): void {
-    this.modalSolicitarAbierto.set(false);
-  }
-
-  confirmarSolicitud(request: SolicitarNormativaRequest): void {
-    this.normativaService.solicitarNormativa(this.procesoId, request).subscribe({
-      next: () => {
-        this.cerrarModalSolicitar();
-        this.mostrarAlerta('success', 'Solicitud formal de normativa iniciada con éxito.');
-      },
-      error: (err) => {
-        this.mostrarAlerta('error', err?.error?.error || 'Error al iniciar la solicitud de normativa.');
-      },
-    });
   }
 
   onSubirDocumento(event: { tipo: TipoDocumentoNormativa; archivo: File }): void {

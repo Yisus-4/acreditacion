@@ -1257,7 +1257,7 @@
                   <button
                     type="button"
                     class="btn-ajustar-plan"
-                    (click)="abrirModalElaborarPlan()"
+                    (click)="seleccionarTab('PLAN_TRABAJO')"
                   >
                     Ajustar Cronograma y RG-001
                   </button>
@@ -1606,8 +1606,8 @@
                   </p>
                   @if (canManage()) {
                     <div class="drawer-acciones-box">
-                      <button type="button" class="btn-primario-accion w-full" (click)="abrirModalElaborarPlan()">
-                        {{ actDrawer.estado === 'COMPLETADA' ? 'Ajustar Cronograma y RG-001' : 'Elaborar Cronograma Tentativo y RG-001' }}
+                      <button type="button" class="btn-primario-accion w-full" (click)="seleccionarTab('PLAN_TRABAJO'); cerrarDrawer()">
+                        {{ actDrawer.estado === 'COMPLETADA' ? 'Ajustar Cronograma y RG-001' : 'Ir a Plan de Trabajo y RG-001' }}
                       </button>
                     </div>
                   }
@@ -1660,129 +1660,6 @@
       </div>
     }
 
-    <!-- PESTAÑA 3: FICHA Y RG-001 -->
-    @if (tabActiva() === 'FICHA') {
-      <div class="info-grid">
-        <!-- Ficha CONEAU RG-001 -->
-        <div class="card">
-          <div class="card-header">
-            <h2 class="card-title">Metadatos CONEAU (RG-001)</h2>
-          </div>
-          <div class="card-body">
-            @if (c.registroConvocatoria) {
-              @let r = c.registroConvocatoria;
-              <div class="detail-row">
-                <span class="detail-label">Carrera y Nivel:</span>
-                <span class="detail-value">{{ c.carreraNombre }} ({{ c.nivel || 'GRADO' }})</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Estado de la Carrera:</span>
-                <span class="detail-value">{{ (r.estadoCarrera || c.tipoProceso) === 'EN_FUNCIONAMIENTO' ? 'En funcionamiento' : 'Nueva' }}</span>
-              </div>
-              @if ((r.estadoCarrera || c.tipoProceso) === 'EN_FUNCIONAMIENTO' || r.nroResolucionConeau) {
-                <div class="detail-row">
-                  <span class="detail-label">Resolución CONEAU:</span>
-                  <span class="detail-value font-mono">{{ r.nroResolucionConeau || '—' }}</span>
-                </div>
-              }
-              <div class="detail-row">
-                <span class="detail-label">Fecha de Inicio (CONEAU):</span>
-                <span class="detail-value">{{ r.fechaInicio | date:'dd/MM/yyyy' }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Fecha de Cierre Oficial:</span>
-                <span class="detail-value">{{ r.fechaCierre | date:'dd/MM/yyyy' }}</span>
-              </div>
-
-              @if (r.rmEstandares) {
-                <div class="detail-row">
-                  <span class="detail-label">RM Estándares:</span>
-                  <span class="detail-value font-mono">{{ r.rmEstandares }}</span>
-                </div>
-              }
-
-              @if (r.areaDisciplinaria) {
-                <div class="detail-row">
-                  <span class="detail-label">Área Disciplinaria:</span>
-                  <span class="detail-value">{{ r.areaDisciplinaria }}</span>
-                </div>
-              }
-
-              <div class="detail-row">
-                <span class="detail-label">Modalidad:</span>
-                <span class="detail-value">{{ r.modalidadCarrera === 'A_DISTANCIA' || r.modalidadCarrera === 'DISTANCIA' ? 'A distancia' : 'Presencial' }}</span>
-              </div>
-
-              @if (r.faseEvaluacion) {
-                <div class="detail-row">
-                  <span class="detail-label">Fase de Evaluación:</span>
-                  <span class="detail-value">
-                    {{ r.faseEvaluacion === 'PRIMERA_FASE' ? '1era Fase' : r.faseEvaluacion === 'SEGUNDA_FASE' ? '2da Fase' : r.faseEvaluacion === 'NUEVO_CICLO' ? 'Nuevo ciclo' : 'Seguimiento' }}
-                  </span>
-                </div>
-              }
-
-              @if (r.fechaLimitePresentacionConeau) {
-                <div class="detail-row">
-                  <span class="detail-label">Fecha Límite CONEAU:</span>
-                  <span class="detail-value font-mono text-primary font-bold">
-                    {{ r.fechaLimitePresentacionConeau | date:'dd/MM/yyyy' }}
-                  </span>
-                </div>
-              }
-
-              @if (r.fechaFormalizacionElectronica) {
-                <div class="detail-row">
-                  <span class="detail-label">Fecha Formalización Electrónica:</span>
-                  <span class="detail-value font-mono text-primary font-bold">
-                    {{ r.fechaFormalizacionElectronica | date:'dd/MM/yyyy' }}
-                  </span>
-                </div>
-              }
-
-              @if (r.observaciones) {
-                <div class="detail-row full-width">
-                  <span class="detail-label">Observaciones:</span>
-                  <p class="detail-text">{{ r.observaciones }}</p>
-                </div>
-              }
-            } @else {
-              <p class="empty-text">Sin registro RG-001 asociado.</p>
-            }
-          </div>
-        </div>
-
-        <!-- Ficha de Resumen del Plan de Trabajo -->
-        <div class="card">
-          <div class="card-header">
-            <h2 class="card-title">Plan de Trabajo Institucional</h2>
-          </div>
-          <div class="card-body">
-            @if (planTrabajo()) {
-              @let p = planTrabajo()!;
-              <div class="detail-row">
-                <span class="detail-label">Código del Plan:</span>
-                <span class="detail-value font-mono">{{ p.codigo }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Tipo:</span>
-                <span class="detail-value">{{ p.tipo }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Estado del Plan:</span>
-                <span class="badge-estado-pills completado">{{ p.estado }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Actividades Registradas:</span>
-                <span class="detail-value">{{ p.actividades.length }}</span>
-              </div>
-            } @else {
-              <p class="empty-text">Cargando datos del plan...</p>
-            }
-          </div>
-        </div>
-      </div>
-    }
   }
 }
 
@@ -1796,16 +1673,5 @@
       [actividad]="actividadSeleccionada()"
       (cerrado)="cerrarModal($event)"
     ></app-completar-actividad-modal>
-  }
-
-  <!-- Modal para Elaborar Plan de Trabajo (Actividad 3 / RG-001) -->
-  @if (modalElaborarPlanAbierto() && convocatoria()) {
-    <app-elaborar-plan-trabajo-modal
-      [procesoId]="convocatoria()!.id"
-      [convocatoria]="convocatoria()!"
-      [planTrabajo]="planTrabajo()"
-      (guardado)="cerrarModalElaborarPlan(true)"
-      (cerrado)="cerrarModalElaborarPlan(false)"
-    ></app-elaborar-plan-trabajo-modal>
   }
 </div>

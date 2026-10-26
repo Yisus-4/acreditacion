@@ -172,14 +172,6 @@
   }
 
   <!-- Modales -->
-  <app-modal-solicitar-normativa
-    [abierto]="modalSolicitarAbierto()"
-    [procesoCodigo]="procesoCodigo"
-    [carreraNombre]="carreraNombre"
-    (confirmar)="confirmarSolicitud($event)"
-    (cancelar)="cerrarModalSolicitar()"
-  ></app-modal-solicitar-normativa>
-
   <app-modal-revisar-normativa
     [abierto]="modalRevisarAbierto()"
     [procesoCodigo]="procesoCodigo"

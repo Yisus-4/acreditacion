@@ -10,16 +10,13 @@ import {
   AREAS_INFORMADAS_LABELS,
   ConvocatoriaDetalle,
   DOCUMENTACION_REMITIDA_LABELS,
-  DocumentoInteresDto,
   FichaFormalizacionFt012Dto,
-  FUENTES_DOCUMENTACION_INTERES_CATALOGO,
   GuardarCronogramaPlanRequest,
   GuardarRg001Request,
   ItemActividadPlanRequest,
   PlanTrabajoDto,
 } from '../../../core/convocatorias/models/convocatoria.model';
 import { CompletarActividadModalComponent } from '../completar-actividad-modal/completar-actividad-modal.component';
-import { ElaborarPlanTrabajoModalComponent } from '../elaborar-plan-trabajo-modal/elaborar-plan-trabajo-modal.component';
 import { NormativaDetalleComponent } from '../../normativa/normativa-detalle/normativa-detalle.component';
 import { NormativaService } from '../../../core/normativa/services/normativa.service';
 import { BadgePlazoDto, formatearEstadoNormativa } from '../../../core/normativa/models/normativa.model';
@@ -36,14 +33,6 @@ export interface SiguientePasoInfo {
   actividad: ActividadPlanTrabajoDto | null;
 }
 
-export interface EtapaProcesoInfo {
-  numero: number;
-  foco: string;
-  hoja: 'INFO' | 'CONEAU';
-  nombre: string;
-  estado: 'COMPLETADA' | 'ACTIVA' | 'PENDIENTE';
-}
-
 @Component({
   selector: 'app-convocatoria-detalle',
   standalone: true,
@@ -52,7 +41,6 @@ export interface EtapaProcesoInfo {
     FormsModule,
     RouterLink,
     CompletarActividadModalComponent,
-    ElaborarPlanTrabajoModalComponent,
     NormativaDetalleComponent,
   ],
   templateUrl: './convocatoria-detalle.component.html',
@@ -68,21 +56,19 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   private idCargadoActualmente: string | null = null;
 
   readonly today = new Date().toISOString().split('T')[0];
-  readonly fuentesInteresCatalogo = FUENTES_DOCUMENTACION_INTERES_CATALOGO;
 
   readonly convocatoria = signal<ConvocatoriaDetalle | null>(null);
   readonly planTrabajo = signal<PlanTrabajoDto | null>(null);
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
 
-  readonly tabActiva = signal<'ACTIVIDADES' | 'PLAN_TRABAJO' | 'SEGUIMIENTO' | 'FICHA'>('ACTIVIDADES');
+  readonly tabActiva = signal<'ACTIVIDADES' | 'PLAN_TRABAJO' | 'SEGUIMIENTO'>('ACTIVIDADES');
   readonly actividadFoco = signal<string>('1.1');
   private focoSeleccionadoManualmente = false;
   readonly reiniciando = signal<boolean>(false);
 
   readonly actividadSeleccionada = signal<ActividadPlanTrabajoDto | null>(null);
   readonly actividadSeleccionadaDrawer = signal<ActividadPlanTrabajoDto | null>(null);
-  readonly modalElaborarPlanAbierto = signal<boolean>(false);
   readonly bannerExitoPlan = signal<string | null>(null);
   readonly filtroHoja = signal<'TODAS' | 'INFO' | 'CONEAU'>('TODAS');
   readonly filtroEstado = signal<string>('TODOS');
@@ -123,22 +109,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     return this.carrerasSeleccionadasDe().size;
   });
 
-  // Estado Actividad 4 (Documentación de interés)
-  readonly documentosAct4 = signal<DocumentoInteresDto[]>([]);
-  readonly archivoAct4 = signal<File | null>(null);
-  readonly clasificacionAct4 = signal<string>('DOC_PROPIA_AREA');
-  readonly descripcionAct4 = signal<string>('');
-  readonly subiendoDocAct4 = signal<boolean>(false);
-  readonly fuentesSeleccionadasAct4 = signal<string[]>([
-    'DOC_PROPIA_AREA',
-    'PROCESOS_ACREDITACION_CARRERAS',
-    'EVALUACION_FUNCIONES',
-    'EVALUACION_INSTITUCIONAL',
-  ]);
-  readonly observacionesAct4 = signal<string>('');
-  readonly guardandoAct4 = signal<boolean>(false);
-
-  // Estado Actividad 5 (Formalización electrónica FT-012 + CONEAU Global ATENEA)
+  // Estado Formalización electrónica FT-012
   readonly fichaFt012 = signal<FichaFormalizacionFt012Dto>({
     procesoId: '',
     modalidadDictado: 'PRESENCIAL',
@@ -181,12 +152,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     coordinadorCaCorreo: '',
     observaciones: '',
   });
-  readonly solicitandoFt012 = signal<boolean>(false);
   readonly guardandoFt012 = signal<boolean>(false);
-  readonly fechaFormalizacionAct6 = signal<string>(new Date().toISOString().split('T')[0]);
-  readonly archivoComprobanteAct6 = signal<File | null>(null);
-  readonly observacionesFormalizacionAct6 = signal<string>('');
-  readonly formalizandoAct6 = signal<boolean>(false);
 
   readonly normativaDetalle = this.normativaService.detalle;
 
@@ -319,18 +285,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     return session.user.roleCodes.includes('ADMINISTRATOR') || session.user.roleCodes.includes('AEA');
   });
 
-  readonly esDirectorCarrera = computed(() => {
-    const session = this.auth.currentSession;
-    if (!session?.user?.roleCodes) return false;
-    return session.user.roleCodes.includes('CAREER_DIRECTOR');
-  });
-
-  readonly esDirectorEscuela = computed(() => {
-    const session = this.auth.currentSession;
-    if (!session?.user?.roleCodes) return false;
-    return session.user.roleCodes.includes('SCHOOL_DIRECTOR');
-  });
-
   readonly canConfirmarDe = computed(() => {
     const session = this.auth.currentSession;
     if (!session?.user?.roleCodes) return false;
@@ -351,11 +305,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
 
   readonly conteoTotal = computed(() => {
     return this.planTrabajo()?.actividades?.length ?? 0;
-  });
-
-  readonly conteoActividadesPendientes = computed(() => {
-    const acts = this.planTrabajo()?.actividades ?? [];
-    return acts.filter((a) => a.estado === 'PENDIENTE' || a.estado === 'EN_PROGRESO').length;
   });
 
   readonly actividadReunion = computed(() => {
@@ -395,34 +344,10 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     );
   });
 
-  readonly actividadDocumentacionInteres = computed(() => {
-    const acts = this.planTrabajo()?.actividades ?? [];
-    return (
-      acts.find(
-        (a) =>
-          a.codigoActividad === 'ACT-04-IDENTIFICAR-DOCUMENTACION-INTERES' ||
-          a.codigoActividad === '1.5' ||
-          a.nombre.toLowerCase().includes('documentación de interés')
-      ) || null
-    );
-  });
-
   readonly actividad2Completa = computed(() => {
     const actNorm = this.actividadNormativa();
     const norm = this.normativaDetalle();
     return actNorm?.estado === 'COMPLETADA' || norm?.estado === 'COMPLETADA';
-  });
-
-  readonly actividadFormalizacionElectronica = computed(() => {
-    const acts = this.planTrabajo()?.actividades ?? [];
-    return (
-      acts.find(
-        (a) =>
-          a.codigoActividad === 'ACT-06-FORMALIZACION-ELECTRONICA' ||
-          a.codigoActividad === '1.8' ||
-          a.nombre.toLowerCase().includes('formalización electrónica')
-      ) || null
-    );
   });
 
   readonly actividadesFiltradas = computed(() => {
@@ -455,70 +380,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     if (!plan) return false;
     const act2 = plan.actividades?.find((a) => a.codigoActividad === 'ACT-02-ELABORAR-PLAN-TRABAJO');
     return !act2 || act2.estado !== 'COMPLETADA';
-  });
-
-  /**
-   * 5 actividades oficiales en orden del flujo (Actividad 1 a Actividad 5):
-   * 1: Informar sobre el proceso de acreditación (1.1)
-   * 2: Gestionar normativa de la carrera (1.3)
-   * 3: Elaborar Plan de Trabajo para acreditación de carreras y RG-001 (1.2)
-   * 4: Identificar información y documentación de interés (1.5)
-   * 5: Formalización electrónica de participación en convocatoria (1.8)
-   */
-  readonly etapas = computed<EtapaProcesoInfo[]>(() => {
-    const actPlan = this.actividadElaborarPlan();
-    const act1 = this.actividadReunion();
-    const actNorm = this.actividadNormativa();
-    const act4 = this.actividadDocumentacionInteres();
-    const act5 = this.actividadFormalizacionElectronica();
-    const norm = this.normativaDetalle();
-    const ft012 = this.fichaFt012();
-
-    const planCompletado = actPlan?.estado === 'COMPLETADA' && !this.requiereElaborarPlan();
-    const act1Completa = act1?.estado === 'COMPLETADA';
-    const act2Completa = actNorm?.estado === 'COMPLETADA' || norm?.estado === 'COMPLETADA';
-    const act4Completa = act4?.estado === 'COMPLETADA';
-    const act5Completa = act5?.estado === 'COMPLETADA' || ft012?.estado === 'FORMALIZADA_EN_CONEAU';
-
-    const focoActual = this.actividadFoco();
-
-    return [
-      {
-        numero: 1,
-        foco: '1.1',
-        hoja: 'INFO',
-        nombre: 'Informar sobre el proceso de acreditación',
-        estado: act1Completa ? 'COMPLETADA' : focoActual === '1.1' ? 'ACTIVA' : 'PENDIENTE',
-      },
-      {
-        numero: 2,
-        foco: '1.3',
-        hoja: 'INFO',
-        nombre: 'Gestionar normativa de la carrera',
-        estado: act2Completa ? 'COMPLETADA' : focoActual === '1.3' ? 'ACTIVA' : 'PENDIENTE',
-      },
-      {
-        numero: 3,
-        foco: '1.2',
-        hoja: 'INFO',
-        nombre: 'Elaborar Plan de Trabajo para acreditación de carreras y RG-001',
-        estado: planCompletado ? 'COMPLETADA' : focoActual === '1.2' ? 'ACTIVA' : 'PENDIENTE',
-      },
-      {
-        numero: 4,
-        foco: '1.5',
-        hoja: 'INFO',
-        nombre: 'Identificar información y documentación de interés',
-        estado: act4Completa ? 'COMPLETADA' : focoActual === '1.5' ? 'ACTIVA' : 'PENDIENTE',
-      },
-      {
-        numero: 5,
-        foco: '1.8',
-        hoja: 'CONEAU',
-        nombre: 'Formalización electrónica de participación en convocatoria',
-        estado: act5Completa ? 'COMPLETADA' : focoActual === '1.8' ? 'ACTIVA' : 'PENDIENTE',
-      },
-    ];
   });
 
   ngOnInit(): void {
@@ -567,7 +428,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         this.convocatoriaService.obtenerPlanTrabajo(id).subscribe({
           next: (plan) => {
             this.planTrabajo.set(plan);
-            this.sincronizarEstadosActividades456();
             this.actualizarFocoPorDefecto();
             this.inicializarRg001YPlan(conv, plan);
             this.loading.set(false);
@@ -673,19 +533,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     });
   }
 
-  private sincronizarEstadosActividades456(): void {
-    const act4 = this.actividadDocumentacionInteres();
-    if (act4) {
-      this.documentosAct4.set(act4.documentos ?? []);
-      if (act4.documentacionRemitida && act4.documentacionRemitida.length > 0) {
-        this.fuentesSeleccionadasAct4.set([...act4.documentacionRemitida]);
-      }
-      if (act4.observaciones || act4.sintesisAcuerdos) {
-        this.observacionesAct4.set(act4.observaciones || act4.sintesisAcuerdos || '');
-      }
-    }
-  }
-
   cargarFichaFormalizacion(procesoId: string, autoAvanzar: boolean = false): void {
     this.convocatoriaService.obtenerFormalizacion(procesoId).subscribe({
       next: (ficha) => {
@@ -697,12 +544,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
           sedeDepartamento: ficha.sedeDepartamento ?? '',
           responsableCargo: ficha.responsableCargo || '',
         });
-        if (ficha.fechaFormalizacionElectronica) {
-          this.fechaFormalizacionAct6.set(ficha.fechaFormalizacionElectronica.split('T')[0]);
-        }
-        if (ficha.observaciones) {
-          this.observacionesFormalizacionAct6.set(ficha.observaciones);
-        }
         this.actualizarFocoPorDefecto();
 
         // Si la etapa de formalización y normativa está completada, avanzar a la carga del RG-001 y Plan de Trabajo
@@ -727,33 +568,19 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     if (this.focoSeleccionadoManualmente) {
       return;
     }
-    const actPlan = this.actividadElaborarPlan();
     const act1 = this.actividadReunion();
     const actNorm = this.actividadNormativa();
-    const act4 = this.actividadDocumentacionInteres();
-    const act5 = this.actividadFormalizacionElectronica();
     const norm = this.normativaDetalle();
-    const ft012 = this.fichaFt012();
 
-    const planCompletado = actPlan?.estado === 'COMPLETADA' && !this.requiereElaborarPlan();
     const act1Completa = act1?.estado === 'COMPLETADA';
     const act2Completa = actNorm?.estado === 'COMPLETADA' || norm?.estado === 'COMPLETADA';
-    const act4Completa = act4?.estado === 'COMPLETADA';
-    const act5Completa = act5?.estado === 'COMPLETADA' || ft012?.estado === 'FORMALIZADA_EN_CONEAU';
 
-    // Orden del flujo: 1.1 -> 1.3 -> 1.2 -> 1.5 -> 1.8
     if (!act1Completa) {
       this.actividadFoco.set('1.1');
     } else if (!act2Completa) {
       this.actividadFoco.set('1.3');
-    } else if (!planCompletado) {
-      this.actividadFoco.set('1.2');
-    } else if (!act4Completa) {
-      this.actividadFoco.set('1.5');
-    } else if (!act5Completa) {
-      this.actividadFoco.set('1.8');
     } else {
-      this.actividadFoco.set('1.1');
+      this.actividadFoco.set('1.2');
     }
   }
 
@@ -796,15 +623,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       act.codigoActividad === 'ACT-04-IDENTIFICAR-DOCUMENTACION-INTERES' ||
       act.nombre.toLowerCase().includes('documentación de interés')
     );
-  }
-
-  tieneDocumentosNormativa(): boolean {
-    return (this.normativaDetalle()?.documentos?.length ?? 0) > 0;
-  }
-
-  tieneComprobanteFormalizacion(): boolean {
-    const ft = this.fichaFt012();
-    return Boolean(ft.comprobanteStoragePath || ft.comprobanteNombre);
   }
 
   obtenerTextoObservaciones(act: ActividadPlanTrabajoDto): string {
@@ -864,127 +682,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   }
 
   // =========================================================================
-  // Acciones Actividad 4 (Documentación de interés)
-  // =========================================================================
-
-  onArchivoAct4Selected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.archivoAct4.set(input.files[0]);
-    } else {
-      this.archivoAct4.set(null);
-    }
-  }
-
-  subirDocumentoAct4(): void {
-    const c = this.convocatoria();
-    const act4 = this.actividadDocumentacionInteres();
-    const file = this.archivoAct4();
-    if (!c || !act4 || !file) return;
-
-    this.subiendoDocAct4.set(true);
-    this.convocatoriaService
-      .subirDocumentoInteres(c.id, act4.id, file, this.clasificacionAct4(), this.descripcionAct4())
-      .subscribe({
-        next: (nuevoDoc) => {
-          this.documentosAct4.update((prev) => [...prev, nuevoDoc]);
-          this.archivoAct4.set(null);
-          this.descripcionAct4.set('');
-          this.subiendoDocAct4.set(false);
-        },
-        error: (err) => {
-          this.subiendoDocAct4.set(false);
-          alert(err?.error?.error || 'No fue posible adjuntar el documento de interés.');
-        },
-      });
-  }
-
-  eliminarDocumentoAct4(doc: DocumentoInteresDto): void {
-    const c = this.convocatoria();
-    const act4 = this.actividadDocumentacionInteres();
-    if (!c || !act4) return;
-
-    this.convocatoriaService.eliminarDocumentoInteres(c.id, act4.id, doc.id).subscribe({
-      next: () => {
-        this.documentosAct4.update((prev) => prev.filter((d) => d.id !== doc.id));
-      },
-      error: (err) => {
-        alert(err?.error?.error || 'No fue posible eliminar el documento.');
-      },
-    });
-  }
-
-  descargarDocumentoAct4(doc: DocumentoInteresDto): void {
-    const c = this.convocatoria();
-    const act4 = this.actividadDocumentacionInteres();
-    if (!c || !act4) return;
-
-    this.convocatoriaService.descargarDocumentoInteres(c.id, act4.id, doc.id).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = doc.nombreOriginal || 'Documento-Interes.pdf';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      },
-      error: () => alert('No fue posible descargar el documento.'),
-    });
-  }
-
-  tieneFuenteAct4(codigo: string): boolean {
-    return this.fuentesSeleccionadasAct4().includes(codigo);
-  }
-
-  toggleFuenteAct4(codigo: string): void {
-    const actuales = this.fuentesSeleccionadasAct4();
-    if (actuales.includes(codigo)) {
-      this.fuentesSeleccionadasAct4.set(actuales.filter((c) => c !== codigo));
-    } else {
-      this.fuentesSeleccionadasAct4.set([...actuales, codigo]);
-    }
-  }
-
-  completarActividad4(): void {
-    const c = this.convocatoria();
-    const act4 = this.actividadDocumentacionInteres();
-    if (!c || !act4) return;
-    if (this.fuentesSeleccionadasAct4().length === 0) {
-      alert('Debe seleccionar al menos una fuente de información y documentación de interés.');
-      return;
-    }
-
-    this.guardandoAct4.set(true);
-    this.convocatoriaService
-      .completarDocumentacionInteres(c.id, act4.id, {
-        fuentesSeleccionadas: this.fuentesSeleccionadasAct4(),
-        observaciones: this.observacionesAct4(),
-      })
-      .subscribe({
-        next: () => {
-          this.guardandoAct4.set(false);
-          this.bannerExitoPlan.set(
-            'La Actividad 4 (Identificar información y documentación de interés) fue registrada y completada exitosamente en la Hoja INFO.'
-          );
-          this.cargarDatos(c.id);
-        },
-        error: (err) => {
-          this.guardandoAct4.set(false);
-          alert(err?.error?.error || 'No fue posible completar la Actividad 4.');
-        },
-      });
-  }
-
-  descargarDocumentoNormativa(docId: string, nombreArchivo: string): void {
-    const c = this.convocatoria();
-    if (!c) return;
-    this.normativaService.descargarDocumento(c.id, docId, nombreArchivo);
-  }
-
-  // =========================================================================
-  // Acciones Actividad 5 (Formalización electrónica FT-012 + CONEAU Global)
+  // Acciones Formalización electrónica FT-012
   // =========================================================================
 
   actualizarCampoFt012(campo: keyof FichaFormalizacionFt012Dto, valor: any): void {
@@ -992,26 +690,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       ...prev,
       [campo]: valor,
     }));
-  }
-
-  solicitarFt012ADireccionCarrera(): void {
-    const c = this.convocatoria();
-    if (!c) return;
-    this.solicitandoFt012.set(true);
-    this.convocatoriaService.solicitarFormalizacion(c.id).subscribe({
-      next: (ficha) => {
-        this.solicitandoFt012.set(false);
-        this.fichaFt012.set(ficha);
-        this.bannerExitoPlan.set(
-          'Se ha solicitado formalmente a la Dirección de Carrera completar la Ficha de Formalización Electrónica (FT-012).'
-        );
-        this.cargarDatos(c.id);
-      },
-      error: (err) => {
-        this.solicitandoFt012.set(false);
-        alert(err?.error?.error || 'No fue posible solicitar la ficha FT-012.');
-      },
-    });
   }
 
   guardarORemitirFt012(enviar: boolean): void {
@@ -1038,52 +716,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         error: (err) => {
           this.guardandoFt012.set(false);
           alert(err?.error?.error || 'No fue posible guardar la Ficha FT-012.');
-        },
-      });
-  }
-
-  onArchivoComprobanteAct6Selected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.archivoComprobanteAct6.set(input.files[0]);
-    } else {
-      this.archivoComprobanteAct6.set(null);
-    }
-  }
-
-  registrarFormalizacionConeauGlobal(): void {
-    const c = this.convocatoria();
-    const file = this.archivoComprobanteAct6();
-    if (!c) return;
-    if (!this.fechaFormalizacionAct6()) {
-      alert('La fecha de formalización electrónica es obligatoria.');
-      return;
-    }
-    if (!file) {
-      alert('Debe adjuntar el Comprobante PDF de formalización electrónica generado desde CONEAU Global ATENEA.');
-      return;
-    }
-
-    this.formalizandoAct6.set(true);
-    this.convocatoriaService
-      .formalizarEnConeau(c.id, {
-        archivo: file,
-        fechaFormalizacionElectronica: this.fechaFormalizacionAct6(),
-        observaciones: this.observacionesFormalizacionAct6(),
-      })
-      .subscribe({
-        next: (ficha) => {
-          this.formalizandoAct6.set(false);
-          this.archivoComprobanteAct6.set(null);
-          this.fichaFt012.set(ficha);
-          this.bannerExitoPlan.set(
-            'La Formalización Electrónica en CONEAU Global ATENEA fue registrada exitosamente, la Fecha de Formalización fue actualizada en el RG-001 y se notificó el comprobante PDF a la Dirección de Carrera.'
-          );
-          this.cargarDatos(c.id);
-        },
-        error: (err) => {
-          this.formalizandoAct6.set(false);
-          alert(err?.error?.error || 'No fue posible registrar la formalización en CONEAU Global.');
         },
       });
   }
@@ -1124,11 +756,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   irAGestionarActividadDesdeDrawer(act: ActividadPlanTrabajoDto): void {
     this.cerrarDrawer();
     this.tabActiva.set('ACTIVIDADES');
-    if (act.codigoActividad === 'ACT-04-IDENTIFICAR-DOCUMENTACION-INTERES' || act.codigoActividad === '1.5') {
-      this.seleccionarActividadFoco('1.5');
-    } else if (act.codigoActividad === 'ACT-06-FORMALIZACION-ELECTRONICA' || act.codigoActividad === '1.8') {
-      this.seleccionarActividadFoco('1.8');
-    }
   }
 
   abrirModalCompletar(act: ActividadPlanTrabajoDto): void {
@@ -1138,24 +765,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   cerrarModal(completada: boolean): void {
     this.actividadSeleccionada.set(null);
     if (completada) {
-      const id = this.route.snapshot.paramMap.get('id');
-      if (id) {
-        this.cargarDatos(id);
-      }
-    }
-  }
-
-  abrirModalElaborarPlan(): void {
-    this.bannerExitoPlan.set(null);
-    this.modalElaborarPlanAbierto.set(true);
-  }
-
-  cerrarModalElaborarPlan(guardado: boolean): void {
-    this.modalElaborarPlanAbierto.set(false);
-    if (guardado) {
-      this.bannerExitoPlan.set(
-        'La Actividad 3 (Elaborar Plan de Trabajo para acreditación de carreras) fue completada exitosamente y el cronograma tentativo institucional ha quedado establecido formalmente.'
-      );
       const id = this.route.snapshot.paramMap.get('id');
       if (id) {
         this.cargarDatos(id);
@@ -1185,7 +794,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     });
   }
 
-  seleccionarTab(tab: 'ACTIVIDADES' | 'PLAN_TRABAJO' | 'SEGUIMIENTO' | 'FICHA'): void {
+  seleccionarTab(tab: 'ACTIVIDADES' | 'PLAN_TRABAJO' | 'SEGUIMIENTO'): void {
     if (tab === 'SEGUIMIENTO' && !this.canManage()) {
       this.tabActiva.set('ACTIVIDADES');
       return;

@@ -31,10 +31,6 @@ export class InstitucionService {
     return this.http.put<InstitucionResponse>(`/api/instituciones/${id}`, formData);
   }
 
-  actualizarInstitucionJson(id: string, datos: RegistrarInstitucionData): Observable<InstitucionResponse> {
-    return this.http.put<InstitucionResponse>(`/api/instituciones/${id}`, datos);
-  }
-
   cambiarEstado(id: string, activo: boolean): Observable<InstitucionResponse> {
     return this.http.patch<InstitucionResponse>(`/api/instituciones/${id}/estado?activo=${activo}`, {});
   }
