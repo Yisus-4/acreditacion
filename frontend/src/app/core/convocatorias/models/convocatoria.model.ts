@@ -449,3 +449,68 @@ export interface GuardarCronogramaPlanRequest {
   fechaLimiteConeau?: string;
   actividades: ItemActividadPlanRequest[];
 }
+
+
+// ==========================================
+// Modelos Comisión de Autoevaluación (RG-002)
+// ==========================================
+
+export type EstadoRegistroCa =
+  | 'PENDIENTE_SOLICITUD'
+  | 'SOLICITADA_A_DC'
+  | 'EN_CARGA_BORRADOR'
+  | 'REMITIDA_A_AEA'
+  | 'APROBADA'
+  | 'OBSERVADA';
+
+export type RolClaustroCa =
+  | 'COORDINADOR'
+  | 'DOCENTE'
+  | 'GRADUADO'
+  | 'ESTUDIANTE'
+  | 'NODOCENTE';
+
+export interface MiembroCaDto {
+  id?: string;
+  registroCaId?: string;
+  apellido: string;
+  primerNombre: string;
+  segundoNombre?: string;
+  dniCuil: string;
+  correo: string;
+  telefono?: string;
+  claustroRol: RolClaustroCa;
+  esDocente: boolean;
+  cuentaConeauGlobalCreada: boolean;
+  cuentaCvarVinculada: boolean;
+  numeroOrden: number;
+}
+
+export interface RegistroCaDto {
+  id: string;
+  procesoId: string;
+  estado: EstadoRegistroCa;
+  coincideComisionCurricular: boolean;
+  solicitadoEn?: string;
+  solicitadoPor?: string;
+  fechaLimiteDc?: string;
+  diasRestantes?: number;
+  semaforoTexto?: string;
+  remitidoEn?: string;
+  remitidoPor?: string;
+  aprobadoEn?: string;
+  aprobadoPor?: string;
+  observacionesRevision?: string;
+  resolucionStoragePath?: string;
+  resolucionNombreOriginal?: string;
+  resolucionTamanioBytes?: number;
+  registroGeneradoStoragePath?: string;
+  creadoEn: string;
+  actualizadoEn: string;
+  miembros: MiembroCaDto[];
+}
+
+export interface GuardarRegistroCaBorradorRequest {
+  coincideCurricular: boolean;
+  miembros: MiembroCaDto[];
+}

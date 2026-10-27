@@ -13,6 +13,10 @@ import {
   FichaFormalizacionFt012Dto,
   GuardarCronogramaPlanRequest,
   GuardarRg001Request,
+  RegistroCaDto,
+  MiembroCaDto,
+  GuardarRegistroCaBorradorRequest,
+  RolClaustroCa,
   ItemActividadPlanRequest,
   PlanTrabajoDto,
 } from '../../../core/convocatorias/models/convocatoria.model';
@@ -62,7 +66,33 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
 
-  readonly tabActiva = signal<'ACTIVIDADES' | 'PLAN_TRABAJO' | 'SEGUIMIENTO'>('ACTIVIDADES');
+  readonly tabActiva = signal<'ACTIVIDADES' | 'PLAN_TRABAJO' | 'COMISION_AUTOEVALUACION' | 'SEGUIMIENTO'>('ACTIVIDADES');
+
+  // Estado Comisión de Autoevaluación (CA · RG-002)
+  readonly registroCa = signal<RegistroCaDto | null>(null);
+  readonly cargandoRegistroCa = signal<boolean>(false);
+  readonly guardandoCaBorrador = signal<boolean>(false);
+  readonly remitirCaCargando = signal<boolean>(false);
+  readonly aprobandoCa = signal<boolean>(false);
+  readonly observandoCa = signal<boolean>(false);
+  readonly motivoObservacionCa = signal<string>('');
+  readonly modalObservarCaAbierto = signal<boolean>(false);
+  readonly miembrosCa = signal<MiembroCaDto[]>([]);
+  readonly coincideCurricularCa = signal<boolean>(false);
+  readonly archivoResolucionCa = signal<File | null>(null);
+  readonly bannerExitoCa = signal<string | null>(null);
+
+  readonly conformacionCaDesbloqueada = computed(() => {
+    return this.actividadPlanFinalizada() && this.esRg001Enviado();
+  });
+
+  readonly puedeEditarCa = computed(() => {
+    if (!this.conformacionCaDesbloqueada()) return false;
+    const est = this.registroCa()?.estado || 'PENDIENTE_SOLICITUD';
+    if (est === 'APROBADA') return false;
+    return true;
+  });
+
   readonly actividadFoco = signal<string>('1.1');
   private focoSeleccionadoManualmente = false;
   readonly reiniciando = signal<boolean>(false);
@@ -451,6 +481,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
           error: () => this.actualizarFocoPorDefecto(),
         });
         this.cargarFichaFormalizacion(id, autoAvanzar);
+        this.cargarRegistroCa(id);
       },
       error: (err) => {
         this.idCargadoActualmente = null;
@@ -794,7 +825,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     });
   }
 
-  seleccionarTab(tab: 'ACTIVIDADES' | 'PLAN_TRABAJO' | 'SEGUIMIENTO'): void {
+  seleccionarTab(tab: 'ACTIVIDADES' | 'PLAN_TRABAJO' | 'COMISION_AUTOEVALUACION' | 'SEGUIMIENTO'): void {
     if (tab === 'SEGUIMIENTO' && !this.canManage()) {
       this.tabActiva.set('ACTIVIDADES');
       return;
@@ -1059,4 +1090,249 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       },
     });
   }
+
+  // ==========================================
+  // Métodos Comisión de Autoevaluación (RG-002)
+  // ==========================================
+
+  cargarRegistroCa(procesoId: string): void {
+    this.cargandoRegistroCa.set(true);
+    this.convocatoriaService.obtenerRegistroCa(procesoId).subscribe({
+      next: (ca) => {
+        this.cargandoRegistroCa.set(false);
+        this.registroCa.set(ca);
+        this.coincideCurricularCa.set(ca.coincideComisionCurricular);
+        if (ca.miembros && ca.miembros.length > 0) {
+          this.miembrosCa.set(ca.miembros.map(m => ({ ...m })));
+        } else {
+          this.miembrosCa.set([]);
+        }
+      },
+      error: () => {
+        this.cargandoRegistroCa.set(false);
+      }
+    });
+  }
+
+  solicitarConformacionCa(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    this.cargandoRegistroCa.set(true);
+    this.convocatoriaService.solicitarConformacionCa(c.id).subscribe({
+      next: (ca) => {
+        this.cargandoRegistroCa.set(false);
+        this.registroCa.set(ca);
+        this.bannerExitoCa.set('Se ha emitido la solicitud formal de conformación de CA a la Dirección de Carrera.');
+      },
+      error: (err) => {
+        this.cargandoRegistroCa.set(false);
+        alert(err?.error?.error || 'No fue posible solicitar la conformación de la CA.');
+      }
+    });
+  }
+
+  descargarInstructivoIt001(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    this.convocatoriaService.descargarInstructivoIt001(c.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'IT-001_Instructivo_Cuentas_CVar_CONEAU_Global.pdf';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => alert('No se pudo descargar el instructivo IT-001.')
+    });
+  }
+
+  agregarMiembroCa(): void {
+    const actuales = this.miembrosCa();
+    const nuevo: MiembroCaDto = {
+      apellido: '',
+      primerNombre: '',
+      segundoNombre: '',
+      dniCuil: '',
+      correo: '',
+      telefono: '',
+      claustroRol: actuales.length === 0 ? 'COORDINADOR' : 'DOCENTE',
+      esDocente: true,
+      cuentaConeauGlobalCreada: false,
+      cuentaCvarVinculada: false,
+      numeroOrden: actuales.length + 1
+    };
+    this.miembrosCa.set([...actuales, nuevo]);
+  }
+
+  eliminarMiembroCa(index: number): void {
+    const actuales = this.miembrosCa().filter((_, i) => i !== index);
+    const reordenados = actuales.map((m, idx) => ({ ...m, numeroOrden: idx + 1 }));
+    this.miembrosCa.set(reordenados);
+  }
+
+  actualizarCampoMiembro(index: number, campo: keyof MiembroCaDto, valor: any): void {
+    const actuales = [...this.miembrosCa()];
+    if (!actuales[index]) return;
+    actuales[index] = { ...actuales[index], [campo]: valor };
+    if (campo === 'esDocente' && !valor) {
+      actuales[index].cuentaCvarVinculada = false;
+    }
+    this.miembrosCa.set(actuales);
+  }
+
+  onResolucionCaFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      if (file.type !== 'application/pdf') {
+        alert('El documento de la resolución de designación debe ser formato PDF.');
+        input.value = '';
+        return;
+      }
+      this.archivoResolucionCa.set(file);
+    }
+  }
+
+  guardarBorradorCa(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    this.guardandoCaBorrador.set(true);
+    const req: GuardarRegistroCaBorradorRequest = {
+      coincideCurricular: this.coincideCurricularCa(),
+      miembros: this.miembrosCa()
+    };
+    this.convocatoriaService.guardarRegistroCaBorrador(c.id, req).subscribe({
+      next: (ca) => {
+        this.guardandoCaBorrador.set(false);
+        this.registroCa.set(ca);
+        this.bannerExitoCa.set('Borrador de la Comisión de Autoevaluación guardado correctamente.');
+      },
+      error: (err) => {
+        this.guardandoCaBorrador.set(false);
+        alert(err?.error?.error || 'No fue posible guardar el borrador de la CA.');
+      }
+    });
+  }
+
+  remitirCaAea(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    const miembros = this.miembrosCa();
+    if (miembros.length === 0) {
+      alert('Debe agregar al menos un miembro para conformar la Comisión de Autoevaluación.');
+      return;
+    }
+    const tieneCoord = miembros.some(m => m.claustroRol === 'COORDINADOR');
+    if (!tieneCoord) {
+      alert('La Comisión de Autoevaluación debe contar con al menos un miembro con rol COORDINADOR.');
+      return;
+    }
+    for (const m of miembros) {
+      if (!m.apellido?.trim() || !m.primerNombre?.trim() || !m.dniCuil?.trim() || !m.correo?.trim()) {
+        alert('Todos los miembros deben tener completos Apellido, Nombre, DNI/CUIL y Correo.');
+        return;
+      }
+      if (m.esDocente && !m.cuentaCvarVinculada) {
+        alert(`El miembro docente ${m.apellido}, ${m.primerNombre} debe tener confirmada la vinculación con CVar.`);
+        return;
+      }
+    }
+    const archivo = this.archivoResolucionCa();
+    const caActual = this.registroCa();
+    if (!archivo && (!caActual?.resolucionStoragePath)) {
+      alert('Es obligatorio adjuntar la Resolución de designación (PDF) para remitir a AEA.');
+      return;
+    }
+
+    this.remitirCaCargando.set(true);
+    const formData = new FormData();
+    formData.append('coincideCurricular', String(this.coincideCurricularCa()));
+    formData.append('miembros', JSON.stringify(miembros));
+    if (archivo) {
+      formData.append('resolucion', archivo);
+    }
+
+    this.convocatoriaService.remitirRegistroCa(c.id, formData).subscribe({
+      next: (ca) => {
+        this.remitirCaCargando.set(false);
+        this.registroCa.set(ca);
+        this.archivoResolucionCa.set(null);
+        this.bannerExitoCa.set('La conformación de la CA ha sido remitida a AEA para su auditoría y aprobación formal.');
+      },
+      error: (err) => {
+        this.remitirCaCargando.set(false);
+        alert(err?.error?.error || 'No fue posible remitir la conformación de la CA.');
+      }
+    });
+  }
+
+  aprobarCa(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    if (!confirm('¿Confirma la aprobación formal de la Comisión de Autoevaluación (RG-002)?')) return;
+    this.aprobandoCa.set(true);
+    this.convocatoriaService.aprobarRegistroCa(c.id).subscribe({
+      next: (ca) => {
+        this.aprobandoCa.set(false);
+        this.registroCa.set(ca);
+        this.bannerExitoCa.set('¡Comisión de Autoevaluación aprobada formalmente! Se ha generado el Registro RG-002 e impactado en el Plan de Trabajo.');
+        this.cargarDatos(c.id);
+      },
+      error: (err) => {
+        this.aprobandoCa.set(false);
+        alert(err?.error?.error || 'No fue posible aprobar la conformación de la CA.');
+      }
+    });
+  }
+
+  abrirModalObservarCa(): void {
+    this.motivoObservacionCa.set('');
+    this.modalObservarCaAbierto.set(true);
+  }
+
+  cerrarModalObservarCa(): void {
+    this.modalObservarCaAbierto.set(false);
+    this.motivoObservacionCa.set('');
+  }
+
+  confirmarObservarCa(): void {
+    const c = this.convocatoria();
+    const motivo = this.motivoObservacionCa().trim();
+    if (!c || !motivo) {
+      alert('Debe ingresar el detalle u observaciones de las correcciones solicitadas.');
+      return;
+    }
+    this.observandoCa.set(true);
+    this.convocatoriaService.observarRegistroCa(c.id, motivo).subscribe({
+      next: (ca) => {
+        this.observandoCa.set(false);
+        this.modalObservarCaAbierto.set(false);
+        this.registroCa.set(ca);
+        this.bannerExitoCa.set('Se ha devuelto el registro a la Dirección de Carrera con observaciones para subsanación.');
+      },
+      error: (err) => {
+        this.observandoCa.set(false);
+        alert(err?.error?.error || 'No fue posible registrar las observaciones.');
+      }
+    });
+  }
+
+  descargarResolucionAdjunta(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    this.convocatoriaService.descargarResolucionCa(c.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const nombre = this.registroCa()?.resolucionNombreOriginal || 'Resolucion_Designacion_CA.pdf';
+        a.download = nombre;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => alert('No fue posible descargar la resolución adjunta.')
+    });
+  }
+
 }

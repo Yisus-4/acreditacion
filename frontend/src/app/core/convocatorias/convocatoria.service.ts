@@ -11,6 +11,8 @@ import {
   FichaFormalizacionFt012Dto,
   GuardarCronogramaPlanRequest,
   GuardarRg001Request,
+  RegistroCaDto,
+  GuardarRegistroCaBorradorRequest,
   IniciarConvocatoriaRequest,
   PlanTrabajoDto,
   PlantillaPlanTrabajoDto,
@@ -156,5 +158,46 @@ export class ConvocatoriaService {
   finalizarActividadPlanTrabajo(procesoId: string): Observable<ConvocatoriaDetalle> {
     return this.http.post<ConvocatoriaDetalle>(`/api/convocatorias/${procesoId}/plan-trabajo/finalizar-actividad`, {});
   }
-}
 
+  // ==========================================
+  // Comisión de Autoevaluación (CA · RG-002)
+  // ==========================================
+
+  obtenerRegistroCa(procesoId: string): Observable<RegistroCaDto> {
+    return this.http.get<RegistroCaDto>(`/api/convocatorias/${procesoId}/comision-autoevaluacion`);
+  }
+
+  solicitarConformacionCa(procesoId: string): Observable<RegistroCaDto> {
+    return this.http.post<RegistroCaDto>(`/api/convocatorias/${procesoId}/comision-autoevaluacion/solicitar`, {});
+  }
+
+  descargarInstructivoIt001(procesoId: string): Observable<Blob> {
+    return this.http.get(`/api/convocatorias/${procesoId}/comision-autoevaluacion/instructivo-it001`, {
+      responseType: 'blob',
+    });
+  }
+
+  guardarRegistroCaBorrador(procesoId: string, request: GuardarRegistroCaBorradorRequest): Observable<RegistroCaDto> {
+    return this.http.put<RegistroCaDto>(`/api/convocatorias/${procesoId}/comision-autoevaluacion/borrador`, request);
+  }
+
+  remitirRegistroCa(procesoId: string, formData: FormData): Observable<RegistroCaDto> {
+    return this.http.post<RegistroCaDto>(`/api/convocatorias/${procesoId}/comision-autoevaluacion/remitir`, formData);
+  }
+
+  aprobarRegistroCa(procesoId: string): Observable<RegistroCaDto> {
+    return this.http.post<RegistroCaDto>(`/api/convocatorias/${procesoId}/comision-autoevaluacion/aprobar`, {});
+  }
+
+  observarRegistroCa(procesoId: string, observaciones: string): Observable<RegistroCaDto> {
+    return this.http.post<RegistroCaDto>(`/api/convocatorias/${procesoId}/comision-autoevaluacion/observar`, {
+      observaciones,
+    });
+  }
+
+  descargarResolucionCa(procesoId: string): Observable<Blob> {
+    return this.http.get(`/api/convocatorias/${procesoId}/comision-autoevaluacion/resolucion/descargar`, {
+      responseType: 'blob',
+    });
+  }
+}
