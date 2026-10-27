@@ -437,4 +437,66 @@ public class UseCaseConfiguration {
         return new com.undec.acreditacion.application.usecase.ConsultarConvocatoriaEscuelaService(
                 convocatoriaRepository, unidadAcademicaRepository, carreraRepository, procesoRepository);
     }
+
+    @Bean
+    public com.undec.acreditacion.application.input.ConsultarRegistroCaUseCase consultarRegistroCaUseCase(
+            com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort registroCaRepository,
+            com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort procesoRepository) {
+        return new com.undec.acreditacion.application.usecase.ConsultarRegistroCaService(
+                registroCaRepository, procesoRepository);
+    }
+
+    @Bean
+    @org.springframework.transaction.annotation.Transactional
+    public com.undec.acreditacion.application.input.SolicitarConformacionCaUseCase solicitarConformacionCaUseCase(
+            com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort registroCaRepository,
+            com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort procesoRepository,
+            com.undec.acreditacion.domain.ports.CarreraRepositoryPort carreraRepository,
+            com.undec.acreditacion.domain.ports.RegistroConvocatoriaRepositoryPort registroConvocatoriaRepository,
+            com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort planTrabajoRepository) {
+        return new com.undec.acreditacion.application.usecase.SolicitarConformacionCaService(
+                registroCaRepository, procesoRepository, carreraRepository, registroConvocatoriaRepository, planTrabajoRepository);
+    }
+
+    @Bean
+    @org.springframework.transaction.annotation.Transactional
+    public com.undec.acreditacion.application.input.GuardarRegistroCaBorradorUseCase guardarRegistroCaBorradorUseCase(
+            com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort registroCaRepository,
+            com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort procesoRepository) {
+        return new com.undec.acreditacion.application.usecase.GuardarRegistroCaBorradorService(
+                registroCaRepository, procesoRepository);
+    }
+
+    @Bean
+    @org.springframework.transaction.annotation.Transactional
+    public com.undec.acreditacion.application.input.RemitirRegistroCaUseCase remitirRegistroCaUseCase(
+            com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort registroCaRepository,
+            com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort procesoRepository,
+            com.undec.acreditacion.domain.ports.DocumentStoragePort storagePort) {
+        return new com.undec.acreditacion.application.usecase.RemitirRegistroCaService(
+                registroCaRepository, procesoRepository, storagePort);
+    }
+
+    @Bean
+    @org.springframework.transaction.annotation.Transactional
+    public com.undec.acreditacion.application.input.AprobarRegistroCaUseCase aprobarRegistroCaUseCase(
+            com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort registroCaRepository,
+            com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort procesoRepository,
+            com.undec.acreditacion.domain.ports.CarreraRepositoryPort carreraRepository,
+            com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort planTrabajoRepository,
+            com.undec.acreditacion.domain.ports.DocumentStoragePort storagePort,
+            com.undec.acreditacion.domain.ports.DocumentoAcreditacionRepositoryPort documentoRepository) {
+        return new com.undec.acreditacion.application.usecase.AprobarRegistroCaService(
+                registroCaRepository, procesoRepository, carreraRepository,
+                planTrabajoRepository, storagePort, documentoRepository);
+    }
+
+    @Bean
+    @org.springframework.transaction.annotation.Transactional
+    public com.undec.acreditacion.application.input.ObservarRegistroCaUseCase observarRegistroCaUseCase(
+            com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort registroCaRepository,
+            com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort procesoRepository) {
+        return new com.undec.acreditacion.application.usecase.ObservarRegistroCaService(
+                registroCaRepository, procesoRepository);
+    }
 }
