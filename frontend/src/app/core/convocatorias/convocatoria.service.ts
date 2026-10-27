@@ -13,6 +13,7 @@ import {
   GuardarRg001Request,
   RegistroCaDto,
   GuardarRegistroCaBorradorRequest,
+  CatalogoMiembroComisionDto,
   IniciarConvocatoriaRequest,
   PlanTrabajoDto,
   PlantillaPlanTrabajoDto,
@@ -199,5 +200,21 @@ export class ConvocatoriaService {
     return this.http.get(`/api/convocatorias/${procesoId}/comision-autoevaluacion/resolucion/descargar`, {
       responseType: 'blob',
     });
+  }
+
+  consultarCatalogoMiembrosCa(busqueda?: string): Observable<CatalogoMiembroComisionDto[]> {
+    let params = new HttpParams();
+    if (busqueda && busqueda.trim()) {
+      params = params.set('busqueda', busqueda.trim());
+    }
+    return this.http.get<CatalogoMiembroComisionDto[]>('/api/comision-autoevaluacion/catalogo', { params });
+  }
+
+  confirmarRegistroMiembroCa(procesoId: string, miembroId: string): Observable<RegistroCaDto> {
+    return this.http.post<RegistroCaDto>(`/api/convocatorias/${procesoId}/comision-autoevaluacion/miembros/${miembroId}/confirmar-registro`, {});
+  }
+
+  cancelarRegistroMiembroCa(procesoId: string, miembroId: string): Observable<RegistroCaDto> {
+    return this.http.post<RegistroCaDto>(`/api/convocatorias/${procesoId}/comision-autoevaluacion/miembros/${miembroId}/cancelar-registro`, {});
   }
 }

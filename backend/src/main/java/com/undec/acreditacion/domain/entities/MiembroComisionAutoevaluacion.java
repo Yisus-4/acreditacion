@@ -16,13 +16,56 @@ public class MiembroComisionAutoevaluacion {
     private String primerNombre;
     private String segundoNombre;
     private String dniCuil;
+    private String cuitPasaporte;
     private String correo;
+    private String correoGmail;
+    private String cargoFuncion;
     private String telefono;
     private RolClaustroCa claustroRol;
     private boolean esDocente;
     private boolean cuentaConeauGlobalCreada;
     private boolean cuentaCvarVinculada;
+    private boolean pendienteAltaSistema;
     private int numeroOrden;
+
+    public MiembroComisionAutoevaluacion(
+            UUID id,
+            UUID registroCaId,
+            String apellido,
+            String primerNombre,
+            String segundoNombre,
+            String dniCuil,
+            String cuitPasaporte,
+            String correo,
+            String correoGmail,
+            String cargoFuncion,
+            String telefono,
+            RolClaustroCa claustroRol,
+            boolean esDocente,
+            boolean cuentaConeauGlobalCreada,
+            boolean cuentaCvarVinculada,
+            boolean pendienteAltaSistema,
+            int numeroOrden
+    ) {
+        validarCampos(apellido, primerNombre, dniCuil, correo, claustroRol);
+        this.id = id != null ? id : UUID.randomUUID();
+        this.registroCaId = registroCaId;
+        this.apellido = apellido.trim();
+        this.primerNombre = primerNombre.trim();
+        this.segundoNombre = segundoNombre != null && !segundoNombre.isBlank() ? segundoNombre.trim() : null;
+        this.dniCuil = dniCuil.trim();
+        this.cuitPasaporte = cuitPasaporte != null && !cuitPasaporte.isBlank() ? cuitPasaporte.trim() : null;
+        this.correo = correo.trim().toLowerCase();
+        this.correoGmail = correoGmail != null && !correoGmail.isBlank() ? correoGmail.trim().toLowerCase() : null;
+        this.cargoFuncion = cargoFuncion != null && !cargoFuncion.isBlank() ? cargoFuncion.trim() : null;
+        this.telefono = telefono != null && !telefono.isBlank() ? telefono.trim() : null;
+        this.claustroRol = claustroRol;
+        this.esDocente = esDocente;
+        this.cuentaConeauGlobalCreada = cuentaConeauGlobalCreada;
+        this.cuentaCvarVinculada = cuentaCvarVinculada;
+        this.pendienteAltaSistema = pendienteAltaSistema;
+        this.numeroOrden = numeroOrden;
+    }
 
     public MiembroComisionAutoevaluacion(
             UUID id,
@@ -39,20 +82,25 @@ public class MiembroComisionAutoevaluacion {
             boolean cuentaCvarVinculada,
             int numeroOrden
     ) {
-        validarCampos(apellido, primerNombre, dniCuil, correo, claustroRol);
-        this.id = id != null ? id : UUID.randomUUID();
-        this.registroCaId = registroCaId;
-        this.apellido = apellido.trim();
-        this.primerNombre = primerNombre.trim();
-        this.segundoNombre = segundoNombre != null ? segundoNombre.trim() : null;
-        this.dniCuil = dniCuil.trim();
-        this.correo = correo.trim().toLowerCase();
-        this.telefono = telefono != null ? telefono.trim() : null;
-        this.claustroRol = claustroRol;
-        this.esDocente = esDocente;
-        this.cuentaConeauGlobalCreada = cuentaConeauGlobalCreada;
-        this.cuentaCvarVinculada = cuentaCvarVinculada;
-        this.numeroOrden = numeroOrden;
+        this(
+                id,
+                registroCaId,
+                apellido,
+                primerNombre,
+                segundoNombre,
+                dniCuil,
+                null,
+                correo,
+                null,
+                null,
+                telefono,
+                claustroRol,
+                esDocente,
+                cuentaConeauGlobalCreada,
+                cuentaCvarVinculada,
+                false,
+                numeroOrden
+        );
     }
 
     private void validarCampos(String apellido, String primerNombre, String dniCuil, String correo, RolClaustroCa claustroRol) {
@@ -77,6 +125,13 @@ public class MiembroComisionAutoevaluacion {
         if (esDocente && !cuentaCvarVinculada) {
             throw new DomainValidationException("El miembro docente " + apellido + ", " + primerNombre + " debe tener su cuenta CVar vinculada para remitir");
         }
+    }
+
+    public String getNombreCompleto() {
+        if (segundoNombre != null && !segundoNombre.isBlank()) {
+            return primerNombre + " " + segundoNombre;
+        }
+        return primerNombre;
     }
 
     public UUID getId() {
@@ -107,8 +162,20 @@ public class MiembroComisionAutoevaluacion {
         return dniCuil;
     }
 
+    public String getCuitPasaporte() {
+        return cuitPasaporte;
+    }
+
     public String getCorreo() {
         return correo;
+    }
+
+    public String getCorreoGmail() {
+        return correoGmail;
+    }
+
+    public String getCargoFuncion() {
+        return cargoFuncion;
     }
 
     public String getTelefono() {
@@ -129,6 +196,14 @@ public class MiembroComisionAutoevaluacion {
 
     public boolean isCuentaCvarVinculada() {
         return cuentaCvarVinculada;
+    }
+
+    public boolean isPendienteAltaSistema() {
+        return pendienteAltaSistema;
+    }
+
+    public void setPendienteAltaSistema(boolean pendienteAltaSistema) {
+        this.pendienteAltaSistema = pendienteAltaSistema;
     }
 
     public int getNumeroOrden() {

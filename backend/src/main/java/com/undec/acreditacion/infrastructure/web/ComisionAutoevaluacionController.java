@@ -6,7 +6,6 @@ import com.undec.acreditacion.application.input.*;
 import com.undec.acreditacion.application.output.RegistroCaDto;
 import com.undec.acreditacion.application.output.UserRepository;
 import com.undec.acreditacion.domain.entities.User;
-import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.domain.ports.DocumentStoragePort;
 import com.undec.acreditacion.infrastructure.web.dto.GuardarRegistroCaBorradorRequest;
@@ -38,6 +37,8 @@ public class ComisionAutoevaluacionController {
     private final RemitirRegistroCaUseCase remitirRegistroCaUseCase;
     private final AprobarRegistroCaUseCase aprobarRegistroCaUseCase;
     private final ObservarRegistroCaUseCase observarRegistroCaUseCase;
+    private final ConfirmarRegistroMiembroCaUseCase confirmarRegistroMiembroCaUseCase;
+    private final CancelarRegistroMiembroCaUseCase cancelarRegistroMiembroCaUseCase;
     private final DocumentStoragePort storagePort;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
@@ -49,6 +50,8 @@ public class ComisionAutoevaluacionController {
             RemitirRegistroCaUseCase remitirRegistroCaUseCase,
             AprobarRegistroCaUseCase aprobarRegistroCaUseCase,
             ObservarRegistroCaUseCase observarRegistroCaUseCase,
+            ConfirmarRegistroMiembroCaUseCase confirmarRegistroMiembroCaUseCase,
+            CancelarRegistroMiembroCaUseCase cancelarRegistroMiembroCaUseCase,
             DocumentStoragePort storagePort,
             UserRepository userRepository,
             ObjectMapper objectMapper
@@ -59,6 +62,8 @@ public class ComisionAutoevaluacionController {
         this.remitirRegistroCaUseCase = remitirRegistroCaUseCase;
         this.aprobarRegistroCaUseCase = aprobarRegistroCaUseCase;
         this.observarRegistroCaUseCase = observarRegistroCaUseCase;
+        this.confirmarRegistroMiembroCaUseCase = confirmarRegistroMiembroCaUseCase;
+        this.cancelarRegistroMiembroCaUseCase = cancelarRegistroMiembroCaUseCase;
         this.storagePort = storagePort;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
@@ -147,6 +152,28 @@ public class ComisionAutoevaluacionController {
     ) {
         UUID usuarioId = resolverUsuarioAutenticadoId();
         RegistroCaDto res = observarRegistroCaUseCase.observar(procesoId, usuarioId, req.observaciones());
+        return ResponseEntity.ok(res);
+    }
+
+    @PostMapping("/miembros/{miembroId}/confirmar-registro")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('CONVOCATORIA_WRITE')")
+    public ResponseEntity<RegistroCaDto> confirmarRegistroMiembro(
+            @PathVariable UUID procesoId,
+            @PathVariable UUID miembroId
+    ) {
+        UUID usuarioId = resolverUsuarioAutenticadoId();
+        RegistroCaDto res = confirmarRegistroMiembroCaUseCase.confirmarRegistro(procesoId, miembroId, usuarioId);
+        return ResponseEntity.ok(res);
+    }
+
+    @PostMapping("/miembros/{miembroId}/cancelar-registro")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('CONVOCATORIA_WRITE')")
+    public ResponseEntity<RegistroCaDto> cancelarRegistroMiembro(
+            @PathVariable UUID procesoId,
+            @PathVariable UUID miembroId
+    ) {
+        UUID usuarioId = resolverUsuarioAutenticadoId();
+        RegistroCaDto res = cancelarRegistroMiembroCaUseCase.cancelarRegistro(procesoId, miembroId, usuarioId);
         return ResponseEntity.ok(res);
     }
 

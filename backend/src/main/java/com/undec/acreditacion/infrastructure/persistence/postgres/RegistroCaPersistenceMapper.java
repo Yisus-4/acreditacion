@@ -21,12 +21,16 @@ public final class RegistroCaPersistenceMapper {
                         m.getPrimerNombre(),
                         m.getSegundoNombre(),
                         m.getDniCuil(),
+                        m.getCuitPasaporte(),
                         m.getCorreo(),
+                        m.getCorreoGmail(),
+                        m.getCargoFuncion(),
                         m.getTelefono(),
                         m.getClaustroRol(),
                         m.isEsDocente(),
                         m.isCuentaConeauGlobalCreada(),
                         m.isCuentaCvarVinculada(),
+                        m.isPendienteAltaSistema(),
                         m.getNumeroOrden()
                 ))
                 .toList();
@@ -86,14 +90,18 @@ public final class RegistroCaPersistenceMapper {
             me.setPrimerNombre(m.getPrimerNombre());
             me.setSegundoNombre(m.getSegundoNombre());
             me.setDniCuil(m.getDniCuil());
+            me.setCuitPasaporte(m.getCuitPasaporte());
             me.setCorreo(m.getCorreo());
+            me.setCorreoGmail(m.getCorreoGmail());
+            me.setCargoFuncion(m.getCargoFuncion());
             me.setTelefono(m.getTelefono());
             me.setClaustroRol(m.getClaustroRol());
             me.setEsDocente(m.isEsDocente());
             me.setCuentaConeauGlobalCreada(m.isCuentaConeauGlobalCreada());
             me.setCuentaCvarVinculada(m.isCuentaCvarVinculada());
+            me.setPendienteAltaSistema(m.isPendienteAltaSistema());
             me.setNumeroOrden(m.getNumeroOrden());
-            me.setCreadoEn(domain.getActualizadoEn());
+            me.setCreadoEn(domain.getActualizadoEn() != null ? domain.getActualizadoEn() : java.time.Instant.now());
             miembrosEntity.add(me);
         }
         entity.setMiembros(miembrosEntity);

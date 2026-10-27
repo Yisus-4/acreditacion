@@ -474,16 +474,35 @@ export interface MiembroCaDto {
   id?: string;
   registroCaId?: string;
   apellido: string;
-  primerNombre: string;
+  primerNombre?: string;
   segundoNombre?: string;
-  dniCuil: string;
+  nombreCompleto?: string;
+  dniCuil?: string;
+  documento?: string;
+  cuitPasaporte?: string;
   correo: string;
+  correoGmail?: string;
+  cargoFuncion?: string;
   telefono?: string;
   claustroRol: RolClaustroCa;
   esDocente: boolean;
   cuentaConeauGlobalCreada: boolean;
   cuentaCvarVinculada: boolean;
+  pendienteAltaSistema?: boolean;
   numeroOrden: number;
+}
+
+export interface CatalogoMiembroComisionDto {
+  id: string;
+  apellido: string;
+  nombreCompleto: string;
+  documento: string;
+  cuitPasaporte: string;
+  correoElectronico: string;
+  correoGmail: string;
+  cargoFuncion: string;
+  esDocente: boolean;
+  creadoEn: string;
 }
 
 export interface RegistroCaDto {

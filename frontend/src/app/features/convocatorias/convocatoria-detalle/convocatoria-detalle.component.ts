@@ -15,6 +15,7 @@ import {
   GuardarRg001Request,
   RegistroCaDto,
   MiembroCaDto,
+  CatalogoMiembroComisionDto,
   GuardarRegistroCaBorradorRequest,
   RolClaustroCa,
   ItemActividadPlanRequest,
@@ -81,6 +82,37 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly coincideCurricularCa = signal<boolean>(false);
   readonly archivoResolucionCa = signal<File | null>(null);
   readonly bannerExitoCa = signal<string | null>(null);
+  readonly modalCatalogoCaAbierto = signal<boolean>(false);
+  readonly busquedaCatalogo = signal<string>('');
+  readonly resultadosCatalogo = signal<CatalogoMiembroComisionDto[]>([]);
+  readonly buscandoCatalogo = signal<boolean>(false);
+  readonly modalNuevoMiembroCaAbierto = signal<boolean>(false);
+  readonly guardandoAltaEnSistema = signal<string | null>(null);
+  readonly nuevoMiembroForm = signal<{
+    apellido: string;
+    nombreCompleto: string;
+    documento: string;
+    cuitPasaporte: string;
+    correo: string;
+    correoGmail: string;
+    cargoFuncion: string;
+    claustroRol: RolClaustroCa;
+    esDocente: boolean;
+    cuentaConeauGlobalCreada: boolean;
+    cuentaCvarVinculada: boolean;
+  }>({
+    apellido: '',
+    nombreCompleto: '',
+    documento: '',
+    cuitPasaporte: '',
+    correo: '',
+    correoGmail: '',
+    cargoFuncion: '',
+    claustroRol: 'DOCENTE',
+    esDocente: true,
+    cuentaConeauGlobalCreada: false,
+    cuentaCvarVinculada: false
+  });
 
   readonly conformacionCaDesbloqueada = computed(() => {
     return this.actividadPlanFinalizada() || (this.esRg001Enviado() && this.esPlanEnviado());
@@ -1150,6 +1182,211 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     });
   }
 
+  abrirModalCatalogoCa(): void {
+    this.busquedaCatalogo.set('');
+    this.modalCatalogoCaAbierto.set(true);
+    this.buscarEnCatalogo('');
+  }
+
+  cerrarModalCatalogoCa(): void {
+    this.modalCatalogoCaAbierto.set(false);
+    this.busquedaCatalogo.set('');
+  }
+
+  buscarEnCatalogo(termino?: string): void {
+    const query = termino !== undefined ? termino : this.busquedaCatalogo();
+    this.buscandoCatalogo.set(true);
+    this.convocatoriaService.consultarCatalogoMiembrosCa(query ? query.trim() : undefined).subscribe({
+      next: (res) => {
+        this.resultadosCatalogo.set(res);
+        this.buscandoCatalogo.set(false);
+      },
+      error: () => {
+        this.buscandoCatalogo.set(false);
+      }
+    });
+  }
+
+  seleccionarMiembroDelCatalogo(item: CatalogoMiembroComisionDto): void {
+    const actuales = this.miembrosCa();
+    const doc = item.documento ? item.documento.trim().toLowerCase() : '';
+    const cuit = item.cuitPasaporte ? item.cuitPasaporte.trim().toLowerCase() : '';
+
+    const yaExiste = actuales.some(m => {
+      const mDoc = (m.documento || m.dniCuil || '').trim().toLowerCase();
+      const mCuit = (m.cuitPasaporte || '').trim().toLowerCase();
+      return (doc && mDoc === doc) || (cuit && mCuit === cuit);
+    });
+
+    if (yaExiste) {
+      alert('Esta persona ya se encuentra incorporada en la nómina de la comisión.');
+      return;
+    }
+
+    const nuevo: MiembroCaDto = {
+      apellido: item.apellido,
+      primerNombre: item.nombreCompleto,
+      nombreCompleto: item.nombreCompleto,
+      dniCuil: item.documento,
+      documento: item.documento,
+      cuitPasaporte: item.cuitPasaporte,
+      correo: item.correoElectronico,
+      correoGmail: item.correoGmail,
+      cargoFuncion: item.cargoFuncion,
+      claustroRol: actuales.length === 0 ? 'COORDINADOR' : 'DOCENTE',
+      esDocente: item.esDocente,
+      cuentaConeauGlobalCreada: false,
+      cuentaCvarVinculada: false,
+      pendienteAltaSistema: false,
+      numeroOrden: actuales.length + 1
+    };
+
+    this.miembrosCa.set([...actuales, nuevo]);
+    this.cerrarModalCatalogoCa();
+  }
+
+  abrirModalNuevoMiembroCa(): void {
+    this.cerrarModalCatalogoCa();
+    const actuales = this.miembrosCa();
+    this.nuevoMiembroForm.set({
+      apellido: '',
+      nombreCompleto: '',
+      documento: '',
+      cuitPasaporte: '',
+      correo: '',
+      correoGmail: '',
+      cargoFuncion: '',
+      claustroRol: actuales.length === 0 ? 'COORDINADOR' : 'DOCENTE',
+      esDocente: true,
+      cuentaConeauGlobalCreada: false,
+      cuentaCvarVinculada: false
+    });
+    this.modalNuevoMiembroCaAbierto.set(true);
+  }
+
+  cerrarModalNuevoMiembroCa(): void {
+    this.modalNuevoMiembroCaAbierto.set(false);
+  }
+
+  actualizarCampoNuevoMiembro(campo: string, valor: any): void {
+    const actual = { ...this.nuevoMiembroForm() };
+    (actual as any)[campo] = valor;
+    if (campo === 'esDocente' && !valor) {
+      actual.cuentaCvarVinculada = false;
+    }
+    this.nuevoMiembroForm.set(actual);
+  }
+
+  guardarNuevoMiembroModal(): void {
+    const f = this.nuevoMiembroForm();
+    if (!f.apellido.trim() || !f.nombreCompleto.trim()) {
+      alert('Debe ingresar Apellido/s y Nombre completo.');
+      return;
+    }
+    if (!f.documento.trim()) {
+      alert('Debe ingresar el Documento.');
+      return;
+    }
+    if (!f.cuitPasaporte.trim()) {
+      alert('Debe ingresar el CUIT/Pasaporte.');
+      return;
+    }
+    if (!f.correo.trim()) {
+      alert('Debe ingresar el correo electrónico asociado a CVar y CONEAU Global.');
+      return;
+    }
+    if (!f.correoGmail.trim()) {
+      alert('Debe ingresar el correo electrónico Gmail para el espacio de trabajo compartido.');
+      return;
+    }
+    if (!f.cargoFuncion.trim()) {
+      alert('Debe indicar el cargo o función en la carrera (ej: Director de Carrera, Docente).');
+      return;
+    }
+
+    const actuales = this.miembrosCa();
+    const doc = f.documento.trim().toLowerCase();
+    const cuit = f.cuitPasaporte.trim().toLowerCase();
+
+    const yaExiste = actuales.some(m => {
+      const mDoc = (m.documento || m.dniCuil || '').trim().toLowerCase();
+      const mCuit = (m.cuitPasaporte || '').trim().toLowerCase();
+      return (doc && mDoc === doc) || (cuit && mCuit === cuit);
+    });
+
+    if (yaExiste) {
+      alert('Esta persona ya se encuentra incorporada en la nómina de la comisión.');
+      return;
+    }
+
+    const nuevo: MiembroCaDto = {
+      apellido: f.apellido.trim(),
+      primerNombre: f.nombreCompleto.trim(),
+      nombreCompleto: f.nombreCompleto.trim(),
+      dniCuil: f.documento.trim(),
+      documento: f.documento.trim(),
+      cuitPasaporte: f.cuitPasaporte.trim(),
+      correo: f.correo.trim().toLowerCase(),
+      correoGmail: f.correoGmail.trim().toLowerCase(),
+      cargoFuncion: f.cargoFuncion.trim(),
+      claustroRol: f.claustroRol,
+      esDocente: f.esDocente,
+      cuentaConeauGlobalCreada: f.cuentaConeauGlobalCreada,
+      cuentaCvarVinculada: f.cuentaCvarVinculada,
+      pendienteAltaSistema: true,
+      numeroOrden: actuales.length + 1
+    };
+
+    this.miembrosCa.set([...actuales, nuevo]);
+    this.cerrarModalNuevoMiembroCa();
+  }
+
+  confirmarRegistroMiembroEnSistema(m: MiembroCaDto): void {
+    const c = this.convocatoria();
+    if (!c || !m.id) {
+      alert('El miembro aún no fue persistido en el servidor. Guarde el borrador primero.');
+      return;
+    }
+    this.guardandoAltaEnSistema.set(m.id);
+    this.convocatoriaService.confirmarRegistroMiembroCa(c.id, m.id).subscribe({
+      next: (ca) => {
+        this.guardandoAltaEnSistema.set(null);
+        this.registroCa.set(ca);
+        if (ca.miembros) {
+          this.miembrosCa.set(ca.miembros.map(mi => ({ ...mi })));
+        }
+        this.bannerExitoCa.set(`Se ha confirmado y registrado permanentemente a ${m.apellido} en el catálogo de miembros.`);
+      },
+      error: (err) => {
+        this.guardandoAltaEnSistema.set(null);
+        alert(err?.error?.error || 'No fue posible registrar al miembro en el catálogo.');
+      }
+    });
+  }
+
+  cancelarRegistroMiembroEnSistema(m: MiembroCaDto): void {
+    const c = this.convocatoria();
+    if (!c || !m.id) {
+      alert('El miembro aún no fue persistido en el servidor. Guarde el borrador primero.');
+      return;
+    }
+    this.guardandoAltaEnSistema.set(m.id);
+    this.convocatoriaService.cancelarRegistroMiembroCa(c.id, m.id).subscribe({
+      next: (ca) => {
+        this.guardandoAltaEnSistema.set(null);
+        this.registroCa.set(ca);
+        if (ca.miembros) {
+          this.miembrosCa.set(ca.miembros.map(mi => ({ ...mi })));
+        }
+        this.bannerExitoCa.set(`Se marcó a ${m.apellido} como revisado para esta convocatoria.`);
+      },
+      error: (err) => {
+        this.guardandoAltaEnSistema.set(null);
+        alert(err?.error?.error || 'No fue posible actualizar el estado del miembro.');
+      }
+    });
+  }
+
   agregarMiembroCa(): void {
     const actuales = this.miembrosCa();
     const nuevo: MiembroCaDto = {
@@ -1178,6 +1415,15 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     const actuales = [...this.miembrosCa()];
     if (!actuales[index]) return;
     actuales[index] = { ...actuales[index], [campo]: valor };
+    if (campo === 'nombreCompleto') {
+      actuales[index].primerNombre = valor;
+    }
+    if (campo === 'documento') {
+      actuales[index].dniCuil = valor;
+    }
+    if (campo === 'dniCuil') {
+      actuales[index].documento = valor;
+    }
     if (campo === 'esDocente' && !valor) {
       actuales[index].cuentaCvarVinculada = false;
     }
@@ -1209,6 +1455,9 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       next: (ca) => {
         this.guardandoCaBorrador.set(false);
         this.registroCa.set(ca);
+        if (ca.miembros) {
+          this.miembrosCa.set(ca.miembros.map(mi => ({ ...mi })));
+        }
         this.bannerExitoCa.set('Borrador de la Comisión de Autoevaluación guardado correctamente.');
       },
       error: (err) => {
@@ -1232,12 +1481,14 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       return;
     }
     for (const m of miembros) {
-      if (!m.apellido?.trim() || !m.primerNombre?.trim() || !m.dniCuil?.trim() || !m.correo?.trim()) {
-        alert('Todos los miembros deben tener completos Apellido, Nombre, DNI/CUIL y Correo.');
+      const nombre = (m.nombreCompleto || m.primerNombre || '').trim();
+      const doc = (m.documento || m.dniCuil || '').trim();
+      if (!m.apellido?.trim() || !nombre || !doc || !m.correo?.trim()) {
+        alert('Todos los miembros deben tener completos Apellido, Nombre, Documento y Correo.');
         return;
       }
       if (m.esDocente && !m.cuentaCvarVinculada) {
-        alert(`El miembro docente ${m.apellido}, ${m.primerNombre} debe tener confirmada la vinculación con CVar.`);
+        alert(`El miembro docente ${m.apellido}, ${nombre} debe tener confirmada la vinculación con CVar.`);
         return;
       }
     }
@@ -1260,6 +1511,9 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       next: (ca) => {
         this.remitirCaCargando.set(false);
         this.registroCa.set(ca);
+        if (ca.miembros) {
+          this.miembrosCa.set(ca.miembros.map(mi => ({ ...mi })));
+        }
         this.archivoResolucionCa.set(null);
         this.bannerExitoCa.set('La conformación de la CA ha sido remitida a AEA para su auditoría y aprobación formal.');
       },

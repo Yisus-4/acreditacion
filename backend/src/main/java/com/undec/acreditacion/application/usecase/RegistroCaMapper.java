@@ -41,13 +41,19 @@ public final class RegistroCaMapper {
                         m.getApellido(),
                         m.getPrimerNombre(),
                         m.getSegundoNombre(),
+                        m.getNombreCompleto(),
                         m.getDniCuil(),
+                        m.getDniCuil(),
+                        m.getCuitPasaporte(),
                         m.getCorreo(),
+                        m.getCorreoGmail(),
+                        m.getCargoFuncion(),
                         m.getTelefono(),
                         m.getClaustroRol(),
                         m.isEsDocente(),
                         m.isCuentaConeauGlobalCreada(),
                         m.isCuentaCvarVinculada(),
+                        m.isPendienteAltaSistema(),
                         m.getNumeroOrden()
                 ))
                 .toList();
@@ -80,21 +86,34 @@ public final class RegistroCaMapper {
     public static List<MiembroComisionAutoevaluacion> toDomainList(List<MiembroCaInputDto> dtos) {
         if (dtos == null) return new ArrayList<>();
         return dtos.stream()
-                .map(d -> new MiembroComisionAutoevaluacion(
-                        d.id(),
-                        null,
-                        d.apellido(),
-                        d.primerNombre(),
-                        d.segundoNombre(),
-                        d.dniCuil(),
-                        d.correo(),
-                        d.telefono(),
-                        d.claustroRol(),
-                        d.esDocente(),
-                        d.cuentaConeauGlobalCreada(),
-                        d.cuentaCvarVinculada(),
-                        d.numeroOrden()
-                ))
+                .map(d -> {
+                    String primerNombre = d.primerNombre();
+                    String segundoNombre = d.segundoNombre();
+                    if ((primerNombre == null || primerNombre.isBlank()) && d.nombreCompleto() != null && !d.nombreCompleto().isBlank()) {
+                        primerNombre = d.nombreCompleto().trim();
+                    }
+                    String documento = d.resolverDocumento();
+
+                    return new MiembroComisionAutoevaluacion(
+                            d.id(),
+                            null,
+                            d.apellido(),
+                            primerNombre != null ? primerNombre : "",
+                            segundoNombre,
+                            documento,
+                            d.cuitPasaporte(),
+                            d.correo(),
+                            d.correoGmail(),
+                            d.cargoFuncion(),
+                            d.telefono(),
+                            d.claustroRol(),
+                            d.esDocente(),
+                            d.cuentaConeauGlobalCreada(),
+                            d.cuentaCvarVinculada(),
+                            d.pendienteAltaSistema(),
+                            d.numeroOrden()
+                    );
+                })
                 .toList();
     }
 }

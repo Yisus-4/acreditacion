@@ -37,13 +37,57 @@ public record RegistroCaDto(
             String apellido,
             String primerNombre,
             String segundoNombre,
+            String nombreCompleto,
             String dniCuil,
+            String documento,
+            String cuitPasaporte,
             String correo,
+            String correoGmail,
+            String cargoFuncion,
             String telefono,
             RolClaustroCa claustroRol,
             boolean esDocente,
             boolean cuentaConeauGlobalCreada,
             boolean cuentaCvarVinculada,
+            boolean pendienteAltaSistema,
             int numeroOrden
-    ) {}
+    ) {
+        public MiembroCaDto(
+                UUID id,
+                UUID registroCaId,
+                String apellido,
+                String primerNombre,
+                String segundoNombre,
+                String dniCuil,
+                String correo,
+                String telefono,
+                RolClaustroCa claustroRol,
+                boolean esDocente,
+                boolean cuentaConeauGlobalCreada,
+                boolean cuentaCvarVinculada,
+                int numeroOrden
+        ) {
+            this(
+                    id,
+                    registroCaId,
+                    apellido,
+                    primerNombre,
+                    segundoNombre,
+                    primerNombre + (segundoNombre != null && !segundoNombre.isBlank() ? " " + segundoNombre : ""),
+                    dniCuil,
+                    dniCuil,
+                    null,
+                    correo,
+                    null,
+                    null,
+                    telefono,
+                    claustroRol,
+                    esDocente,
+                    cuentaConeauGlobalCreada,
+                    cuentaCvarVinculada,
+                    false,
+                    numeroOrden
+            );
+        }
+    }
 }

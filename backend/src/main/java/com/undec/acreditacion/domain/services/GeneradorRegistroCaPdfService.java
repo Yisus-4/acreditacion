@@ -29,10 +29,13 @@ public final class GeneradorRegistroCaPdfService {
         sb.append("% --- NOMINA DE MIEMBROS DE LA COMISION DE AUTOEVALUACION ---\n");
         for (MiembroComisionAutoevaluacion m : ca.getMiembros()) {
             sb.append("% ").append(m.getNumeroOrden()).append(". ")
-                    .append(m.getApellido()).append(", ").append(m.getPrimerNombre())
-                    .append(" | DNI/CUIL: ").append(m.getDniCuil())
-                    .append(" | Rol: ").append(m.getClaustroRol().name())
+                    .append(m.getApellido()).append(", ").append(m.getNombreCompleto())
+                    .append(" | DNI/Doc: ").append(m.getDniCuil())
+                    .append(m.getCuitPasaporte() != null ? " | CUIT/Pasaporte: " + m.getCuitPasaporte() : "")
+                    .append(" | Rol CA: ").append(m.getClaustroRol().name())
+                    .append(m.getCargoFuncion() != null ? " | Cargo: " + m.getCargoFuncion() : "")
                     .append(" | Correo: ").append(m.getCorreo())
+                    .append(m.getCorreoGmail() != null ? " | Gmail: " + m.getCorreoGmail() : "")
                     .append(" | Docente: ").append(m.isEsDocente() ? "SI" : "NO")
                     .append(" | CVar Vinculada: ").append(m.isCuentaCvarVinculada() ? "SI" : "NO")
                     .append(" | CONEAU Global: ").append(m.isCuentaConeauGlobalCreada() ? "SI" : "NO")

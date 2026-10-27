@@ -30,8 +30,17 @@ public class MiembroComisionAutoevaluacionJpaEntity {
     @Column(name = "dni_cuil", nullable = false, length = 30)
     private String dniCuil;
 
+    @Column(name = "cuit_pasaporte", length = 50)
+    private String cuitPasaporte;
+
     @Column(name = "correo", nullable = false, length = 150)
     private String correo;
+
+    @Column(name = "correo_gmail", length = 150)
+    private String correoGmail;
+
+    @Column(name = "cargo_funcion", length = 150)
+    private String cargoFuncion;
 
     @Column(name = "telefono", length = 50)
     private String telefono;
@@ -48,6 +57,9 @@ public class MiembroComisionAutoevaluacionJpaEntity {
 
     @Column(name = "cuenta_cvar_vinculada", nullable = false)
     private boolean cuentaCvarVinculada;
+
+    @Column(name = "pendiente_alta_sistema", nullable = false)
+    private boolean pendienteAltaSistema;
 
     @Column(name = "numero_orden", nullable = false)
     private int numeroOrden;
@@ -105,12 +117,36 @@ public class MiembroComisionAutoevaluacionJpaEntity {
         this.dniCuil = dniCuil;
     }
 
+    public String getCuitPasaporte() {
+        return cuitPasaporte;
+    }
+
+    public void setCuitPasaporte(String cuitPasaporte) {
+        this.cuitPasaporte = cuitPasaporte;
+    }
+
     public String getCorreo() {
         return correo;
     }
 
     public void setCorreo(String correo) {
         this.correo = correo;
+    }
+
+    public String getCorreoGmail() {
+        return correoGmail;
+    }
+
+    public void setCorreoGmail(String correoGmail) {
+        this.correoGmail = correoGmail;
+    }
+
+    public String getCargoFuncion() {
+        return cargoFuncion;
+    }
+
+    public void setCargoFuncion(String cargoFuncion) {
+        this.cargoFuncion = cargoFuncion;
     }
 
     public String getTelefono() {
@@ -151,6 +187,14 @@ public class MiembroComisionAutoevaluacionJpaEntity {
 
     public void setCuentaCvarVinculada(boolean cuentaCvarVinculada) {
         this.cuentaCvarVinculada = cuentaCvarVinculada;
+    }
+
+    public boolean isPendienteAltaSistema() {
+        return pendienteAltaSistema;
+    }
+
+    public void setPendienteAltaSistema(boolean pendienteAltaSistema) {
+        this.pendienteAltaSistema = pendienteAltaSistema;
     }
 
     public int getNumeroOrden() {

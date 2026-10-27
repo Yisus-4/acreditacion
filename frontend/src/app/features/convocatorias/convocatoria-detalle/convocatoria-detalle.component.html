@@ -1298,7 +1298,7 @@
               <div>
                 <h3 class="bloqueo-titulo">Etapa Institucional No Habilitada</h3>
                 <p class="bloqueo-desc">
-                  La conformación de la Comisión de Autoevaluación (Registro RG-002 e Instructivo IT-001) para carreras de Grado
+                  La conformación de la Comisión de Autoevaluación (Registro RG-002) para carreras de Grado
                   requiere como condición excluyente la formalización finalizada del <strong>Plan de Trabajo (PT-001)</strong> y del <strong>Registro RG-001</strong>.
                 </p>
               </div>
@@ -1346,21 +1346,7 @@
                 </p>
               </div>
 
-              <div class="ca-header-actions">
-                <button
-                  type="button"
-                  class="btn btn-secondary btn-sm"
-                  (click)="descargarInstructivoIt001()"
-                  title="Descargar Instructivo Oficial IT-001"
-                >
-                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  <span>Descargar IT-001 (Instructivo CVar / CONEAU Global)</span>
-                </button>
-              </div>
+
             </div>
 
             <!-- Semáforo y Cómputo de Plazo (15 días) -->
@@ -1426,135 +1412,246 @@
                   </p>
                 </div>
 
-                <!-- Tabla de Miembros de la Comisión -->
+                <!-- Tabla de Miembros de la Comisión (RG-002) -->
                 <div class="tabla-miembros-section">
                   <div class="section-sub-header">
-                    <h3>Nómina de Integrantes de la Comisión de Autoevaluación</h3>
+                    <div>
+                      <h3>Nómina de Integrantes de la Comisión de Autoevaluación (RG-002)</h3>
+                      <p class="field-hint" style="margin: 0.25rem 0 0 0;">
+                        Campos oficiales de acreditación: DNI, CUIT, correo CVar/CONEAU, Gmail y cargo en carrera.
+                      </p>
+                    </div>
                     @if (puedeEditarCa()) {
-                      <button type="button" class="btn btn-outline btn-sm" (click)="agregarMiembroCa()">
-                        + Agregar Miembro
-                      </button>
+                      <div class="section-actions-group">
+                        <button type="button" class="btn btn-secondary btn-sm" (click)="abrirModalCatalogoCa()">
+                          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                          </svg>
+                          <span>Consultar Comisión / Buscar Miembro</span>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" (click)="abrirModalNuevoMiembroCa()">
+                          + Cargar Nuevo Miembro
+                        </button>
+                      </div>
                     }
                   </div>
 
                   @if (miembrosCa().length === 0) {
                     <div class="empty-state-table">
-                      <p>No se han registrado integrantes en la nómina. Presione <strong>+ Agregar Miembro</strong> para comenzar.</p>
+                      <p>No se han registrado integrantes en la nómina de la comisión.</p>
+                      @if (puedeEditarCa()) {
+                        <div class="empty-state-actions" style="margin-top: 0.75rem; display: flex; gap: 0.75rem; justify-content: center;">
+                          <button type="button" class="btn btn-secondary btn-sm" (click)="abrirModalCatalogoCa()">
+                            Consultar Comisión / Buscar Miembro
+                          </button>
+                          <button type="button" class="btn btn-primary btn-sm" (click)="abrirModalNuevoMiembroCa()">
+                            + Cargar Nuevo Miembro
+                          </button>
+                        </div>
+                      }
                     </div>
                   } @else {
                     <div class="table-responsive">
                       <table class="table-undec">
                         <thead>
                           <tr>
-                            <th style="width: 40px">#</th>
+                            <th style="width: 36px">#</th>
                             <th>Apellido y Nombre</th>
-                            <th style="width: 120px">DNI / CUIL</th>
-                            <th>Correo Electrónico</th>
-                            <th style="width: 140px">Claustro / Rol</th>
-                            <th style="width: 80px; text-align: center">¿Es Docente?</th>
-                            <th style="width: 110px; text-align: center">CONEAU Global</th>
-                            <th style="width: 110px; text-align: center">CVar Vinculado</th>
-                            @if (puedeEditarCa()) {
-                              <th style="width: 50px"></th>
-                            }
+                            <th style="width: 140px">Documento / CUIT</th>
+                            <th style="width: 160px">Cargo y Rol CA</th>
+                            <th>Correos (CVar / Gmail)</th>
+                            <th style="width: 180px; text-align: center">Docente / CVar / CONEAU</th>
+                            <th style="width: 150px; text-align: center">Estado Catálogo</th>
+                            <th style="width: 110px; text-align: center">Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
                           @for (m of miembrosCa(); track $index) {
-                            <tr>
+                            <tr [class.row-pendiente]="m.pendienteAltaSistema">
                               <td class="col-num">{{ m.numeroOrden }}</td>
                               <td>
-                                <div class="cell-flex-row">
-                                  <input
-                                    type="text"
-                                    class="form-input form-input-sm"
-                                    placeholder="Apellido"
-                                    [value]="m.apellido"
-                                    [disabled]="!puedeEditarCa()"
-                                    (input)="actualizarCampoMiembro($index, 'apellido', $any($event.target).value)"
-                                  />
-                                  <input
-                                    type="text"
-                                    class="form-input form-input-sm"
-                                    placeholder="Nombre"
-                                    [value]="m.primerNombre"
-                                    [disabled]="!puedeEditarCa()"
-                                    (input)="actualizarCampoMiembro($index, 'primerNombre', $any($event.target).value)"
-                                  />
+                                @if (puedeEditarCa()) {
+                                  <div class="cell-stack">
+                                    <input
+                                      type="text"
+                                      class="form-input form-input-sm"
+                                      placeholder="Apellido/s"
+                                      [value]="m.apellido"
+                                      (input)="actualizarCampoMiembro($index, 'apellido', $any($event.target).value)"
+                                    />
+                                    <input
+                                      type="text"
+                                      class="form-input form-input-sm"
+                                      placeholder="Nombre completo"
+                                      [value]="m.nombreCompleto || m.primerNombre || ''"
+                                      (input)="actualizarCampoMiembro($index, 'nombreCompleto', $any($event.target).value)"
+                                    />
+                                  </div>
+                                } @else {
+                                  <div class="cell-text-main">
+                                    <strong>{{ m.apellido }}, {{ m.nombreCompleto || m.primerNombre }}</strong>
+                                  </div>
+                                }
+                              </td>
+                              <td>
+                                @if (puedeEditarCa()) {
+                                  <div class="cell-stack">
+                                    <input
+                                      type="text"
+                                      class="form-input form-input-sm"
+                                      placeholder="Doc: 8.386.710"
+                                      [value]="m.documento || m.dniCuil || ''"
+                                      (input)="actualizarCampoMiembro($index, 'documento', $any($event.target).value)"
+                                    />
+                                    <input
+                                      type="text"
+                                      class="form-input form-input-sm"
+                                      placeholder="CUIT: 20-08386710-9"
+                                      [value]="m.cuitPasaporte || ''"
+                                      (input)="actualizarCampoMiembro($index, 'cuitPasaporte', $any($event.target).value)"
+                                    />
+                                  </div>
+                                } @else {
+                                  <div class="cell-stack text-sm">
+                                    <span>Doc: {{ m.documento || m.dniCuil }}</span>
+                                    <span class="text-muted">CUIT: {{ m.cuitPasaporte || '—' }}</span>
+                                  </div>
+                                }
+                              </td>
+                              <td>
+                                @if (puedeEditarCa()) {
+                                  <div class="cell-stack">
+                                    <input
+                                      type="text"
+                                      class="form-input form-input-sm"
+                                      placeholder="Cargo en carrera"
+                                      [value]="m.cargoFuncion || ''"
+                                      (input)="actualizarCampoMiembro($index, 'cargoFuncion', $any($event.target).value)"
+                                    />
+                                    <select
+                                      class="form-select form-select-sm"
+                                      [value]="m.claustroRol"
+                                      (change)="actualizarCampoMiembro($index, 'claustroRol', $any($event.target).value)"
+                                    >
+                                      <option value="COORDINADOR">Coordinador</option>
+                                      <option value="DOCENTE">Docente</option>
+                                      <option value="GRADUADO">Graduado</option>
+                                      <option value="ESTUDIANTE">Estudiante</option>
+                                      <option value="NODOCENTE">Nodocente</option>
+                                    </select>
+                                  </div>
+                                } @else {
+                                  <div class="cell-stack text-sm">
+                                    <span class="font-medium">{{ m.cargoFuncion || '—' }}</span>
+                                    <span class="badge-rol-ca">{{ m.claustroRol }}</span>
+                                  </div>
+                                }
+                              </td>
+                              <td>
+                                @if (puedeEditarCa()) {
+                                  <div class="cell-stack">
+                                    <input
+                                      type="email"
+                                      class="form-input form-input-sm"
+                                      placeholder="Correo CVar / CONEAU"
+                                      [value]="m.correo"
+                                      (input)="actualizarCampoMiembro($index, 'correo', $any($event.target).value)"
+                                    />
+                                    <input
+                                      type="email"
+                                      class="form-input form-input-sm"
+                                      placeholder="Correo Gmail (trabajo)"
+                                      [value]="m.correoGmail || ''"
+                                      (input)="actualizarCampoMiembro($index, 'correoGmail', $any($event.target).value)"
+                                    />
+                                  </div>
+                                } @else {
+                                  <div class="cell-stack text-sm">
+                                    <span>CVar: {{ m.correo }}</span>
+                                    <span class="text-muted">Gmail: {{ m.correoGmail || '—' }}</span>
+                                  </div>
+                                }
+                              </td>
+                              <td style="text-align: center">
+                                <div class="flags-cell">
+                                  <label class="flag-item" title="¿Es Docente de la carrera?">
+                                    <input
+                                      type="checkbox"
+                                      [checked]="m.esDocente"
+                                      [disabled]="!puedeEditarCa()"
+                                      (change)="actualizarCampoMiembro($index, 'esDocente', $any($event.target).checked)"
+                                    />
+                                    <span class="flag-label">Docente</span>
+                                  </label>
+                                  <label class="flag-item" title="Cuenta CONEAU Global creada">
+                                    <input
+                                      type="checkbox"
+                                      [checked]="m.cuentaConeauGlobalCreada"
+                                      [disabled]="!puedeEditarCa()"
+                                      (change)="actualizarCampoMiembro($index, 'cuentaConeauGlobalCreada', $any($event.target).checked)"
+                                    />
+                                    <span class="flag-label">CONEAU</span>
+                                  </label>
+                                  <label class="flag-item" [title]="m.esDocente ? 'Obligatorio vincular CVar' : 'Solo aplica a docentes'">
+                                    <input
+                                      type="checkbox"
+                                      [checked]="m.cuentaCvarVinculada"
+                                      [disabled]="!puedeEditarCa() || !m.esDocente"
+                                      (change)="actualizarCampoMiembro($index, 'cuentaCvarVinculada', $any($event.target).checked)"
+                                    />
+                                    <span class="flag-label">CVar</span>
+                                  </label>
                                 </div>
                               </td>
-                              <td>
-                                <input
-                                  type="text"
-                                  class="form-input form-input-sm"
-                                  placeholder="DNI/CUIL"
-                                  [value]="m.dniCuil"
-                                  [disabled]="!puedeEditarCa()"
-                                  (input)="actualizarCampoMiembro($index, 'dniCuil', $any($event.target).value)"
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  type="email"
-                                  class="form-input form-input-sm"
-                                  placeholder="correo@undec.edu.ar"
-                                  [value]="m.correo"
-                                  [disabled]="!puedeEditarCa()"
-                                  (input)="actualizarCampoMiembro($index, 'correo', $any($event.target).value)"
-                                />
-                              </td>
-                              <td>
-                                <select
-                                  class="form-select form-select-sm"
-                                  [value]="m.claustroRol"
-                                  [disabled]="!puedeEditarCa()"
-                                  (change)="actualizarCampoMiembro($index, 'claustroRol', $any($event.target).value)"
-                                >
-                                  <option value="COORDINADOR">Coordinador</option>
-                                  <option value="DOCENTE">Docente</option>
-                                  <option value="GRADUADO">Graduado</option>
-                                  <option value="ESTUDIANTE">Estudiante</option>
-                                  <option value="NODOCENTE">Nodocente</option>
-                                </select>
+                              <td style="text-align: center">
+                                @if (m.pendienteAltaSistema) {
+                                  <span class="badge-pendiente-alta" title="Miembro cargado ad-hoc, pendiente de confirmación en el catálogo permanente">
+                                    Nuevo · Pendiente registro en sistema
+                                  </span>
+                                } @else {
+                                  <span class="badge-en-catalogo" title="Miembro registrado en el catálogo institucional permanente">
+                                    En Catálogo
+                                  </span>
+                                }
                               </td>
                               <td style="text-align: center">
-                                <input
-                                  type="checkbox"
-                                  [checked]="m.esDocente"
-                                  [disabled]="!puedeEditarCa()"
-                                  (change)="actualizarCampoMiembro($index, 'esDocente', $any($event.target).checked)"
-                                />
+                                <div class="cell-actions-column">
+                                  @if (puedeEditarCa()) {
+                                    <button
+                                      type="button"
+                                      class="btn-icon-danger"
+                                      (click)="eliminarMiembroCa($index)"
+                                      title="Eliminar integrante de la comisión"
+                                    >
+                                      ✕
+                                    </button>
+                                  }
+
+                                  @if (canManage() && m.pendienteAltaSistema && m.id) {
+                                    <div class="aea-alta-actions">
+                                      <button
+                                        type="button"
+                                        class="btn btn-xs btn-primary"
+                                        [disabled]="guardandoAltaEnSistema() === m.id"
+                                        (click)="confirmarRegistroMiembroEnSistema(m)"
+                                        title="Confirmar y registrar permanentemente en el catálogo del sistema"
+                                      >
+                                        {{ guardandoAltaEnSistema() === m.id ? '...' : 'Confirmar en Sistema' }}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        class="btn btn-xs btn-outline"
+                                        [disabled]="guardandoAltaEnSistema() === m.id"
+                                        (click)="cancelarRegistroMiembroEnSistema(m)"
+                                        title="Dejar registrado solo para esta convocatoria"
+                                      >
+                                        Solo Convocatoria / Descartar
+                                      </button>
+                                    </div>
+                                  }
+                                </div>
                               </td>
-                              <td style="text-align: center">
-                                <input
-                                  type="checkbox"
-                                  [checked]="m.cuentaConeauGlobalCreada"
-                                  [disabled]="!puedeEditarCa()"
-                                  (change)="actualizarCampoMiembro($index, 'cuentaConeauGlobalCreada', $any($event.target).checked)"
-                                  title="Cuenta CONEAU Global creada"
-                                />
-                              </td>
-                              <td style="text-align: center">
-                                <input
-                                  type="checkbox"
-                                  [checked]="m.cuentaCvarVinculada"
-                                  [disabled]="!puedeEditarCa() || !m.esDocente"
-                                  (change)="actualizarCampoMiembro($index, 'cuentaCvarVinculada', $any($event.target).checked)"
-                                  [title]="m.esDocente ? 'Obligatorio vincular CVar' : 'Solo aplica a docentes'"
-                                />
-                              </td>
-                              @if (puedeEditarCa()) {
-                                <td>
-                                  <button
-                                    type="button"
-                                    class="btn-icon-danger"
-                                    (click)="eliminarMiembroCa($index)"
-                                    title="Eliminar fila"
-                                  >
-                                    ✕
-                                  </button>
-                                </td>
-                              }
                             </tr>
                           }
                         </tbody>
@@ -1647,6 +1744,278 @@
             }
           </div>
         }
+      </div>
+    }
+
+    <!-- Modal Consultar Catálogo de Miembros -->
+    @if (modalCatalogoCaAbierto()) {
+      <div class="modal-backdrop" (click)="cerrarModalCatalogoCa()">
+        <div class="modal-card modal-card-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div>
+              <span class="badge-header">Catálogo Institucional · RG-002</span>
+              <h3>Consultar Comisión / Buscar Miembro</h3>
+              <p class="modal-subtitle-text">
+                Seleccione miembros registrados en el catálogo institucional permanente para sumarlos a la comisión.
+              </p>
+            </div>
+            <button type="button" class="btn-close" (click)="cerrarModalCatalogoCa()">✕</button>
+          </div>
+
+          <div class="modal-body">
+            <div class="catalogo-search-bar">
+              <input
+                type="text"
+                class="form-input"
+                placeholder="Buscar por apellido, nombre, documento, CUIT o correo..."
+                [value]="busquedaCatalogo()"
+                (input)="busquedaCatalogo.set($any($event.target).value)"
+                (keydown.enter)="buscarEnCatalogo()"
+              />
+              <button type="button" class="btn btn-secondary" [disabled]="buscandoCatalogo()" (click)="buscarEnCatalogo()">
+                {{ buscandoCatalogo() ? 'Buscando...' : 'Buscar' }}
+              </button>
+            </div>
+
+            @if (buscandoCatalogo()) {
+              <div class="catalogo-loading">
+                <p>Buscando en el catálogo institucional...</p>
+              </div>
+            } @else if (resultadosCatalogo().length === 0) {
+              <div class="catalogo-empty">
+                <p>No se encontraron integrantes en el catálogo permanente.</p>
+                <button type="button" class="btn btn-primary btn-sm" (click)="abrirModalNuevoMiembroCa()">
+                  + Cargar Nuevo Miembro
+                </button>
+              </div>
+            } @else {
+              <div class="table-responsive modal-table-wrap">
+                <table class="table-undec table-catalogo">
+                  <thead>
+                    <tr>
+                      <th>Apellido y Nombre</th>
+                      <th>Documento / CUIT</th>
+                      <th>Cargo en Carrera</th>
+                      <th>Correos</th>
+                      <th style="width: 100px; text-align: center">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (c of resultadosCatalogo(); track c.id) {
+                      <tr>
+                        <td>
+                          <strong>{{ c.apellido }}, {{ c.nombreCompleto }}</strong>
+                          @if (c.esDocente) {
+                            <span class="badge-docente-sm">Docente</span>
+                          }
+                        </td>
+                        <td>
+                          <div class="cell-stack text-sm">
+                            <span>Doc: {{ c.documento }}</span>
+                            <span class="text-muted">CUIT: {{ c.cuitPasaporte }}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span class="cargo-tag">{{ c.cargoFuncion }}</span>
+                        </td>
+                        <td>
+                          <div class="cell-stack text-sm">
+                            <span>{{ c.correoElectronico }}</span>
+                            <span class="text-muted">{{ c.correoGmail }}</span>
+                          </div>
+                        </td>
+                        <td style="text-align: center">
+                          <button
+                            type="button"
+                            class="btn btn-primary btn-sm"
+                            (click)="seleccionarMiembroDelCatalogo(c)"
+                          >
+                            Seleccionar
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" (click)="abrirModalNuevoMiembroCa()">
+              + Cargar Nuevo Miembro
+            </button>
+            <button type="button" class="btn btn-secondary" (click)="cerrarModalCatalogoCa()">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Modal Cargar Nuevo Miembro -->
+    @if (modalNuevoMiembroCaAbierto()) {
+      <div class="modal-backdrop" (click)="cerrarModalNuevoMiembroCa()">
+        <div class="modal-card modal-card-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div>
+              <span class="badge-header">Registro Oficial RG-002</span>
+              <h3>Cargar Nuevo Miembro de Comisión</h3>
+              <p class="modal-subtitle-text">
+                Ingrese los datos oficiales requeridos según el formulario RG-002. Quedará marcado como <strong>Nuevo · Pendiente registro en sistema</strong> para la auditoría de AEA.
+              </p>
+            </div>
+            <button type="button" class="btn-close" (click)="cerrarModalNuevoMiembroCa()">✕</button>
+          </div>
+
+          <div class="modal-body">
+            <div class="form-grid-2col">
+              <div class="form-group">
+                <label class="form-label" for="nm-apellido">Apellido/s <span class="required">*</span></label>
+                <input
+                  id="nm-apellido"
+                  type="text"
+                  class="form-input"
+                  placeholder="Ej: Salerno"
+                  [value]="nuevoMiembroForm().apellido"
+                  (input)="actualizarCampoNuevoMiembro('apellido', $any($event.target).value)"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="nm-nombre">Nombre completo <span class="required">*</span></label>
+                <input
+                  id="nm-nombre"
+                  type="text"
+                  class="form-input"
+                  placeholder="Ej: Julio Luis"
+                  [value]="nuevoMiembroForm().nombreCompleto"
+                  (input)="actualizarCampoNuevoMiembro('nombreCompleto', $any($event.target).value)"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="nm-documento">Documento <span class="required">*</span></label>
+                <input
+                  id="nm-documento"
+                  type="text"
+                  class="form-input"
+                  placeholder="Ej: 8.386.710"
+                  [value]="nuevoMiembroForm().documento"
+                  (input)="actualizarCampoNuevoMiembro('documento', $any($event.target).value)"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="nm-cuit">CUIT / Pasaporte <span class="required">*</span></label>
+                <input
+                  id="nm-cuit"
+                  type="text"
+                  class="form-input"
+                  placeholder="Ej: 20-08386710-9"
+                  [value]="nuevoMiembroForm().cuitPasaporte"
+                  (input)="actualizarCampoNuevoMiembro('cuitPasaporte', $any($event.target).value)"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="nm-correo">Correo CVar / CONEAU Global <span class="required">*</span></label>
+                <input
+                  id="nm-correo"
+                  type="email"
+                  class="form-input"
+                  placeholder="jsalerno@undec.edu.ar"
+                  [value]="nuevoMiembroForm().correo"
+                  (input)="actualizarCampoNuevoMiembro('correo', $any($event.target).value)"
+                />
+                <span class="field-hint">Mismo correo asociado a las plataformas oficiales.</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="nm-gmail">Correo Gmail (Espacio compartido) <span class="required">*</span></label>
+                <input
+                  id="nm-gmail"
+                  type="email"
+                  class="form-input"
+                  placeholder="salernojulioluis@gmail.com"
+                  [value]="nuevoMiembroForm().correoGmail"
+                  (input)="actualizarCampoNuevoMiembro('correoGmail', $any($event.target).value)"
+                />
+                <span class="field-hint">Para acceso al espacio de trabajo colaborativo.</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="nm-cargo">Cargo / Función en la Carrera <span class="required">*</span></label>
+                <input
+                  id="nm-cargo"
+                  type="text"
+                  class="form-input"
+                  placeholder="Ej: Director de Carrera / Docente"
+                  [value]="nuevoMiembroForm().cargoFuncion"
+                  (input)="actualizarCampoNuevoMiembro('cargoFuncion', $any($event.target).value)"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="nm-rol">Rol en la Comisión (CA) <span class="required">*</span></label>
+                <select
+                  id="nm-rol"
+                  class="form-select"
+                  [value]="nuevoMiembroForm().claustroRol"
+                  (change)="actualizarCampoNuevoMiembro('claustroRol', $any($event.target).value)"
+                >
+                  <option value="COORDINADOR">Coordinador</option>
+                  <option value="DOCENTE">Docente</option>
+                  <option value="GRADUADO">Graduado</option>
+                  <option value="ESTUDIANTE">Estudiante</option>
+                  <option value="NODOCENTE">Nodocente</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-checkboxes-row" style="margin-top: 1rem; display: flex; gap: 1.5rem; flex-wrap: wrap;">
+              <label class="checkbox-container">
+                <input
+                  type="checkbox"
+                  [checked]="nuevoMiembroForm().esDocente"
+                  (change)="actualizarCampoNuevoMiembro('esDocente', $any($event.target).checked)"
+                />
+                <span class="checkmark"></span>
+                <span class="checkbox-text">¿Es Docente de la Carrera?</span>
+              </label>
+
+              <label class="checkbox-container">
+                <input
+                  type="checkbox"
+                  [checked]="nuevoMiembroForm().cuentaConeauGlobalCreada"
+                  (change)="actualizarCampoNuevoMiembro('cuentaConeauGlobalCreada', $any($event.target).checked)"
+                />
+                <span class="checkmark"></span>
+                <span class="checkbox-text">Cuenta CONEAU Global creada</span>
+              </label>
+
+              <label class="checkbox-container">
+                <input
+                  type="checkbox"
+                  [checked]="nuevoMiembroForm().cuentaCvarVinculada"
+                  [disabled]="!nuevoMiembroForm().esDocente"
+                  (change)="actualizarCampoNuevoMiembro('cuentaCvarVinculada', $any($event.target).checked)"
+                />
+                <span class="checkmark"></span>
+                <span class="checkbox-text">Cuenta CVar vinculada</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="cerrarModalNuevoMiembroCa()">
+              Cancelar
+            </button>
+            <button type="button" class="btn btn-primary" (click)="guardarNuevoMiembroModal()">
+              Incorporar a la Comisión
+            </button>
+          </div>
+        </div>
       </div>
     }
 

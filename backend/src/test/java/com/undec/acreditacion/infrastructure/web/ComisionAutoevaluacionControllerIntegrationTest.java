@@ -21,7 +21,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -39,11 +38,14 @@ class ComisionAutoevaluacionControllerIntegrationTest {
     private RemitirRegistroCaUseCase remitirUseCase;
     private AprobarRegistroCaUseCase aprobarUseCase;
     private ObservarRegistroCaUseCase observarUseCase;
+    private ConfirmarRegistroMiembroCaUseCase confirmarRegistroUseCase;
+    private CancelarRegistroMiembroCaUseCase cancelarRegistroUseCase;
     private DocumentStoragePort storagePort;
     private UserRepository userRepository;
     private ObjectMapper objectMapper;
 
     private UUID procesoId;
+    private UUID miembroId;
 
     @BeforeEach
     void setUp() {
@@ -53,6 +55,8 @@ class ComisionAutoevaluacionControllerIntegrationTest {
         remitirUseCase = mock(RemitirRegistroCaUseCase.class);
         aprobarUseCase = mock(AprobarRegistroCaUseCase.class);
         observarUseCase = mock(ObservarRegistroCaUseCase.class);
+        confirmarRegistroUseCase = mock(ConfirmarRegistroMiembroCaUseCase.class);
+        cancelarRegistroUseCase = mock(CancelarRegistroMiembroCaUseCase.class);
         storagePort = mock(DocumentStoragePort.class);
         userRepository = mock(UserRepository.class);
         objectMapper = new ObjectMapper();
@@ -60,6 +64,7 @@ class ComisionAutoevaluacionControllerIntegrationTest {
         ComisionAutoevaluacionController controller = new ComisionAutoevaluacionController(
                 consultarUseCase, solicitarUseCase, guardarBorradorUseCase,
                 remitirUseCase, aprobarUseCase, observarUseCase,
+                confirmarRegistroUseCase, cancelarRegistroUseCase,
                 storagePort, userRepository, objectMapper
         );
 
@@ -68,6 +73,7 @@ class ComisionAutoevaluacionControllerIntegrationTest {
                 .build();
 
         procesoId = UUID.randomUUID();
+        miembroId = UUID.randomUUID();
     }
 
     private RegistroCaDto crearDtoEjemplo(EstadoRegistroCa estado) {
@@ -77,9 +83,10 @@ class ComisionAutoevaluacionControllerIntegrationTest {
                 null, null, null, null, null,
                 null, null, null, null, Instant.now(), Instant.now(),
                 List.of(new RegistroCaDto.MiembroCaDto(
-                        UUID.randomUUID(), UUID.randomUUID(), "Perez", "Juan", null,
-                        "12345678", "juan@undec.edu.ar", "123", RolClaustroCa.COORDINADOR,
-                        true, true, true, 1
+                        miembroId, UUID.randomUUID(), "Perez", "Juan", null, "Juan Perez",
+                        "12345678", "12345678", "20-12345678-9", "juan@undec.edu.ar",
+                        "juan@gmail.com", "Docente", "123", RolClaustroCa.COORDINADOR,
+                        true, true, true, false, 1
                 ))
         );
     }
@@ -175,5 +182,27 @@ class ComisionAutoevaluacionControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estado").value("OBSERVADA"));
+    }
+
+    @Test
+    @DisplayName("POST /api/convocatorias/{procesoId}/comision-autoevaluacion/miembros/{miembroId}/confirmar-registro confirma registro en catálogo")
+    void confirmarRegistroMiembro() throws Exception {
+        RegistroCaDto dto = crearDtoEjemplo(EstadoRegistroCa.EN_CARGA_BORRADOR);
+        when(confirmarRegistroUseCase.confirmarRegistro(eq(procesoId), eq(miembroId), any())).thenReturn(dto);
+
+        mockMvc.perform(post("/api/convocatorias/{procesoId}/comision-autoevaluacion/miembros/{miembroId}/confirmar-registro", procesoId, miembroId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.miembros[0].pendienteAltaSistema").value(false));
+    }
+
+    @Test
+    @DisplayName("POST /api/convocatorias/{procesoId}/comision-autoevaluacion/miembros/{miembroId}/cancelar-registro cancela alta en catálogo")
+    void cancelarRegistroMiembro() throws Exception {
+        RegistroCaDto dto = crearDtoEjemplo(EstadoRegistroCa.EN_CARGA_BORRADOR);
+        when(cancelarRegistroUseCase.cancelarRegistro(eq(procesoId), eq(miembroId), any())).thenReturn(dto);
+
+        mockMvc.perform(post("/api/convocatorias/{procesoId}/comision-autoevaluacion/miembros/{miembroId}/cancelar-registro", procesoId, miembroId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.miembros[0].pendienteAltaSistema").value(false));
     }
 }
