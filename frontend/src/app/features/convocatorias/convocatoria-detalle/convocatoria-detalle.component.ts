@@ -83,7 +83,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly bannerExitoCa = signal<string | null>(null);
 
   readonly conformacionCaDesbloqueada = computed(() => {
-    return this.actividadPlanFinalizada() && this.esRg001Enviado();
+    return this.actividadPlanFinalizada() || (this.esRg001Enviado() && this.esPlanEnviado());
   });
 
   readonly puedeEditarCa = computed(() => {
@@ -577,9 +577,11 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         });
         this.actualizarFocoPorDefecto();
 
-        // Si la etapa de formalización y normativa está completada, avanzar a la carga del RG-001 y Plan de Trabajo
-        if (autoAvanzar || (!this.focoSeleccionadoManualmente && this.tabActiva() === 'ACTIVIDADES')) {
-          if (this.planTrabajoDesbloqueado() && !this.actividadPlanFinalizada()) {
+        // Si la etapa de formalización y normativa está completada, avanzar a la carga del RG-001 y Plan de Trabajo, o a Comisión de Autoevaluación
+        if (autoAvanzar || (!this.focoSeleccionadoManualmente && (this.tabActiva() === 'ACTIVIDADES' || this.tabActiva() === 'PLAN_TRABAJO'))) {
+          if (this.conformacionCaDesbloqueada() && this.registroCa()?.estado !== 'APROBADA') {
+            this.tabActiva.set('COMISION_AUTOEVALUACION');
+          } else if (this.planTrabajoDesbloqueado() && !this.actividadPlanFinalizada()) {
             this.tabActiva.set('PLAN_TRABAJO');
           }
         }
@@ -1037,6 +1039,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         this.finalizandoActividadPlan.set(false);
         this.convocatoria.set(detalleActualizado);
         this.bannerExitoPlan.set('¡Actividad Finalizada! La elaboración del Plan de Trabajo y Formulario RG-001 ha quedado formalmente completada.');
+        this.seleccionarTab('COMISION_AUTOEVALUACION');
         this.cargarDatos(c.id);
       },
       error: (err) => {

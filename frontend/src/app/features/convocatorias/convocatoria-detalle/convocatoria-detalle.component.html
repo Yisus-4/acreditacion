@@ -1256,6 +1256,29 @@
                 </div>
               </div>
             </section>
+
+            @if (conformacionCaDesbloqueada()) {
+              <div class="banner-siguiente-etapa-desbloqueada mt-lg">
+                <div class="banner-siguiente-contenido">
+                  <svg class="icon-svg-success" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  <div class="banner-siguiente-textos">
+                    <h3 class="banner-siguiente-titulo">¡Plan de Trabajo y Formulario RG-001 completados!</h3>
+                    <p class="banner-siguiente-desc">
+                      El cronograma institucional y el registro oficial se encuentran vigentes. La siguiente etapa (Conformación de la Comisión de Autoevaluación · RG-002) ha quedado habilitada para su gestión.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="btn-avanzar-siguiente-etapa"
+                  (click)="seleccionarTab('COMISION_AUTOEVALUACION')"
+                >
+                  Continuar a Comisión de Autoevaluación (CA · RG-002) &rarr;
+                </button>
+              </div>
+            }
           </div>
         }
       </div>
