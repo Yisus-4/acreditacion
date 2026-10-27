@@ -1097,7 +1097,7 @@
                         </tr>
                       </thead>
                       <tbody>
-                        @for (act of cronogramaActividadesFiltradas(); track act.codigoActividad; let idx = $index) {
+                        @for (act of cronogramaActividadesFiltradas(); track (act.hoja + '_' + act.numeroOrden); let idx = $index) {
                           <tr>
                             <td class="col-num">{{ act.numeroOrden }}</td>
                             <td class="col-cod"><code>{{ act.codigoActividad }}</code></td>
