@@ -1424,11 +1424,11 @@
                     @if (puedeEditarCa()) {
                       <div class="section-actions-group">
                         <button type="button" class="btn btn-secondary btn-sm" (click)="abrirModalCatalogoCa()">
-                          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="11" cy="11" r="8" />
                             <line x1="21" y1="21" x2="16.65" y2="16.65" />
                           </svg>
-                          <span>Consultar Comisión / Buscar Miembro</span>
+                          <span>Consultar Catálogo</span>
                         </button>
                         <button type="button" class="btn btn-primary btn-sm" (click)="abrirModalNuevoMiembroCa()">
                           + Cargar Nuevo Miembro
@@ -1441,9 +1441,13 @@
                     <div class="empty-state-table">
                       <p>No se han registrado integrantes en la nómina de la comisión.</p>
                       @if (puedeEditarCa()) {
-                        <div class="empty-state-actions" style="margin-top: 0.75rem; display: flex; gap: 0.75rem; justify-content: center;">
+                        <div class="empty-state-actions">
                           <button type="button" class="btn btn-secondary btn-sm" (click)="abrirModalCatalogoCa()">
-                            Consultar Comisión / Buscar Miembro
+                            <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <circle cx="11" cy="11" r="8" />
+                              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <span>Consultar en Catálogo</span>
                           </button>
                           <button type="button" class="btn btn-primary btn-sm" (click)="abrirModalNuevoMiembroCa()">
                             + Cargar Nuevo Miembro
