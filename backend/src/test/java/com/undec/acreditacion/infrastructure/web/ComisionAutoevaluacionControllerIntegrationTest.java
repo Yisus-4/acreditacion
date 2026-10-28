@@ -128,6 +128,7 @@ class ComisionAutoevaluacionControllerIntegrationTest {
     @DisplayName("PUT /api/convocatorias/{procesoId}/comision-autoevaluacion/borrador guarda borrador")
     void guardarBorrador() throws Exception {
         RegistroCaDto dto = crearDtoEjemplo(EstadoRegistroCa.EN_CARGA_BORRADOR);
+        when(guardarBorradorUseCase.guardarBorrador(eq(procesoId), any(), eq(true), any())).thenReturn(dto);
         when(guardarBorradorUseCase.guardarBorrador(eq(procesoId), eq(true), any())).thenReturn(dto);
 
         GuardarRegistroCaBorradorRequest req = new GuardarRegistroCaBorradorRequest(

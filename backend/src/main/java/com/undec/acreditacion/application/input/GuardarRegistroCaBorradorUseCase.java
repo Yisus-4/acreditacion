@@ -7,4 +7,8 @@ import java.util.UUID;
 
 public interface GuardarRegistroCaBorradorUseCase {
     RegistroCaDto guardarBorrador(UUID procesoId, boolean coincideCurricular, List<MiembroCaInputDto> miembros);
+
+    default RegistroCaDto guardarBorrador(UUID procesoId, UUID usuarioId, boolean coincideCurricular, List<MiembroCaInputDto> miembros) {
+        return guardarBorrador(procesoId, coincideCurricular, miembros);
+    }
 }

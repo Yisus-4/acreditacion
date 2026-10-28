@@ -107,8 +107,9 @@ public class ComisionAutoevaluacionController {
             @PathVariable UUID procesoId,
             @RequestBody GuardarRegistroCaBorradorRequest req
     ) {
+        UUID usuarioId = resolverUsuarioAutenticadoId();
         RegistroCaDto res = guardarRegistroCaBorradorUseCase.guardarBorrador(
-                procesoId, req.coincideCurricular(), req.miembros()
+                procesoId, usuarioId, req.coincideCurricular(), req.miembros()
         );
         return ResponseEntity.ok(res);
     }

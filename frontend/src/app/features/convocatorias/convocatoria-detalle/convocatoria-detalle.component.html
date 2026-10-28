@@ -1466,8 +1466,8 @@
                             <th style="width: 160px">Cargo y Rol CA</th>
                             <th>Correos (CVar / Gmail)</th>
                             <th style="width: 180px; text-align: center">Docente / CVar / CONEAU</th>
-                            <th style="width: 150px; text-align: center">Estado Catálogo</th>
-                            <th style="width: 110px; text-align: center">Acciones</th>
+                            <th style="width: 130px; text-align: center">Origen</th>
+                            <th style="width: 70px; text-align: center">Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1611,7 +1611,7 @@
                               <td style="text-align: center">
                                 @if (m.pendienteAltaSistema) {
                                   <span class="badge-pendiente-alta" title="Miembro cargado ad-hoc, pendiente de confirmación en el catálogo permanente">
-                                    Nuevo · Pendiente registro en sistema
+                                    Nuevo
                                   </span>
                                 } @else {
                                   <span class="badge-en-catalogo" title="Miembro registrado en el catálogo institucional permanente">
@@ -1620,41 +1620,18 @@
                                 }
                               </td>
                               <td style="text-align: center">
-                                <div class="cell-actions-column">
-                                  @if (puedeEditarCa()) {
-                                    <button
-                                      type="button"
-                                      class="btn-icon-danger"
-                                      (click)="eliminarMiembroCa($index)"
-                                      title="Eliminar integrante de la comisión"
-                                    >
-                                      ✕
-                                    </button>
-                                  }
-
-                                  @if (canManage() && m.pendienteAltaSistema && m.id) {
-                                    <div class="aea-alta-actions">
-                                      <button
-                                        type="button"
-                                        class="btn btn-xs btn-primary"
-                                        [disabled]="guardandoAltaEnSistema() === m.id"
-                                        (click)="confirmarRegistroMiembroEnSistema(m)"
-                                        title="Confirmar y registrar permanentemente en el catálogo del sistema"
-                                      >
-                                        {{ guardandoAltaEnSistema() === m.id ? '...' : 'Confirmar en Sistema' }}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        class="btn btn-xs btn-outline"
-                                        [disabled]="guardandoAltaEnSistema() === m.id"
-                                        (click)="cancelarRegistroMiembroEnSistema(m)"
-                                        title="Dejar registrado solo para esta convocatoria"
-                                      >
-                                        Solo Convocatoria / Descartar
-                                      </button>
-                                    </div>
-                                  }
-                                </div>
+                                @if (puedeEditarCa()) {
+                                  <button
+                                    type="button"
+                                    class="btn-icon-danger"
+                                    (click)="eliminarMiembroCa($index)"
+                                    title="Eliminar integrante de la comisión"
+                                  >
+                                    ✕
+                                  </button>
+                                } @else {
+                                  <span class="text-muted text-xs">—</span>
+                                }
                               </td>
                             </tr>
                           }
