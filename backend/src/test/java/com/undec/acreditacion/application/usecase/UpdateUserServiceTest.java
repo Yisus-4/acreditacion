@@ -126,4 +126,27 @@ class UpdateUserServiceTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.updateUser(command));
         assertTrue(ex.getMessage().contains("Role not found"));
     }
+
+    @Test
+    @DisplayName("Updates unidadAcademicaId successfully")
+    void updatesUnidadAcademicaSuccessfully() {
+        UUID userId = UUID.randomUUID();
+        UUID escuelaId = UUID.randomUUID();
+        User existingUser = User.rehydrate(userId, "user1", "user1@undec.edu.ar", "hash", true, false, Set.of());
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateUserCommand command = new UpdateUserCommand(
+                userId,
+                "user1",
+                "user1@undec.edu.ar",
+                List.of(),
+                null,
+                escuelaId
+        );
+
+        User result = service.updateUser(command);
+        assertEquals(escuelaId, result.getUnidadAcademicaId());
+    }
 }

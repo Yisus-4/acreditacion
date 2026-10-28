@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { RoleItem, UserItem, UsersService } from '../../../core/users/users.service';
+import { EstructuraService, UnidadAcademicaResponse } from '../../../core/estructura/estructura.service';
 
 @Component({
   selector: 'app-users',
@@ -14,10 +15,12 @@ import { RoleItem, UserItem, UsersService } from '../../../core/users/users.serv
 })
 export class UserManagement implements OnInit {
   private readonly usersService = inject(UsersService);
+  private readonly estructuraService = inject(EstructuraService);
   private readonly fb = inject(FormBuilder);
 
   readonly users = signal<UserItem[]>([]);
   readonly roles = signal<RoleItem[]>([]);
+  readonly unidadesAcademicas = signal<UnidadAcademicaResponse[]>([]);
   readonly loading = signal<boolean>(true);
   readonly submitting = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
@@ -36,12 +39,14 @@ export class UserManagement implements OnInit {
     username: ['', [Validators.required, Validators.minLength(3)]],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
+    unidadAcademicaId: [''],
   });
 
   readonly editForm = this.fb.nonNullable.group({
     username: ['', [Validators.required, Validators.minLength(3)]],
     email: ['', [Validators.required, Validators.email]],
     newPassword: [''],
+    unidadAcademicaId: [''],
   });
 
   ngOnInit(): void {
@@ -51,6 +56,11 @@ export class UserManagement implements OnInit {
   loadData(): void {
     this.loading.set(true);
     this.errorMessage.set(null);
+
+    this.estructuraService.listarUnidadesAcademicas().subscribe({
+      next: (unidades) => this.unidadesAcademicas.set(unidades),
+      error: (err) => console.error('Error al cargar unidades académicas:', err),
+    });
 
     this.usersService.getRoles().subscribe({
       next: (roles) => this.roles.set(roles),
@@ -78,6 +88,18 @@ export class UserManagement implements OnInit {
     );
   }
 
+  getNombreUnidadAcademica(id?: string | null): string {
+    if (!id) return '—';
+    const ua = this.unidadesAcademicas().find((u) => u.id === id);
+    return ua ? (ua.sigla || ua.nombre) : id;
+  }
+
+  getDetalleUnidadAcademica(id?: string | null): string {
+    if (!id) return '';
+    const ua = this.unidadesAcademicas().find((u) => u.id === id);
+    return ua ? `${ua.nombre} (${ua.sigla})` : id;
+  }
+
   // --- Role checkboxes helper ---
   toggleRole(code: string): void {
     const next = new Set(this.selectedRoles());
@@ -95,7 +117,12 @@ export class UserManagement implements OnInit {
 
   // --- Create Modal ---
   openCreateModal(): void {
-    this.createForm.reset();
+    this.createForm.reset({
+      username: '',
+      email: '',
+      password: '',
+      unidadAcademicaId: '',
+    });
     this.selectedRoles.set(new Set());
     this.errorMessage.set(null);
     this.showCreateModal.set(true);
@@ -112,10 +139,16 @@ export class UserManagement implements OnInit {
     }
 
     this.submitting.set(true);
-    const { username, email, password } = this.createForm.getRawValue();
+    const { username, email, password, unidadAcademicaId } = this.createForm.getRawValue();
     const roleCodes = Array.from(this.selectedRoles());
 
-    this.usersService.createUser({ username, email, password, roleCodes })
+    this.usersService.createUser({
+      username,
+      email,
+      password,
+      roleCodes,
+      unidadAcademicaId: unidadAcademicaId ? unidadAcademicaId : null,
+    })
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
         next: (created) => {
@@ -137,6 +170,7 @@ export class UserManagement implements OnInit {
       username: user.username,
       email: user.email,
       newPassword: '',
+      unidadAcademicaId: user.unidadAcademicaId ?? '',
     });
     this.selectedRoles.set(new Set(user.roleCodes));
     this.errorMessage.set(null);
@@ -158,7 +192,7 @@ export class UserManagement implements OnInit {
     if (!user) return;
 
     this.submitting.set(true);
-    const { username, email, newPassword } = this.editForm.getRawValue();
+    const { username, email, newPassword, unidadAcademicaId } = this.editForm.getRawValue();
     const roleCodes = Array.from(this.selectedRoles());
 
     this.usersService.updateUser(user.id, {
@@ -166,6 +200,7 @@ export class UserManagement implements OnInit {
       email,
       roleCodes,
       newPassword: newPassword ? newPassword : undefined,
+      unidadAcademicaId: unidadAcademicaId ? unidadAcademicaId : null,
     })
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({

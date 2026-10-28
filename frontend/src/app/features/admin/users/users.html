@@ -67,6 +67,7 @@
             <tr>
               <th>Usuario</th>
               <th>Correo electrónico</th>
+              <th>Escuela / Unidad Académica</th>
               <th>Roles</th>
               <th>Tipo</th>
               <th>Estado</th>
@@ -81,6 +82,15 @@
                 </td>
                 <td>
                   <span class="text-muted">{{ user.email }}</span>
+                </td>
+                <td>
+                  @if (user.unidadAcademicaId) {
+                    <span class="badge badge--escuela" [title]="getDetalleUnidadAcademica(user.unidadAcademicaId)">
+                      {{ getNombreUnidadAcademica(user.unidadAcademicaId) }}
+                    </span>
+                  } @else {
+                    <span class="text-muted text-sm">—</span>
+                  }
                 </td>
                 <td>
                   <div class="chips-container">
@@ -203,6 +213,20 @@
             </div>
 
             <div class="form-field">
+              <label for="create-unidad-academica">Escuela / Unidad Académica</label>
+              <select
+                id="create-unidad-academica"
+                formControlName="unidadAcademicaId"
+              >
+                <option value="">-- Sin Escuela / Ámbito Central --</option>
+                @for (ua of unidadesAcademicas(); track ua.id) {
+                  <option [value]="ua.id">{{ ua.nombre }} ({{ ua.sigla }})</option>
+                }
+              </select>
+              <span class="form-hint">Requerido para Directores de Escuela o Carrera para acceder a sus convocatorias.</span>
+            </div>
+
+            <div class="form-field">
               <label>Asignación de Roles</label>
               <div class="roles-checklist">
                 @for (role of roles(); track role.id) {
@@ -292,6 +316,20 @@
                 formControlName="newPassword"
                 placeholder="Dejar en blanco para mantener la actual"
               />
+            </div>
+
+            <div class="form-field">
+              <label for="edit-unidad-academica">Escuela / Unidad Académica</label>
+              <select
+                id="edit-unidad-academica"
+                formControlName="unidadAcademicaId"
+              >
+                <option value="">-- Sin Escuela / Ámbito Central --</option>
+                @for (ua of unidadesAcademicas(); track ua.id) {
+                  <option [value]="ua.id">{{ ua.nombre }} ({{ ua.sigla }})</option>
+                }
+              </select>
+              <span class="form-hint">Requerido para Directores de Escuela o Carrera para acceder a sus convocatorias.</span>
             </div>
 
             <div class="form-field">
