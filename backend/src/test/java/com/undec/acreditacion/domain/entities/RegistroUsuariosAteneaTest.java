@@ -108,4 +108,33 @@ class RegistroUsuariosAteneaTest {
 
         assertThrows(DomainValidationException.class, () -> registro.finalizar(usuarioId, "otro/path.pdf"));
     }
+
+    @Test
+    @DisplayName("Debe inicializar y actualizar matriz de permisos en borrador")
+    void debeGestionarMatrizPermisosCorrectamente() {
+        UUID procesoId = UUID.randomUUID();
+        UUID usuarioId = UUID.randomUUID();
+        RegistroUsuariosAtenea registro = RegistroUsuariosAtenea.iniciar(procesoId, usuarioId, LocalDate.now());
+
+        assertNotNull(registro.getMatrizPermisos());
+        assertEquals(146, registro.getMatrizPermisos().size());
+
+        ItemMatrizPermisoAtenea primerItem = registro.getMatrizPermisos().get(0);
+        primerItem.actualizarPermisos(true, false);
+
+        registro.actualizarMatrizPermisos(List.of(primerItem));
+        assertEquals(1, registro.getMatrizPermisos().size());
+        assertFalse(registro.getMatrizPermisos().get(0).isPermisoCa());
+
+        // Al finalizar no debe permitir modificar matriz
+        UsuarioPermisoAtenea u = UsuarioPermisoAtenea.crear(
+                GrupoUsuarioAtenea.AEA, "Ana", "Lopez", "27-30111222-4",
+                "alopez@undec.edu.ar", "AEA", "Coordinadora", TipoAccesoAtenea.ADMINISTRACION,
+                "Formulario", false, true, true
+        );
+        registro.agregarUsuario(u);
+        registro.finalizar(usuarioId, "path/doc.pdf");
+
+        assertThrows(DomainValidationException.class, () -> registro.actualizarMatrizPermisos(List.of()));
+    }
 }

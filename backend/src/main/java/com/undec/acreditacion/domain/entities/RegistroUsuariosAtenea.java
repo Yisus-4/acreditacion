@@ -1,6 +1,7 @@
 package com.undec.acreditacion.domain.entities;
 
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
+import com.undec.acreditacion.domain.services.CatalogoMatrizPermisosAtenea;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -23,6 +24,7 @@ public class RegistroUsuariosAtenea {
     private Instant creadoEn;
     private Instant actualizadoEn;
     private final List<UsuarioPermisoAtenea> usuarios = new ArrayList<>();
+    private final List<ItemMatrizPermisoAtenea> matrizPermisos = new ArrayList<>();
 
     public RegistroUsuariosAtenea() {
         this.id = UUID.randomUUID();
@@ -45,6 +47,7 @@ public class RegistroUsuariosAtenea {
         r.fechaLimite = CalculadorDiasHabiles.calcularFechaLimite(inicio, 2);
         r.creadoEn = Instant.now();
         r.actualizadoEn = Instant.now();
+        r.matrizPermisos.addAll(CatalogoMatrizPermisosAtenea.crearMatrizPorDefecto(r.id));
         return r;
     }
 
@@ -60,6 +63,26 @@ public class RegistroUsuariosAtenea {
             Instant creadoEn,
             Instant actualizadoEn,
             List<UsuarioPermisoAtenea> usuarios
+    ) {
+        return rehydrate(
+                id, procesoId, estado, fechaLimite, generadoEn, aprobadoEn,
+                creadoPor, rutaDocumento, creadoEn, actualizadoEn, usuarios, null
+        );
+    }
+
+    public static RegistroUsuariosAtenea rehydrate(
+            UUID id,
+            UUID procesoId,
+            EstadoRegistroUsuariosAtenea estado,
+            LocalDate fechaLimite,
+            Instant generadoEn,
+            Instant aprobadoEn,
+            UUID creadoPor,
+            String rutaDocumento,
+            Instant creadoEn,
+            Instant actualizadoEn,
+            List<UsuarioPermisoAtenea> usuarios,
+            List<ItemMatrizPermisoAtenea> matrizPermisos
     ) {
         RegistroUsuariosAtenea r = new RegistroUsuariosAtenea();
         r.id = id;
@@ -77,6 +100,14 @@ public class RegistroUsuariosAtenea {
                 u.setRegistroId(id);
                 r.usuarios.add(u);
             }
+        }
+        if (matrizPermisos != null && !matrizPermisos.isEmpty()) {
+            for (ItemMatrizPermisoAtenea m : matrizPermisos) {
+                m.setRegistroId(id);
+                r.matrizPermisos.add(m);
+            }
+        } else {
+            r.matrizPermisos.addAll(CatalogoMatrizPermisosAtenea.crearMatrizPorDefecto(id));
         }
         return r;
     }
@@ -135,6 +166,29 @@ public class RegistroUsuariosAtenea {
             }
         }
         this.actualizadoEn = Instant.now();
+    }
+
+    public void actualizarMatrizPermisos(List<ItemMatrizPermisoAtenea> nuevaMatriz) {
+        if (this.estado == EstadoRegistroUsuariosAtenea.FINALIZADO) {
+            throw new DomainValidationException("No se puede modificar la matriz de permisos de un registro ya finalizado");
+        }
+        this.matrizPermisos.clear();
+        if (nuevaMatriz != null && !nuevaMatriz.isEmpty()) {
+            for (ItemMatrizPermisoAtenea item : nuevaMatriz) {
+                item.setRegistroId(this.id);
+                this.matrizPermisos.add(item);
+            }
+        } else {
+            this.matrizPermisos.addAll(CatalogoMatrizPermisosAtenea.crearMatrizPorDefecto(this.id));
+        }
+        this.actualizadoEn = Instant.now();
+    }
+
+    public void inicializarMatrizPorDefectoSiVacia() {
+        if (this.matrizPermisos.isEmpty()) {
+            this.matrizPermisos.addAll(CatalogoMatrizPermisosAtenea.crearMatrizPorDefecto(this.id));
+            this.actualizadoEn = Instant.now();
+        }
     }
 
     public void finalizar(UUID usuarioAeaId, String rutaDocumento) {
@@ -226,6 +280,10 @@ public class RegistroUsuariosAtenea {
 
     public List<UsuarioPermisoAtenea> getUsuarios() {
         return Collections.unmodifiableList(usuarios);
+    }
+
+    public List<ItemMatrizPermisoAtenea> getMatrizPermisos() {
+        return Collections.unmodifiableList(matrizPermisos);
     }
 
     @Override
