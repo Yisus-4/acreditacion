@@ -1,0 +1,59 @@
+package com.undec.acreditacion.domain.services;
+
+import com.undec.acreditacion.domain.entities.*;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class GeneradorRegistroUsuariosAteneaPdfServiceTest {
+
+    @Test
+    @DisplayName("Debe generar PDF de RG-003 con cabeceras oficiales UNdeC y grupos de usuarios")
+    void debeGenerarPdfRg003Correctamente() {
+        UUID procesoId = UUID.randomUUID();
+        UUID usuarioId = UUID.randomUUID();
+        RegistroUsuariosAtenea registro = RegistroUsuariosAtenea.iniciar(procesoId, usuarioId, LocalDate.of(2026, 10, 26));
+
+        registro.agregarUsuario(UsuarioPermisoAtenea.crear(
+                GrupoUsuarioAtenea.AEA, "Valeria", "Castro", "27-32111222-3",
+                "vcastro@undec.edu.ar", "Área de Evaluación y Acreditación (AEA)",
+                "Equipo Técnico AEA", TipoAccesoAtenea.ADMINISTRACION,
+                "Formulario Integral ATENEA", false, true, true
+        ));
+
+        registro.agregarUsuario(UsuarioPermisoAtenea.crear(
+                GrupoUsuarioAtenea.SGI, "Carlos", "Perez", "20-25444333-1",
+                "cperez@undec.edu.ar", "Secretaría de Gestión Institucional",
+                "Secretario SGI", TipoAccesoAtenea.VISUALIZACION,
+                "Dimensión Institucional", false, true, true
+        ));
+
+        registro.agregarUsuario(UsuarioPermisoAtenea.crear(
+                GrupoUsuarioAtenea.COMISION_AUTOEVALUACION, "Julio Luis", "Salerno", "20-08386710-9",
+                "jsalerno@undec.edu.ar", "Comisión de Autoevaluación",
+                "Director de Carrera", TipoAccesoAtenea.CARGA_Y_VISUALIZACION,
+                "Formulario Carrera", false, true, true
+        ));
+
+        byte[] pdf = GeneradorRegistroUsuariosAteneaPdfService.generarPdf(
+                registro, "Ingeniería Agronómica", "1raFase", "2026"
+        );
+
+        assertNotNull(pdf);
+        assertTrue(pdf.length > 50);
+
+        String contenido = new String(pdf, StandardCharsets.ISO_8859_1);
+        assertTrue(contenido.contains("RG-003: Registro de usuarios de ATENEA"));
+        assertTrue(contenido.contains("Ingeniería Agronómica"));
+        assertTrue(contenido.contains("1raFase"));
+        assertTrue(contenido.contains("2026"));
+        assertTrue(contenido.contains("Área de Evaluación y Acreditación (AEA)"));
+        assertTrue(contenido.contains("Valeria"));
+        assertTrue(contenido.contains("Salerno"));
+    }
+}
