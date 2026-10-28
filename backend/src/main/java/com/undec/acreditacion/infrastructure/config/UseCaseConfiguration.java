@@ -505,4 +505,37 @@ public class UseCaseConfiguration {
         return new com.undec.acreditacion.application.usecase.ObservarRegistroCaService(
                 registroCaRepository, procesoRepository);
     }
+
+    @Bean
+    @org.springframework.transaction.annotation.Transactional
+    public com.undec.acreditacion.application.input.ConsultarRegistroUsuariosAteneaUseCase consultarRegistroUsuariosAteneaUseCase(
+            com.undec.acreditacion.domain.ports.RegistroUsuariosAteneaRepositoryPort registroUsuariosRepository,
+            com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort registroCaRepository,
+            com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort procesoRepository) {
+        return new com.undec.acreditacion.application.usecase.ConsultarRegistroUsuariosAteneaService(
+                registroUsuariosRepository, registroCaRepository, procesoRepository);
+    }
+
+    @Bean
+    @org.springframework.transaction.annotation.Transactional
+    public com.undec.acreditacion.application.input.GuardarRegistroUsuariosAteneaUseCase guardarRegistroUsuariosAteneaUseCase(
+            com.undec.acreditacion.domain.ports.RegistroUsuariosAteneaRepositoryPort registroUsuariosRepository) {
+        return new com.undec.acreditacion.application.usecase.GuardarRegistroUsuariosAteneaService(
+                registroUsuariosRepository);
+    }
+
+    @Bean
+    @org.springframework.transaction.annotation.Transactional
+    public com.undec.acreditacion.application.input.FinalizarRegistroUsuariosAteneaUseCase finalizarRegistroUsuariosAteneaUseCase(
+            com.undec.acreditacion.domain.ports.RegistroUsuariosAteneaRepositoryPort registroUsuariosRepository,
+            com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort procesoRepository,
+            com.undec.acreditacion.domain.ports.CarreraRepositoryPort carreraRepository,
+            com.undec.acreditacion.domain.ports.RegistroConvocatoriaRepositoryPort registroConvocatoriaRepository,
+            com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort planTrabajoRepository,
+            com.undec.acreditacion.domain.ports.DocumentStoragePort storagePort,
+            com.undec.acreditacion.domain.ports.DocumentoAcreditacionRepositoryPort documentoRepository) {
+        return new com.undec.acreditacion.application.usecase.FinalizarRegistroUsuariosAteneaService(
+                registroUsuariosRepository, procesoRepository, carreraRepository,
+                registroConvocatoriaRepository, planTrabajoRepository, storagePort, documentoRepository);
+    }
 }
