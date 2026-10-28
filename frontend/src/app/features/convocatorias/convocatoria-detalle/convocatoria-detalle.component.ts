@@ -25,6 +25,7 @@ import { CompletarActividadModalComponent } from '../completar-actividad-modal/c
 import { NormativaDetalleComponent } from '../../normativa/normativa-detalle/normativa-detalle.component';
 import { NormativaService } from '../../../core/normativa/services/normativa.service';
 import { BadgePlazoDto, formatearEstadoNormativa } from '../../../core/normativa/models/normativa.model';
+import { NotificationService } from '../../../core/notifications/notification.service';
 
 export interface SiguientePasoInfo {
   codigo: string;
@@ -56,6 +57,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly convocatoriaService = inject(ConvocatoriaService);
   private readonly normativaService = inject(NormativaService);
+  private readonly notificationService = inject(NotificationService);
   private readonly auth = inject(Auth);
   private routeSub?: Subscription;
   private idCargadoActualmente: string | null = null;
@@ -346,6 +348,8 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     if (!session?.user?.roleCodes) return false;
     return session.user.roleCodes.includes('ADMINISTRATOR') || session.user.roleCodes.includes('AEA');
   });
+
+  readonly esAdminOAEA = this.canManage;
 
   readonly canConfirmarDe = computed(() => {
     const session = this.auth.currentSession;
@@ -1357,7 +1361,8 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         if (ca.miembros) {
           this.miembrosCa.set(ca.miembros.map(mi => ({ ...mi })));
         }
-        this.bannerExitoCa.set(`Se ha confirmado y registrado permanentemente a ${m.apellido} en el catálogo de miembros.`);
+        this.bannerExitoCa.set(`Se ha confirmado y registrado permanentemente a ${m.apellido} en el catálogo de miembros y en Usuarios.`);
+        this.notificationService.refrescar('AEA');
       },
       error: (err) => {
         this.guardandoAltaEnSistema.set(null);
@@ -1381,6 +1386,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
           this.miembrosCa.set(ca.miembros.map(mi => ({ ...mi })));
         }
         this.bannerExitoCa.set(`Se marcó a ${m.apellido} como revisado para esta convocatoria.`);
+        this.notificationService.refrescar('AEA');
       },
       error: (err) => {
         this.guardandoAltaEnSistema.set(null);
@@ -1462,7 +1468,10 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         }
         const tieneNuevos = (ca.miembros || []).some(m => m.pendienteAltaSistema);
         if (tieneNuevos) {
-          this.bannerExitoCa.set('¡Borrador guardado! Se ha enviado la solicitud de alta en catálogo para los integrantes nuevos a la campana de AEA.');
+          this.bannerExitoCa.set('¡Borrador guardado! Se ha enviado la solicitud de alta en catálogo para los integrantes nuevos a la campana de AEA y a Administración de Usuarios.');
+          if (this.canManage()) {
+            this.notificationService.refrescar('AEA');
+          }
         } else {
           this.bannerExitoCa.set('Borrador de la Comisión de Autoevaluación guardado correctamente.');
         }

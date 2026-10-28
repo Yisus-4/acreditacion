@@ -5,6 +5,11 @@ import { finalize } from 'rxjs';
 
 import { RoleItem, UserItem, UsersService } from '../../../core/users/users.service';
 import { EstructuraService, UnidadAcademicaResponse } from '../../../core/estructura/estructura.service';
+import {
+  DatosPayloadAltaMiembro,
+  NotificationService,
+  SolicitudNotificacion,
+} from '../../../core/notifications/notification.service';
 
 @Component({
   selector: 'app-users',
@@ -16,11 +21,14 @@ import { EstructuraService, UnidadAcademicaResponse } from '../../../core/estruc
 export class UserManagement implements OnInit {
   private readonly usersService = inject(UsersService);
   private readonly estructuraService = inject(EstructuraService);
+  private readonly notificationService = inject(NotificationService);
   private readonly fb = inject(FormBuilder);
 
   readonly users = signal<UserItem[]>([]);
   readonly roles = signal<RoleItem[]>([]);
   readonly unidadesAcademicas = signal<UnidadAcademicaResponse[]>([]);
+  readonly solicitudesPendientes = signal<SolicitudNotificacion[]>([]);
+  readonly procesandoSolicitudId = signal<string | null>(null);
   readonly loading = signal<boolean>(true);
   readonly submitting = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
@@ -67,6 +75,15 @@ export class UserManagement implements OnInit {
       error: (err) => console.error('Error al cargar roles:', err),
     });
 
+    this.notificationService.listar('AEA', 'PENDIENTE').subscribe({
+      next: (list) => this.solicitudesPendientes.set(list.filter((n) => n.estado === 'PENDIENTE')),
+      error: () => {},
+    });
+
+    this.notificationService.conteoPendientes('AEA').subscribe({
+      error: () => {},
+    });
+
     this.usersService.getUsers()
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
@@ -74,6 +91,57 @@ export class UserManagement implements OnInit {
         error: (err) => {
           this.errorMessage.set('No se pudo cargar el listado de usuarios.');
           console.error(err);
+        },
+      });
+  }
+
+  parsePayload(json: string): DatosPayloadAltaMiembro | null {
+    if (!json) return null;
+    try {
+      return JSON.parse(json) as DatosPayloadAltaMiembro;
+    } catch {
+      return null;
+    }
+  }
+
+  confirmarAltaMiembro(notif: SolicitudNotificacion): void {
+    if (this.procesandoSolicitudId()) return;
+    this.procesandoSolicitudId.set(notif.id);
+    this.errorMessage.set(null);
+
+    this.notificationService
+      .aceptar(notif.id)
+      .pipe(finalize(() => this.procesandoSolicitudId.set(null)))
+      .subscribe({
+        next: () => {
+          this.successMessage.set(
+            'Se confirmó el alta del usuario en el sistema y en el catálogo de Comisión de Autoevaluación.'
+          );
+          this.loadData();
+        },
+        error: (err) => {
+          const msg = err?.error?.error || 'No fue posible confirmar el alta del miembro.';
+          this.errorMessage.set(msg);
+        },
+      });
+  }
+
+  rechazarAltaMiembro(notif: SolicitudNotificacion): void {
+    if (this.procesandoSolicitudId()) return;
+    this.procesandoSolicitudId.set(notif.id);
+    this.errorMessage.set(null);
+
+    this.notificationService
+      .rechazar(notif.id)
+      .pipe(finalize(() => this.procesandoSolicitudId.set(null)))
+      .subscribe({
+        next: () => {
+          this.successMessage.set('Solicitud de alta rechazada.');
+          this.loadData();
+        },
+        error: (err) => {
+          const msg = err?.error?.error || 'No fue posible rechazar la solicitud.';
+          this.errorMessage.set(msg);
         },
       });
   }

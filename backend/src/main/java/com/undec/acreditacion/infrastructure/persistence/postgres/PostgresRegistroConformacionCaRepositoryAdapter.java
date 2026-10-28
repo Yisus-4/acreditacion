@@ -4,6 +4,7 @@ import com.undec.acreditacion.domain.entities.RegistroConformacionCa;
 import com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,5 +39,12 @@ public class PostgresRegistroConformacionCaRepositoryAdapter implements Registro
     @Override
     public void deleteById(UUID id) {
         repository.deleteById(id);
+    }
+
+    @Override
+    public List<RegistroConformacionCa> findAll() {
+        return repository.findAll().stream()
+                .map(RegistroCaPersistenceMapper::toDomain)
+                .toList();
     }
 }

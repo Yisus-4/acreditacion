@@ -1610,9 +1610,33 @@
                               </td>
                               <td style="text-align: center">
                                 @if (m.pendienteAltaSistema) {
-                                  <span class="badge-pendiente-alta" title="Miembro cargado ad-hoc, pendiente de confirmación en el catálogo permanente">
-                                    Nuevo
-                                  </span>
+                                  <div class="cell-actions-column">
+                                    <span class="badge-pendiente-alta" title="Miembro cargado ad-hoc, pendiente de confirmación en el catálogo permanente y en Usuarios">
+                                      Nuevo
+                                    </span>
+                                    @if (esAdminOAEA() && m.id) {
+                                      <div class="aea-alta-actions">
+                                        <button
+                                          type="button"
+                                          class="btn btn-primary btn-xs"
+                                          (click)="confirmarRegistroMiembroEnSistema(m)"
+                                          [disabled]="guardandoAltaEnSistema() === m.id"
+                                          title="Confirmar alta en el catálogo institucional y crear usuario en el sistema"
+                                        >
+                                          ✓ Confirmar Alta
+                                        </button>
+                                        <button
+                                          type="button"
+                                          class="btn btn-secondary btn-xs"
+                                          (click)="cancelarRegistroMiembroEnSistema(m)"
+                                          [disabled]="guardandoAltaEnSistema() === m.id"
+                                          title="Mantener solo para esta convocatoria sin agregar al catálogo"
+                                        >
+                                          Descartar
+                                        </button>
+                                      </div>
+                                    }
+                                  </div>
                                 } @else {
                                   <span class="badge-en-catalogo" title="Miembro registrado en el catálogo institucional permanente">
                                     En Catálogo

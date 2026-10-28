@@ -46,6 +46,11 @@
         />
       </div>
       <div class="table-stats">
+        @if (solicitudesPendientes().length > 0) {
+          <span class="badge badge--pending" style="margin-right: 0.75rem;">
+            {{ solicitudesPendientes().length }} pendiente(s) de confirmar alta
+          </span>
+        }
         <span>Total: <strong>{{ filteredUsers().length }}</strong> usuarios</span>
       </div>
     </div>
@@ -57,7 +62,7 @@
           <span class="spinner"></span>
           <span>Cargando usuarios...</span>
         </div>
-      } @else if (filteredUsers().length === 0) {
+      } @else if (filteredUsers().length === 0 && solicitudesPendientes().length === 0) {
         <div class="empty-state">
           <p>No se encontraron usuarios que coincidan con la búsqueda.</p>
         </div>
@@ -75,6 +80,74 @@
             </tr>
           </thead>
           <tbody>
+            @for (notif of solicitudesPendientes(); track notif.id) {
+              @let payload = parsePayload(notif.datosPayload);
+              <tr class="row--pending-approval">
+                <td>
+                  <div class="pending-user-cell">
+                    <span class="font-medium">
+                      {{ payload ? (payload.apellido + ', ' + payload.nombreCompleto) : notif.titulo }}
+                    </span>
+                    @if (payload) {
+                      <span class="pending-user-meta">
+                        Doc: {{ payload.documento || '—' }} | CUIT: {{ payload.cuitPasaporte || '—' }}
+                      </span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <div class="pending-user-cell">
+                    <span class="text-muted">{{ payload?.correoElectronico || '—' }}</span>
+                    @if (payload?.correoGmail) {
+                      <span class="pending-user-meta">Gmail: {{ payload?.correoGmail }}</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <span class="badge badge--escuela">
+                    {{ notif.carreraNombre || 'Comisión CA' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="chips-container">
+                    <span class="badge badge--role">SELF_EVALUATION_COMMITTEE_MEMBER</span>
+                    @if (payload?.cargoFuncion) {
+                      <span class="badge badge--neutral">{{ payload?.cargoFuncion }}</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <span class="badge badge--system" title="Solicitud originada en conformación de Comisión de Autoevaluación">
+                    Solicitud RG-002
+                  </span>
+                </td>
+                <td>
+                  <span class="badge badge--pending">Pendiente de confirmar alta</span>
+                </td>
+                <td class="text-right">
+                  <div class="actions-group">
+                    <button
+                      class="btn-action btn-action--confirm"
+                      (click)="confirmarAltaMiembro(notif)"
+                      [disabled]="procesandoSolicitudId() === notif.id"
+                      type="button"
+                      title="Confirmar alta del usuario en el sistema y en el catálogo permanente"
+                    >
+                      ✓ Confirmar Alta
+                    </button>
+                    <button
+                      class="btn-action btn-action--deactivate"
+                      (click)="rechazarAltaMiembro(notif)"
+                      [disabled]="procesandoSolicitudId() === notif.id"
+                      type="button"
+                      title="Rechazar solicitud de alta"
+                    >
+                      ✕ Rechazar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
             @for (user of filteredUsers(); track user.id) {
               <tr [class.row--inactive]="!user.active">
                 <td>

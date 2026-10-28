@@ -231,6 +231,25 @@
   .row--inactive td {
     opacity: 0.75;
   }
+
+  .row--pending-approval td {
+    background-color: #fffbeb;
+  }
+
+  .row--pending-approval:hover td {
+    background-color: #fef3c7;
+  }
+}
+
+.pending-user-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pending-user-meta {
+  font-size: 0.75rem;
+  color: var(--color-gray-500);
 }
 
 .text-right {
@@ -297,6 +316,12 @@
     color: #6b21a8;
     font-weight: 500;
   }
+
+  &--pending {
+    background-color: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+  }
 }
 
 /* ── Botones de acción en fila ─────────────────────────────────────────── */
@@ -339,6 +364,16 @@
 
     &:hover {
       background-color: #dcfce7;
+    }
+  }
+
+  &--confirm {
+    background-color: #16a34a;
+    color: #ffffff;
+    border-color: #15803d;
+
+    &:hover:not(:disabled) {
+      background-color: #15803d;
     }
   }
 

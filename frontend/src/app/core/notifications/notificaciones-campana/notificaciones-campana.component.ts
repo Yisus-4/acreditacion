@@ -6,10 +6,12 @@ import {
   OnDestroy,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { NotificationService } from '../notification.service';
 import { DatosPayloadAltaMiembro, SolicitudNotificacion } from '../notification.model';
 import { Auth } from '../../auth/auth';
@@ -27,6 +29,10 @@ export class NotificacionesCampanaComponent implements OnInit, OnDestroy {
   private readonly auth = inject(Auth);
   private readonly elementRef = inject(ElementRef);
 
+  readonly session = toSignal(this.auth.currentSession$, {
+    initialValue: this.auth.currentSession,
+  });
+
   readonly dropdownAbierto = signal<boolean>(false);
   readonly procesandoId = signal<string | null>(null);
 
@@ -37,7 +43,7 @@ export class NotificacionesCampanaComponent implements OnInit, OnDestroy {
   private pollInterval: any = null;
 
   readonly userRoles = computed(() => {
-    return this.auth.currentSession?.user?.roleCodes ?? [];
+    return this.session()?.user?.roleCodes ?? [];
   });
 
   readonly puedeGestionar = computed(() => {
@@ -45,13 +51,20 @@ export class NotificacionesCampanaComponent implements OnInit, OnDestroy {
     return r.includes('ADMINISTRATOR') || r.includes('AEA');
   });
 
-  ngOnInit(): void {
-    if (this.puedeGestionar()) {
-      this.notificationService.refrescar('AEA');
-      this.pollInterval = setInterval(() => {
+  constructor() {
+    effect(() => {
+      if (this.puedeGestionar()) {
         this.notificationService.refrescar('AEA');
-      }, 30000);
-    }
+      }
+    });
+  }
+
+  ngOnInit(): void {
+    this.pollInterval = setInterval(() => {
+      if (this.puedeGestionar()) {
+        this.notificationService.refrescar('AEA');
+      }
+    }, 30000);
   }
 
   ngOnDestroy(): void {

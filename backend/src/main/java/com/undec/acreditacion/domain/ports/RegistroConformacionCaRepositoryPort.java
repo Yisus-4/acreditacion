@@ -2,6 +2,7 @@ package com.undec.acreditacion.domain.ports;
 
 import com.undec.acreditacion.domain.entities.RegistroConformacionCa;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -10,4 +11,8 @@ public interface RegistroConformacionCaRepositoryPort {
     Optional<RegistroConformacionCa> findByProcesoId(UUID procesoId);
     Optional<RegistroConformacionCa> findById(UUID id);
     void deleteById(UUID id);
+
+    default List<RegistroConformacionCa> findAll() {
+        return List.of();
+    }
 }
