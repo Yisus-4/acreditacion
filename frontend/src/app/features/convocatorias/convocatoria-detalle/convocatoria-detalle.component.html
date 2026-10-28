@@ -385,6 +385,30 @@
         }
       </button>
 
+      <button
+        type="button"
+        role="tab"
+        class="tab-nav-btn"
+        [class.active]="tabActiva() === 'USUARIOS_ATENEA'"
+        [attr.aria-selected]="tabActiva() === 'USUARIOS_ATENEA'"
+        (click)="seleccionarTab('USUARIOS_ATENEA')"
+      >
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="8.5" cy="7" r="4" />
+          <line x1="20" y1="8" x2="20" y2="14" />
+          <line x1="23" y1="11" x2="17" y2="11" />
+        </svg>
+        <span class="tab-label">Usuarios ATENEA (RG-003)</span>
+        @if (!usuariosAteneaDesbloqueado()) {
+          <span class="badge-tab-bloqueada">Bloqueada</span>
+        } @else if (registroUsuariosAtenea()?.finalizado) {
+          <span class="badge-tab-finalizada">Completada</span>
+        } @else {
+          <span class="badge-tab-en-proceso">En definición</span>
+        }
+      </button>
+
       @if (canManage()) {
         <button
           type="button"
@@ -2060,7 +2084,614 @@
       </div>
     }
 
-        <!-- PESTAÑA 2: SEGUIMIENTO DEL PLAN DE TRABAJO (AEA) CON DRAWER LATERAL SPLIT-VIEW -->
+        <!-- PESTAÑA: USUARIOS Y PERMISOS ATENEA (RG-003) -->
+    @if (tabActiva() === 'USUARIOS_ATENEA') {
+      <div class="usuarios-atenea-container">
+        @if (!usuariosAteneaDesbloqueado()) {
+          <div class="panel-bloqueo-institucional card">
+            <div class="bloqueo-header">
+              <svg class="icon-bloqueo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <div>
+                <h3 class="bloqueo-titulo">Etapa de Definición de Usuarios ATENEA Bloqueada</h3>
+                <p class="bloqueo-desc">
+                  La definición y habilitación de usuarios para CONEAU Global ATENEA (RG-003) requiere la previa aprobación y resolución de la Comisión de Autoevaluación (CA · RG-002).
+                </p>
+              </div>
+            </div>
+            <div class="bloqueo-checklist">
+              <div class="chk-item">
+                <span class="dot-pendiente"></span>
+                <span>Resolución y conformación formal de la CA por parte de Dirección de Carrera.</span>
+              </div>
+              <div class="chk-item">
+                <span class="dot-pendiente"></span>
+                <span>Aprobación de la nómina de CA por parte del Área de Evaluación y Acreditación (AEA).</span>
+              </div>
+            </div>
+          </div>
+        } @else {
+          @let regU = registroUsuariosAtenea();
+
+          <!-- Banners de Notificación / Éxito -->
+          @if (bannerExitoUsuariosAtenea()) {
+            <div class="alert alert-success" style="margin-bottom: 1rem;">
+              {{ bannerExitoUsuariosAtenea() }}
+            </div>
+          }
+          @if (bannerErrorUsuariosAtenea()) {
+            <div class="alert alert-danger" style="margin-bottom: 1rem;">
+              {{ bannerErrorUsuariosAtenea() }}
+            </div>
+          }
+
+          <!-- Header Card RG-003 -->
+          <div class="card header-atenea-card" style="margin-bottom: 1.5rem;">
+            <div class="header-atenea-content" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <span class="badge-rg003" style="background-color: var(--color-primary, #826170); color: #fff; font-weight: 600; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px;">
+                    RG-003: REGISTRO DE USUARIOS DE ATENEA
+                  </span>
+                  @if (regU?.finalizado) {
+                    <span class="badge badge-success" style="background-color: #16a34a; color: #fff; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px;">
+                      Finalizado y Notificado
+                    </span>
+                  } @else {
+                    <span class="badge badge-warning" style="background-color: #d97706; color: #fff; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px;">
+                      En Definición
+                    </span>
+                  }
+                </div>
+                <h2 style="font-family: var(--font-title, Candara, sans-serif); color: var(--color-primary-dark, #6a4d5a); margin: 0 0 4px 0;">
+                  Definición de Usuarios y Permisos para CONEAU Global ATENEA
+                </h2>
+                <p style="color: var(--color-text-muted, #5a4a53); font-size: 0.9rem; margin: 0;">
+                  Registro formal de acceso para el formulario de acreditación de carrera. El Área de Evaluación y Acreditación (AEA) dispone de un plazo reglamentario no mayor a dos (2) días hábiles.
+                </p>
+
+                <!-- Semáforo de Plazo y Vínculo con Plan de Trabajo -->
+                <div style="margin-top: 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                  <div
+                    class="semaforo-badge"
+                    [class.semaforo-ok]="(regU?.diasRestantes ?? 0) > 1 || regU?.finalizado"
+                    [class.semaforo-alerta]="(regU?.diasRestantes ?? 0) <= 1 && (regU?.diasRestantes ?? 0) >= 0 && !regU?.finalizado"
+                    [class.semaforo-vencido]="(regU?.diasRestantes ?? 0) < 0 && !regU?.finalizado"
+                    style="padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 0.85rem;"
+                  >
+                    {{ regU?.semaforoTexto || 'Dentro del plazo reglamentario' }}
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-outline"
+                    style="font-size: 0.825rem; padding: 4px 10px; border: 1px solid var(--color-primary, #826170); color: var(--color-primary, #826170); background: transparent; border-radius: 4px; cursor: pointer;"
+                    (click)="seleccionarTab('PLAN_TRABAJO')"
+                  >
+                    Ver Actividad 3.3 en Plan de Trabajo (Hoja INFO)
+                  </button>
+                </div>
+              </div>
+
+              <!-- Botones de Acción de AEA -->
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                @if (canManage() && !regU?.finalizado) {
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    style="background: #fff; border: 1px solid var(--color-primary, #826170); color: var(--color-primary, #826170); padding: 8px 14px; border-radius: 6px; font-weight: 600; cursor: pointer;"
+                    [disabled]="guardandoUsuariosAtenea()"
+                    (click)="guardarUsuariosAtenea()"
+                  >
+                    {{ guardandoUsuariosAtenea() ? 'Guardando...' : 'Guardar Permisos' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    style="background: var(--color-primary, #826170); border: none; color: #fff; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;"
+                    [disabled]="finalizandoUsuariosAtenea()"
+                    (click)="abrirModalFinalizarRg003()"
+                  >
+                    Finalizar y Generar RG-003
+                  </button>
+                }
+                @if (regU?.finalizado) {
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    style="background: #16a34a; border: none; color: #fff; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;"
+                    (click)="descargarPdfRg003()"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Descargar RG-003 Oficial (PDF)
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 1: PERSONAL DE SGI -->
+          <div class="card grupo-atenea-card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--color-primary, #826170);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border, #e5e7eb); padding-bottom: 8px;">
+              <div>
+                <h3 style="font-family: var(--font-title, Candara, sans-serif); color: var(--color-primary-dark, #6a4d5a); margin: 0 0 4px 0;">
+                  1. Personal de SGI (Secretaría de Gestión Institucional)
+                </h3>
+                <p style="color: var(--color-text-muted, #5a4a53); font-size: 0.85rem; margin: 0;">
+                  Usuarios responsables de la carga y visualización de información institucional y dependencias centrales.
+                </p>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table-atenea" style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                <thead>
+                  <tr style="background: var(--color-surface-alt, #f5f5f6); text-align: left; border-bottom: 2px solid var(--color-border, #e5e7eb);">
+                    <th style="padding: 8px 12px;">Usuario / Nombre</th>
+                    <th style="padding: 8px 12px;">DNI / CUIL</th>
+                    <th style="padding: 8px 12px;">Correo Electrónico</th>
+                    <th style="padding: 8px 12px;">Área / Cargo</th>
+                    <th style="padding: 8px 12px;">Tipo de Acceso</th>
+                    <th style="padding: 8px 12px;">Alcance / Sección</th>
+                    <th style="padding: 8px 12px; text-align: center;">Req. Cuenta Nueva</th>
+                    <th style="padding: 8px 12px; text-align: center;">Habilitado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (u of usuariosSgi(); track u.id || $index) {
+                    <tr style="border-bottom: 1px solid var(--color-border, #e5e7eb);">
+                      <td style="padding: 8px 12px; font-weight: 600;">{{ u.nombreCompleto || (u.apellido + ', ' + u.nombre) }}</td>
+                      <td style="padding: 8px 12px;">{{ u.dniCuil }}</td>
+                      <td style="padding: 8px 12px;">{{ u.correo }}</td>
+                      <td style="padding: 8px 12px;">
+                        <div>{{ u.areaDependencia || 'SGI' }}</div>
+                        <small style="color: var(--color-text-muted, #5a4a53);">{{ u.cargoFuncion || '-' }}</small>
+                      </td>
+                      <td style="padding: 8px 12px;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <select [(ngModel)]="u.tipoAcceso" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db;">
+                            <option value="VISUALIZACION">VISUALIZACION</option>
+                            <option value="CARGA">CARGA</option>
+                            <option value="CARGA_Y_VISUALIZACION">CARGA_Y_VISUALIZACION</option>
+                            <option value="ADMINISTRACION">ADMINISTRACION</option>
+                          </select>
+                        } @else {
+                          <span class="badge" style="background: #e0e7ff; color: #3730a3; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem;">{{ u.tipoAcceso }}</span>
+                        }
+                      </td>
+                      <td style="padding: 8px 12px;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <input type="text" [(ngModel)]="u.seccionAlcance" placeholder="Sección o dimensión" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db; width: 100%; max-width: 180px;" />
+                        } @else {
+                          {{ u.seccionAlcance || 'Institucional' }}
+                        }
+                      </td>
+                      <td style="padding: 8px 12px; text-align: center;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <input type="checkbox" [(ngModel)]="u.requiereCuentaNuevaConeauGlobal" />
+                        } @else {
+                          <span>{{ u.requiereCuentaNuevaConeauGlobal ? 'SÍ' : 'NO' }}</span>
+                        }
+                      </td>
+                      <td style="padding: 8px 12px; text-align: center;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <input type="checkbox" [(ngModel)]="u.habilitadoEnConeau" />
+                        } @else {
+                          <span style="color: #16a34a; font-weight: 600;">{{ u.habilitadoEnConeau ? 'SÍ' : 'NO' }}</span>
+                        }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="8" style="padding: 16px; text-align: center; color: var(--color-text-muted, #5a4a53);">
+                        No hay usuarios de SGI cargados.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: PERSONAL DE AEA -->
+          <div class="card grupo-atenea-card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--color-primary, #826170);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border, #e5e7eb); padding-bottom: 8px;">
+              <div>
+                <h3 style="font-family: var(--font-title, Candara, sans-serif); color: var(--color-primary-dark, #6a4d5a); margin: 0 0 4px 0;">
+                  2. Personal de AEA (Área de Evaluación y Acreditación)
+                </h3>
+                <p style="color: var(--color-text-muted, #5a4a53); font-size: 0.85rem; margin: 0;">
+                  Equipo técnico del Área de Evaluación y Acreditación (AEA) para coordinación y administración integral de CONEAU Global ATENEA.
+                </p>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table-atenea" style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                <thead>
+                  <tr style="background: var(--color-surface-alt, #f5f5f6); text-align: left; border-bottom: 2px solid var(--color-border, #e5e7eb);">
+                    <th style="padding: 8px 12px;">Usuario / Nombre</th>
+                    <th style="padding: 8px 12px;">DNI / CUIL</th>
+                    <th style="padding: 8px 12px;">Correo Electrónico</th>
+                    <th style="padding: 8px 12px;">Área / Cargo</th>
+                    <th style="padding: 8px 12px;">Tipo de Acceso</th>
+                    <th style="padding: 8px 12px;">Alcance / Sección</th>
+                    <th style="padding: 8px 12px; text-align: center;">Req. Cuenta Nueva</th>
+                    <th style="padding: 8px 12px; text-align: center;">Habilitado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (u of usuariosAea(); track u.id || $index) {
+                    <tr style="border-bottom: 1px solid var(--color-border, #e5e7eb);">
+                      <td style="padding: 8px 12px; font-weight: 600;">{{ u.nombreCompleto || (u.apellido + ', ' + u.nombre) }}</td>
+                      <td style="padding: 8px 12px;">{{ u.dniCuil }}</td>
+                      <td style="padding: 8px 12px;">{{ u.correo }}</td>
+                      <td style="padding: 8px 12px;">
+                        <div>{{ u.areaDependencia || 'Área de Evaluación y Acreditación (AEA)' }}</div>
+                        <small style="color: var(--color-text-muted, #5a4a53);">{{ u.cargoFuncion || 'Técnico AEA' }}</small>
+                      </td>
+                      <td style="padding: 8px 12px;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <select [(ngModel)]="u.tipoAcceso" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db;">
+                            <option value="ADMINISTRACION">ADMINISTRACION</option>
+                            <option value="CARGA_Y_VISUALIZACION">CARGA_Y_VISUALIZACION</option>
+                            <option value="CARGA">CARGA</option>
+                            <option value="VISUALIZACION">VISUALIZACION</option>
+                          </select>
+                        } @else {
+                          <span class="badge" style="background: #fef3c7; color: #92400e; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem;">{{ u.tipoAcceso }}</span>
+                        }
+                      </td>
+                      <td style="padding: 8px 12px;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <input type="text" [(ngModel)]="u.seccionAlcance" placeholder="Sección o dimensión" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db; width: 100%; max-width: 180px;" />
+                        } @else {
+                          {{ u.seccionAlcance || 'Gestión Integral' }}
+                        }
+                      </td>
+                      <td style="padding: 8px 12px; text-align: center;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <input type="checkbox" [(ngModel)]="u.requiereCuentaNuevaConeauGlobal" />
+                        } @else {
+                          <span>{{ u.requiereCuentaNuevaConeauGlobal ? 'SÍ' : 'NO' }}</span>
+                        }
+                      </td>
+                      <td style="padding: 8px 12px; text-align: center;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <input type="checkbox" [(ngModel)]="u.habilitadoEnConeau" />
+                        } @else {
+                          <span style="color: #16a34a; font-weight: 600;">{{ u.habilitadoEnConeau ? 'SÍ' : 'NO' }}</span>
+                        }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="8" style="padding: 16px; text-align: center; color: var(--color-text-muted, #5a4a53);">
+                        No hay usuarios de AEA cargados.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 3: PERSONAL DE OTRAS ÁREAS INSTITUCIONALES -->
+          <div class="card grupo-atenea-card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--color-primary, #826170);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border, #e5e7eb); padding-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <h3 style="font-family: var(--font-title, Candara, sans-serif); color: var(--color-primary-dark, #6a4d5a); margin: 0 0 4px 0;">
+                  3. Personal de Otras Áreas de la Institución
+                </h3>
+                <p style="color: var(--color-text-muted, #5a4a53); font-size: 0.85rem; margin: 0;">
+                  Personal de dependencias institucionales que proveerán información específica (Infraestructura, Biblioteca, etc.).
+                </p>
+              </div>
+              @if (!regU?.finalizado && canManage()) {
+                <button
+                  type="button"
+                  class="btn btn-outline"
+                  style="border: 1px dashed var(--color-primary, #826170); color: var(--color-primary, #826170); background: #fff; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer;"
+                  (click)="abrirModalNuevoUsuario('OTRAS_AREAS')"
+                >
+                  + Agregar Personal de Otra Área
+                </button>
+              }
+            </div>
+
+            <div class="table-responsive">
+              <table class="table-atenea" style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                <thead>
+                  <tr style="background: var(--color-surface-alt, #f5f5f6); text-align: left; border-bottom: 2px solid var(--color-border, #e5e7eb);">
+                    <th style="padding: 8px 12px;">Usuario / Nombre</th>
+                    <th style="padding: 8px 12px;">DNI / CUIL</th>
+                    <th style="padding: 8px 12px;">Correo Electrónico</th>
+                    <th style="padding: 8px 12px;">Área / Cargo</th>
+                    <th style="padding: 8px 12px;">Tipo de Acceso</th>
+                    <th style="padding: 8px 12px;">Alcance / Sección</th>
+                    <th style="padding: 8px 12px; text-align: center;">Req. Cuenta Nueva</th>
+                    <th style="padding: 8px 12px; text-align: center;">Habilitado</th>
+                    @if (!regU?.finalizado && canManage()) {
+                      <th style="padding: 8px 12px; text-align: center;">Acciones</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (u of usuariosOtrasAreas(); track u.id || $index) {
+                    <tr style="border-bottom: 1px solid var(--color-border, #e5e7eb);">
+                      <td style="padding: 8px 12px; font-weight: 600;">{{ u.nombreCompleto || (u.apellido + ', ' + u.nombre) }}</td>
+                      <td style="padding: 8px 12px;">{{ u.dniCuil }}</td>
+                      <td style="padding: 8px 12px;">{{ u.correo }}</td>
+                      <td style="padding: 8px 12px;">
+                        <div>{{ u.areaDependencia || '-' }}</div>
+                        <small style="color: var(--color-text-muted, #5a4a53);">{{ u.cargoFuncion || '-' }}</small>
+                      </td>
+                      <td style="padding: 8px 12px;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <select [(ngModel)]="u.tipoAcceso" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db;">
+                            <option value="CARGA">CARGA</option>
+                            <option value="VISUALIZACION">VISUALIZACION</option>
+                            <option value="CARGA_Y_VISUALIZACION">CARGA_Y_VISUALIZACION</option>
+                            <option value="ADMINISTRACION">ADMINISTRACION</option>
+                          </select>
+                        } @else {
+                          <span class="badge" style="background: #e0e7ff; color: #3730a3; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem;">{{ u.tipoAcceso }}</span>
+                        }
+                      </td>
+                      <td style="padding: 8px 12px;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <input type="text" [(ngModel)]="u.seccionAlcance" placeholder="Sección o dimensión" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db; width: 100%; max-width: 180px;" />
+                        } @else {
+                          {{ u.seccionAlcance || '-' }}
+                        }
+                      </td>
+                      <td style="padding: 8px 12px; text-align: center;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <input type="checkbox" [(ngModel)]="u.requiereCuentaNuevaConeauGlobal" />
+                        } @else {
+                          <span>{{ u.requiereCuentaNuevaConeauGlobal ? 'SÍ' : 'NO' }}</span>
+                        }
+                      </td>
+                      <td style="padding: 8px 12px; text-align: center;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <input type="checkbox" [(ngModel)]="u.habilitadoEnConeau" />
+                        } @else {
+                          <span style="color: #16a34a; font-weight: 600;">{{ u.habilitadoEnConeau ? 'SÍ' : 'NO' }}</span>
+                        }
+                      </td>
+                      @if (!regU?.finalizado && canManage()) {
+                        <td style="padding: 8px 12px; text-align: center;">
+                          <button
+                            type="button"
+                            class="btn-icon"
+                            style="background: none; border: none; color: #dc2626; cursor: pointer;"
+                            title="Quitar usuario"
+                            (click)="eliminarUsuarioAtenea(u)"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                          </button>
+                        </td>
+                      }
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td [attr.colspan]="(!regU?.finalizado && canManage()) ? 9 : 8" style="padding: 16px; text-align: center; color: var(--color-text-muted, #5a4a53);">
+                        No hay personal de otras áreas institucionales agregado.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 4: USUARIOS DE LA COMISIÓN DE AUTOEVALUACIÓN (CA) -->
+          <div class="card grupo-atenea-card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--color-primary, #826170);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border, #e5e7eb); padding-bottom: 8px;">
+              <div>
+                <h3 style="font-family: var(--font-title, Candara, sans-serif); color: var(--color-primary-dark, #6a4d5a); margin: 0 0 4px 0;">
+                  4. Usuarios de la Comisión de Autoevaluación (CA)
+                </h3>
+                <p style="color: var(--color-text-muted, #5a4a53); font-size: 0.85rem; margin: 0;">
+                  Miembros pre-poblados a partir del Registro Oficial RG-002 aprobado para la carrera.
+                </p>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table-atenea" style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                <thead>
+                  <tr style="background: var(--color-surface-alt, #f5f5f6); text-align: left; border-bottom: 2px solid var(--color-border, #e5e7eb);">
+                    <th style="padding: 8px 12px;">Miembro CA / Nombre</th>
+                    <th style="padding: 8px 12px;">DNI / CUIL</th>
+                    <th style="padding: 8px 12px;">Correo Electrónico</th>
+                    <th style="padding: 8px 12px;">Rol / Cargo en CA</th>
+                    <th style="padding: 8px 12px;">Tipo de Acceso</th>
+                    <th style="padding: 8px 12px;">Alcance / Sección</th>
+                    <th style="padding: 8px 12px; text-align: center;">Req. Cuenta Nueva</th>
+                    <th style="padding: 8px 12px; text-align: center;">Habilitado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (u of usuariosCa(); track u.id || $index) {
+                    <tr style="border-bottom: 1px solid var(--color-border, #e5e7eb);">
+                      <td style="padding: 8px 12px; font-weight: 600;">{{ u.nombreCompleto || (u.apellido + ', ' + u.nombre) }}</td>
+                      <td style="padding: 8px 12px;">{{ u.dniCuil }}</td>
+                      <td style="padding: 8px 12px;">{{ u.correo }}</td>
+                      <td style="padding: 8px 12px;">
+                        <div>{{ u.cargoFuncion || 'Miembro CA' }}</div>
+                        <small style="color: var(--color-text-muted, #5a4a53);">{{ u.areaDependencia || 'Comisión de Autoevaluación' }}</small>
+                      </td>
+                      <td style="padding: 8px 12px;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <select [(ngModel)]="u.tipoAcceso" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db;">
+                            <option value="CARGA_Y_VISUALIZACION">CARGA_Y_VISUALIZACION</option>
+                            <option value="CARGA">CARGA</option>
+                            <option value="VISUALIZACION">VISUALIZACION</option>
+                            <option value="ADMINISTRACION">ADMINISTRACION</option>
+                          </select>
+                        } @else {
+                          <span class="badge" style="background: #e0e7ff; color: #3730a3; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem;">{{ u.tipoAcceso }}</span>
+                        }
+                      </td>
+                      <td style="padding: 8px 12px;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <input type="text" [(ngModel)]="u.seccionAlcance" placeholder="Sección o dimensión" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db; width: 100%; max-width: 180px;" />
+                        } @else {
+                          {{ u.seccionAlcance || 'Formulario Carrera' }}
+                        }
+                      </td>
+                      <td style="padding: 8px 12px; text-align: center;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <input type="checkbox" [(ngModel)]="u.requiereCuentaNuevaConeauGlobal" />
+                        } @else {
+                          <span>{{ u.requiereCuentaNuevaConeauGlobal ? 'SÍ' : 'NO' }}</span>
+                        }
+                      </td>
+                      <td style="padding: 8px 12px; text-align: center;">
+                        @if (!regU?.finalizado && canManage()) {
+                          <input type="checkbox" [(ngModel)]="u.habilitadoEnConeau" />
+                        } @else {
+                          <span style="color: #16a34a; font-weight: 600;">{{ u.habilitadoEnConeau ? 'SÍ' : 'NO' }}</span>
+                        }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="8" style="padding: 16px; text-align: center; color: var(--color-text-muted, #5a4a53);">
+                        No hay miembros de CA importados.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- MODAL PARA AGREGAR USUARIO DE OTRAS ÁREAS -->
+      @if (modalNuevoUsuarioAteneaVisible()) {
+        <div class="modal-backdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+          <div class="modal-card card" style="background: #fff; border-radius: 8px; width: 100%; max-width: 520px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--color-border, #e5e7eb); padding-bottom: 8px;">
+              <h3 style="font-family: var(--font-title, Candara, sans-serif); color: var(--color-primary-dark, #6a4d5a); margin: 0;">
+                Agregar Usuario para CONEAU Global ATENEA
+              </h3>
+              <button type="button" (click)="cerrarModalNuevoUsuario()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #6b7280;">✕</button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">Nombre *</label>
+                  <input type="text" [ngModel]="nuevoUsuarioNombre()" (ngModelChange)="nuevoUsuarioNombre.set($event)" placeholder="Ej: Roberto" style="width: 100%; padding: 6px 10px; border-radius: 4px; border: 1px solid #d1d5db;" />
+                </div>
+                <div style="flex: 1;">
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">Apellido *</label>
+                  <input type="text" [ngModel]="nuevoUsuarioApellido()" (ngModelChange)="nuevoUsuarioApellido.set($event)" placeholder="Ej: Perez" style="width: 100%; padding: 6px 10px; border-radius: 4px; border: 1px solid #d1d5db;" />
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">DNI / CUIL *</label>
+                  <input type="text" [ngModel]="nuevoUsuarioDni()" (ngModelChange)="nuevoUsuarioDni.set($event)" placeholder="Ej: 20-30111222-3" style="width: 100%; padding: 6px 10px; border-radius: 4px; border: 1px solid #d1d5db;" />
+                </div>
+                <div style="flex: 1;">
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">Correo electrónico *</label>
+                  <input type="email" [ngModel]="nuevoUsuarioCorreo()" (ngModelChange)="nuevoUsuarioCorreo.set($event)" placeholder="usuario@undec.edu.ar" style="width: 100%; padding: 6px 10px; border-radius: 4px; border: 1px solid #d1d5db;" />
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">Área o Dependencia</label>
+                  <input type="text" [ngModel]="nuevoUsuarioArea()" (ngModelChange)="nuevoUsuarioArea.set($event)" placeholder="Ej: Dirección de Infraestructura" style="width: 100%; padding: 6px 10px; border-radius: 4px; border: 1px solid #d1d5db;" />
+                </div>
+                <div style="flex: 1;">
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">Cargo o Función</label>
+                  <input type="text" [ngModel]="nuevoUsuarioCargo()" (ngModelChange)="nuevoUsuarioCargo.set($event)" placeholder="Ej: Responsable de Edificios" style="width: 100%; padding: 6px 10px; border-radius: 4px; border: 1px solid #d1d5db;" />
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">Tipo de Acceso</label>
+                  <select [ngModel]="nuevoUsuarioAcceso()" (ngModelChange)="nuevoUsuarioAcceso.set($event)" style="width: 100%; padding: 6px 10px; border-radius: 4px; border: 1px solid #d1d5db;">
+                    <option value="CARGA">CARGA</option>
+                    <option value="VISUALIZACION">VISUALIZACION</option>
+                    <option value="CARGA_Y_VISUALIZACION">CARGA_Y_VISUALIZACION</option>
+                    <option value="ADMINISTRACION">ADMINISTRACION</option>
+                  </select>
+                </div>
+                <div style="flex: 1;">
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">Alcance / Sección</label>
+                  <input type="text" [ngModel]="nuevoUsuarioAlcance()" (ngModelChange)="nuevoUsuarioAlcance.set($event)" placeholder="Ej: Infraestructura e Inmuebles" style="width: 100%; padding: 6px 10px; border-radius: 4px; border: 1px solid #d1d5db;" />
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                  <input type="checkbox" [ngModel]="nuevoUsuarioReqCuenta()" (ngModelChange)="nuevoUsuarioReqCuenta.set($event)" />
+                  <span>Requiere creación de cuenta nueva en CONEAU Global</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                  <input type="checkbox" [ngModel]="nuevoUsuarioCuentaCreada()" (ngModelChange)="nuevoUsuarioCuentaCreada.set($event)" />
+                  <span>Cuenta CONEAU Global ya existente</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                  <input type="checkbox" [ngModel]="nuevoUsuarioHabilitado()" (ngModelChange)="nuevoUsuarioHabilitado.set($event)" />
+                  <span>Habilitado en CONEAU Global</span>
+                </label>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; border-top: 1px solid var(--color-border, #e5e7eb); padding-top: 12px;">
+              <button type="button" class="btn btn-outline" (click)="cerrarModalNuevoUsuario()" style="padding: 6px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 4px; cursor: pointer;">Cancelar</button>
+              <button type="button" class="btn btn-primary" (click)="agregarNuevoUsuario()" style="padding: 6px 16px; background: var(--color-primary, #826170); color: #fff; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">Agregar al Registro</button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- MODAL PARA CONFIRMAR FINALIZACIÓN RG-003 -->
+      @if (modalConfirmarFinalizarRg003Visible()) {
+        <div class="modal-backdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+          <div class="modal-card card" style="background: #fff; border-radius: 8px; width: 100%; max-width: 480px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+            <h3 style="font-family: var(--font-title, Candara, sans-serif); color: var(--color-primary-dark, #6a4d5a); margin: 0 0 10px 0;">
+              Confirmar Finalización de RG-003
+            </h3>
+            <p style="font-size: 0.9rem; color: var(--color-text, #1f1a1d); line-height: 1.5; margin-bottom: 12px;">
+              Está a punto de emitir formalmente el <strong>Registro RG-003: Registro de usuarios de ATENEA</strong>.
+            </p>
+            <ul style="font-size: 0.85rem; color: var(--color-text-muted, #5a4a53); margin: 0 0 16px 20px; padding: 0;">
+              <li>Se generará el archivo oficial en PDF bajo nomenclatura institucional UNdeC.</li>
+              <li>El documento será resguardado en la carpeta <code>01-Convocatoria y formalización CONEAU</code> en MinIO.</li>
+              <li>Se marcará como <strong>COMPLETADA</strong> la <strong>Actividad 3.3</strong> en la hoja <strong>INFO</strong> del Plan de Trabajo.</li>
+              <li>Los usuarios quedarán registrados para su posterior habilitación en CONEAU Global ATENEA.</li>
+            </ul>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--color-border, #e5e7eb); padding-top: 12px;">
+              <button type="button" class="btn btn-outline" (click)="cerrarModalFinalizarRg003()" [disabled]="finalizandoUsuariosAtenea()" style="padding: 6px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 4px; cursor: pointer;">Cancelar</button>
+              <button type="button" class="btn btn-primary" (click)="confirmarFinalizarRg003()" [disabled]="finalizandoUsuariosAtenea()" style="padding: 6px 16px; background: var(--color-primary, #826170); color: #fff; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                {{ finalizandoUsuariosAtenea() ? 'Finalizando y Generando...' : 'Confirmar y Finalizar' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    }
+
+    <!-- PESTAÑA 2: SEGUIMIENTO DEL PLAN DE TRABAJO (AEA) CON DRAWER LATERAL SPLIT-VIEW -->
     @if (tabActiva() === 'SEGUIMIENTO') {
       <div class="seguimiento-layout" [class.drawer-abierto]="actividadSeleccionadaDrawer() !== null">
         <!-- Columna Principal: Tabla de Actividades -->

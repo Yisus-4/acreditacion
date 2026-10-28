@@ -21,6 +21,13 @@ import {
   ItemActividadPlanRequest,
   PlanTrabajoDto,
 } from '../../../core/convocatorias/models/convocatoria.model';
+import { UsuariosAteneaService } from '../../../core/convocatorias/usuarios-atenea.service';
+import {
+  RegistroUsuariosAteneaDto,
+  UsuarioPermisoAteneaDto,
+  GrupoUsuarioAtenea,
+  TipoAccesoAtenea,
+} from '../../../core/convocatorias/models/usuarios-atenea.model';
 import { CompletarActividadModalComponent } from '../completar-actividad-modal/completar-actividad-modal.component';
 import { NormativaDetalleComponent } from '../../normativa/normativa-detalle/normativa-detalle.component';
 import { NormativaService } from '../../../core/normativa/services/normativa.service';
@@ -58,6 +65,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   private readonly convocatoriaService = inject(ConvocatoriaService);
   private readonly normativaService = inject(NormativaService);
   private readonly notificationService = inject(NotificationService);
+  private readonly usuariosAteneaService = inject(UsuariosAteneaService);
   private readonly auth = inject(Auth);
   private routeSub?: Subscription;
   private idCargadoActualmente: string | null = null;
@@ -69,7 +77,38 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
 
-  readonly tabActiva = signal<'ACTIVIDADES' | 'PLAN_TRABAJO' | 'COMISION_AUTOEVALUACION' | 'SEGUIMIENTO'>('ACTIVIDADES');
+  readonly tabActiva = signal<'ACTIVIDADES' | 'PLAN_TRABAJO' | 'COMISION_AUTOEVALUACION' | 'USUARIOS_ATENEA' | 'SEGUIMIENTO'>('ACTIVIDADES');
+
+  // RG-003: Usuarios y permisos ATENEA
+  readonly usuariosAteneaDesbloqueado = computed(() => this.registroCa()?.estado === 'APROBADA');
+  readonly registroUsuariosAtenea = signal<RegistroUsuariosAteneaDto | null>(null);
+  readonly cargandoUsuariosAtenea = signal(false);
+  readonly guardandoUsuariosAtenea = signal(false);
+  readonly finalizandoUsuariosAtenea = signal(false);
+  readonly bannerExitoUsuariosAtenea = signal<string | null>(null);
+  readonly bannerErrorUsuariosAtenea = signal<string | null>(null);
+  readonly modalNuevoUsuarioAteneaVisible = signal(false);
+  readonly modalConfirmarFinalizarRg003Visible = signal(false);
+
+  // Formulario nuevo usuario ATENEA
+  readonly nuevoUsuarioGrupo = signal<GrupoUsuarioAtenea>('OTRAS_AREAS');
+  readonly nuevoUsuarioNombre = signal('');
+  readonly nuevoUsuarioApellido = signal('');
+  readonly nuevoUsuarioDni = signal('');
+  readonly nuevoUsuarioCorreo = signal('');
+  readonly nuevoUsuarioArea = signal('');
+  readonly nuevoUsuarioCargo = signal('');
+  readonly nuevoUsuarioAcceso = signal<TipoAccesoAtenea>('CARGA');
+  readonly nuevoUsuarioAlcance = signal('');
+  readonly nuevoUsuarioReqCuenta = signal(true);
+  readonly nuevoUsuarioCuentaCreada = signal(false);
+  readonly nuevoUsuarioHabilitado = signal(false);
+
+  // Grupos filtrados para visualización por pestaña y tablas
+  readonly usuariosSgi = computed(() => (this.registroUsuariosAtenea()?.usuarios ?? []).filter(u => u.grupoUsuario === 'SGI'));
+  readonly usuariosAea = computed(() => (this.registroUsuariosAtenea()?.usuarios ?? []).filter(u => u.grupoUsuario === 'AEA'));
+  readonly usuariosOtrasAreas = computed(() => (this.registroUsuariosAtenea()?.usuarios ?? []).filter(u => u.grupoUsuario === 'OTRAS_AREAS'));
+  readonly usuariosCa = computed(() => (this.registroUsuariosAtenea()?.usuarios ?? []).filter(u => u.grupoUsuario === 'COMISION_AUTOEVALUACION'));
 
   // Estado Comisión de Autoevaluación (CA · RG-002)
   readonly registroCa = signal<RegistroCaDto | null>(null);
@@ -863,12 +902,21 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     });
   }
 
-  seleccionarTab(tab: 'ACTIVIDADES' | 'PLAN_TRABAJO' | 'COMISION_AUTOEVALUACION' | 'SEGUIMIENTO'): void {
+  seleccionarTab(tab: 'ACTIVIDADES' | 'PLAN_TRABAJO' | 'COMISION_AUTOEVALUACION' | 'USUARIOS_ATENEA' | 'SEGUIMIENTO'): void {
     if (tab === 'SEGUIMIENTO' && !this.canManage()) {
       this.tabActiva.set('ACTIVIDADES');
       return;
     }
+    if (tab === 'USUARIOS_ATENEA' && !this.usuariosAteneaDesbloqueado()) {
+      return;
+    }
     this.tabActiva.set(tab);
+    if (tab === 'USUARIOS_ATENEA') {
+      const c = this.convocatoria();
+      if (c && !this.registroUsuariosAtenea()) {
+        this.cargarUsuariosAtenea(c.id);
+      }
+    }
   }
 
   // =========================================================================
@@ -1140,6 +1188,9 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       next: (ca) => {
         this.cargandoRegistroCa.set(false);
         this.registroCa.set(ca);
+        if (ca.estado === 'APROBADA') {
+          this.cargarUsuariosAtenea(procesoId);
+        }
         this.coincideCurricularCa.set(ca.coincideComisionCurricular);
         if (ca.miembros && ca.miembros.length > 0) {
           this.miembrosCa.set(ca.miembros.map(m => ({ ...m })));
@@ -1608,4 +1659,162 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     });
   }
 
+
+  // =========================================================================
+  // Métodos RG-003: Registro de usuarios de ATENEA
+  // =========================================================================
+
+  cargarUsuariosAtenea(procesoId: string): void {
+    this.cargandoUsuariosAtenea.set(true);
+    this.usuariosAteneaService.consultar(procesoId).subscribe({
+      next: (res) => {
+        this.cargandoUsuariosAtenea.set(false);
+        this.registroUsuariosAtenea.set(res);
+      },
+      error: (err) => {
+        this.cargandoUsuariosAtenea.set(false);
+        console.error('Error al cargar registro de usuarios ATENEA:', err);
+      }
+    });
+  }
+
+  guardarUsuariosAtenea(): void {
+    const c = this.convocatoria();
+    const reg = this.registroUsuariosAtenea();
+    if (!c || !reg) return;
+
+    this.guardandoUsuariosAtenea.set(true);
+    this.bannerExitoUsuariosAtenea.set(null);
+    this.bannerErrorUsuariosAtenea.set(null);
+
+    this.usuariosAteneaService.guardar(c.id, { usuarios: reg.usuarios }).subscribe({
+      next: (actualizado) => {
+        this.guardandoUsuariosAtenea.set(false);
+        this.registroUsuariosAtenea.set(actualizado);
+        this.bannerExitoUsuariosAtenea.set('Los permisos y usuarios de ATENEA han sido guardados correctamente.');
+        setTimeout(() => this.bannerExitoUsuariosAtenea.set(null), 4000);
+      },
+      error: (err) => {
+        this.guardandoUsuariosAtenea.set(false);
+        this.bannerErrorUsuariosAtenea.set(err?.error?.message || 'Error al guardar cambios de usuarios ATENEA.');
+      }
+    });
+  }
+
+  abrirModalNuevoUsuario(grupo: GrupoUsuarioAtenea = 'OTRAS_AREAS'): void {
+    this.nuevoUsuarioGrupo.set(grupo);
+    this.nuevoUsuarioNombre.set('');
+    this.nuevoUsuarioApellido.set('');
+    this.nuevoUsuarioDni.set('');
+    this.nuevoUsuarioCorreo.set('');
+    this.nuevoUsuarioArea.set('');
+    this.nuevoUsuarioCargo.set('');
+    this.nuevoUsuarioAcceso.set('CARGA');
+    this.nuevoUsuarioAlcance.set('');
+    this.nuevoUsuarioReqCuenta.set(true);
+    this.nuevoUsuarioCuentaCreada.set(false);
+    this.nuevoUsuarioHabilitado.set(false);
+    this.modalNuevoUsuarioAteneaVisible.set(true);
+  }
+
+  cerrarModalNuevoUsuario(): void {
+    this.modalNuevoUsuarioAteneaVisible.set(false);
+  }
+
+  agregarNuevoUsuario(): void {
+    const reg = this.registroUsuariosAtenea();
+    if (!reg) return;
+
+    if (!this.nuevoUsuarioNombre().trim() || !this.nuevoUsuarioApellido().trim() || !this.nuevoUsuarioDni().trim() || !this.nuevoUsuarioCorreo().trim()) {
+      alert('Por favor complete Nombre, Apellido, DNI/CUIL y Correo electrónico.');
+      return;
+    }
+
+    const nuevo: UsuarioPermisoAteneaDto = {
+      grupoUsuario: this.nuevoUsuarioGrupo(),
+      nombre: this.nuevoUsuarioNombre().trim(),
+      apellido: this.nuevoUsuarioApellido().trim(),
+      nombreCompleto: `${this.nuevoUsuarioApellido().trim()}, ${this.nuevoUsuarioNombre().trim()}`,
+      dniCuil: this.nuevoUsuarioDni().trim(),
+      correo: this.nuevoUsuarioCorreo().trim().toLowerCase(),
+      areaDependencia: this.nuevoUsuarioArea().trim() || undefined,
+      cargoFuncion: this.nuevoUsuarioCargo().trim() || undefined,
+      tipoAcceso: this.nuevoUsuarioAcceso(),
+      seccionAlcance: this.nuevoUsuarioAlcance().trim() || undefined,
+      requiereCuentaNuevaConeauGlobal: this.nuevoUsuarioReqCuenta(),
+      cuentaConeauGlobalCreada: this.nuevoUsuarioCuentaCreada(),
+      habilitadoEnConeau: this.nuevoUsuarioHabilitado()
+    };
+
+    const lista = [...reg.usuarios, nuevo];
+    this.registroUsuariosAtenea.set({ ...reg, usuarios: lista });
+    this.cerrarModalNuevoUsuario();
+  }
+
+  eliminarUsuarioAtenea(usuario: UsuarioPermisoAteneaDto): void {
+    const reg = this.registroUsuariosAtenea();
+    if (!reg || reg.finalizado) return;
+
+    if (!confirm(`¿Está seguro de quitar a "${usuario.nombreCompleto || usuario.apellido}" del registro de ATENEA?`)) {
+      return;
+    }
+
+    const lista = reg.usuarios.filter(u => u !== usuario);
+    this.registroUsuariosAtenea.set({ ...reg, usuarios: lista });
+  }
+
+  abrirModalFinalizarRg003(): void {
+    this.modalConfirmarFinalizarRg003Visible.set(true);
+  }
+
+  cerrarModalFinalizarRg003(): void {
+    this.modalConfirmarFinalizarRg003Visible.set(false);
+  }
+
+  confirmarFinalizarRg003(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+
+    this.finalizandoUsuariosAtenea.set(true);
+    this.bannerExitoUsuariosAtenea.set(null);
+    this.bannerErrorUsuariosAtenea.set(null);
+
+    this.usuariosAteneaService.finalizar(c.id).subscribe({
+      next: (actualizado) => {
+        this.finalizandoUsuariosAtenea.set(false);
+        this.registroUsuariosAtenea.set(actualizado);
+        this.cerrarModalFinalizarRg003();
+        this.bannerExitoUsuariosAtenea.set('El Registro RG-003 ha sido formalmente emitido, almacenado en MinIO y la Actividad 3.3 en el Plan de Trabajo ha quedado completada.');
+        // Recargar convocatoria para refrescar progreso del plan
+        this.cargarDatos(c.id);
+      },
+      error: (err) => {
+        this.finalizandoUsuariosAtenea.set(false);
+        this.bannerErrorUsuariosAtenea.set(err?.error?.message || 'Error al finalizar el registro RG-003.');
+      }
+    });
+  }
+
+  descargarPdfRg003(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+
+    this.usuariosAteneaService.descargarPdf(c.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const nombreCarrera = c.carreraNombre?.replace(/\s+/g, '_') || 'Carrera';
+        const anio = new Date().getFullYear();
+        a.download = `RG-003_Registro_de_usuarios_de_ATENEA_${nombreCarrera}_${anio}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        alert('No fue posible descargar el archivo PDF oficial del RG-003.');
+      }
+    });
+  }
 }
