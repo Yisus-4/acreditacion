@@ -14,6 +14,7 @@ import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.domain.ports.CarreraRepositoryPort;
 import com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort;
 import com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +37,7 @@ public class GuardarRegistroCaBorradorService implements GuardarRegistroCaBorrad
         this(registroCaRepository, procesoRepository, null, null, null);
     }
 
+    @Autowired
     public GuardarRegistroCaBorradorService(
             RegistroConformacionCaRepositoryPort registroCaRepository,
             ProcesoAcreditacionRepositoryPort procesoRepository,

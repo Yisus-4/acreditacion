@@ -1243,6 +1243,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
 
     this.miembrosCa.set([...actuales, nuevo]);
     this.cerrarModalCatalogoCa();
+    this.guardarBorradorCa();
   }
 
   abrirModalNuevoMiembroCa(): void {
@@ -1339,6 +1340,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
 
     this.miembrosCa.set([...actuales, nuevo]);
     this.cerrarModalNuevoMiembroCa();
+    this.guardarBorradorCa();
   }
 
   confirmarRegistroMiembroEnSistema(m: MiembroCaDto): void {
@@ -1458,7 +1460,12 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         if (ca.miembros) {
           this.miembrosCa.set(ca.miembros.map(mi => ({ ...mi })));
         }
-        this.bannerExitoCa.set('Borrador de la Comisión de Autoevaluación guardado correctamente.');
+        const tieneNuevos = (ca.miembros || []).some(m => m.pendienteAltaSistema);
+        if (tieneNuevos) {
+          this.bannerExitoCa.set('¡Borrador guardado! Se ha enviado la solicitud de alta en catálogo para los integrantes nuevos a la campana de AEA.');
+        } else {
+          this.bannerExitoCa.set('Borrador de la Comisión de Autoevaluación guardado correctamente.');
+        }
       },
       error: (err) => {
         this.guardandoCaBorrador.set(false);

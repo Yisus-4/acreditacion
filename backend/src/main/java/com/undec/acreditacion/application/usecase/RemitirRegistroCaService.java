@@ -12,6 +12,7 @@ import com.undec.acreditacion.domain.ports.CarreraRepositoryPort;
 import com.undec.acreditacion.domain.ports.DocumentStoragePort;
 import com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort;
 import com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +39,7 @@ public class RemitirRegistroCaService implements RemitirRegistroCaUseCase {
         this(registroCaRepository, procesoRepository, storagePort, null, null, null);
     }
 
+    @Autowired
     public RemitirRegistroCaService(
             RegistroConformacionCaRepositoryPort registroCaRepository,
             ProcesoAcreditacionRepositoryPort procesoRepository,
