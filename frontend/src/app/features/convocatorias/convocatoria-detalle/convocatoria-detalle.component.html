@@ -2215,6 +2215,35 @@
             </div>
           </div>
 
+          <!-- Sub-navegación entre Usuarios y Matriz -->
+          <div class="subtabs-atenea" style="display: flex; gap: 8px; margin-bottom: 1.5rem; border-bottom: 2px solid var(--color-border, #e5e7eb); padding-bottom: 4px;">
+            <button
+              type="button"
+              class="subtab-btn"
+              [class.active]="subTabAtenea() === 'USUARIOS'"
+              (click)="subTabAtenea.set('USUARIOS')"
+              style="padding: 8px 16px; border-radius: 6px 6px 0 0; font-weight: 600; cursor: pointer; border: none;"
+              [style.background]="subTabAtenea() === 'USUARIOS' ? 'var(--color-primary, #826170)' : 'transparent'"
+              [style.color]="subTabAtenea() === 'USUARIOS' ? '#fff' : 'var(--color-text, #374151)'"
+            >
+              Nómina de Usuarios Habilitados ({{ (regU?.usuarios ?? []).length }})
+            </button>
+            <button
+              type="button"
+              class="subtab-btn"
+              [class.active]="subTabAtenea() === 'MATRIZ'"
+              (click)="subTabAtenea.set('MATRIZ')"
+              style="padding: 8px 16px; border-radius: 6px 6px 0 0; font-weight: 600; cursor: pointer; border: none;"
+              [style.background]="subTabAtenea() === 'MATRIZ' ? 'var(--color-primary, #826170)' : 'transparent'"
+              [style.color]="subTabAtenea() === 'MATRIZ' ? '#fff' : 'var(--color-text, #374151)'"
+            >
+              Matriz de Permisos CONEAU Global ATENEA ({{ (regU?.matrizPermisos ?? []).length }} permisos)
+            </button>
+          </div>
+
+          @if (subTabAtenea() === 'USUARIOS') {
+
+
           <!-- SECCIÓN 1: PERSONAL DE SGI -->
           <div class="card grupo-atenea-card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--color-primary, #826170);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border, #e5e7eb); padding-bottom: 8px;">
@@ -2575,6 +2604,232 @@
               </table>
             </div>
           </div>
+          } @else if (subTabAtenea() === 'MATRIZ') {
+            <div class="card matriz-permisos-card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--color-primary, #826170);">
+              <!-- Encabezado y Explicación -->
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--color-border, #e5e7eb); padding-bottom: 12px;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <span class="badge" style="background: #2563eb; color: #fff; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 4px;">
+                      Catálogo Oficial CONEAU Global
+                    </span>
+                    <span style="font-size: 0.85rem; color: var(--color-text-muted, #5a4a53); font-weight: 600;">
+                      14 Procesos / Actividades · {{ (regU?.matrizPermisos ?? []).length }} permisos configurables
+                    </span>
+                  </div>
+                  <h3 style="font-family: var(--font-title, Candara, sans-serif); color: var(--color-primary-dark, #6a4d5a); margin: 0 0 4px 0;">
+                    Matriz de Permisos del Sistema CONEAU Global ATENEA
+                  </h3>
+                  <p style="color: var(--color-text-muted, #5a4a53); font-size: 0.85rem; margin: 0;">
+                    Configure los permisos de <strong>Lectura</strong> y <strong>Lectura y modificación</strong> para los usuarios del <strong>SGI-AEA</strong> y de la <strong>Comisión de Autoevaluación (CA)</strong> según el estándar oficial UNdeC AEA (RG-003).
+                  </p>
+                </div>
+
+                <!-- Botones de Acción Rápida -->
+                @if (!regU?.finalizado && canManage()) {
+                  <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary"
+                      style="font-size: 0.8rem; padding: 6px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 4px; cursor: pointer; font-weight: 500;"
+                      (click)="restablecerMatrizPorDefecto()"
+                      title="Restaura la configuración recomendada de permisos"
+                    >
+                      Restablecer Predeterminados
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary"
+                      style="font-size: 0.8rem; padding: 6px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 4px; cursor: pointer; font-weight: 500;"
+                      (click)="marcarTodosGrupoMatriz('CA', true)"
+                    >
+                      Habilitar Todo CA
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary"
+                      style="font-size: 0.8rem; padding: 6px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 4px; cursor: pointer; font-weight: 500;"
+                      (click)="marcarTodosGrupoMatriz('CA', false)"
+                    >
+                      Desmarcar Todo CA
+                    </button>
+                  </div>
+                }
+              </div>
+
+              <!-- Filtros y Búsqueda -->
+              <div style="display: flex; gap: 12px; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; background: var(--color-surface-alt, #f8f9fa); padding: 12px 14px; border-radius: 6px;">
+                <div style="flex: 1.5; min-width: 260px;">
+                  <label style="display: block; font-size: 0.75rem; font-weight: 600; color: #4b5563; margin-bottom: 4px;">
+                    Filtrar por Proceso / Actividad:
+                  </label>
+                  <select
+                    [ngModel]="filtroProcesoMatriz()"
+                    (ngModelChange)="filtroProcesoMatriz.set($event)"
+                    style="width: 100%; padding: 6px 10px; border-radius: 4px; border: 1px solid #d1d5db; font-size: 0.85rem;"
+                  >
+                    <option value="TODOS">Todos los Procesos (14)</option>
+                    @for (p of procesosUnicosMatriz(); track p) {
+                      <option [value]="p">{{ p }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div style="flex: 1.2; min-width: 220px;">
+                  <label style="display: block; font-size: 0.75rem; font-weight: 600; color: #4b5563; margin-bottom: 4px;">
+                    Buscar Item o Sección:
+                  </label>
+                  <input
+                    type="text"
+                    [ngModel]="busquedaItemMatriz()"
+                    (ngModelChange)="busquedaItemMatriz.set($event)"
+                    placeholder="Ej: Inmuebles, Plan de estudios, Alumnos..."
+                    style="width: 100%; padding: 6px 10px; border-radius: 4px; border: 1px solid #d1d5db; font-size: 0.85rem;"
+                  />
+                </div>
+
+                @if (filtroProcesoMatriz() !== 'TODOS' || busquedaItemMatriz()) {
+                  <button
+                    type="button"
+                    (click)="filtroProcesoMatriz.set('TODOS'); busquedaItemMatriz.set('')"
+                    style="margin-top: 18px; padding: 6px 12px; font-size: 0.8rem; background: #e5e7eb; border: none; border-radius: 4px; cursor: pointer;"
+                  >
+                    Limpiar Filtros
+                  </button>
+                }
+              </div>
+
+              <!-- Matriz de Permisos Agrupada -->
+              <div class="table-responsive">
+                <table class="table-atenea table-matriz-permisos" style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                  <thead>
+                    <tr style="background: var(--color-surface-alt, #f5f5f6); text-align: left; border-bottom: 2px solid var(--color-border, #e5e7eb);">
+                      <th style="padding: 10px 12px; width: 44%;">Item / Formulario</th>
+                      <th style="padding: 10px 12px; width: 18%;">Sección</th>
+                      <th style="padding: 10px 12px; width: 18%;">Tipo de Permiso</th>
+                      <th style="padding: 10px 12px; width: 10%; text-align: center;">Permisos SGI-AEA</th>
+                      <th style="padding: 10px 12px; width: 10%; text-align: center;">Permisos CA</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (grupo of matrizAgrupadaPorProceso(); track grupo.proceso) {
+                      <!-- Fila separadora de Proceso -->
+                      <tr style="background: #f1f5f9; border-top: 2px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;">
+                        <td colspan="5" style="padding: 8px 12px; font-weight: 700; color: #1e293b;">
+                          <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span>{{ grupo.proceso }}</span>
+                            <span style="font-size: 0.75rem; background: #e2e8f0; color: #475569; padding: 2px 8px; border-radius: 9999px; font-weight: 600;">
+                              {{ grupo.items.length }} permisos
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+
+                      <!-- Filas de Items del Proceso -->
+                      @for (m of grupo.items; track m.id || (m.orden + '_' + m.tipoPermiso)) {
+                        <tr
+                          style="border-bottom: 1px solid var(--color-border, #e5e7eb);"
+                          [style.background]="m.tipoPermiso === 'LECTURA_MODIFICACION' ? '#fafafa' : '#fff'"
+                        >
+                          <!-- Item -->
+                          <td style="padding: 8px 12px;">
+                            <div style="font-weight: 500; color: #1f2937;">
+                              {{ m.item }}
+                            </div>
+                          </td>
+
+                          <!-- Sección Badge -->
+                          <td style="padding: 8px 12px;">
+                            @if (m.seccion === 'Carrera') {
+                              <span style="display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;">
+                                Carrera
+                              </span>
+                            } @else if (m.seccion === 'Unidad Académica') {
+                              <span style="display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff;">
+                                Unidad Académica
+                              </span>
+                            } @else if (m.seccion === 'Institución') {
+                              <span style="display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;">
+                                Institución
+                              </span>
+                            } @else {
+                              <span style="display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;">
+                                {{ m.seccion || 'Todos (Global)' }}
+                              </span>
+                            }
+                          </td>
+
+                          <!-- Tipo Permiso -->
+                          <td style="padding: 8px 12px;">
+                            @if (m.tipoPermiso === 'LECTURA') {
+                              <span style="font-size: 0.8rem; font-weight: 500; color: #2563eb; display: inline-flex; align-items: center; gap: 4px;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                  <circle cx="12" cy="12" r="3" />
+                                </svg>
+                                Lectura
+                              </span>
+                            } @else {
+                              <span style="font-size: 0.8rem; font-weight: 600; color: #d97706; display: inline-flex; align-items: center; gap: 4px;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                                Lectura y modificación
+                              </span>
+                            }
+                          </td>
+
+                          <!-- Checkbox SGI-AEA -->
+                          <td style="padding: 8px 12px; text-align: center;">
+                            @if (!regU?.finalizado && canManage()) {
+                              <input
+                                type="checkbox"
+                                [checked]="m.permisoSgiAea"
+                                (change)="togglePermisoSgiAea(m)"
+                                style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--color-primary, #826170);"
+                              />
+                            } @else {
+                              @if (m.permisoSgiAea) {
+                                <span style="color: #16a34a; font-weight: 700; font-size: 0.9rem;">SÍ</span>
+                              } @else {
+                                <span style="color: #9ca3af; font-weight: 600; font-size: 0.9rem;">NO</span>
+                              }
+                            }
+                          </td>
+
+                          <!-- Checkbox CA -->
+                          <td style="padding: 8px 12px; text-align: center;">
+                            @if (!regU?.finalizado && canManage()) {
+                              <input
+                                type="checkbox"
+                                [checked]="m.permisoCa"
+                                (change)="togglePermisoCa(m)"
+                                style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--color-primary, #826170);"
+                              />
+                            } @else {
+                              @if (m.permisoCa) {
+                                <span style="color: #16a34a; font-weight: 700; font-size: 0.9rem;">SÍ</span>
+                              } @else {
+                                <span style="color: #9ca3af; font-weight: 600; font-size: 0.9rem;">NO</span>
+                              }
+                            }
+                          </td>
+                        </tr>
+                      }
+                    } @empty {
+                      <tr>
+                        <td colspan="5" style="padding: 24px; text-align: center; color: var(--color-text-muted, #5a4a53);">
+                          No se encontraron items que coincidan con los filtros seleccionados.
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+
         }
       </div>
 

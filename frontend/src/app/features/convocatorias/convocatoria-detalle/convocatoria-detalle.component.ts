@@ -22,6 +22,7 @@ import {
   PlanTrabajoDto,
 } from '../../../core/convocatorias/models/convocatoria.model';
 import { UsuariosAteneaService } from '../../../core/convocatorias/usuarios-atenea.service';
+import { ItemMatrizPermisoAteneaDto, TipoPermisoMatrizAtenea } from '../../../core/convocatorias/models/usuarios-atenea.model';
 import {
   RegistroUsuariosAteneaDto,
   UsuarioPermisoAteneaDto,
@@ -89,6 +90,49 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly bannerErrorUsuariosAtenea = signal<string | null>(null);
   readonly modalNuevoUsuarioAteneaVisible = signal(false);
   readonly modalConfirmarFinalizarRg003Visible = signal(false);
+
+  // Matriz de permisos ATENEA (RG-003)
+  readonly subTabAtenea = signal<'USUARIOS' | 'MATRIZ'>('USUARIOS');
+  readonly filtroProcesoMatriz = signal<string>('TODOS');
+  readonly busquedaItemMatriz = signal<string>('');
+
+  readonly procesosUnicosMatriz = computed(() => {
+    const items = this.registroUsuariosAtenea()?.matrizPermisos ?? [];
+    const set = new Set<string>();
+    items.forEach(i => set.add(i.procesoActividad));
+    return Array.from(set);
+  });
+
+  readonly itemsMatrizFiltrados = computed(() => {
+    const items = this.registroUsuariosAtenea()?.matrizPermisos ?? [];
+    const filtroProc = this.filtroProcesoMatriz();
+    const query = this.busquedaItemMatriz().toLowerCase().trim();
+
+    return items.filter(i => {
+      const matchProc = filtroProc === 'TODOS' || i.procesoActividad === filtroProc;
+      const matchQuery = !query || i.item.toLowerCase().includes(query) || i.procesoActividad.toLowerCase().includes(query) || (!!i.seccion && i.seccion.toLowerCase().includes(query));
+      return matchProc && matchQuery;
+    });
+  });
+
+  readonly matrizAgrupadaPorProceso = computed(() => {
+    const items = this.itemsMatrizFiltrados();
+    const grupos: { proceso: string; items: ItemMatrizPermisoAteneaDto[] }[] = [];
+    const mapa = new Map<string, ItemMatrizPermisoAteneaDto[]>();
+
+    items.forEach(item => {
+      if (!mapa.has(item.procesoActividad)) {
+        mapa.set(item.procesoActividad, []);
+      }
+      mapa.get(item.procesoActividad)!.push(item);
+    });
+
+    mapa.forEach((itemsGrupo, proceso) => {
+      grupos.push({ proceso, items: itemsGrupo });
+    });
+
+    return grupos;
+  });
 
   // Formulario nuevo usuario ATENEA
   readonly nuevoUsuarioGrupo = signal<GrupoUsuarioAtenea>('OTRAS_AREAS');
@@ -1687,7 +1731,10 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     this.bannerExitoUsuariosAtenea.set(null);
     this.bannerErrorUsuariosAtenea.set(null);
 
-    this.usuariosAteneaService.guardar(c.id, { usuarios: reg.usuarios }).subscribe({
+    this.usuariosAteneaService.guardar(c.id, {
+      usuarios: reg.usuarios,
+      matrizPermisos: reg.matrizPermisos
+    }).subscribe({
       next: (actualizado) => {
         this.guardandoUsuariosAtenea.set(false);
         this.registroUsuariosAtenea.set(actualizado);
@@ -1699,6 +1746,60 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         this.bannerErrorUsuariosAtenea.set(err?.error?.message || 'Error al guardar cambios de usuarios ATENEA.');
       }
     });
+  }
+
+  togglePermisoSgiAea(item: ItemMatrizPermisoAteneaDto): void {
+    const reg = this.registroUsuariosAtenea();
+    if (!reg || reg.finalizado) return;
+    const nuevosItems = reg.matrizPermisos.map(m => {
+      if (m === item || (m.orden === item.orden && m.tipoPermiso === item.tipoPermiso)) {
+        return { ...m, permisoSgiAea: !m.permisoSgiAea };
+      }
+      return m;
+    });
+    this.registroUsuariosAtenea.set({ ...reg, matrizPermisos: nuevosItems });
+  }
+
+  togglePermisoCa(item: ItemMatrizPermisoAteneaDto): void {
+    const reg = this.registroUsuariosAtenea();
+    if (!reg || reg.finalizado) return;
+    const nuevosItems = reg.matrizPermisos.map(m => {
+      if (m === item || (m.orden === item.orden && m.tipoPermiso === item.tipoPermiso)) {
+        return { ...m, permisoCa: !m.permisoCa };
+      }
+      return m;
+    });
+    this.registroUsuariosAtenea.set({ ...reg, matrizPermisos: nuevosItems });
+  }
+
+  marcarTodosGrupoMatriz(grupo: 'SGI_AEA' | 'CA', valor: boolean): void {
+    const reg = this.registroUsuariosAtenea();
+    if (!reg || reg.finalizado) return;
+    const nuevosItems = reg.matrizPermisos.map(m => {
+      if (grupo === 'SGI_AEA') {
+        return { ...m, permisoSgiAea: valor };
+      } else {
+        return { ...m, permisoCa: valor };
+      }
+    });
+    this.registroUsuariosAtenea.set({ ...reg, matrizPermisos: nuevosItems });
+  }
+
+  restablecerMatrizPorDefecto(): void {
+    const reg = this.registroUsuariosAtenea();
+    if (!reg || reg.finalizado) return;
+    if (!confirm('¿Desea restablecer todos los permisos de la matriz a los valores predeterminados de UNdeC AEA?')) {
+      return;
+    }
+    const nuevosItems = reg.matrizPermisos.map(m => {
+      const esCarrera = 'carrera' === (m.seccion || '').toLowerCase();
+      if (m.tipoPermiso === 'LECTURA') {
+        return { ...m, permisoSgiAea: true, permisoCa: true };
+      } else {
+        return { ...m, permisoSgiAea: true, permisoCa: esCarrera };
+      }
+    });
+    this.registroUsuariosAtenea.set({ ...reg, matrizPermisos: nuevosItems });
   }
 
   abrirModalNuevoUsuario(grupo: GrupoUsuarioAtenea = 'OTRAS_AREAS'): void {
