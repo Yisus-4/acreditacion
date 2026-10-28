@@ -269,7 +269,7 @@ public class ConvocatoriaController {
     }
 
     @PostMapping("/{id}/reiniciar-test")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'ADMIN') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'ADMIN', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<ConvocatoriaDetalleResponse> reiniciarConvocatoriaTest(@PathVariable UUID id) {
         reiniciarConvocatoriaEscuelaTestUseCase.reiniciar(id);
         ConvocatoriaEscuelaDetalleDto detalle = consultarConvocatoriaEscuelaUseCase.obtenerPorId(id);
