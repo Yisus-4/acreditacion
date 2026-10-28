@@ -71,8 +71,18 @@ public class FinalizarRegistroUsuariosAteneaService implements FinalizarRegistro
         String nombreArchivo = "RG-003_Registro de usuarios de ATENEA_" + nombreCarrera + "_" + cicloFase + "_" + anio + ".pdf";
         String objectPath = CARPETA_CONVOCATORIA + nombreArchivo;
 
+        String estadoCarreraStr = convOpt
+                .map(RegistroConvocatoria::getEstadoCarrera)
+                .map(e -> e.toLowerCase().replace('_', ' '))
+                .orElse("en funcionamiento");
+        String tipoConvocatoria = "Grado - " + estadoCarreraStr + " - " + (cicloFase != null ? cicloFase : "1era Fase");
+        String nroExpedienteTad = convOpt
+                .map(RegistroConvocatoria::getNroResolucionConeau)
+                .filter(n -> !n.isBlank())
+                .orElseGet(proceso::getCodigo);
+
         byte[] pdfBytes = GeneradorRegistroUsuariosAteneaPdfService.generarPdf(
-                registro, carrera.getNombre(), cicloFase, anio
+                registro, carrera.getNombre(), tipoConvocatoria, anio, nroExpedienteTad
         );
         String storedPath = storagePort.uploadFile(pdfBytes, objectPath, DocumentoAcreditacion.MIME_PDF);
 

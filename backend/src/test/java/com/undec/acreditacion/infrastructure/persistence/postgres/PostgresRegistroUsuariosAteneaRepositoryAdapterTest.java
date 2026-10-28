@@ -33,11 +33,13 @@ class PostgresRegistroUsuariosAteneaRepositoryAdapterTest {
         assertEquals(domain.getId(), entity.getId());
         assertEquals(procesoId, entity.getProcesoId());
         assertEquals(1, entity.getUsuarios().size());
+        assertEquals(146, entity.getMatrizPermisos().size());
 
         RegistroUsuariosAtenea reconstruido = RegistroUsuariosAteneaPersistenceMapper.toDomain(entity);
         assertNotNull(reconstruido);
         assertEquals(domain.getId(), reconstruido.getId());
         assertEquals(1, reconstruido.getUsuarios().size());
+        assertEquals(146, reconstruido.getMatrizPermisos().size());
         assertEquals("Valeria", reconstruido.getUsuarios().get(0).getNombre());
     }
 

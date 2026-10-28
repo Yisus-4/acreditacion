@@ -3,6 +3,7 @@ package com.undec.acreditacion.application.output;
 import com.undec.acreditacion.domain.entities.EstadoRegistroUsuariosAtenea;
 import com.undec.acreditacion.domain.entities.GrupoUsuarioAtenea;
 import com.undec.acreditacion.domain.entities.TipoAccesoAtenea;
+import com.undec.acreditacion.domain.entities.TipoPermisoMatrizAtenea;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -21,7 +22,8 @@ public record RegistroUsuariosAteneaDto(
         UUID creadoPor,
         String rutaDocumento,
         boolean finalizado,
-        List<UsuarioPermisoAteneaDto> usuarios
+        List<UsuarioPermisoAteneaDto> usuarios,
+        List<ItemMatrizPermisoAteneaDto> matrizPermisos
 ) {
     public record UsuarioPermisoAteneaDto(
             UUID id,
@@ -38,5 +40,17 @@ public record RegistroUsuariosAteneaDto(
             boolean requiereCuentaNuevaConeauGlobal,
             boolean cuentaConeauGlobalCreada,
             boolean habilitadoEnConeau
+    ) {}
+
+    public record ItemMatrizPermisoAteneaDto(
+            UUID id,
+            String procesoActividad,
+            String item,
+            String seccion,
+            TipoPermisoMatrizAtenea tipoPermiso,
+            String tipoPermisoDescripcion,
+            boolean permisoSgiAea,
+            boolean permisoCa,
+            int orden
     ) {}
 }

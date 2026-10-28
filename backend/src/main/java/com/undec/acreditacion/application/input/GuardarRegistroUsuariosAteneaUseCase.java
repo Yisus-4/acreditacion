@@ -7,4 +7,5 @@ import java.util.UUID;
 
 public interface GuardarRegistroUsuariosAteneaUseCase {
     RegistroUsuariosAteneaDto guardar(UUID procesoId, UUID usuarioId, List<GuardarUsuarioPermisoAteneaInputDto> usuarios);
+    RegistroUsuariosAteneaDto guardar(UUID procesoId, UUID usuarioId, List<GuardarUsuarioPermisoAteneaInputDto> usuarios, List<GuardarItemMatrizPermisoInputDto> matrizPermisos);
 }

@@ -10,6 +10,7 @@ import com.undec.acreditacion.application.output.UserRepository;
 import com.undec.acreditacion.domain.entities.EstadoRegistroUsuariosAtenea;
 import com.undec.acreditacion.domain.entities.GrupoUsuarioAtenea;
 import com.undec.acreditacion.domain.entities.TipoAccesoAtenea;
+import com.undec.acreditacion.domain.entities.TipoPermisoMatrizAtenea;
 import com.undec.acreditacion.domain.ports.DocumentStoragePort;
 import com.undec.acreditacion.infrastructure.web.dto.GuardarUsuariosAteneaRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -88,12 +89,23 @@ class UsuariosAteneaControllerIntegrationTest {
                         false,
                         true,
                         true
+                )),
+                List.of(new RegistroUsuariosAteneaDto.ItemMatrizPermisoAteneaDto(
+                        UUID.randomUUID(),
+                        "1. Infraestructura y equipamiento para enseñanza y aprendizaje",
+                        "Todos",
+                        "Todos",
+                        TipoPermisoMatrizAtenea.LECTURA,
+                        "Lectura",
+                        true,
+                        true,
+                        1
                 ))
         );
     }
 
     @Test
-    @DisplayName("GET /api/procesos/{procesoId}/usuarios-atenea debe retornar registro 200 OK")
+    @DisplayName("GET /api/procesos/{procesoId}/usuarios-atenea debe retornar registro 200 OK con usuarios y matriz")
     void debeConsultarRegistroUsuariosAtenea() throws Exception {
         RegistroUsuariosAteneaDto dto = crearDtoEjemplo(EstadoRegistroUsuariosAtenea.EN_DEFINICION);
         when(consultarUseCase.consultarPorProcesoId(procesoId)).thenReturn(dto);
@@ -103,22 +115,25 @@ class UsuariosAteneaControllerIntegrationTest {
                 .andExpect(jsonPath("$.procesoId").value(procesoId.toString()))
                 .andExpect(jsonPath("$.estado").value("EN_DEFINICION"))
                 .andExpect(jsonPath("$.usuarios[0].nombre").value("Valeria"))
-                .andExpect(jsonPath("$.usuarios[0].grupoUsuario").value("AEA"));
+                .andExpect(jsonPath("$.usuarios[0].grupoUsuario").value("AEA"))
+                .andExpect(jsonPath("$.matrizPermisos[0].item").value("Todos"))
+                .andExpect(jsonPath("$.matrizPermisos[0].tipoPermiso").value("LECTURA"));
     }
 
     @Test
     @DisplayName("PUT /api/procesos/{procesoId}/usuarios-atenea debe guardar cambios y retornar 200 OK")
     void debeGuardarUsuariosAtenea() throws Exception {
         RegistroUsuariosAteneaDto dto = crearDtoEjemplo(EstadoRegistroUsuariosAtenea.EN_DEFINICION);
-        when(guardarUseCase.guardar(eq(procesoId), any(), any())).thenReturn(dto);
+        when(guardarUseCase.guardar(eq(procesoId), any(), any(), any())).thenReturn(dto);
 
-        GuardarUsuariosAteneaRequest req = new GuardarUsuariosAteneaRequest(List.of(
-                new GuardarUsuarioPermisoAteneaInputDto(
+        GuardarUsuariosAteneaRequest req = new GuardarUsuariosAteneaRequest(
+                List.of(new GuardarUsuarioPermisoAteneaInputDto(
                         UUID.randomUUID(), GrupoUsuarioAtenea.AEA, "Valeria", "Castro",
                         "27-32111222-3", "vcastro@undec.edu.ar", "AEA", "Técnica",
                         TipoAccesoAtenea.ADMINISTRACION, "Formulario", false, true, true
-                )
-        ));
+                )),
+                null
+        );
 
         mockMvc.perform(put("/api/procesos/{procesoId}/usuarios-atenea", procesoId)
                         .contentType(MediaType.APPLICATION_JSON)

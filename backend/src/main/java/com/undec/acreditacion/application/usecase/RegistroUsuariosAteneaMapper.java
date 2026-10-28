@@ -2,10 +2,12 @@ package com.undec.acreditacion.application.usecase;
 
 import com.undec.acreditacion.application.output.RegistroUsuariosAteneaDto;
 import com.undec.acreditacion.domain.entities.EstadoRegistroUsuariosAtenea;
+import com.undec.acreditacion.domain.entities.ItemMatrizPermisoAtenea;
 import com.undec.acreditacion.domain.entities.RegistroUsuariosAtenea;
 import com.undec.acreditacion.domain.entities.UsuarioPermisoAtenea;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public final class RegistroUsuariosAteneaMapper {
@@ -39,6 +41,23 @@ public final class RegistroUsuariosAteneaMapper {
             }
         }
 
+        List<RegistroUsuariosAteneaDto.ItemMatrizPermisoAteneaDto> matrizDto = new ArrayList<>();
+        if (domain.getMatrizPermisos() != null) {
+            domain.getMatrizPermisos().stream()
+                    .sorted(Comparator.comparingInt(ItemMatrizPermisoAtenea::getOrden))
+                    .forEach(m -> matrizDto.add(new RegistroUsuariosAteneaDto.ItemMatrizPermisoAteneaDto(
+                            m.getId(),
+                            m.getProcesoActividad(),
+                            m.getItem(),
+                            m.getSeccion(),
+                            m.getTipoPermiso(),
+                            m.getTipoPermiso().getDescripcion(),
+                            m.isPermisoSgiAea(),
+                            m.isPermisoCa(),
+                            m.getOrden()
+                    )));
+        }
+
         return new RegistroUsuariosAteneaDto(
                 domain.getId(),
                 domain.getProcesoId(),
@@ -51,7 +70,8 @@ public final class RegistroUsuariosAteneaMapper {
                 domain.getCreadoPor(),
                 domain.getRutaDocumento(),
                 domain.getEstado() == EstadoRegistroUsuariosAtenea.FINALIZADO,
-                usuariosDto
+                usuariosDto,
+                matrizDto
         );
     }
 }

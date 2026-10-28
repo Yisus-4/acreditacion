@@ -58,7 +58,7 @@ public class UsuariosAteneaController {
             @RequestBody GuardarUsuariosAteneaRequest request
     ) {
         UUID usuarioId = resolverUsuarioAutenticadoId();
-        RegistroUsuariosAteneaDto dto = guardarUseCase.guardar(procesoId, usuarioId, request.usuarios());
+        RegistroUsuariosAteneaDto dto = guardarUseCase.guardar(procesoId, usuarioId, request.usuarios(), request.matrizPermisos());
         return ResponseEntity.ok(dto);
     }
 

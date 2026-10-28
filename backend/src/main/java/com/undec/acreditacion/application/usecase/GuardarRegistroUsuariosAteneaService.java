@@ -1,8 +1,10 @@
 package com.undec.acreditacion.application.usecase;
 
+import com.undec.acreditacion.application.input.GuardarItemMatrizPermisoInputDto;
 import com.undec.acreditacion.application.input.GuardarRegistroUsuariosAteneaUseCase;
 import com.undec.acreditacion.application.input.GuardarUsuarioPermisoAteneaInputDto;
 import com.undec.acreditacion.application.output.RegistroUsuariosAteneaDto;
+import com.undec.acreditacion.domain.entities.ItemMatrizPermisoAtenea;
 import com.undec.acreditacion.domain.entities.RegistroUsuariosAtenea;
 import com.undec.acreditacion.domain.entities.UsuarioPermisoAtenea;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
@@ -22,11 +24,21 @@ public class GuardarRegistroUsuariosAteneaService implements GuardarRegistroUsua
 
     @Override
     public RegistroUsuariosAteneaDto guardar(UUID procesoId, UUID usuarioId, List<GuardarUsuarioPermisoAteneaInputDto> usuariosInput) {
+        return guardar(procesoId, usuarioId, usuariosInput, null);
+    }
+
+    @Override
+    public RegistroUsuariosAteneaDto guardar(
+            UUID procesoId,
+            UUID usuarioId,
+            List<GuardarUsuarioPermisoAteneaInputDto> usuariosInput,
+            List<GuardarItemMatrizPermisoInputDto> matrizInput
+    ) {
         RegistroUsuariosAtenea registro = repository.findByProcesoId(procesoId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró registro de usuarios de ATENEA para el proceso: " + procesoId));
 
-        List<UsuarioPermisoAtenea> lista = new ArrayList<>();
         if (usuariosInput != null) {
+            List<UsuarioPermisoAtenea> lista = new ArrayList<>();
             for (GuardarUsuarioPermisoAteneaInputDto in : usuariosInput) {
                 UsuarioPermisoAtenea u = UsuarioPermisoAtenea.crear(
                         in.grupoUsuario(),
@@ -47,9 +59,31 @@ public class GuardarRegistroUsuariosAteneaService implements GuardarRegistroUsua
                 }
                 lista.add(u);
             }
+            registro.actualizarUsuarios(lista);
         }
 
-        registro.actualizarUsuarios(lista);
+        if (matrizInput != null && !matrizInput.isEmpty()) {
+            List<ItemMatrizPermisoAtenea> itemsMatriz = new ArrayList<>();
+            for (GuardarItemMatrizPermisoInputDto min : matrizInput) {
+                ItemMatrizPermisoAtenea item = ItemMatrizPermisoAtenea.crear(
+                        min.procesoActividad(),
+                        min.item(),
+                        min.seccion(),
+                        min.tipoPermiso(),
+                        min.permisoSgiAea(),
+                        min.permisoCa(),
+                        min.orden()
+                );
+                if (min.id() != null) {
+                    item.setId(min.id());
+                }
+                itemsMatriz.add(item);
+            }
+            registro.actualizarMatrizPermisos(itemsMatriz);
+        } else {
+            registro.inicializarMatrizPorDefectoSiVacia();
+        }
+
         RegistroUsuariosAtenea guardado = repository.save(registro);
         return RegistroUsuariosAteneaMapper.toDto(guardado);
     }

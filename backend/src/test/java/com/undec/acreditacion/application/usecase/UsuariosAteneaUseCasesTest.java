@@ -141,6 +141,27 @@ class UsuariosAteneaUseCasesTest {
     }
 
     @Test
+    @DisplayName("Guardar: Debe permitir actualizar matriz de permisos además de usuarios")
+    void debeGuardarMatrizPermisosActualizada() {
+        RegistroUsuariosAtenea existente = RegistroUsuariosAtenea.iniciar(procesoId, usuarioAeaId, LocalDate.now());
+        when(registroUsuariosRepo.findByProcesoId(procesoId)).thenReturn(Optional.of(existente));
+        when(registroUsuariosRepo.save(any(RegistroUsuariosAtenea.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        com.undec.acreditacion.application.input.GuardarItemMatrizPermisoInputDto itemDto =
+                new com.undec.acreditacion.application.input.GuardarItemMatrizPermisoInputDto(
+                        UUID.randomUUID(), "1. Infraestructura", "Todos", "Todos",
+                        TipoPermisoMatrizAtenea.LECTURA, true, false, 1
+                );
+
+        RegistroUsuariosAteneaDto res = guardarService.guardar(procesoId, usuarioAeaId, null, List.of(itemDto));
+
+        assertNotNull(res);
+        assertEquals(1, res.matrizPermisos().size());
+        assertFalse(res.matrizPermisos().get(0).permisoCa());
+        assertTrue(res.matrizPermisos().get(0).permisoSgiAea());
+    }
+
+    @Test
     @DisplayName("Finalizar: Debe generar PDF con nomenclatura reglamentaria, subir a MinIO y completar actividad 3.3 en PT")
     void debeFinalizarRegistroCorrectamente() {
         RegistroUsuariosAtenea existente = RegistroUsuariosAtenea.iniciar(procesoId, usuarioAeaId, LocalDate.now());

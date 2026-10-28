@@ -35,7 +35,12 @@ public class ConsultarRegistroUsuariosAteneaService implements ConsultarRegistro
     public RegistroUsuariosAteneaDto consultarPorProcesoId(UUID procesoId) {
         Optional<RegistroUsuariosAtenea> existente = registroUsuariosRepository.findByProcesoId(procesoId);
         if (existente.isPresent()) {
-            return RegistroUsuariosAteneaMapper.toDto(existente.get());
+            RegistroUsuariosAtenea reg = existente.get();
+            if (reg.getMatrizPermisos().isEmpty() && reg.getEstado() != EstadoRegistroUsuariosAtenea.FINALIZADO) {
+                reg.inicializarMatrizPorDefectoSiVacia();
+                reg = registroUsuariosRepository.save(reg);
+            }
+            return RegistroUsuariosAteneaMapper.toDto(reg);
         }
 
         ProcesoAcreditacion proceso = procesoRepository.findById(procesoId)

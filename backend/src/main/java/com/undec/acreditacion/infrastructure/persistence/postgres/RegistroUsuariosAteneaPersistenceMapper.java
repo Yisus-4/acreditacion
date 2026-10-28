@@ -1,5 +1,6 @@
 package com.undec.acreditacion.infrastructure.persistence.postgres;
 
+import com.undec.acreditacion.domain.entities.ItemMatrizPermisoAtenea;
 import com.undec.acreditacion.domain.entities.RegistroUsuariosAtenea;
 import com.undec.acreditacion.domain.entities.UsuarioPermisoAtenea;
 
@@ -39,6 +40,25 @@ public final class RegistroUsuariosAteneaPersistenceMapper {
             }
         }
 
+        List<ItemMatrizPermisoAtenea> matrizDomain = new ArrayList<>();
+        if (entity.getMatrizPermisos() != null) {
+            for (ItemMatrizPermisoAteneaJpaEntity me : entity.getMatrizPermisos()) {
+                matrizDomain.add(ItemMatrizPermisoAtenea.rehydrate(
+                        me.getId(),
+                        entity.getId(),
+                        me.getProcesoActividad(),
+                        me.getItem(),
+                        me.getSeccion(),
+                        me.getTipoPermiso(),
+                        me.isPermisoSgiAea(),
+                        me.isPermisoCa(),
+                        me.getOrden(),
+                        me.getCreadoEn(),
+                        me.getActualizadoEn()
+                ));
+            }
+        }
+
         return RegistroUsuariosAtenea.rehydrate(
                 entity.getId(),
                 entity.getProcesoId(),
@@ -50,7 +70,8 @@ public final class RegistroUsuariosAteneaPersistenceMapper {
                 entity.getRutaDocumento(),
                 entity.getCreadoEn(),
                 entity.getActualizadoEn(),
-                usuariosDomain
+                usuariosDomain,
+                matrizDomain
         );
     }
 
@@ -95,6 +116,26 @@ public final class RegistroUsuariosAteneaPersistenceMapper {
             }
         }
         entity.setUsuarios(usuariosEntities);
+
+        List<ItemMatrizPermisoAteneaJpaEntity> matrizEntities = new ArrayList<>();
+        if (domain.getMatrizPermisos() != null) {
+            for (ItemMatrizPermisoAtenea md : domain.getMatrizPermisos()) {
+                ItemMatrizPermisoAteneaJpaEntity me = new ItemMatrizPermisoAteneaJpaEntity();
+                me.setId(md.getId());
+                me.setRegistro(entity);
+                me.setProcesoActividad(md.getProcesoActividad());
+                me.setItem(md.getItem());
+                me.setSeccion(md.getSeccion());
+                me.setTipoPermiso(md.getTipoPermiso());
+                me.setPermisoSgiAea(md.isPermisoSgiAea());
+                me.setPermisoCa(md.isPermisoCa());
+                me.setOrden(md.getOrden());
+                me.setCreadoEn(md.getCreadoEn());
+                me.setActualizadoEn(md.getActualizadoEn());
+                matrizEntities.add(me);
+            }
+        }
+        entity.setMatrizPermisos(matrizEntities);
 
         return entity;
     }

@@ -48,6 +48,10 @@ public class RegistroUsuariosAteneaJpaEntity {
     @OneToMany(mappedBy = "registro", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UsuarioPermisoAteneaJpaEntity> usuarios = new ArrayList<>();
 
+    @OneToMany(mappedBy = "registro", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orden ASC")
+    private List<ItemMatrizPermisoAteneaJpaEntity> matrizPermisos = new ArrayList<>();
+
     public RegistroUsuariosAteneaJpaEntity() {}
 
     public UUID getId() {
@@ -136,5 +140,13 @@ public class RegistroUsuariosAteneaJpaEntity {
 
     public void setUsuarios(List<UsuarioPermisoAteneaJpaEntity> usuarios) {
         this.usuarios = usuarios;
+    }
+
+    public List<ItemMatrizPermisoAteneaJpaEntity> getMatrizPermisos() {
+        return matrizPermisos;
+    }
+
+    public void setMatrizPermisos(List<ItemMatrizPermisoAteneaJpaEntity> matrizPermisos) {
+        this.matrizPermisos = matrizPermisos;
     }
 }
