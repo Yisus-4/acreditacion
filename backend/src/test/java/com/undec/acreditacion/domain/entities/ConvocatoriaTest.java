@@ -152,4 +152,44 @@ class ConvocatoriaTest {
         assertTrue(conv.getCarreras().stream().filter(c -> c.getCarreraId().equals(c1)).findFirst().get().isSeleccionadaPorDe());
         assertFalse(conv.getCarreras().stream().filter(c -> c.getCarreraId().equals(c2)).findFirst().get().isSeleccionadaPorDe());
     }
+
+    @Test
+    @DisplayName("Debe reiniciar convocatoria para pruebas reseteando estado y desvinculando procesos")
+    void debeReiniciarConvocatoriaParaPruebas() {
+        UUID escuelaId = UUID.randomUUID();
+        UUID c1 = UUID.randomUUID();
+        UUID convId = UUID.randomUUID();
+
+        ConvocatoriaCarrera obligatoria = ConvocatoriaCarrera.crear(convId, c1, true, true);
+
+        Convocatoria conv = Convocatoria.crear(
+                escuelaId,
+                "CONV-2026-EI-01",
+                "Convocatoria EI",
+                TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
+                "RES-123",
+                LocalDate.now(),
+                LocalDate.now().plusDays(10),
+                "Obs",
+                UUID.randomUUID(),
+                List.of(obligatoria)
+        );
+
+        UUID usuarioDe = UUID.randomUUID();
+        conv.confirmarPorDirectorEscuela(List.of(c1), usuarioDe);
+        UUID procesoId = UUID.randomUUID();
+        obligatoria.vincularProceso(procesoId);
+
+        assertEquals(EstadoConvocatoria.CONFIRMADA_DIRECTOR_ESCUELA, conv.getEstado());
+        assertEquals(procesoId, obligatoria.getProcesoId());
+        assertTrue(obligatoria.isSeleccionadaPorDe());
+
+        conv.reiniciarParaPruebas();
+
+        assertEquals(EstadoConvocatoria.PENDIENTE_DIRECTOR_ESCUELA, conv.getEstado());
+        assertNull(conv.getConfirmadoPorDe());
+        assertNull(conv.getConfirmadoPorDeEn());
+        assertNull(obligatoria.getProcesoId());
+        assertFalse(obligatoria.isSeleccionadaPorDe());
+    }
 }

@@ -226,6 +226,12 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly guardandoConfirmacionDe = signal<boolean>(false);
   readonly errorConfirmacionDe = signal<string | null>(null);
 
+  // Modo Test: Reiniciar Convocatoria
+  readonly modalReiniciarTestAbierto = signal<boolean>(false);
+  readonly reiniciandoTest = signal<boolean>(false);
+  readonly bannerExitoTest = signal<string | null>(null);
+  readonly bannerErrorTest = signal<string | null>(null);
+
   readonly esConvocatoriaEscuela = computed(() => {
     const c = this.convocatoria();
     if (!c) return false;
@@ -679,6 +685,42 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.errorConfirmacionDe.set(err?.error?.error || 'No fue posible confirmar la selección de carreras.');
         this.guardandoConfirmacionDe.set(false);
+      },
+    });
+  }
+
+  abrirModalReiniciarTest(): void {
+    this.bannerErrorTest.set(null);
+    this.modalReiniciarTestAbierto.set(true);
+  }
+
+  cerrarModalReiniciarTest(): void {
+    if (!this.reiniciandoTest()) {
+      this.modalReiniciarTestAbierto.set(false);
+    }
+  }
+
+  confirmarReinicioTest(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+
+    this.reiniciandoTest.set(true);
+    this.bannerErrorTest.set(null);
+
+    this.convocatoriaService.reiniciarConvocatoriaTest(c.id).subscribe({
+      next: (actualizada) => {
+        this.reiniciandoTest.set(false);
+        this.modalReiniciarTestAbierto.set(false);
+        this.bannerExitoTest.set(
+          "El proceso de acreditación de la escuela ha sido reiniciado con éxito para pruebas. Se encuentra nuevamente en estado 'Pendiente de Director de Escuela'."
+        );
+        this.convocatoria.set(actualizada);
+        this.initSeleccionDirectorEscuela(actualizada);
+        this.cargarDatos(c.id, true);
+      },
+      error: (err) => {
+        this.reiniciandoTest.set(false);
+        this.bannerErrorTest.set(err?.error?.message || err?.error?.error || 'Error al reiniciar la convocatoria para pruebas.');
       },
     });
   }

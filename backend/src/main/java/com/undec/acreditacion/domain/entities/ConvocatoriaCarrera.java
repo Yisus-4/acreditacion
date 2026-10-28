@@ -102,6 +102,12 @@ public final class ConvocatoriaCarrera {
         this.actualizadoEn = Instant.now();
     }
 
+    public void desvincularProceso() {
+        this.procesoId = null;
+        this.seleccionadaPorDe = false;
+        this.actualizadoEn = Instant.now();
+    }
+
     public UUID getId() {
         return id;
     }

@@ -429,6 +429,15 @@ public class UseCaseConfiguration {
     }
 
     @Bean
+    @Transactional
+    public com.undec.acreditacion.application.input.ReiniciarConvocatoriaEscuelaTestUseCase reiniciarConvocatoriaEscuelaTestUseCase(
+            com.undec.acreditacion.domain.ports.ConvocatoriaEscuelaRepositoryPort convocatoriaRepository,
+            ProcesoAcreditacionRepositoryPort procesoRepository) {
+        return new com.undec.acreditacion.application.usecase.ReiniciarConvocatoriaEscuelaTestService(
+                convocatoriaRepository, procesoRepository);
+    }
+
+    @Bean
     public com.undec.acreditacion.application.input.ConsultarConvocatoriaEscuelaUseCase consultarConvocatoriaEscuelaUseCase(
             com.undec.acreditacion.domain.ports.ConvocatoriaEscuelaRepositoryPort convocatoriaRepository,
             com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort unidadAcademicaRepository,

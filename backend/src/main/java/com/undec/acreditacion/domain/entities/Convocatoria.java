@@ -201,6 +201,16 @@ public final class Convocatoria {
         this.actualizadoEn = Instant.now();
     }
 
+    public void reiniciarParaPruebas() {
+        this.estado = EstadoConvocatoria.PENDIENTE_DIRECTOR_ESCUELA;
+        this.confirmadoPorDe = null;
+        this.confirmadoPorDeEn = null;
+        this.actualizadoEn = Instant.now();
+        for (ConvocatoriaCarrera item : this.carreras) {
+            item.desvincularProceso();
+        }
+    }
+
     public UUID getId() {
         return id;
     }

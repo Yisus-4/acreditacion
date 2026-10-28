@@ -55,6 +55,7 @@ class ConvocatoriaControllerIntegrationTest {
     private com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort planTrabajoRepository;
     private com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort procesoRepository;
     private UserRepository userRepository;
+    private ReiniciarConvocatoriaEscuelaTestUseCase reiniciarConvocatoriaEscuelaTestUseCase;
     private ObjectMapper objectMapper;
 
     @BeforeEach
@@ -77,6 +78,7 @@ class ConvocatoriaControllerIntegrationTest {
         planTrabajoRepository = mock(com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort.class);
         procesoRepository = mock(com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort.class);
         userRepository = mock(UserRepository.class);
+        reiniciarConvocatoriaEscuelaTestUseCase = mock(ReiniciarConvocatoriaEscuelaTestUseCase.class);
 
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
@@ -99,7 +101,8 @@ class ConvocatoriaControllerIntegrationTest {
                 unidadAcademicaRepository,
                 planTrabajoRepository,
                 procesoRepository,
-                userRepository
+                userRepository,
+                reiniciarConvocatoriaEscuelaTestUseCase
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -466,6 +469,42 @@ class ConvocatoriaControllerIntegrationTest {
         mockMvc.perform(post("/api/convocatorias/{id}/plan-trabajo/finalizar-actividad", procesoId))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("No se puede finalizar la actividad: el formulario RG-001 debe ser enviado previamente."));
+    }
+
+    @Test
+    @DisplayName("POST /api/convocatorias/{id}/reiniciar-test debe reiniciar la convocatoria y responder 200 OK")
+    void debeReiniciarConvocatoriaTestRetornando200() throws Exception {
+        UUID convId = UUID.randomUUID();
+        UUID escuelaId = UUID.randomUUID();
+        ConvocatoriaEscuelaDetalleDto detalle = new ConvocatoriaEscuelaDetalleDto(
+                convId,
+                escuelaId,
+                "Escuela de Ingeniería",
+                "EI",
+                "CONV-2026-EI-01",
+                "Convocatoria EI",
+                TipoProcesoAcreditacion.EN_FUNCIONAMIENTO,
+                "RES-123",
+                LocalDate.now(),
+                LocalDate.now().plusMonths(6),
+                EstadoConvocatoria.PENDIENTE_DIRECTOR_ESCUELA,
+                "Obs",
+                UUID.randomUUID(),
+                null,
+                null,
+                Instant.now(),
+                Instant.now(),
+                List.of()
+        );
+
+        when(consultarConvocatoriaEscuelaUseCase.obtenerPorId(convId)).thenReturn(detalle);
+
+        mockMvc.perform(post("/api/convocatorias/{id}/reiniciar-test", convId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(convId.toString()))
+                .andExpect(jsonPath("$.estado").value("PENDIENTE_DIRECTOR_ESCUELA"));
+
+        verify(reiniciarConvocatoriaEscuelaTestUseCase).reiniciar(convId);
     }
 
     @Test

@@ -62,6 +62,10 @@ export class ConvocatoriaService {
     return this.http.post<ConvocatoriaDetalle>(`/api/convocatorias/${id}/confirmar-de`, { carrerasSeleccionadas });
   }
 
+  reiniciarConvocatoriaTest(convocatoriaId: string): Observable<ConvocatoriaDetalle> {
+    return this.http.post<ConvocatoriaDetalle>(`/api/convocatorias/${convocatoriaId}/reiniciar-test`, {});
+  }
+
   obtenerPlanTrabajo(procesoId: string): Observable<PlanTrabajoDto> {
     return this.http.get<PlanTrabajoDto>(`/api/convocatorias/${procesoId}/plan-trabajo`);
   }

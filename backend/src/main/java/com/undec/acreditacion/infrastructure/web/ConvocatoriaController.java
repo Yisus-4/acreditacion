@@ -49,6 +49,7 @@ public class ConvocatoriaController {
     private final PlanTrabajoRepositoryPort planTrabajoRepository;
     private final ProcesoAcreditacionRepositoryPort procesoRepository;
     private final UserRepository userRepository;
+    private final ReiniciarConvocatoriaEscuelaTestUseCase reiniciarConvocatoriaEscuelaTestUseCase;
 
     public ConvocatoriaController(
             IniciarConvocatoriaUseCase iniciarConvocatoriaUseCase,
@@ -68,7 +69,8 @@ public class ConvocatoriaController {
             UnidadAcademicaRepositoryPort unidadAcademicaRepository,
             PlanTrabajoRepositoryPort planTrabajoRepository,
             ProcesoAcreditacionRepositoryPort procesoRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            ReiniciarConvocatoriaEscuelaTestUseCase reiniciarConvocatoriaEscuelaTestUseCase) {
         this.iniciarConvocatoriaUseCase = iniciarConvocatoriaUseCase;
         this.iniciarConvocatoriaEscuelaUseCase = iniciarConvocatoriaEscuelaUseCase;
         this.confirmarConvocatoriaDirectorEscuelaUseCase = confirmarConvocatoriaDirectorEscuelaUseCase;
@@ -87,6 +89,7 @@ public class ConvocatoriaController {
         this.planTrabajoRepository = planTrabajoRepository;
         this.procesoRepository = procesoRepository;
         this.userRepository = userRepository;
+        this.reiniciarConvocatoriaEscuelaTestUseCase = reiniciarConvocatoriaEscuelaTestUseCase;
     }
 
     @PostMapping
@@ -263,6 +266,14 @@ public class ConvocatoriaController {
 
         ProcesoAcreditacion proceso = consultarConvocatoriaUseCase.obtenerPorId(id);
         return ResponseEntity.ok(construirDetalleResponse(proceso));
+    }
+
+    @PostMapping("/{id}/reiniciar-test")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'ADMIN') or hasAuthority('CONVOCATORIA_WRITE')")
+    public ResponseEntity<ConvocatoriaDetalleResponse> reiniciarConvocatoriaTest(@PathVariable UUID id) {
+        reiniciarConvocatoriaEscuelaTestUseCase.reiniciar(id);
+        ConvocatoriaEscuelaDetalleDto detalle = consultarConvocatoriaEscuelaUseCase.obtenerPorId(id);
+        return ResponseEntity.ok(construirDetalleResponseDesdeEscuela(detalle));
     }
 
     @DeleteMapping("/{id}")
