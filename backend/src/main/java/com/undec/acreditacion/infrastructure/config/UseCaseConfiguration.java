@@ -462,9 +462,12 @@ public class UseCaseConfiguration {
     @org.springframework.transaction.annotation.Transactional
     public com.undec.acreditacion.application.input.GuardarRegistroCaBorradorUseCase guardarRegistroCaBorradorUseCase(
             com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort registroCaRepository,
-            com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort procesoRepository) {
+            com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort procesoRepository,
+            com.undec.acreditacion.domain.ports.CarreraRepositoryPort carreraRepository,
+            com.undec.acreditacion.application.output.UserRepository userRepository,
+            com.undec.acreditacion.application.input.CrearSolicitudNotificacionUseCase crearSolicitudNotificacionUseCase) {
         return new com.undec.acreditacion.application.usecase.GuardarRegistroCaBorradorService(
-                registroCaRepository, procesoRepository);
+                registroCaRepository, procesoRepository, carreraRepository, userRepository, crearSolicitudNotificacionUseCase);
     }
 
     @Bean
@@ -472,9 +475,12 @@ public class UseCaseConfiguration {
     public com.undec.acreditacion.application.input.RemitirRegistroCaUseCase remitirRegistroCaUseCase(
             com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort registroCaRepository,
             com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort procesoRepository,
-            com.undec.acreditacion.domain.ports.DocumentStoragePort storagePort) {
+            com.undec.acreditacion.domain.ports.DocumentStoragePort storagePort,
+            com.undec.acreditacion.domain.ports.CarreraRepositoryPort carreraRepository,
+            com.undec.acreditacion.application.output.UserRepository userRepository,
+            com.undec.acreditacion.application.input.CrearSolicitudNotificacionUseCase crearSolicitudNotificacionUseCase) {
         return new com.undec.acreditacion.application.usecase.RemitirRegistroCaService(
-                registroCaRepository, procesoRepository, storagePort);
+                registroCaRepository, procesoRepository, storagePort, carreraRepository, userRepository, crearSolicitudNotificacionUseCase);
     }
 
     @Bean

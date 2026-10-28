@@ -1,5 +1,8 @@
 package com.undec.acreditacion.application.usecase;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.undec.acreditacion.application.input.CrearSolicitudNotificacionUseCase;
 import com.undec.acreditacion.application.input.GuardarRegistroCaBorradorUseCase;
 import com.undec.acreditacion.application.input.MiembroCaInputDto;
@@ -23,6 +26,8 @@ import java.util.UUID;
 
 @Service
 public class GuardarRegistroCaBorradorService implements GuardarRegistroCaBorradorUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(GuardarRegistroCaBorradorService.class);
 
     private final RegistroConformacionCaRepositoryPort registroCaRepository;
     private final ProcesoAcreditacionRepositoryPort procesoRepository;
@@ -83,7 +88,11 @@ public class GuardarRegistroCaBorradorService implements GuardarRegistroCaBorrad
             UUID usuarioId,
             List<MiembroCaInputDto> miembros
     ) {
-        if (crearSolicitudNotificacionUseCase == null || miembros == null || miembros.isEmpty()) {
+        if (miembros == null || miembros.isEmpty()) {
+            return;
+        }
+        if (crearSolicitudNotificacionUseCase == null) {
+            log.warn("No se pudo emitir solicitud de notificación de miembro nuevo: crearSolicitudNotificacionUseCase es null");
             return;
         }
 
