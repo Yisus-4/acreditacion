@@ -160,7 +160,7 @@ export class InstitucionListComponent implements OnInit {
           console.error('Error al eliminar institución:', err);
           const msg =
             err.error?.error ||
-            'No se pudo eliminar la institución. Verifique que no posea unidades académicas o registros vinculados.';
+            'No se pudo eliminar la institución. Verifique que no posea escuelas o registros vinculados.';
           this.errorMessage.set(msg);
           this.institucionAEliminar.set(null);
         },

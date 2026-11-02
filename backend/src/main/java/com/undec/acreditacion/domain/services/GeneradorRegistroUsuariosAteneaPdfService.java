@@ -1,14 +1,12 @@
 package com.undec.acreditacion.domain.services;
 
 import com.undec.acreditacion.domain.entities.GrupoUsuarioAtenea;
-import com.undec.acreditacion.domain.entities.ItemMatrizPermisoAtenea;
 import com.undec.acreditacion.domain.entities.RegistroUsuariosAtenea;
 import com.undec.acreditacion.domain.entities.UsuarioPermisoAtenea;
 
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
 import java.util.List;
 
 public final class GeneradorRegistroUsuariosAteneaPdfService {
@@ -79,29 +77,6 @@ public final class GeneradorRegistroUsuariosAteneaPdfService {
                             .append("\n");
                 }
             }
-        }
-
-        sb.append("% -----------------------------------------------------------------------------\n");
-        sb.append("% SECCION II: MATRIZ DE PERMISOS DEL SISTEMA CONEAU GLOBAL ATENEA\n");
-        sb.append("% -----------------------------------------------------------------------------\n");
-        sb.append("% Proceso/Actividades | Item | Sección | Tipo de permiso | Permisos SGI-AEA | Permisos CA\n");
-
-        List<ItemMatrizPermisoAtenea> itemsMatriz = registro.getMatrizPermisos().stream()
-                .sorted(Comparator.comparingInt(ItemMatrizPermisoAtenea::getOrden))
-                .toList();
-
-        String procesoActual = "";
-        for (ItemMatrizPermisoAtenea m : itemsMatriz) {
-            if (!m.getProcesoActividad().equals(procesoActual)) {
-                procesoActual = m.getProcesoActividad();
-                sb.append("% \n% [Proceso] ").append(procesoActual).append("\n");
-            }
-            sb.append("%   - Item: ").append(m.getItem())
-                    .append(" | Sección: ").append(m.getSeccion() != null && !m.getSeccion().isBlank() ? m.getSeccion() : "Todos")
-                    .append(" | Permiso: ").append(m.getTipoPermiso().getDescripcion())
-                    .append(" | SGI-AEA: ").append(m.isPermisoSgiAea() ? "SI" : "NO")
-                    .append(" | CA: ").append(m.isPermisoCa() ? "SI" : "NO")
-                    .append("\n");
         }
 
         sb.append("% -----------------------------------------------------------------------------\n");

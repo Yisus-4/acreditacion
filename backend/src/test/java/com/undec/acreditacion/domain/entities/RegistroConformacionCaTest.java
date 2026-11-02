@@ -98,8 +98,8 @@ class RegistroConformacionCaTest {
     }
 
     @Test
-    @DisplayName("Remitir a AEA falla si no adjunta resolución")
-    void remitirSinResolucionFalla() {
+    @DisplayName("Remitir a AEA permite enviar sin resolución adjunta (queda pendiente la resolución)")
+    void remitirSinResolucionEsValido() {
         RegistroConformacionCa ca = new RegistroConformacionCa(null, UUID.randomUUID());
         ca.solicitar(UUID.randomUUID());
 
@@ -108,11 +108,11 @@ class RegistroConformacionCaTest {
                 null, RolClaustroCa.COORDINADOR, true, true, true, 1
         );
 
-        assertThatThrownBy(() -> ca.remitir(
-                UUID.randomUUID(), false, List.of(mCoord),
-                null, null, null
-        )).isInstanceOf(DomainValidationException.class)
-                .hasMessageContaining("Resolución de designación");
+        UUID dcUserId = UUID.randomUUID();
+        ca.remitir(dcUserId, false, List.of(mCoord), null, null, null);
+
+        assertThat(ca.getEstado()).isEqualTo(EstadoRegistroCa.REMITIDA_A_AEA);
+        assertThat(ca.getResolucionStoragePath()).isNull();
     }
 
     @Test

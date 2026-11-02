@@ -36,6 +36,65 @@
         <!-- Progreso de la Matriz Normativa -->
         @if (detalle()) {
           @let d = detalle()!;
+          <!-- Barra de Plazo y Presión al Usuario -->
+          <div class="plazo-normativa-banner" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; padding: 10px 14px; border-radius: 6px; border: 1px solid #e2e8f0; background: #f8fafc;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              @if (d.badgePlazo) {
+                <span
+                  style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; font-size: 0.78rem; font-weight: 700;"
+                  [style.background]="d.badgePlazo.diasRestantes < 0 ? '#fee2e2' : (d.badgePlazo.diasRestantes <= 2 && d.estado !== 'COMPLETADA' ? '#fef3c7' : '#dcfce7')"
+                  [style.color]="d.badgePlazo.diasRestantes < 0 ? '#991b1b' : (d.badgePlazo.diasRestantes <= 2 && d.estado !== 'COMPLETADA' ? '#92400e' : '#166534')"
+                >
+                  ● {{ d.badgePlazo.etiqueta }}
+                </span>
+              }
+              <span style="font-size: 0.85rem; color: #334155;">
+                <strong>Plazo exigido:</strong> {{ d.diasHabilesPlazo || 5 }} días hábiles
+                @if (d.fechaLimiteEntrega) {
+                  · <strong>Fecha límite:</strong> {{ d.fechaLimiteEntrega | date:'dd/MM/yyyy' }}
+                }
+              </span>
+            </div>
+
+            @if (esAeaOAdmin() && d.estado !== 'COMPLETADA') {
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                @if (!editandoPlazo()) {
+                  <button
+                    type="button"
+                    (click)="abrirEdicionPlazoNormativa()"
+                    style="font-size: 0.78rem; padding: 4px 10px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer; font-weight: 600;"
+                  >
+                    ⏱ Extender Plazo (Calendario)
+                  </button>
+                } @else {
+                  <label style="font-size: 0.78rem; font-weight: 600; color: #475569;">Nuevo vencimiento:</label>
+                  <input
+                    type="date"
+                    [min]="obtenerFechaMinimaPlazo()"
+                    [ngModel]="fechaPlazoInput()"
+                    (ngModelChange)="fechaPlazoInput.set($event)"
+                    style="padding: 3px 6px; border-radius: 4px; border: 1px solid #94a3b8; font-size: 0.8rem;"
+                  />
+                  <button
+                    type="button"
+                    (click)="guardarPlazoNormativa()"
+                    [disabled]="actionLoading()"
+                    style="font-size: 0.78rem; padding: 4px 10px; border-radius: 4px; border: none; background: var(--color-primary, #826170); color: #fff; cursor: pointer; font-weight: 600;"
+                  >
+                    Aplicar
+                  </button>
+                  <button
+                    type="button"
+                    (click)="editandoPlazo.set(false)"
+                    style="font-size: 0.78rem; padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; color: #64748b; cursor: pointer;"
+                  >
+                    Cancelar
+                  </button>
+                }
+              </div>
+            }
+          </div>
+
           <div class="progress-section">
             <div class="progress-labels">
               <span class="progress-value">

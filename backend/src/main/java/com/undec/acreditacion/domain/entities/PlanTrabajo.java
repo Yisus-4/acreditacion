@@ -183,6 +183,7 @@ public final class PlanTrabajo {
             Optional<ActividadPlanTrabajo> act6PreviaOpt = this.actividades.stream()
                     .filter(PlanTrabajo::esActividadFormalizacionElectronica)
                     .findFirst();
+            List<ActividadPlanTrabajo> previasSnapshot = new ArrayList<>(this.actividades);
 
             // Reemplazar actividades de cronograma previas (orden > 2)
             this.actividades.removeIf(a -> a.getNumeroOrden() > 2);
@@ -215,13 +216,17 @@ public final class PlanTrabajo {
                     act6Incorporada = true;
                     nueva = fusionarConPrevia(act6PreviaOpt.get(), act, orden);
                 } else {
+                    Optional<ActividadPlanTrabajo> previaCoincidente = previasSnapshot.stream()
+                            .filter(p -> Objects.equals(p.getCodigoActividad(), act.getCodigoActividad())
+                                    && Objects.equals(p.getHoja(), act.getHoja()))
+                            .findFirst();
                     nueva = ActividadPlanTrabajo.rehydrate(
-                            act.getId(),
+                            previaCoincidente.map(ActividadPlanTrabajo::getId).orElse(act.getId()),
                             this.id,
                             orden,
                             act.getCodigoActividad(),
                             act.getNombre(),
-                            act.getEstado(),
+                            previaCoincidente.map(ActividadPlanTrabajo::getEstado).orElse(act.getEstado()),
                             act.getFechaReunionCoordinacion(),
                             act.getSintesisAcuerdos(),
                             act.getCompletadaEn(),
@@ -235,6 +240,9 @@ public final class PlanTrabajo {
                             act.getActualizadoEn()
                     );
                     nueva.restaurarRegistroComunicacion(act.getAreasInformadas(), act.getDocumentacionRemitida());
+                    nueva.restaurarPlazosExtendidos(
+                            previaCoincidente.map(ActividadPlanTrabajo::getPlazosExtendidos).orElse(act.getPlazosExtendidos())
+                    );
                 }
                 this.actividades.add(nueva);
                 ordenActual = Math.max(ordenActual, orden) + 1;
@@ -278,6 +286,7 @@ public final class PlanTrabajo {
                             Instant.now()
                     );
                     reordenada.restaurarRegistroComunicacion(a.getAreasInformadas(), a.getDocumentacionRemitida());
+                    reordenada.restaurarPlazosExtendidos(a.getPlazosExtendidos());
                     normalizadas.add(reordenada);
                 }
                 seq++;
@@ -310,6 +319,7 @@ public final class PlanTrabajo {
                 Instant.now()
         );
         nueva.restaurarRegistroComunicacion(prev.getAreasInformadas(), prev.getDocumentacionRemitida());
+        nueva.restaurarPlazosExtendidos(prev.getPlazosExtendidos());
         return nueva;
     }
 
@@ -342,6 +352,7 @@ public final class PlanTrabajo {
                 Instant.now()
         );
         preservada.restaurarRegistroComunicacion(prev.getAreasInformadas(), prev.getDocumentacionRemitida());
+        preservada.restaurarPlazosExtendidos(prev.getPlazosExtendidos());
         this.actividades.add(preservada);
         return Math.max(ordenActual, orden) + 1;
     }

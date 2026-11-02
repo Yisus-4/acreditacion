@@ -4,6 +4,7 @@ import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -39,6 +40,7 @@ public final class ActividadPlanTrabajo {
     private PrioridadActividad prioridad;
     private List<AreaInformadaProceso> areasInformadas = List.of();
     private List<DocumentacionRemitidaProceso> documentacionRemitida = List.of();
+    private List<LocalDate> plazosExtendidos = List.of();
     private final Instant creadoEn;
     private Instant actualizadoEn;
 
@@ -50,15 +52,15 @@ public final class ActividadPlanTrabajo {
                 1,
                 CODIGO_ACT_01,
                 NOMBRE_ACT_01,
-                EstadoActividad.PENDIENTE,
+                EstadoActividad.COMPLETADA,
                 null,
-                null,
-                null,
+                "Informado sobre el proceso de acreditación (realizado fuera del sistema)",
+                now,
                 null,
                 HojaPlanTrabajo.INFO,
                 null,
                 null,
-                null,
+                "Área de Evaluación y Acreditación (AEA)",
                 PrioridadActividad.MEDIA,
                 now,
                 now
@@ -264,10 +266,11 @@ public final class ActividadPlanTrabajo {
                                                  PrioridadActividad prioridad,
                                                  Instant creadoEn,
                                                  Instant actualizadoEn) {
+        int ordenSaneado = numeroOrden > 0 ? numeroOrden : (numeroOrden < -1000 ? Math.abs(numeroOrden) - 1000 : 1);
         return new ActividadPlanTrabajo(
                 id,
                 planTrabajoId,
-                numeroOrden,
+                ordenSaneado,
                 codigoActividad,
                 nombre,
                 estado,
@@ -354,7 +357,7 @@ public final class ActividadPlanTrabajo {
                                                 Instant fechaReunion,
                                                 String observaciones,
                                                 UUID usuarioAeaId) {
-        if (this.estado == EstadoActividad.COMPLETADA) {
+        if (this.estado == EstadoActividad.COMPLETADA && this.completadaPor != null) {
             throw new DomainValidationException("La actividad ya ha sido completada previamente");
         }
         if (areasInformadas == null || areasInformadas.stream().noneMatch(Objects::nonNull)) {
@@ -390,23 +393,74 @@ public final class ActividadPlanTrabajo {
         this.documentacionRemitida = documentacionRemitida == null ? List.of() : sinDuplicados(documentacionRemitida);
     }
 
+    public void restaurarPlazosExtendidos(List<LocalDate> plazos) {
+        this.plazosExtendidos = plazos == null ? List.of() : List.copyOf(plazos.stream().filter(Objects::nonNull).toList());
+    }
+
+    public void agregarPlazoExtendido(LocalDate nuevaFechaPlazo) {
+        if (nuevaFechaPlazo == null) {
+            throw new DomainValidationException("Debe seleccionar una fecha válida para el plazo");
+        }
+        if (!this.plazosExtendidos.isEmpty()) {
+            LocalDate ultimoPlazo = this.plazosExtendidos.get(this.plazosExtendidos.size() - 1);
+            if (!nuevaFechaPlazo.isAfter(ultimoPlazo)) {
+                throw new DomainValidationException(
+                        "El nuevo plazo (" + nuevaFechaPlazo + ") debe ser posterior al último plazo establecido (" +
+                        ultimoPlazo + "). No se puede volver a setear un tiempo hacia atrás."
+                );
+            }
+        } else if (this.fechaFinEstimada != null && !nuevaFechaPlazo.isAfter(this.fechaFinEstimada)) {
+            throw new DomainValidationException(
+                    "El plazo extendido (" + nuevaFechaPlazo + ") debe ser posterior al plazo estimado original (" +
+                    this.fechaFinEstimada + "). No se puede volver a setear un tiempo hacia atrás."
+            );
+        }
+        if (nuevaFechaPlazo.isBefore(LocalDate.now())) {
+            throw new DomainValidationException(
+                    "El plazo no puede establecerse en una fecha anterior a hoy (" + LocalDate.now() + ")."
+            );
+        }
+
+        List<LocalDate> actualizados = new ArrayList<>(this.plazosExtendidos);
+        actualizados.add(nuevaFechaPlazo);
+        this.plazosExtendidos = List.copyOf(actualizados);
+        this.actualizadoEn = Instant.now();
+    }
+
+    public List<LocalDate> getPlazosExtendidos() {
+        return plazosExtendidos;
+    }
+
+    public LocalDate getUltimoPlazoVigente() {
+        if (plazosExtendidos != null && !plazosExtendidos.isEmpty()) {
+            return plazosExtendidos.get(plazosExtendidos.size() - 1);
+        }
+        return fechaFinEstimada;
+    }
+
     private static <T> List<T> sinDuplicados(List<T> valores) {
         return List.copyOf(new LinkedHashSet<>(valores.stream().filter(Objects::nonNull).toList()));
     }
 
     public void completar(UUID usuarioAeaId) {
-        if (this.estado == EstadoActividad.COMPLETADA) {
-            throw new DomainValidationException("La actividad ya ha sido completada previamente");
-        }
-        if (usuarioAeaId == null) {
-            throw new DomainValidationException("El usuario de AEA responsable es obligatorio");
-        }
+        completar(usuarioAeaId, null);
+    }
 
-        this.completadaPor = usuarioAeaId;
+    public void completar(UUID usuarioAeaId, String observaciones) {
+        if (usuarioAeaId != null) {
+            this.completadaPor = usuarioAeaId;
+        }
+        if (observaciones != null && !observaciones.isBlank()) {
+            this.sintesisAcuerdos = observaciones.trim();
+        }
         Instant now = Instant.now();
         this.completadaEn = now;
         this.actualizadoEn = now;
         this.estado = EstadoActividad.COMPLETADA;
+    }
+
+    public void marcarCompletadaAutomatica(String observaciones) {
+        completar(null, observaciones);
     }
 
     public void completarDocumentacionInteres(List<DocumentacionRemitidaProceso> fuentesSeleccionadas,

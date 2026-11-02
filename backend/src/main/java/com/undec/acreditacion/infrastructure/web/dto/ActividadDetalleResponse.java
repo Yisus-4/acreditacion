@@ -27,8 +27,37 @@ public record ActividadDetalleResponse(
         List<DocumentoAcreditacionResponse> documentos,
         List<String> areasInformadas,
         List<String> documentacionRemitida,
-        String observaciones
+        String observaciones,
+        List<LocalDate> plazosExtendidos
 ) {
+    public ActividadDetalleResponse(UUID id,
+                                   UUID planTrabajoId,
+                                   int numeroOrden,
+                                   String codigoActividad,
+                                   String nombre,
+                                   String estado,
+                                   Instant fechaReunionCoordinacion,
+                                   String sintesisAcuerdos,
+                                   Instant completadaEn,
+                                   UUID completadaPor,
+                                   String completadaPorNombre,
+                                   String hoja,
+                                   LocalDate fechaInicioEstimada,
+                                   LocalDate fechaFinEstimada,
+                                   String responsable,
+                                   String prioridad,
+                                   Instant creadoEn,
+                                   Instant actualizadoEn,
+                                   List<DocumentoAcreditacionResponse> documentos,
+                                   List<String> areasInformadas,
+                                   List<String> documentacionRemitida,
+                                   String observaciones) {
+        this(id, planTrabajoId, numeroOrden, codigoActividad, nombre, estado, fechaReunionCoordinacion,
+             sintesisAcuerdos, completadaEn, completadaPor, completadaPorNombre, hoja, fechaInicioEstimada,
+             fechaFinEstimada, responsable, prioridad, creadoEn, actualizadoEn, documentos, areasInformadas,
+             documentacionRemitida, observaciones, List.of());
+    }
+
     public ActividadDetalleResponse(UUID id,
                                    UUID planTrabajoId,
                                    int numeroOrden,
@@ -45,6 +74,6 @@ public record ActividadDetalleResponse(
                                    List<DocumentoAcreditacionResponse> documentos) {
         this(id, planTrabajoId, numeroOrden, codigoActividad, nombre, estado, fechaReunionCoordinacion,
              sintesisAcuerdos, completadaEn, completadaPor, completadaPorNombre, "INFO", null, null, null, "MEDIA",
-             creadoEn, actualizadoEn, documentos, List.of(), List.of(), sintesisAcuerdos);
+             creadoEn, actualizadoEn, documentos, List.of(), List.of(), sintesisAcuerdos, List.of());
     }
 }

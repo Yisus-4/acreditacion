@@ -14,4 +14,13 @@ public interface RemitirRegistroCaUseCase {
             byte[] resolucionBytes,
             String resolucionNombreOriginal
     );
+
+    default RegistroCaDto adjuntarResolucion(
+            UUID procesoId,
+            UUID usuarioId,
+            byte[] resolucionBytes,
+            String resolucionNombreOriginal
+    ) {
+        throw new UnsupportedOperationException("No implementado");
+    }
 }

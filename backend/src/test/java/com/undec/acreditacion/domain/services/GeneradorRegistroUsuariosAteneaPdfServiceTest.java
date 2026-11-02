@@ -56,9 +56,7 @@ class GeneradorRegistroUsuariosAteneaPdfServiceTest {
         assertTrue(contenido.contains("2026"));
         assertTrue(contenido.contains("EX-2026-12345678-APN-CONEAU#ME"));
         assertTrue(contenido.contains("SECCION I: TABLA DE USUARIOS HABILITADOS EN CONEAU GLOBAL ATENEA"));
-        assertTrue(contenido.contains("SECCION II: MATRIZ DE PERMISOS DEL SISTEMA CONEAU GLOBAL ATENEA"));
-        assertTrue(contenido.contains("Infraestructura y equipamiento para enseñanza y aprendizaje"));
-        assertTrue(contenido.contains("Estructura curricular, organización y gestión de la carrera"));
+        assertFalse(contenido.contains("SECCION II: MATRIZ DE PERMISOS DEL SISTEMA CONEAU GLOBAL ATENEA"));
         assertTrue(contenido.contains("Valeria"));
         assertTrue(contenido.contains("Salerno"));
     }

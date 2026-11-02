@@ -13,10 +13,7 @@ public final class MatrizNormativa {
         TipoDocumentoNormativa.PLAN_DESARROLLO_CARRERA
     );
 
-    private static final Set<TipoDocumentoNormativa> OBLIGATORIOS_EN_FUNCIONAMIENTO = Set.of(
-        TipoDocumentoNormativa.RM_VALIDEZ_NACIONAL,
-        TipoDocumentoNormativa.APROBACION_PROGRAMAS_ANALITICOS
-    );
+    private static final Set<TipoDocumentoNormativa> OBLIGATORIOS_EN_FUNCIONAMIENTO = Set.of();
 
     private static final Set<TipoDocumentoNormativa> OBLIGATORIOS_HISTORIAL = Set.of();
 

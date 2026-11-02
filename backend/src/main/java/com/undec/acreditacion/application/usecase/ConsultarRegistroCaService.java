@@ -2,6 +2,7 @@ package com.undec.acreditacion.application.usecase;
 
 import com.undec.acreditacion.application.input.ConsultarRegistroCaUseCase;
 import com.undec.acreditacion.application.output.RegistroCaDto;
+import com.undec.acreditacion.domain.entities.ProcesoAcreditacion;
 import com.undec.acreditacion.domain.entities.RegistroConformacionCa;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.domain.ports.ProcesoAcreditacionRepositoryPort;
@@ -24,11 +25,23 @@ public class ConsultarRegistroCaService implements ConsultarRegistroCaUseCase {
 
     @Override
     public RegistroCaDto consultarPorProcesoId(UUID procesoId) {
-        procesoRepository.findById(procesoId)
+        ProcesoAcreditacion proceso = procesoRepository.findById(procesoId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el proceso de acreditación con ID: " + procesoId));
 
         RegistroConformacionCa ca = registroCaRepository.findByProcesoId(procesoId)
-                .orElseGet(() -> new RegistroConformacionCa(null, procesoId));
+                .orElseGet(() -> {
+                    RegistroConformacionCa nueva = new RegistroConformacionCa(null, procesoId);
+                    nueva.solicitar(proceso.getCreadoPor(), 15);
+                    RegistroConformacionCa saved = registroCaRepository.save(nueva);
+                    return saved != null ? saved : nueva;
+                });
+        if (ca.getFechaLimiteDc() == null) {
+            ca.solicitar(proceso.getCreadoPor(), 15);
+            RegistroConformacionCa saved = registroCaRepository.save(ca);
+            if (saved != null) {
+                ca = saved;
+            }
+        }
 
         return RegistroCaMapper.toDto(ca);
     }

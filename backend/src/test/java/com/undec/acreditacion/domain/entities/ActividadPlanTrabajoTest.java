@@ -23,7 +23,7 @@ class ActividadPlanTrabajoTest {
     );
 
     @Test
-    @DisplayName("Debe crear la actividad inicial con código y nombre oficial en estado PENDIENTE")
+    @DisplayName("Debe crear la actividad inicial con código y nombre oficial en estado COMPLETADA (realizado fuera del sistema)")
     void debeCrearActividadInicial() {
         UUID planId = UUID.randomUUID();
 
@@ -34,7 +34,7 @@ class ActividadPlanTrabajoTest {
         assertEquals(1, actividad.getNumeroOrden());
         assertEquals(ActividadPlanTrabajo.CODIGO_ACT_01, actividad.getCodigoActividad());
         assertEquals(ActividadPlanTrabajo.NOMBRE_ACT_01, actividad.getNombre());
-        assertEquals(EstadoActividad.PENDIENTE, actividad.getEstado());
+        assertEquals(EstadoActividad.COMPLETADA, actividad.getEstado());
         assertEquals(HojaPlanTrabajo.INFO, actividad.getHoja());
         assertEquals(PrioridadActividad.MEDIA, actividad.getPrioridad());
         assertTrue(actividad.getAreasInformadas().isEmpty());
@@ -109,7 +109,7 @@ class ActividadPlanTrabajoTest {
                 actividad.registrarComunicacionYCompletar(List.of(), DOCUMENTACION, Instant.now(), null, UUID.randomUUID()));
         assertThrows(DomainValidationException.class, () ->
                 actividad.registrarComunicacionYCompletar(null, DOCUMENTACION, Instant.now(), null, UUID.randomUUID()));
-        assertEquals(EstadoActividad.PENDIENTE, actividad.getEstado());
+        assertEquals(EstadoActividad.COMPLETADA, actividad.getEstado());
     }
 
     @Test

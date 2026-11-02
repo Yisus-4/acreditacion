@@ -71,9 +71,11 @@ public class NormativaController {
     ) {
         UUID usuarioId = resolverUsuarioAutenticadoId();
         String obs = request != null ? request.observaciones() : null;
+        Integer plazoDias = request != null ? request.plazoDiasHabiles() : 5;
+        java.time.LocalDate nuevaFecha = request != null ? request.nuevaFechaLimite() : null;
 
         NormativaDetalleDto detalle = solicitarNormativaUseCase.ejecutar(
-                new SolicitarNormativaCommand(procesoId, usuarioId, obs)
+                new SolicitarNormativaCommand(procesoId, usuarioId, obs, plazoDias, nuevaFecha)
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(mapearDetalleResponse(detalle));
     }

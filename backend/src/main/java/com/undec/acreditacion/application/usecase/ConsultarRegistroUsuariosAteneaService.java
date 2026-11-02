@@ -49,8 +49,12 @@ public class ConsultarRegistroUsuariosAteneaService implements ConsultarRegistro
         Optional<RegistroConformacionCa> caOpt = registroCaRepository.findByProcesoId(procesoId);
 
         LocalDate fechaInicio = LocalDate.now();
-        if (caOpt.isPresent() && caOpt.get().getAprobadoEn() != null) {
-            fechaInicio = LocalDate.ofInstant(caOpt.get().getAprobadoEn(), ZONA_ARGENTINA);
+        if (caOpt.isPresent()) {
+            if (caOpt.get().getAprobadoEn() != null) {
+                fechaInicio = LocalDate.ofInstant(caOpt.get().getAprobadoEn(), ZONA_ARGENTINA);
+            } else if (caOpt.get().getRemitidoEn() != null) {
+                fechaInicio = LocalDate.ofInstant(caOpt.get().getRemitidoEn(), ZONA_ARGENTINA);
+            }
         }
 
         RegistroUsuariosAtenea nuevo = RegistroUsuariosAtenea.iniciar(procesoId, proceso.getCreadoPor(), fechaInicio);

@@ -97,12 +97,15 @@ public final class SolicitudNormativaCarrera {
         if (this.fechaSolicitud == null) {
             this.fechaSolicitud = Instant.now();
         }
+        if (this.fechaLimiteEntrega == null) {
+            this.fechaLimiteEntrega = CalculadorDiasHabiles.calcularFechaLimite(LocalDate.now(), this.diasHabilesPlazo > 0 ? this.diasHabilesPlazo : 5);
+        }
         this.actualizadoEn = Instant.now();
     }
 
     public void solicitar(UUID usuarioAeaId, String observaciones, int diasHabiles, LocalDate fechaInicioCalculo) {
-        if (this.estado != EstadoSolicitudNormativa.PENDIENTE_SOLICITUD) {
-            throw new EstadoInvalidoException("La solicitud ya fue emitida previamente (estado: " + this.estado + ")");
+        if (this.estado == EstadoSolicitudNormativa.COMPLETADA) {
+            throw new EstadoInvalidoException("No se puede modificar el plazo de una normativa ya completada (estado: " + this.estado + ")");
         }
         Objects.requireNonNull(usuarioAeaId, "El identificador del usuario solicitante es obligatorio");
         this.solicitadoPor = usuarioAeaId;
@@ -110,8 +113,41 @@ public final class SolicitudNormativaCarrera {
         this.diasHabilesPlazo = diasHabiles > 0 ? diasHabiles : 5;
         LocalDate inicio = fechaInicioCalculo != null ? fechaInicioCalculo : LocalDate.now();
         this.fechaLimiteEntrega = CalculadorDiasHabiles.calcularFechaLimite(inicio, this.diasHabilesPlazo);
-        this.observacionesSolicitud = observaciones != null ? observaciones.trim() : null;
-        this.estado = EstadoSolicitudNormativa.SOLICITADA;
+        this.observacionesSolicitud = observaciones != null ? observaciones.trim() : this.observacionesSolicitud;
+        if (this.estado == EstadoSolicitudNormativa.PENDIENTE_SOLICITUD) {
+            this.estado = EstadoSolicitudNormativa.SOLICITADA;
+        }
+        this.actualizadoEn = Instant.now();
+    }
+
+    public void extenderPlazoFecha(UUID usuarioAeaId, LocalDate nuevaFechaLimite) {
+        if (this.estado == EstadoSolicitudNormativa.COMPLETADA) {
+            throw new EstadoInvalidoException("No se puede modificar el plazo de una normativa ya completada (estado: " + this.estado + ")");
+        }
+        if (nuevaFechaLimite == null) {
+            throw new NormativaValidationException("Debe seleccionar una fecha válida para el nuevo plazo");
+        }
+        if (this.fechaLimiteEntrega != null && !nuevaFechaLimite.isAfter(this.fechaLimiteEntrega)) {
+            throw new NormativaValidationException(
+                "El nuevo plazo (" + nuevaFechaLimite + ") debe ser posterior al plazo actual (" +
+                this.fechaLimiteEntrega + "). No se puede volver a setear un tiempo hacia atrás."
+            );
+        }
+        if (nuevaFechaLimite.isBefore(LocalDate.now())) {
+            throw new NormativaValidationException(
+                "El plazo no puede establecerse en una fecha anterior a hoy (" + LocalDate.now() + ")."
+            );
+        }
+        if (usuarioAeaId != null) {
+            this.solicitadoPor = usuarioAeaId;
+        }
+        if (this.fechaSolicitud == null) {
+            this.fechaSolicitud = Instant.now();
+        }
+        this.fechaLimiteEntrega = nuevaFechaLimite;
+        if (this.estado == EstadoSolicitudNormativa.PENDIENTE_SOLICITUD) {
+            this.estado = EstadoSolicitudNormativa.SOLICITADA;
+        }
         this.actualizadoEn = Instant.now();
     }
 
@@ -205,7 +241,13 @@ public final class SolicitudNormativaCarrera {
         LocalDate hoy = fechaActual != null ? fechaActual : LocalDate.now();
 
         return switch (this.estado) {
-            case PENDIENTE_SOLICITUD -> new BadgePlazoInfo("PENDIENTE", 0, "Pendiente de solicitud", "badge-secondary");
+            case PENDIENTE_SOLICITUD -> {
+                if (this.fechaLimiteEntrega != null) {
+                    int dias = CalculadorDiasHabiles.calcularDiasHabilesRestantes(hoy, this.fechaLimiteEntrega);
+                    yield dias >= 0 ? BadgePlazoInfo.enTermino(dias) : BadgePlazoInfo.fueraDeTermino(dias);
+                }
+                yield BadgePlazoInfo.enTermino(this.diasHabilesPlazo > 0 ? this.diasHabilesPlazo : 5);
+            }
             case COMPLETADA -> BadgePlazoInfo.completado();
             case ENVIADA_A_REVISION -> {
                 if (this.cumplimientoPlazo == CumplimientoPlazo.EN_TERMINO) {

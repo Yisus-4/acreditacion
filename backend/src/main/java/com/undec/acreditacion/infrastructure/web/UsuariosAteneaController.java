@@ -62,6 +62,22 @@ public class UsuariosAteneaController {
         return ResponseEntity.ok(dto);
     }
 
+    @PostMapping("/plazo")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('CONVOCATORIA_WRITE')")
+    public ResponseEntity<RegistroUsuariosAteneaDto> actualizarPlazo(
+            @PathVariable UUID procesoId,
+            @RequestParam(value = "diasHabiles", required = false) Integer diasHabiles,
+            @RequestParam(value = "nuevaFechaLimite", required = false) java.time.LocalDate nuevaFechaLimite
+    ) {
+        RegistroUsuariosAteneaDto dto;
+        if (nuevaFechaLimite != null) {
+            dto = guardarUseCase.extenderPlazoFecha(procesoId, nuevaFechaLimite);
+        } else {
+            dto = guardarUseCase.actualizarPlazo(procesoId, diasHabiles != null ? diasHabiles : 2);
+        }
+        return ResponseEntity.ok(dto);
+    }
+
     @PostMapping("/finalizar")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<RegistroUsuariosAteneaDto> finalizar(@PathVariable UUID procesoId) {

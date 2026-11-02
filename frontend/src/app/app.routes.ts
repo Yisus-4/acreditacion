@@ -62,7 +62,7 @@ export const routes: Routes = [
   },
   {
     path: 'admin/unidades-academicas',
-    title: 'Unidades Académicas — Sistema de Acreditación UNdeC',
+    title: 'Escuelas — Sistema de Acreditación UNdeC',
     canActivate: [authGuard],
     loadComponent: () =>
       import(

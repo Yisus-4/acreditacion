@@ -112,6 +112,15 @@ export class ConvocatoriaService {
     return this.http.post<ActividadPlanTrabajoDto>(`/api/actividades/${actividadId}/completar`, formData);
   }
 
+  extenderPlazoActividad(actividadId: string, nuevaFechaLimite: string): Observable<ActividadPlanTrabajoDto> {
+    const params = new HttpParams().set('nuevaFechaLimite', nuevaFechaLimite);
+    return this.http.post<ActividadPlanTrabajoDto>(`/api/actividades/${actividadId}/plazo`, {}, { params });
+  }
+
+  completarActividadSimple(actividadId: string): Observable<ActividadPlanTrabajoDto> {
+    return this.http.post<ActividadPlanTrabajoDto>(`/api/actividades/${actividadId}/completar-simple`, {});
+  }
+
   descargarDocumento(documentoId: string): Observable<Blob> {
     return this.http.get(`/api/documentos/${documentoId}/descargar`, {
       responseType: 'blob',
@@ -172,8 +181,20 @@ export class ConvocatoriaService {
     return this.http.get<RegistroCaDto>(`/api/convocatorias/${procesoId}/comision-autoevaluacion`);
   }
 
-  solicitarConformacionCa(procesoId: string): Observable<RegistroCaDto> {
-    return this.http.post<RegistroCaDto>(`/api/convocatorias/${procesoId}/comision-autoevaluacion/solicitar`, {});
+  solicitarConformacionCa(procesoId: string, diasPlazo?: number, nuevaFechaLimite?: string): Observable<RegistroCaDto> {
+    let params = new HttpParams();
+    if (nuevaFechaLimite) {
+      params = params.set('nuevaFechaLimite', nuevaFechaLimite);
+    } else if (diasPlazo && diasPlazo > 0) {
+      params = params.set('diasPlazo', String(diasPlazo));
+    }
+    return this.http.post<RegistroCaDto>(`/api/convocatorias/${procesoId}/comision-autoevaluacion/solicitar`, {}, { params });
+  }
+
+  adjuntarResolucionCa(procesoId: string, archivo: File): Observable<RegistroCaDto> {
+    const formData = new FormData();
+    formData.append('resolucion', archivo);
+    return this.http.post<RegistroCaDto>(`/api/convocatorias/${procesoId}/comision-autoevaluacion/resolucion`, formData);
   }
 
   descargarInstructivoIt001(procesoId: string): Observable<Blob> {

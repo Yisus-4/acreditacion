@@ -116,7 +116,7 @@ class IniciarConvocatoriaServiceTest {
         assertEquals(resultado.getId(), planGuardado.getProcesoId());
         assertEquals(EstadoPlanTrabajo.ACTIVO, planGuardado.getEstado());
         assertEquals(2, planGuardado.getActividades().size());
-        assertEquals(EstadoActividad.PENDIENTE, planGuardado.getActividades().get(0).getEstado());
+        assertEquals(EstadoActividad.COMPLETADA, planGuardado.getActividades().get(0).getEstado());
         assertEquals(EstadoActividad.PENDIENTE, planGuardado.getActividades().get(1).getEstado());
     }
 

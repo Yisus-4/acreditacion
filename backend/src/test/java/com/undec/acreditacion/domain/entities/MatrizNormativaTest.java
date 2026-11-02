@@ -26,22 +26,22 @@ class MatrizNormativaTest {
     }
 
     @Test
-    @DisplayName("Carrera EN_FUNCIONAMIENTO sin antecedentes CONEAU exige los 7 documentos requeridos")
-    void testCarreraEnFuncionamiento_sinHistorial_exige7Documentos() {
+    @DisplayName("Carrera EN_FUNCIONAMIENTO sin antecedentes CONEAU exige los 5 documentos base (RM y Programas Analíticos opcionales)")
+    void testCarreraEnFuncionamiento_sinHistorial_exige5Documentos() {
         Set<TipoDocumentoNormativa> requeridos = MatrizNormativa.obtenerRequeridos(false, false);
-        assertEquals(7, requeridos.size());
-        assertTrue(requeridos.contains(TipoDocumentoNormativa.RM_VALIDEZ_NACIONAL));
-        assertTrue(requeridos.contains(TipoDocumentoNormativa.APROBACION_PROGRAMAS_ANALITICOS));
+        assertEquals(5, requeridos.size());
+        assertFalse(requeridos.contains(TipoDocumentoNormativa.RM_VALIDEZ_NACIONAL));
+        assertFalse(requeridos.contains(TipoDocumentoNormativa.APROBACION_PROGRAMAS_ANALITICOS));
     }
 
     @Test
-    @DisplayName("Carrera EN_FUNCIONAMIENTO con historial CONEAU exige los 7 documentos de funcionamiento")
-    void testCarreraEnFuncionamiento_conHistorial_exige7Documentos() {
+    @DisplayName("Carrera EN_FUNCIONAMIENTO con historial CONEAU exige los 5 documentos base (RM y Programas Analíticos opcionales)")
+    void testCarreraEnFuncionamiento_conHistorial_exige5Documentos() {
         Set<TipoDocumentoNormativa> requeridos = MatrizNormativa.obtenerRequeridos(false, true);
 
-        assertEquals(7, requeridos.size());
-        assertTrue(requeridos.contains(TipoDocumentoNormativa.RM_VALIDEZ_NACIONAL));
-        assertTrue(requeridos.contains(TipoDocumentoNormativa.APROBACION_PROGRAMAS_ANALITICOS));
+        assertEquals(5, requeridos.size());
+        assertFalse(requeridos.contains(TipoDocumentoNormativa.RM_VALIDEZ_NACIONAL));
+        assertFalse(requeridos.contains(TipoDocumentoNormativa.APROBACION_PROGRAMAS_ANALITICOS));
         assertFalse(requeridos.contains(TipoDocumentoNormativa.ACTA_COMISION_CURRICULAR));
     }
 

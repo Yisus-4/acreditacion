@@ -3,6 +3,7 @@ package com.undec.acreditacion.infrastructure.persistence.postgres;
 import com.undec.acreditacion.domain.entities.*;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -86,7 +87,33 @@ public class PlanTrabajoPersistenceMapper {
                 deserializar(entity.getAreasInformadas(), AreaInformadaProceso.class),
                 deserializar(entity.getDocumentacionRemitida(), DocumentacionRemitidaProceso.class)
         );
+        actividad.restaurarPlazosExtendidos(deserializarFechas(entity.getPlazosExtendidos()));
         return actividad;
+    }
+
+    private static String serializarFechas(List<LocalDate> fechas) {
+        if (fechas == null || fechas.isEmpty()) {
+            return null;
+        }
+        return fechas.stream().map(LocalDate::toString).collect(Collectors.joining(SEPARADOR));
+    }
+
+    private static List<LocalDate> deserializarFechas(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return List.of();
+        }
+        List<LocalDate> resultado = new ArrayList<>();
+        for (String parte : valor.split("\\|")) {
+            String fechaStr = parte.trim();
+            if (fechaStr.isEmpty()) {
+                continue;
+            }
+            try {
+                resultado.add(LocalDate.parse(fechaStr));
+            } catch (Exception ignored) {
+            }
+        }
+        return resultado;
     }
 
     private static <E extends Enum<E>> String serializar(List<E> valores) {
@@ -137,6 +164,7 @@ public class PlanTrabajoPersistenceMapper {
         entity.setPrioridad(domain.getPrioridad() != null ? domain.getPrioridad().name() : PrioridadActividad.MEDIA.name());
         entity.setAreasInformadas(serializar(domain.getAreasInformadas()));
         entity.setDocumentacionRemitida(serializar(domain.getDocumentacionRemitida()));
+        entity.setPlazosExtendidos(serializarFechas(domain.getPlazosExtendidos()));
         entity.setCreadoEn(domain.getCreadoEn());
         entity.setActualizadoEn(domain.getActualizadoEn());
         return entity;

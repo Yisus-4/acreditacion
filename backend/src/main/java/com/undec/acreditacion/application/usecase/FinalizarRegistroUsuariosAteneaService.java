@@ -91,13 +91,14 @@ public class FinalizarRegistroUsuariosAteneaService implements FinalizarRegistro
 
         // Actualizar automáticamente la actividad 3.3 en PlanTrabajo (hoja INFO) marcándola COMPLETADA
         planTrabajoRepository.findByProcesoId(procesoId).ifPresent(plan -> {
-            Optional<ActividadPlanTrabajo> actUsuariosOpt = plan.getActividades().stream()
+            java.util.List<ActividadPlanTrabajo> actsUsuarios = plan.getActividades().stream()
                     .filter(a -> a.getHoja() == HojaPlanTrabajo.INFO
                             && ("3.3".equals(a.getCodigoActividad())
-                            || a.getNombre().toLowerCase().contains("definir usuarios")))
-                    .findFirst();
+                            || a.getNombre().toLowerCase().contains("definir usuarios")
+                            || a.getNombre().toLowerCase().contains("usuarios y permisos")))
+                    .collect(java.util.stream.Collectors.toList());
 
-            ActividadPlanTrabajo actUsuarios = actUsuariosOpt.orElseGet(() -> {
+            if (actsUsuarios.isEmpty()) {
                 ActividadPlanTrabajo nueva = new ActividadPlanTrabajo(
                         UUID.randomUUID(),
                         plan.getId(),
@@ -114,18 +115,22 @@ public class FinalizarRegistroUsuariosAteneaService implements FinalizarRegistro
                         Instant.now()
                 );
                 plan.agregarActividad(nueva);
-                return planTrabajoRepository.saveActividad(nueva);
-            });
-
-            if (actUsuarios.getEstado() != EstadoActividad.COMPLETADA) {
-                actUsuarios.completar(usuarioAeaId);
-                planTrabajoRepository.saveActividad(actUsuarios);
+                actsUsuarios.add(planTrabajoRepository.saveActividad(nueva));
             }
+
+            for (ActividadPlanTrabajo actUsuarios : actsUsuarios) {
+                if (actUsuarios.getEstado() != EstadoActividad.COMPLETADA) {
+                    actUsuarios.completar(usuarioAeaId);
+                    planTrabajoRepository.saveActividad(actUsuarios);
+                }
+            }
+
+            ActividadPlanTrabajo actPrincipal = actsUsuarios.get(0);
 
             // Registrar DocumentoAcreditacion formal RG-003
             DocumentoAcreditacion docFormal = DocumentoAcreditacion.crear(
                     procesoId,
-                    actUsuarios.getId(),
+                    actPrincipal.getId(),
                     nombreArchivo,
                     TipoDocumentoAcreditacion.REGISTRO_USUARIOS_ATENEA,
                     "AEA_OFICIAL",

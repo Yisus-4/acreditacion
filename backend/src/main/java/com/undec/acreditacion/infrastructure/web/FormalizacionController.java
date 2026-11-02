@@ -667,7 +667,8 @@ public class FormalizacionController {
                 docsDto,
                 act.getAreasInformadas().stream().map(Enum::name).toList(),
                 act.getDocumentacionRemitida().stream().map(Enum::name).toList(),
-                act.getObservaciones()
+                act.getObservaciones(),
+                act.getPlazosExtendidos()
         );
     }
 

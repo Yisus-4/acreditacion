@@ -7,12 +7,20 @@ import com.undec.acreditacion.domain.entities.ActividadPlanTrabajo;
 import com.undec.acreditacion.domain.entities.AreaInformadaProceso;
 import com.undec.acreditacion.domain.entities.DocumentacionRemitidaProceso;
 import com.undec.acreditacion.domain.entities.DocumentoAcreditacion;
+import com.undec.acreditacion.domain.entities.PlanTrabajo;
+import com.undec.acreditacion.domain.entities.SolicitudNormativaCarrera;
 import com.undec.acreditacion.domain.entities.TipoDocumentoAcreditacion;
 import com.undec.acreditacion.domain.entities.User;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
+import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.domain.ports.DocumentoAcreditacionRepositoryPort;
+import com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort;
+import com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort;
+import com.undec.acreditacion.domain.ports.RegistroUsuariosAteneaRepositoryPort;
+import com.undec.acreditacion.domain.ports.SolicitudNormativaRepositoryPort;
 import com.undec.acreditacion.infrastructure.web.dto.ActividadDetalleResponse;
 import com.undec.acreditacion.infrastructure.web.dto.DocumentoAcreditacionResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -66,6 +74,10 @@ public class ActividadController {
     private final CompletarActividadInformarProcesoUseCase completarActividadUseCase;
     private final DocumentoAcreditacionRepositoryPort documentoRepository;
     private final UserRepository userRepository;
+    private PlanTrabajoRepositoryPort planTrabajoRepository;
+    private SolicitudNormativaRepositoryPort solicitudNormativaRepository;
+    private RegistroConformacionCaRepositoryPort registroCaRepository;
+    private RegistroUsuariosAteneaRepositoryPort registroUsuariosAteneaRepository;
 
     public ActividadController(
             CompletarActividadInformarProcesoUseCase completarActividadUseCase,
@@ -74,6 +86,24 @@ public class ActividadController {
         this.completarActividadUseCase = completarActividadUseCase;
         this.documentoRepository = documentoRepository;
         this.userRepository = userRepository;
+    }
+
+    @Autowired
+    public ActividadController(
+            CompletarActividadInformarProcesoUseCase completarActividadUseCase,
+            DocumentoAcreditacionRepositoryPort documentoRepository,
+            UserRepository userRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            SolicitudNormativaRepositoryPort solicitudNormativaRepository,
+            RegistroConformacionCaRepositoryPort registroCaRepository,
+            RegistroUsuariosAteneaRepositoryPort registroUsuariosAteneaRepository) {
+        this.completarActividadUseCase = completarActividadUseCase;
+        this.documentoRepository = documentoRepository;
+        this.userRepository = userRepository;
+        this.planTrabajoRepository = planTrabajoRepository;
+        this.solicitudNormativaRepository = solicitudNormativaRepository;
+        this.registroCaRepository = registroCaRepository;
+        this.registroUsuariosAteneaRepository = registroUsuariosAteneaRepository;
     }
 
     @PostMapping(value = "/{id}/completar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -187,7 +217,182 @@ public class ActividadController {
                 docsDto,
                 actividad.getAreasInformadas().stream().map(Enum::name).toList(),
                 actividad.getDocumentacionRemitida().stream().map(Enum::name).toList(),
-                actividad.getObservaciones()
+                actividad.getObservaciones(),
+                actividad.getPlazosExtendidos()
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = {"/{id}/plazo", "/{id}/extender-plazo"})
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
+    public ResponseEntity<ActividadDetalleResponse> extenderPlazo(
+            @PathVariable UUID id,
+            @RequestParam(value = "fecha", required = false) String fechaStr,
+            @RequestParam(value = "nuevaFechaLimite", required = false) String nuevaFechaLimiteStr
+    ) {
+        if (planTrabajoRepository == null) {
+            throw new IllegalStateException("planTrabajoRepository no está inicializado");
+        }
+        ActividadPlanTrabajo actividad = planTrabajoRepository.findActividadById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró la actividad: " + id));
+
+        String inputStr = (fechaStr != null && !fechaStr.isBlank()) ? fechaStr : nuevaFechaLimiteStr;
+        if (inputStr == null || inputStr.isBlank()) {
+            throw new DomainValidationException("Debe especificar la nueva fecha para el plazo");
+        }
+
+        LocalDate nuevaFechaLimite;
+        try {
+            nuevaFechaLimite = LocalDate.parse(inputStr.trim());
+        } catch (DateTimeParseException ex) {
+            throw new DomainValidationException("Formato inválido de fecha para extender plazo (use YYYY-MM-DD): " + inputStr);
+        }
+
+        actividad.agregarPlazoExtendido(nuevaFechaLimite);
+        ActividadPlanTrabajo guardada = planTrabajoRepository.saveActividad(actividad);
+        if (guardada != null) {
+            actividad = guardada;
+        }
+
+        UUID usuarioId = resolverUsuarioAutenticadoId();
+        final ActividadPlanTrabajo actRef = actividad;
+        planTrabajoRepository.findById(actividad.getPlanTrabajoId()).ifPresent(plan -> {
+            UUID procesoId = plan.getProcesoId();
+            String cod = actRef.getCodigoActividad() != null ? actRef.getCodigoActividad().trim() : "";
+            String nom = actRef.getNombre() != null ? actRef.getNombre().toLowerCase() : "";
+
+            if (PlanTrabajo.esActividadNormativa(actRef) && solicitudNormativaRepository != null) {
+                SolicitudNormativaCarrera sol = solicitudNormativaRepository.findByActividadId(actRef.getId())
+                        .orElseGet(() -> SolicitudNormativaCarrera.iniciar(procesoId, actRef.getId()));
+                if (sol.getFechaLimiteEntrega() == null || nuevaFechaLimite.isAfter(sol.getFechaLimiteEntrega())) {
+                    sol.extenderPlazoFecha(usuarioId, nuevaFechaLimite);
+                    solicitudNormativaRepository.save(sol);
+                }
+            } else if (("3.1".equals(cod) || "3.2".equals(cod) || nom.contains("comisión de autoevaluación") || nom.contains("conformación de la ca")) && registroCaRepository != null) {
+                registroCaRepository.findByProcesoId(procesoId).ifPresent(ca -> {
+                    if (ca.getFechaLimiteDc() == null || nuevaFechaLimite.isAfter(ca.getFechaLimiteDc())) {
+                        ca.extenderPlazoFecha(usuarioId, nuevaFechaLimite);
+                        registroCaRepository.save(ca);
+                    }
+                });
+            } else if (("3.3".equals(cod) || nom.contains("atenea") || nom.contains("definir usuarios")) && registroUsuariosAteneaRepository != null) {
+                registroUsuariosAteneaRepository.findByProcesoId(procesoId).ifPresent(reg -> {
+                    if (reg.getFechaLimite() == null || nuevaFechaLimite.isAfter(reg.getFechaLimite())) {
+                        reg.extenderPlazoFecha(nuevaFechaLimite);
+                        registroUsuariosAteneaRepository.save(reg);
+                    }
+                });
+            }
+        });
+
+        List<DocumentoAcreditacion> docs = documentoRepository.findByActividadId(actividad.getId());
+        List<DocumentoAcreditacionResponse> docsDto = docs.stream().map(d ->
+                new DocumentoAcreditacionResponse(
+                        d.getId(),
+                        d.getNombreOriginal(),
+                        d.getTipoDocumento().name(),
+                        d.getClasificacionOrigen(),
+                        d.getDescripcion(),
+                        d.getMimeType(),
+                        d.getTamanioBytes(),
+                        "/api/documentos/" + d.getId() + "/descargar",
+                        d.getCreadoEn()
+                )
+        ).collect(Collectors.toList());
+
+        String nombreUsuario = actividad.getCompletadaPor() != null
+                ? userRepository.findById(actividad.getCompletadaPor()).map(User::getUsername).orElse("Usuario AEA")
+                : null;
+
+        ActividadDetalleResponse response = new ActividadDetalleResponse(
+                actividad.getId(),
+                actividad.getPlanTrabajoId(),
+                actividad.getNumeroOrden(),
+                actividad.getCodigoActividad(),
+                actividad.getNombre(),
+                actividad.getEstado().name(),
+                actividad.getFechaReunionCoordinacion(),
+                actividad.getSintesisAcuerdos(),
+                actividad.getCompletadaEn(),
+                actividad.getCompletadaPor(),
+                nombreUsuario,
+                actividad.getHoja() != null ? actividad.getHoja().name() : "INFO",
+                actividad.getFechaInicioEstimada(),
+                actividad.getFechaFinEstimada(),
+                actividad.getResponsable(),
+                actividad.getPrioridad() != null ? actividad.getPrioridad().name() : "MEDIA",
+                actividad.getCreadoEn(),
+                actividad.getActualizadoEn(),
+                docsDto,
+                actividad.getAreasInformadas().stream().map(Enum::name).toList(),
+                actividad.getDocumentacionRemitida().stream().map(Enum::name).toList(),
+                actividad.getObservaciones(),
+                actividad.getPlazosExtendidos()
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/completar-simple")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
+    public ResponseEntity<ActividadDetalleResponse> completarSimple(@PathVariable UUID id) {
+        if (planTrabajoRepository == null) {
+            throw new IllegalStateException("planTrabajoRepository no está inicializado");
+        }
+        ActividadPlanTrabajo actividad = planTrabajoRepository.findActividadById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró la actividad: " + id));
+
+        UUID usuarioId = resolverUsuarioAutenticadoId();
+        actividad.completar(usuarioId, "Participación registrada y completada por AEA");
+        ActividadPlanTrabajo guardada = planTrabajoRepository.saveActividad(actividad);
+        if (guardada != null) {
+            actividad = guardada;
+        }
+
+        List<DocumentoAcreditacion> docs = documentoRepository.findByActividadId(actividad.getId());
+        List<DocumentoAcreditacionResponse> docsDto = docs.stream().map(d ->
+                new DocumentoAcreditacionResponse(
+                        d.getId(),
+                        d.getNombreOriginal(),
+                        d.getTipoDocumento().name(),
+                        d.getClasificacionOrigen(),
+                        d.getDescripcion(),
+                        d.getMimeType(),
+                        d.getTamanioBytes(),
+                        "/api/documentos/" + d.getId() + "/descargar",
+                        d.getCreadoEn()
+                )
+        ).collect(Collectors.toList());
+
+        String nombreUsuario = actividad.getCompletadaPor() != null
+                ? userRepository.findById(actividad.getCompletadaPor()).map(User::getUsername).orElse("Usuario AEA")
+                : null;
+
+        ActividadDetalleResponse response = new ActividadDetalleResponse(
+                actividad.getId(),
+                actividad.getPlanTrabajoId(),
+                actividad.getNumeroOrden(),
+                actividad.getCodigoActividad(),
+                actividad.getNombre(),
+                actividad.getEstado().name(),
+                actividad.getFechaReunionCoordinacion(),
+                actividad.getSintesisAcuerdos(),
+                actividad.getCompletadaEn(),
+                actividad.getCompletadaPor(),
+                nombreUsuario,
+                actividad.getHoja() != null ? actividad.getHoja().name() : "INFO",
+                actividad.getFechaInicioEstimada(),
+                actividad.getFechaFinEstimada(),
+                actividad.getResponsable(),
+                actividad.getPrioridad() != null ? actividad.getPrioridad().name() : "MEDIA",
+                actividad.getCreadoEn(),
+                actividad.getActualizadoEn(),
+                docsDto,
+                actividad.getAreasInformadas().stream().map(Enum::name).toList(),
+                actividad.getDocumentacionRemitida().stream().map(Enum::name).toList(),
+                actividad.getObservaciones(),
+                actividad.getPlazosExtendidos()
         );
 
         return ResponseEntity.ok(response);

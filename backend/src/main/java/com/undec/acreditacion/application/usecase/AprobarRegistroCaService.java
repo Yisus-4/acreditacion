@@ -72,9 +72,9 @@ public class AprobarRegistroCaService implements AprobarRegistroCaUseCase {
         ca.aprobar(usuarioAeaId, storedPath);
         RegistroConformacionCa guardado = registroCaRepository.save(ca);
 
-        // Actualizar automáticamente la actividad correspondiente en PlanTrabajo marcándola completada en hoja INFO
+        // Actualizar automáticamente las actividades de CA (3.1 y 3.2) en PlanTrabajo marcándolas completadas en hoja INFO
         planTrabajoRepository.findByProcesoId(procesoId).ifPresent(plan -> {
-            Optional<ActividadPlanTrabajo> actCaOpt = plan.getActividades().stream()
+            java.util.List<ActividadPlanTrabajo> actsCa = plan.getActividades().stream()
                     .filter(a -> a.getHoja() == HojaPlanTrabajo.INFO
                             && (a.getNombre().toLowerCase().contains("conformación de la ca")
                             || a.getNombre().toLowerCase().contains("conformacion de la ca")
@@ -82,9 +82,9 @@ public class AprobarRegistroCaService implements AprobarRegistroCaUseCase {
                             || a.getNombre().toLowerCase().contains("conformacion de ca")
                             || "3.1".equals(a.getCodigoActividad())
                             || "3.2".equals(a.getCodigoActividad())))
-                    .findFirst();
+                    .collect(java.util.stream.Collectors.toList());
 
-            ActividadPlanTrabajo actCa = actCaOpt.orElseGet(() -> {
+            if (actsCa.isEmpty()) {
                 ActividadPlanTrabajo nueva = new ActividadPlanTrabajo(
                         UUID.randomUUID(),
                         plan.getId(),
@@ -101,18 +101,22 @@ public class AprobarRegistroCaService implements AprobarRegistroCaUseCase {
                         java.time.Instant.now()
                 );
                 plan.agregarActividad(nueva);
-                return planTrabajoRepository.saveActividad(nueva);
-            });
-
-            if (actCa.getEstado() != com.undec.acreditacion.domain.entities.EstadoActividad.COMPLETADA) {
-                actCa.completar(usuarioAeaId);
-                planTrabajoRepository.saveActividad(actCa);
+                actsCa.add(planTrabajoRepository.saveActividad(nueva));
             }
+
+            for (ActividadPlanTrabajo actCa : actsCa) {
+                if (actCa.getEstado() != com.undec.acreditacion.domain.entities.EstadoActividad.COMPLETADA) {
+                    actCa.completar(usuarioAeaId);
+                    planTrabajoRepository.saveActividad(actCa);
+                }
+            }
+
+            ActividadPlanTrabajo actCaPrincipal = actsCa.get(0);
 
             // Registrar DocumentoAcreditacion formal
             DocumentoAcreditacion docFormal = DocumentoAcreditacion.crear(
                     procesoId,
-                    actCa.getId(),
+                    actCaPrincipal.getId(),
                     nombreArchivo,
                     TipoDocumentoAcreditacion.REGISTRO_CONFORMACION_CA,
                     "AEA_OFICIAL",

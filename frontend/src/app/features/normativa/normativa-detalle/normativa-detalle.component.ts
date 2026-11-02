@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Auth } from '../../../core/auth/auth';
 import { NormativaService } from '../../../core/normativa/services/normativa.service';
@@ -18,6 +19,7 @@ import { ModalRevisarNormativaComponent } from '../modal-revisar-normativa/modal
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     RouterLink,
     BandejaCargaNormativaComponent,
     HojaInfoTabularComponent,
@@ -42,6 +44,9 @@ export class NormativaDetalleComponent implements OnInit, OnChanges {
   readonly modalRevisarAbierto = signal<boolean>(false);
   readonly errorRevision = signal<string | null>(null);
   readonly alertMensaje = signal<{ tipo: 'success' | 'error'; texto: string } | null>(null);
+  readonly diasPlazoInput = signal<number>(5);
+  readonly fechaPlazoInput = signal<string>('');
+  readonly editandoPlazo = signal<boolean>(false);
 
   readonly detalle = this.normativaService.detalle;
   readonly loading = this.normativaService.loading;
@@ -94,12 +99,60 @@ export class NormativaDetalleComponent implements OnInit, OnChanges {
 
   cargarDatos(): void {
     this.normativaService.obtenerDetalle(this.procesoId).subscribe({
+      next: (d) => {
+        if (d?.diasHabilesPlazo) {
+          this.diasPlazoInput.set(d.diasHabilesPlazo);
+        }
+      },
       error: (err) => {
         // Si no existe solicitud aún (404), queda en estado PENDIENTE_SOLICITUD
         if (err?.status !== 404) {
           this.mostrarAlerta('error', err?.error?.error || 'No se pudo cargar la información de normativa.');
         }
       },
+    });
+  }
+
+  obtenerFechaMinimaPlazo(): string {
+    const actual = this.detalle()?.fechaLimiteEntrega;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    let base = hoy;
+    if (actual) {
+      const fActual = new Date(actual + 'T00:00:00');
+      if (!isNaN(fActual.getTime()) && fActual > base) {
+        base = fActual;
+      }
+    }
+    const min = new Date(base);
+    min.setDate(min.getDate() + 1);
+    return min.toISOString().split('T')[0];
+  }
+
+  abrirEdicionPlazoNormativa(): void {
+    this.fechaPlazoInput.set(this.obtenerFechaMinimaPlazo());
+    this.editandoPlazo.set(true);
+  }
+
+  guardarPlazoNormativa(): void {
+    const nuevaFecha = this.fechaPlazoInput();
+    const minFecha = this.obtenerFechaMinimaPlazo();
+    if (!nuevaFecha || nuevaFecha < minFecha) {
+      this.mostrarAlerta('error', `El nuevo plazo debe ser posterior al plazo vigente (mínimo ${minFecha}). No se puede volver hacia atrás.`);
+      return;
+    }
+    this.normativaService.solicitarNormativa(this.procesoId, {
+      nuevaFechaLimite: nuevaFecha,
+      observaciones: this.detalle()?.observacionesSolicitud || 'Extensión de plazo configurada por AEA.'
+    }).subscribe({
+      next: () => {
+        this.editandoPlazo.set(false);
+        this.mostrarAlerta('success', `Nuevo plazo extendido registrado hasta ${nuevaFecha} y añadido al seguimiento de actividades.`);
+        this.normativaActualizada.emit();
+      },
+      error: (err) => {
+        this.mostrarAlerta('error', err?.error?.error || err?.error?.message || 'No se pudo actualizar el plazo.');
+      }
     });
   }
 

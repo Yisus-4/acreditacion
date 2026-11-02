@@ -78,9 +78,20 @@ public class ComisionAutoevaluacionController {
 
     @PostMapping("/solicitar")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('CONVOCATORIA_WRITE')")
-    public ResponseEntity<RegistroCaDto> solicitar(@PathVariable UUID procesoId) {
+    public ResponseEntity<RegistroCaDto> solicitar(
+            @PathVariable UUID procesoId,
+            @RequestParam(value = "diasPlazo", required = false) Integer diasPlazo,
+            @RequestParam(value = "nuevaFechaLimite", required = false) java.time.LocalDate nuevaFechaLimite
+    ) {
         UUID usuarioId = resolverUsuarioAutenticadoId();
-        RegistroCaDto res = solicitarConformacionCaUseCase.solicitar(procesoId, usuarioId);
+        RegistroCaDto res;
+        if (nuevaFechaLimite != null) {
+            res = solicitarConformacionCaUseCase.extenderPlazoFecha(procesoId, usuarioId, nuevaFechaLimite);
+        } else if (diasPlazo != null) {
+            res = solicitarConformacionCaUseCase.solicitar(procesoId, usuarioId, diasPlazo);
+        } else {
+            res = solicitarConformacionCaUseCase.solicitar(procesoId, usuarioId);
+        }
         return ResponseEntity.ok(res);
     }
 
@@ -134,6 +145,19 @@ public class ComisionAutoevaluacionController {
         RegistroCaDto res = remitirRegistroCaUseCase.remitir(
                 procesoId, usuarioId, coincideCurricular, miembros, resolucionBytes, resolucionNombre
         );
+        return ResponseEntity.ok(res);
+    }
+
+    @PostMapping(value = "/resolucion", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    public ResponseEntity<RegistroCaDto> adjuntarResolucion(
+            @PathVariable UUID procesoId,
+            @RequestParam("resolucion") MultipartFile resolucion
+    ) throws IOException {
+        UUID usuarioId = resolverUsuarioAutenticadoId();
+        byte[] resolucionBytes = (resolucion != null && !resolucion.isEmpty()) ? resolucion.getBytes() : null;
+        String resolucionNombre = (resolucion != null && !resolucion.isEmpty()) ? resolucion.getOriginalFilename() : null;
+        RegistroCaDto res = remitirRegistroCaUseCase.adjuntarResolucion(procesoId, usuarioId, resolucionBytes, resolucionNombre);
         return ResponseEntity.ok(res);
     }
 

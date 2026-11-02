@@ -284,8 +284,18 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    public ConsultarPlanTrabajoUseCase consultarPlanTrabajoUseCase(PlanTrabajoRepositoryPort planTrabajoRepository) {
-        return new ConsultarPlanTrabajoService(planTrabajoRepository);
+    public ConsultarPlanTrabajoUseCase consultarPlanTrabajoUseCase(
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            com.undec.acreditacion.domain.ports.SolicitudNormativaRepositoryPort solicitudNormativaRepository,
+            com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort registroCaRepository,
+            com.undec.acreditacion.domain.ports.RegistroUsuariosAteneaRepositoryPort registroUsuariosAteneaRepository
+    ) {
+        return new ConsultarPlanTrabajoService(
+                planTrabajoRepository,
+                solicitudNormativaRepository,
+                registroCaRepository,
+                registroUsuariosAteneaRepository
+        );
     }
 
     @Bean
@@ -487,9 +497,10 @@ public class UseCaseConfiguration {
             com.undec.acreditacion.domain.ports.DocumentStoragePort storagePort,
             com.undec.acreditacion.domain.ports.CarreraRepositoryPort carreraRepository,
             com.undec.acreditacion.application.output.UserRepository userRepository,
-            com.undec.acreditacion.application.input.CrearSolicitudNotificacionUseCase crearSolicitudNotificacionUseCase) {
+            com.undec.acreditacion.application.input.CrearSolicitudNotificacionUseCase crearSolicitudNotificacionUseCase,
+            com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort planTrabajoRepository) {
         return new com.undec.acreditacion.application.usecase.RemitirRegistroCaService(
-                registroCaRepository, procesoRepository, storagePort, carreraRepository, userRepository, crearSolicitudNotificacionUseCase);
+                registroCaRepository, procesoRepository, storagePort, carreraRepository, userRepository, crearSolicitudNotificacionUseCase, planTrabajoRepository);
     }
 
     @Bean
@@ -528,9 +539,10 @@ public class UseCaseConfiguration {
     @Bean
     @org.springframework.transaction.annotation.Transactional
     public com.undec.acreditacion.application.input.GuardarRegistroUsuariosAteneaUseCase guardarRegistroUsuariosAteneaUseCase(
-            com.undec.acreditacion.domain.ports.RegistroUsuariosAteneaRepositoryPort registroUsuariosRepository) {
+            com.undec.acreditacion.domain.ports.RegistroUsuariosAteneaRepositoryPort registroUsuariosRepository,
+            com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort planTrabajoRepository) {
         return new com.undec.acreditacion.application.usecase.GuardarRegistroUsuariosAteneaService(
-                registroUsuariosRepository);
+                registroUsuariosRepository, planTrabajoRepository);
     }
 
     @Bean

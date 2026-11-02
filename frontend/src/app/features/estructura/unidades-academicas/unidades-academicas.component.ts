@@ -80,8 +80,8 @@ export class UnidadesAcademicasComponent implements OnInit {
       .subscribe({
         next: (items) => this.unidades.set(items),
         error: (err) => {
-          console.error('Error al listar unidades académicas:', err);
-          this.errorMessage.set('No se pudo cargar el listado de unidades académicas.');
+          console.error('Error al listar escuelas:', err);
+          this.errorMessage.set('No se pudo cargar el listado de escuelas.');
         },
       });
   }
@@ -157,12 +157,12 @@ export class UnidadesAcademicasComponent implements OnInit {
             this.unidades.update((list) =>
               list.map((item) => (item.id === actualizada.id ? actualizada : item))
             );
-            this.successMessage.set(`Unidad académica "${actualizada.nombre}" actualizada exitosamente.`);
+            this.successMessage.set(`Escuela "${actualizada.nombre}" actualizada exitosamente.`);
             this.cancelarFormulario();
           },
           error: (err) => {
-            console.error('Error al actualizar unidad académica:', err);
-            const msg = err.error?.error || 'No se pudo actualizar la unidad académica. Intente nuevamente.';
+            console.error('Error al actualizar escuela:', err);
+            const msg = err.error?.error || 'No se pudo actualizar la escuela. Intente nuevamente.';
             this.errorMessage.set(msg);
           },
         });
@@ -181,12 +181,12 @@ export class UnidadesAcademicasComponent implements OnInit {
         .subscribe({
           next: (nueva) => {
             this.unidades.update((list) => [...list, nueva]);
-            this.successMessage.set(`Unidad académica "${nueva.nombre}" registrada exitosamente.`);
+            this.successMessage.set(`Escuela "${nueva.nombre}" registrada exitosamente.`);
             this.cancelarFormulario();
           },
           error: (err) => {
-            console.error('Error al registrar unidad académica:', err);
-            const msg = err.error?.error || 'No se pudo registrar la unidad académica. Intente nuevamente.';
+            console.error('Error al registrar escuela:', err);
+            const msg = err.error?.error || 'No se pudo registrar la escuela. Intente nuevamente.';
             this.errorMessage.set(msg);
           },
         });
@@ -212,13 +212,13 @@ export class UnidadesAcademicasComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error al cambiar estado:', err);
-          this.errorMessage.set(err.error?.error || 'No se pudo cambiar el estado de la unidad académica.');
+          this.errorMessage.set(err.error?.error || 'No se pudo cambiar el estado de la escuela.');
         },
       });
   }
 
   eliminar(ua: UnidadAcademicaResponse): void {
-    if (!confirm(`¿Está seguro de eliminar la unidad académica "${ua.nombre}"? Esta acción no se puede deshacer.`)) {
+    if (!confirm(`¿Está seguro de eliminar la escuela "${ua.nombre}"? Esta acción no se puede deshacer.`)) {
       return;
     }
 
@@ -231,14 +231,14 @@ export class UnidadesAcademicasComponent implements OnInit {
       .subscribe({
         next: () => {
           this.unidades.update((list) => list.filter((item) => item.id !== ua.id));
-          this.successMessage.set(`Unidad académica "${ua.nombre}" eliminada exitosamente.`);
+          this.successMessage.set(`Escuela "${ua.nombre}" eliminada exitosamente.`);
           if (this.editingId() === ua.id) {
             this.cancelarFormulario();
           }
         },
         error: (err) => {
-          console.error('Error al eliminar unidad académica:', err);
-          this.errorMessage.set(err.error?.error || 'No se pudo eliminar la unidad académica.');
+          console.error('Error al eliminar escuela:', err);
+          this.errorMessage.set(err.error?.error || 'No se pudo eliminar la escuela.');
         },
       });
   }

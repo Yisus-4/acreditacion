@@ -218,6 +218,7 @@ export interface ActividadPlanTrabajoDto {
   creadoEn: string;
   actualizadoEn: string;
   documentos: DocumentoAcreditacionDto[];
+  plazosExtendidos?: string[];
 }
 
 export interface OpcionCatalogoProceso {

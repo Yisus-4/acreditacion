@@ -191,6 +191,37 @@ public class RegistroUsuariosAtenea {
         }
     }
 
+    public void actualizarPlazoDiasHabiles(int diasHabiles) {
+        if (this.estado == EstadoRegistroUsuariosAtenea.FINALIZADO) {
+            throw new DomainValidationException("No se puede modificar el plazo de un registro de usuarios ATENEA ya finalizado");
+        }
+        int dias = diasHabiles > 0 ? diasHabiles : 2;
+        this.fechaLimite = CalculadorDiasHabiles.calcularFechaLimite(LocalDate.now(), dias);
+        this.actualizadoEn = Instant.now();
+    }
+
+    public void extenderPlazoFecha(LocalDate nuevaFechaLimite) {
+        if (this.estado == EstadoRegistroUsuariosAtenea.FINALIZADO) {
+            throw new DomainValidationException("No se puede modificar el plazo de un registro de usuarios ATENEA ya finalizado");
+        }
+        if (nuevaFechaLimite == null) {
+            throw new DomainValidationException("Debe seleccionar una fecha válida para el nuevo plazo");
+        }
+        if (this.fechaLimite != null && !nuevaFechaLimite.isAfter(this.fechaLimite)) {
+            throw new DomainValidationException(
+                    "El nuevo plazo (" + nuevaFechaLimite + ") debe ser posterior al plazo actual (" +
+                    this.fechaLimite + "). No se puede volver a setear un tiempo hacia atrás."
+            );
+        }
+        if (nuevaFechaLimite.isBefore(LocalDate.now())) {
+            throw new DomainValidationException(
+                    "El plazo no puede establecerse en una fecha anterior a hoy (" + LocalDate.now() + ")."
+            );
+        }
+        this.fechaLimite = nuevaFechaLimite;
+        this.actualizadoEn = Instant.now();
+    }
+
     public void finalizar(UUID usuarioAeaId, String rutaDocumento) {
         if (this.estado == EstadoRegistroUsuariosAtenea.FINALIZADO) {
             throw new DomainValidationException("El registro de usuarios de ATENEA ya se encuentra finalizado");

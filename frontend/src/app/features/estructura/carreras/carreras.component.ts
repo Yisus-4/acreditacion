@@ -385,7 +385,7 @@ export class CarrerasComponent implements OnInit {
 
   getNombreUnidad(uaId: string): string {
     const ua = this.unidades().find((u) => u.id === uaId);
-    return ua ? ua.nombre : 'Unidad Académica';
+    return ua ? ua.nombre : 'Escuela';
   }
 
   getNombreSede(sedeId: string): string {

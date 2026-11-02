@@ -148,6 +148,14 @@ public class RevisarNormativaService implements RevisarNormativaUseCase {
             actividadNormativa.completar(command.revisorId());
             planTrabajoRepository.saveActividad(actividadNormativa);
 
+            // Completar automáticamente la actividad ACT-04 (Identificar información y documentación de interés)
+            for (ActividadPlanTrabajo act : plan.getActividades()) {
+                if (PlanTrabajo.esActividadIdentificarDocumentacionInteres(act) && act.getEstado() != com.undec.acreditacion.domain.entities.EstadoActividad.COMPLETADA) {
+                    act.marcarCompletadaAutomatica("Documentación de interés confirmada y aprobada con la normativa de carrera");
+                    planTrabajoRepository.saveActividad(act);
+                }
+            }
+
             emailNotificationPort.enviarAprobacion(
                 proceso.getId(),
                 "director_carrera@undec.edu.ar",

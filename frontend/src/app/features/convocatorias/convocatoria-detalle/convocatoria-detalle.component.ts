@@ -7,6 +7,7 @@ import { Auth } from '../../../core/auth/auth';
 import { ConvocatoriaService } from '../../../core/convocatorias/convocatoria.service';
 import {
   ActividadPlanTrabajoDto,
+  EstadoActividad,
   AREAS_INFORMADAS_LABELS,
   ConvocatoriaDetalle,
   DOCUMENTACION_REMITIDA_LABELS,
@@ -81,7 +82,10 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly tabActiva = signal<'ACTIVIDADES' | 'PLAN_TRABAJO' | 'COMISION_AUTOEVALUACION' | 'USUARIOS_ATENEA' | 'SEGUIMIENTO'>('ACTIVIDADES');
 
   // RG-003: Usuarios y permisos ATENEA
-  readonly usuariosAteneaDesbloqueado = computed(() => this.registroCa()?.estado === 'APROBADA');
+  readonly usuariosAteneaDesbloqueado = computed(() => {
+    const est = this.registroCa()?.estado;
+    return est === 'REMITIDA_A_AEA' || est === 'APROBADA';
+  });
   readonly registroUsuariosAtenea = signal<RegistroUsuariosAteneaDto | null>(null);
   readonly cargandoUsuariosAtenea = signal(false);
   readonly guardandoUsuariosAtenea = signal(false);
@@ -90,6 +94,16 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly bannerErrorUsuariosAtenea = signal<string | null>(null);
   readonly modalNuevoUsuarioAteneaVisible = signal(false);
   readonly modalConfirmarFinalizarRg003Visible = signal(false);
+  readonly editandoPlazoAtenea = signal(false);
+  readonly diasPlazoAteneaInput = signal<number>(2);
+  readonly fechaPlazoAteneaInput = signal<string>('');
+  readonly editandoPlazoCa = signal(false);
+  readonly diasPlazoCaInput = signal<number>(15);
+  readonly fechaPlazoCaInput = signal<string>('');
+  readonly subiendoResolucionCa = signal(false);
+  readonly actividadEditandoPlazoId = signal<string | null>(null);
+  readonly fechaPlazoActividadInput = signal<string>('');
+  readonly guardandoPlazoActividad = signal<boolean>(false);
 
   // Matriz de permisos ATENEA (RG-003)
   readonly subTabAtenea = signal<'USUARIOS' | 'MATRIZ'>('USUARIOS');
@@ -462,6 +476,15 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     return this.planTrabajo()?.actividades?.length ?? 0;
   });
 
+  readonly maxPlazosExtendidos = computed(() => {
+    const acts = this.planTrabajo()?.actividades ?? [];
+    return acts.reduce((max, a) => Math.max(max, a.plazosExtendidos?.length ?? 0), 0);
+  });
+
+  readonly columnasPlazosExtendidos = computed(() => {
+    return Array.from({ length: this.maxPlazosExtendidos() }, (_, i) => i);
+  });
+
   readonly actividadReunion = computed(() => {
     const acts = this.planTrabajo()?.actividades ?? [];
     return (
@@ -558,8 +581,8 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     void this.router.navigate(['/acreditacion/convocatorias', procesoId]);
   }
 
-  cargarDatos(id: string, autoAvanzar: boolean = false): void {
-    if (this.idCargadoActualmente === id && this.convocatoria() && !autoAvanzar) {
+  cargarDatos(id: string, autoAvanzar: boolean = false, forzarRecarga: boolean = false): void {
+    if (this.idCargadoActualmente === id && this.convocatoria() && !autoAvanzar && !forzarRecarga) {
       return;
     }
     this.idCargadoActualmente = id;
@@ -754,8 +777,27 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   onNormativaActualizada(): void {
     const c = this.convocatoria();
     if (c) {
+      this.refrescarPlanTrabajo();
       this.cargarDatos(c.id, true);
     }
+  }
+
+  refrescarPlanTrabajo(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    this.convocatoriaService.obtenerPlanTrabajo(c.id).subscribe({
+      next: (plan) => {
+        this.planTrabajo.set(plan);
+        const drawerAct = this.actividadSeleccionadaDrawer();
+        if (drawerAct && plan.actividades) {
+          const actualizada = plan.actividades.find((a) => a.id === drawerAct.id);
+          if (actualizada) {
+            this.actividadSeleccionadaDrawer.set(actualizada);
+          }
+        }
+      },
+      error: () => {},
+    });
   }
 
   private actualizarFocoPorDefecto(): void {
@@ -817,6 +859,31 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       act.codigoActividad === 'ACT-04-IDENTIFICAR-DOCUMENTACION-INTERES' ||
       act.nombre.toLowerCase().includes('documentación de interés')
     );
+  }
+
+  esActividadTallerConeau(act: ActividadPlanTrabajoDto): boolean {
+    return (
+      act.codigoActividad === '1.6' ||
+      act.nombre.toLowerCase().includes('taller de la coneau') ||
+      act.nombre.toLowerCase().includes('taller coneau')
+    );
+  }
+
+  marcarComoCompleta(act: ActividadPlanTrabajoDto): void {
+    if (!this.canManage()) return;
+    this.convocatoriaService.completarActividadSimple(act.id).subscribe({
+      next: (actActualizada) => {
+        this.refrescarPlanTrabajo();
+        const c = this.convocatoria();
+        if (c?.id) {
+          this.cargarDatos(c.id, false, true);
+        }
+      },
+      error: (err) => {
+        console.error('Error al completar actividad:', err);
+        alert(err.error?.message || 'Error al marcar la actividad como completa.');
+      }
+    });
   }
 
   obtenerTextoObservaciones(act: ActividadPlanTrabajoDto): string {
@@ -997,11 +1064,17 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       return;
     }
     this.tabActiva.set(tab);
-    if (tab === 'USUARIOS_ATENEA') {
-      const c = this.convocatoria();
-      if (c && !this.registroUsuariosAtenea()) {
-        this.cargarUsuariosAtenea(c.id);
-      }
+    const c = this.convocatoria();
+    if (!c) return;
+
+    if (tab === 'SEGUIMIENTO') {
+      this.refrescarPlanTrabajo();
+    } else if (tab === 'USUARIOS_ATENEA') {
+      this.cargarUsuariosAtenea(c.id);
+    } else if (tab === 'COMISION_AUTOEVALUACION') {
+      this.cargarRegistroCa(c.id);
+    } else if (tab === 'PLAN_TRABAJO') {
+      this.refrescarPlanTrabajo();
     }
   }
 
@@ -1210,7 +1283,8 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         this.convocatoria.set(detalleActualizado);
         this.bannerExitoPlan.set('¡Actividad Finalizada! La elaboración del Plan de Trabajo y Formulario RG-001 ha quedado formalmente completada.');
         this.seleccionarTab('COMISION_AUTOEVALUACION');
-        this.cargarDatos(c.id);
+        this.refrescarPlanTrabajo();
+        this.cargarDatos(c.id, false, true);
       },
       error: (err) => {
         this.finalizandoActividadPlan.set(false);
@@ -1646,11 +1720,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       }
     }
     const archivo = this.archivoResolucionCa();
-    const caActual = this.registroCa();
-    if (!archivo && (!caActual?.resolucionStoragePath)) {
-      alert('Es obligatorio adjuntar la Resolución de designación (PDF) para remitir a AEA.');
-      return;
-    }
 
     this.remitirCaCargando.set(true);
     const formData = new FormData();
@@ -1668,11 +1737,193 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
           this.miembrosCa.set(ca.miembros.map(mi => ({ ...mi })));
         }
         this.archivoResolucionCa.set(null);
-        this.bannerExitoCa.set('La conformación de la CA ha sido remitida a AEA para su auditoría y aprobación formal.');
+        const msgRes = ca.resolucionStoragePath
+          ? 'La conformación de la CA y su Resolución han sido remitidas a AEA. La etapa de Usuarios ATENEA (RG-003) está desbloqueada.'
+          : 'La conformación de la CA ha sido remitida a AEA y la etapa de Usuarios ATENEA (RG-003) está desbloqueada. La actividad quedará en progreso hasta que envíe la Resolución de Designación.';
+        this.bannerExitoCa.set(msgRes);
+        this.refrescarPlanTrabajo();
+        this.cargarDatos(c.id, false, true);
       },
       error: (err) => {
         this.remitirCaCargando.set(false);
         alert(err?.error?.error || 'No fue posible remitir la conformación de la CA.');
+      }
+    });
+  }
+
+  enviarResolucionPendienteCa(): void {
+    const c = this.convocatoria();
+    const archivo = this.archivoResolucionCa();
+    if (!c) return;
+    if (!archivo) {
+      alert('Seleccione primero el archivo PDF de la Resolución de Designación de la Comisión.');
+      return;
+    }
+    this.subiendoResolucionCa.set(true);
+    this.convocatoriaService.adjuntarResolucionCa(c.id, archivo).subscribe({
+      next: (ca) => {
+        this.subiendoResolucionCa.set(false);
+        this.registroCa.set(ca);
+        this.archivoResolucionCa.set(null);
+        this.bannerExitoCa.set('¡Resolución de Designación de la Comisión enviada correctamente! La actividad ha quedado completada.');
+        this.refrescarPlanTrabajo();
+        this.cargarDatos(c.id, false, true);
+      },
+      error: (err) => {
+        this.subiendoResolucionCa.set(false);
+        alert(err?.error?.error || 'No fue posible adjuntar la Resolución de Designación.');
+      }
+    });
+  }
+
+  private calcularDiaSiguienteISO(fechasCandidatas: (string | undefined | null)[]): string {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    let base = hoy;
+    for (const fStr of fechasCandidatas) {
+      if (!fStr) continue;
+      const f = new Date(fStr + 'T00:00:00');
+      if (!isNaN(f.getTime()) && f > base) {
+        base = f;
+      }
+    }
+    const min = new Date(base);
+    min.setDate(min.getDate() + 1);
+    return min.toISOString().split('T')[0];
+  }
+
+  obtenerFechaMinimaPlazoActividad(act: ActividadPlanTrabajoDto): string {
+    const ultimoExt = act.plazosExtendidos && act.plazosExtendidos.length > 0
+      ? act.plazosExtendidos[act.plazosExtendidos.length - 1]
+      : null;
+    return this.calcularDiaSiguienteISO([act.fechaFinEstimada, ultimoExt]);
+  }
+
+  abrirEdicionPlazoActividad(act: ActividadPlanTrabajoDto): void {
+    if (!this.canManage()) return;
+    this.actividadEditandoPlazoId.set(act.id);
+    this.fechaPlazoActividadInput.set(this.obtenerFechaMinimaPlazoActividad(act));
+  }
+
+  cancelarEdicionPlazoActividad(): void {
+    this.actividadEditandoPlazoId.set(null);
+    this.fechaPlazoActividadInput.set('');
+  }
+
+  guardarPlazoExtendidoActividad(act: ActividadPlanTrabajoDto): void {
+    if (!this.canManage()) return;
+    const nuevaFecha = this.fechaPlazoActividadInput();
+    const minFecha = this.obtenerFechaMinimaPlazoActividad(act);
+    if (!nuevaFecha || nuevaFecha < minFecha) {
+      alert(`El nuevo plazo debe ser posterior al último plazo vigente (mínimo ${minFecha}). No se puede volver el tiempo hacia atrás.`);
+      return;
+    }
+    this.guardandoPlazoActividad.set(true);
+    this.convocatoriaService.extenderPlazoActividad(act.id, nuevaFecha).subscribe({
+      next: (actActualizada) => {
+        this.guardandoPlazoActividad.set(false);
+        this.actividadEditandoPlazoId.set(null);
+        this.planTrabajo.update((plan) => {
+          if (!plan) return plan;
+          return {
+            ...plan,
+            actividades: (plan.actividades || []).map((a) => (a.id === actActualizada.id ? actActualizada : a)),
+          };
+        });
+        if (this.actividadSeleccionadaDrawer()?.id === actActualizada.id) {
+          this.actividadSeleccionadaDrawer.set(actActualizada);
+        }
+        const c = this.convocatoria();
+        if (c) {
+          this.normativaService.obtenerDetalle(c.id).subscribe({ error: () => {} });
+          this.cargarRegistroCa(c.id);
+          if (this.registroUsuariosAtenea()) {
+            this.cargarUsuariosAtenea(c.id);
+          }
+        }
+      },
+      error: (err) => {
+        this.guardandoPlazoActividad.set(false);
+        alert(err?.error?.error || err?.error?.message || 'No se pudo agregar el plazo extendido.');
+      },
+    });
+  }
+
+  obtenerFechaMinimaPlazoCa(): string {
+    const actCa = (this.planTrabajo()?.actividades ?? []).find(
+      (a) => a.codigoActividad === '3.1' || a.codigoActividad === '3.2' || a.nombre.toLowerCase().includes('comisión de autoevaluación')
+    );
+    const ultimoExt = actCa?.plazosExtendidos?.length ? actCa.plazosExtendidos[actCa.plazosExtendidos.length - 1] : null;
+    return this.calcularDiaSiguienteISO([this.registroCa()?.fechaLimiteDc, actCa?.fechaFinEstimada, ultimoExt]);
+  }
+
+  abrirEdicionPlazoCa(): void {
+    if (!this.canManage()) return;
+    this.fechaPlazoCaInput.set(this.obtenerFechaMinimaPlazoCa());
+    this.editandoPlazoCa.set(true);
+  }
+
+  guardarPlazoCa(): void {
+    const c = this.convocatoria();
+    if (!c || !this.canManage()) return;
+    const nuevaFecha = this.fechaPlazoCaInput();
+    const minFecha = this.obtenerFechaMinimaPlazoCa();
+    if (!nuevaFecha || nuevaFecha < minFecha) {
+      alert(`El nuevo plazo debe ser posterior al último plazo vigente (mínimo ${minFecha}). No se puede volver hacia atrás.`);
+      return;
+    }
+    this.cargandoRegistroCa.set(true);
+    this.convocatoriaService.solicitarConformacionCa(c.id, undefined, nuevaFecha).subscribe({
+      next: (ca) => {
+        this.cargandoRegistroCa.set(false);
+        this.editandoPlazoCa.set(false);
+        this.registroCa.set(ca);
+        this.bannerExitoCa.set(`Nuevo plazo extendido hasta ${nuevaFecha} y añadido al seguimiento de actividades.`);
+        this.refrescarPlanTrabajo();
+      },
+      error: (err) => {
+        this.cargandoRegistroCa.set(false);
+        alert(err?.error?.error || err?.error?.message || 'No se pudo actualizar el plazo de la CA.');
+      }
+    });
+  }
+
+  obtenerFechaMinimaPlazoAtenea(): string {
+    const actAtenea = (this.planTrabajo()?.actividades ?? []).find(
+      (a) => a.codigoActividad === '3.3' || a.nombre.toLowerCase().includes('atenea')
+    );
+    const ultimoExt = actAtenea?.plazosExtendidos?.length ? actAtenea.plazosExtendidos[actAtenea.plazosExtendidos.length - 1] : null;
+    return this.calcularDiaSiguienteISO([this.registroUsuariosAtenea()?.fechaLimite, actAtenea?.fechaFinEstimada, ultimoExt]);
+  }
+
+  abrirEdicionPlazoAtenea(): void {
+    if (!this.canManage()) return;
+    this.fechaPlazoAteneaInput.set(this.obtenerFechaMinimaPlazoAtenea());
+    this.editandoPlazoAtenea.set(true);
+  }
+
+  guardarPlazoAtenea(): void {
+    const c = this.convocatoria();
+    if (!c || !this.canManage()) return;
+    const nuevaFecha = this.fechaPlazoAteneaInput();
+    const minFecha = this.obtenerFechaMinimaPlazoAtenea();
+    if (!nuevaFecha || nuevaFecha < minFecha) {
+      this.bannerErrorUsuariosAtenea.set(`El nuevo plazo debe ser posterior al último plazo vigente (mínimo ${minFecha}). No se puede volver hacia atrás.`);
+      return;
+    }
+    this.guardandoUsuariosAtenea.set(true);
+    this.usuariosAteneaService.actualizarPlazo(c.id, undefined, nuevaFecha).subscribe({
+      next: (res) => {
+        this.guardandoUsuariosAtenea.set(false);
+        this.editandoPlazoAtenea.set(false);
+        this.registroUsuariosAtenea.set(res);
+        this.bannerExitoUsuariosAtenea.set(`Nuevo plazo extendido hasta ${nuevaFecha} y añadido al seguimiento de actividades.`);
+        this.refrescarPlanTrabajo();
+        setTimeout(() => this.bannerExitoUsuariosAtenea.set(null), 4000);
+      },
+      error: (err) => {
+        this.guardandoUsuariosAtenea.set(false);
+        this.bannerErrorUsuariosAtenea.set(err?.error?.error || err?.error?.message || 'No se pudo actualizar el plazo de Usuarios ATENEA.');
       }
     });
   }
@@ -1687,7 +1938,8 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         this.aprobandoCa.set(false);
         this.registroCa.set(ca);
         this.bannerExitoCa.set('¡Comisión de Autoevaluación aprobada formalmente! Se ha generado el Registro RG-002 e impactado en el Plan de Trabajo.');
-        this.cargarDatos(c.id);
+        this.refrescarPlanTrabajo();
+        this.cargarDatos(c.id, false, true);
       },
       error: (err) => {
         this.aprobandoCa.set(false);
@@ -1929,7 +2181,8 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         this.cerrarModalFinalizarRg003();
         this.bannerExitoUsuariosAtenea.set('El Registro RG-003 ha sido formalmente emitido, almacenado en MinIO y la Actividad 3.3 en el Plan de Trabajo ha quedado completada.');
         // Recargar convocatoria para refrescar progreso del plan
-        this.cargarDatos(c.id);
+        this.refrescarPlanTrabajo();
+        this.cargarDatos(c.id, false, true);
       },
       error: (err) => {
         this.finalizandoUsuariosAtenea.set(false);

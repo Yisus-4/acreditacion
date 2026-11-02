@@ -78,6 +78,7 @@ export interface NormativaDetalleDto {
 export interface SolicitarNormativaRequest {
   observaciones?: string;
   plazoDiasHabiles?: number;
+  nuevaFechaLimite?: string;
 }
 
 export interface DocumentoObservadoDto {
@@ -123,7 +124,7 @@ export const METADATOS_DOCUMENTOS_NORMATIVA: Partial<Record<TipoDocumentoNormati
   RM_VALIDEZ_NACIONAL: {
     codigo: 'RM_VALIDEZ_NACIONAL',
     titulo: 'Resolución de reconocimiento oficial y validez nacional de título',
-    descripcion: 'Resolución Ministerial de reconocimiento oficial y validez nacional del título universitario (sólo carreras en funcionamiento).',
+    descripcion: 'Resolución Ministerial de reconocimiento oficial y validez nacional del título universitario (Opcional).',
     carpeta: 'NORMATIVA',
     carpetaLabel: '01-Convocatoria y formalizacion CONEAU/Normativa/'
   },
@@ -158,7 +159,7 @@ export const METADATOS_DOCUMENTOS_NORMATIVA: Partial<Record<TipoDocumentoNormati
   APROBACION_PROGRAMAS_ANALITICOS: {
     codigo: 'APROBACION_PROGRAMAS_ANALITICOS',
     titulo: 'Acto administrativo que aprueba los programas analíticos',
-    descripcion: 'Resolución formal de aprobación de los programas analíticos de las asignaturas (sólo carreras en funcionamiento).',
+    descripcion: 'Resolución formal de aprobación de los programas analíticos de las asignaturas (Opcional).',
     carpeta: 'NORMATIVA',
     carpetaLabel: '01-Convocatoria y formalizacion CONEAU/Normativa/'
   },

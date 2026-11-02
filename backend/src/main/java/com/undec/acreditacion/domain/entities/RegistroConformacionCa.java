@@ -90,16 +90,54 @@ public class RegistroConformacionCa {
 
     /**
      * AEA solicita a la Dirección de Carrera (DC) la conformación de la CA.
-     * Inicia el cómputo del plazo legal no mayor a 15 días corridos.
+     * Inicia el cómputo del plazo legal no mayor a 15 días corridos (o el plazo configurado).
      */
     public void solicitar(UUID usuarioAeaId) {
-        if (this.estado != EstadoRegistroCa.PENDIENTE_SOLICITUD && this.estado != EstadoRegistroCa.OBSERVADA) {
-            throw new DomainValidationException("Solo se puede solicitar la conformación de CA si está pendiente o fue observada");
+        solicitar(usuarioAeaId, 15);
+    }
+
+    public void solicitar(UUID usuarioAeaId, Integer diasPlazo) {
+        if (this.estado == EstadoRegistroCa.APROBADA) {
+            throw new DomainValidationException("No se puede modificar el plazo de una comisión de autoevaluación ya aprobada");
         }
-        this.estado = EstadoRegistroCa.SOLICITADA_A_DC;
+        int dias = (diasPlazo != null && diasPlazo > 0) ? diasPlazo : 15;
+        if (this.estado == EstadoRegistroCa.PENDIENTE_SOLICITUD || this.estado == EstadoRegistroCa.OBSERVADA) {
+            this.estado = EstadoRegistroCa.SOLICITADA_A_DC;
+        }
         this.solicitadoEn = Instant.now();
         this.solicitadoPor = usuarioAeaId;
-        this.fechaLimiteDc = LocalDate.now().plusDays(15);
+        this.fechaLimiteDc = LocalDate.now().plusDays(dias);
+        this.actualizadoEn = Instant.now();
+    }
+
+    public void extenderPlazoFecha(UUID usuarioAeaId, LocalDate nuevaFechaLimite) {
+        if (this.estado == EstadoRegistroCa.APROBADA && this.resolucionStoragePath != null && !this.resolucionStoragePath.isBlank()) {
+            throw new DomainValidationException("No se puede modificar el plazo de una comisión de autoevaluación ya completada");
+        }
+        if (nuevaFechaLimite == null) {
+            throw new DomainValidationException("Debe seleccionar una fecha válida para el nuevo plazo");
+        }
+        if (this.fechaLimiteDc != null && !nuevaFechaLimite.isAfter(this.fechaLimiteDc)) {
+            throw new DomainValidationException(
+                    "El nuevo plazo (" + nuevaFechaLimite + ") debe ser posterior al plazo actual (" +
+                    this.fechaLimiteDc + "). No se puede volver a setear un tiempo hacia atrás."
+            );
+        }
+        if (nuevaFechaLimite.isBefore(LocalDate.now())) {
+            throw new DomainValidationException(
+                    "El plazo no puede establecerse en una fecha anterior a hoy (" + LocalDate.now() + ")."
+            );
+        }
+        if (this.estado == EstadoRegistroCa.PENDIENTE_SOLICITUD || this.estado == EstadoRegistroCa.OBSERVADA) {
+            this.estado = EstadoRegistroCa.SOLICITADA_A_DC;
+        }
+        if (this.solicitadoEn == null) {
+            this.solicitadoEn = Instant.now();
+        }
+        if (usuarioAeaId != null) {
+            this.solicitadoPor = usuarioAeaId;
+        }
+        this.fechaLimiteDc = nuevaFechaLimite;
         this.actualizadoEn = Instant.now();
     }
 
@@ -153,8 +191,6 @@ public class RegistroConformacionCa {
             this.resolucionStoragePath = resolucionPath;
             this.resolucionNombreOriginal = resolucionNombre;
             this.resolucionTamanioBytes = resolucionBytes;
-        } else if (this.resolucionStoragePath == null || this.resolucionStoragePath.isBlank()) {
-            throw new DomainValidationException("Es obligatorio adjuntar la Resolución de designación para remitir la conformación de la CA");
         }
 
         this.estado = EstadoRegistroCa.REMITIDA_A_AEA;

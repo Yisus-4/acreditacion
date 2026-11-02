@@ -21,6 +21,16 @@ export class UsuariosAteneaService {
     return this.http.post<RegistroUsuariosAteneaDto>(`/api/procesos/${procesoId}/usuarios-atenea/finalizar`, {});
   }
 
+  actualizarPlazo(procesoId: string, diasHabiles?: number, nuevaFechaLimite?: string): Observable<RegistroUsuariosAteneaDto> {
+    const query = nuevaFechaLimite
+      ? `nuevaFechaLimite=${encodeURIComponent(nuevaFechaLimite)}`
+      : `diasHabiles=${diasHabiles ?? 2}`;
+    return this.http.post<RegistroUsuariosAteneaDto>(
+      `/api/procesos/${procesoId}/usuarios-atenea/plazo?${query}`,
+      {}
+    );
+  }
+
   descargarPdf(procesoId: string): Observable<Blob> {
     return this.http.get(`/api/procesos/${procesoId}/usuarios-atenea/descargar`, {
       responseType: 'blob'

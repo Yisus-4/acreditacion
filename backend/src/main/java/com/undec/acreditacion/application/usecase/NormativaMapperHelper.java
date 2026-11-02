@@ -51,6 +51,10 @@ public final class NormativaMapperHelper {
         boolean esNueva = proceso != null && proceso.getTipoProceso() == TipoProcesoAcreditacion.NUEVA;
         boolean tieneHistorial = proceso != null && proceso.getTipoProceso() == TipoProcesoAcreditacion.EN_FUNCIONAMIENTO;
 
+        LocalDate fechaLimiteDto = solicitud.getFechaLimiteEntrega() != null
+            ? solicitud.getFechaLimiteEntrega()
+            : CalculadorDiasHabiles.calcularFechaLimite(LocalDate.now(), solicitud.getDiasHabilesPlazo() > 0 ? solicitud.getDiasHabilesPlazo() : 5);
+
         return new NormativaDetalleDto(
             solicitud.getId(),
             solicitud.getProcesoId(),
@@ -58,7 +62,7 @@ public final class NormativaMapperHelper {
             solicitud.getEstado(),
             solicitud.getFechaSolicitud(),
             solicitud.getSolicitadoPor(),
-            solicitud.getFechaLimiteEntrega(),
+            fechaLimiteDto,
             solicitud.getDiasHabilesPlazo(),
             solicitud.getFechaEnvio(),
             solicitud.getEnviadoPor(),

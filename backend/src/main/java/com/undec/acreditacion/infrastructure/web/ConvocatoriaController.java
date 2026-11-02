@@ -564,7 +564,8 @@ public class ConvocatoriaController {
                     docsDto,
                     act.getAreasInformadas().stream().map(Enum::name).toList(),
                     act.getDocumentacionRemitida().stream().map(Enum::name).toList(),
-                    act.getObservaciones()
+                    act.getObservaciones(),
+                    act.getPlazosExtendidos()
             ));
         }
 

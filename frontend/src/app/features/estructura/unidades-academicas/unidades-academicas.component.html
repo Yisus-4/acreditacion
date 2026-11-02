@@ -3,9 +3,9 @@
     <div class="page-header__content">
       <div class="page-header__left">
         <a class="back-link" routerLink="/admin/estructura">Volver a Administración Institucional</a>
-        <h1 class="page-header__title">Unidades Académicas</h1>
+        <h1 class="page-header__title">Escuelas</h1>
         <p class="page-header__desc">
-          Gestión de escuelas, departamentos y facultades dependientes de la institución.
+          Gestión de escuelas dependientes de la institución.
         </p>
       </div>
       <div class="page-header__actions">
@@ -13,7 +13,7 @@
           @if (showForm()) {
             Cancelar
           } @else {
-            Registrar unidad académica
+            Registrar escuela
           }
         </button>
       </div>
@@ -36,7 +36,7 @@
     @if (showForm()) {
       <section class="form-panel">
         <h2 class="form-panel__title">
-          {{ editingId() ? 'Editar unidad académica' : 'Nueva unidad académica' }}
+          {{ editingId() ? 'Editar escuela' : 'Nueva escuela' }}
         </h2>
         <form [formGroup]="form" (ngSubmit)="onSubmit()">
           <div class="form-grid">
@@ -61,7 +61,7 @@
             </div>
 
             <div class="form-group form-group--full">
-              <label for="nombre" class="form-label">Nombre de la unidad académica *</label>
+              <label for="nombre" class="form-label">Nombre de la escuela *</label>
               <input
                 id="nombre"
                 type="text"
@@ -95,7 +95,7 @@
               @if (editingId()) {
                 {{ submitting() ? 'Guardando cambios...' : 'Guardar cambios' }}
               } @else {
-                {{ submitting() ? 'Guardando...' : 'Guardar unidad académica' }}
+                {{ submitting() ? 'Guardando...' : 'Guardar escuela' }}
               }
             </button>
           </div>
@@ -118,9 +118,9 @@
     </div>
 
     @if (loading()) {
-      <div class="state-box">Cargando unidades académicas...</div>
+      <div class="state-box">Cargando escuelas...</div>
     } @else if (filteredUnidades().length === 0) {
-      <div class="state-box">No se encontraron unidades académicas registradas.</div>
+      <div class="state-box">No se encontraron escuelas registradas.</div>
     } @else {
       <div class="table-container">
         <table class="data-table">

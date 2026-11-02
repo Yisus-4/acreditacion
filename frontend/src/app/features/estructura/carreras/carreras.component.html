@@ -5,7 +5,7 @@
         <a class="back-link" routerLink="/admin/estructura">Volver a Administración Institucional</a>
         <h1 class="page-header__title">Carreras de Grado</h1>
         <p class="page-header__desc">
-          Gestión de la oferta académica de nivel Grado por unidad académica y sede de dictado.
+          Gestión de la oferta académica de nivel Grado por escuela y sede de dictado.
         </p>
       </div>
       <div class="page-header__actions">
@@ -42,7 +42,7 @@
         <form [formGroup]="form" (ngSubmit)="onSubmit()">
           <div class="form-grid">
             <div class="form-group">
-              <label for="unidadAcademicaId" class="form-label">Unidad académica *</label>
+              <label for="unidadAcademicaId" class="form-label">Escuela *</label>
               <select id="unidadAcademicaId" class="form-control" formControlName="unidadAcademicaId">
                 @for (ua of unidades(); track ua.id) {
                   <option [value]="ua.id">{{ ua.nombre }}</option>
@@ -192,7 +192,7 @@
           />
         </div>
         <select class="form-control filter-select" (change)="onFilterUaChange($event)" [value]="selectedUaFilter()">
-          <option value="">Todas las unidades académicas</option>
+          <option value="">Todas las escuelas</option>
           @for (ua of unidades(); track ua.id) {
             <option [value]="ua.id">{{ ua.nombre }}</option>
           }
@@ -213,7 +213,7 @@
           <thead>
             <tr>
               <th>Carrera</th>
-              <th>Unidad Académica</th>
+              <th>Escuela</th>
               <th>Área Disciplinaria</th>
               <th>Modalidad</th>
               <th>Duración</th>

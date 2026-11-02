@@ -62,7 +62,13 @@ public class SolicitarNormativaService implements SolicitarNormativaUseCase {
         SolicitudNormativaCarrera solicitud = solicitudRepository.findByActividadId(finalActividadId)
             .orElseGet(() -> SolicitudNormativaCarrera.iniciar(proceso.getId(), finalActividadId));
 
-        solicitud.solicitar(command.solicitanteId(), command.observaciones(), 5, LocalDate.now());
+        if (command.nuevaFechaLimite() != null) {
+            solicitud.extenderPlazoFecha(command.solicitanteId(), command.nuevaFechaLimite());
+            actividadNormativa.agregarPlazoExtendido(command.nuevaFechaLimite());
+        } else {
+            int dias = (command.plazoDiasHabiles() != null && command.plazoDiasHabiles() > 0) ? command.plazoDiasHabiles() : 5;
+            solicitud.solicitar(command.solicitanteId(), command.observaciones(), dias, LocalDate.now());
+        }
         SolicitudNormativaCarrera guardada = solicitudRepository.save(solicitud);
 
         actividadNormativa.cambiarEstado(EstadoActividad.EN_PROGRESO);
