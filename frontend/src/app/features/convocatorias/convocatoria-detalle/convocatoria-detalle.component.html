@@ -2294,104 +2294,125 @@
             </div>
           </div>
 
-          <!-- 2. Barra de Título y Acción Guardar Permisos (nodo 9:158) -->
-          <div class="atenea-toolbar-figma">
-            <h2 class="atenea-titulo-figma">Usuarios y permisos de CONEAU Global ATENEA</h2>
+          <!-- 2. Panel Card de Usuarios y Permisos ATENEA -->
+          <div class="card panel-usuarios-atenea-card">
+            <div class="panel-atenea-header">
+              <div class="atenea-titulo-wrap">
+                <h2 class="atenea-titulo-figma">Usuarios y permisos de CONEAU Global ATENEA</h2>
+                <p class="atenea-subtitulo-figma">
+                  Nómina oficial de autoridades, equipo técnico y comisión con credenciales y niveles de acceso a la plataforma (RG-003).
+                </p>
+              </div>
 
-            <div class="atenea-toolbar-acciones">
-              @if (!regU?.finalizado && canManage()) {
+              <div class="atenea-toolbar-acciones">
+                @if (!regU?.finalizado && canManage()) {
+                  <button
+                    type="button"
+                    class="btn-guardar-atenea"
+                    [disabled]="guardandoUsuariosAtenea()"
+                    (click)="guardarUsuariosAtenea()"
+                  >
+                    @if (guardandoUsuariosAtenea()) {
+                      <span class="spinner-sm"></span> Guardando...
+                    } @else {
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                      </svg>
+                      Guardar permisos
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- 3. Barra de Pills de Filtro de Grupo -->
+            <div class="atenea-pills-bar">
+              <div class="pills-grupo">
                 <button
                   type="button"
-                  class="btn-figma-outline"
-                  [disabled]="guardandoUsuariosAtenea()"
-                  (click)="guardarUsuariosAtenea()"
+                  class="pill-btn"
+                  [class.active]="filtroGrupoAtenea() === 'TODOS'"
+                  (click)="filtroGrupoAtenea.set('TODOS')"
                 >
-                  {{ guardandoUsuariosAtenea() ? 'Guardando...' : 'Guardar permisos' }}
+                  Todos <span class="pill-count">{{ conteoAteneaTodos() }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="pill-btn"
+                  [class.active]="filtroGrupoAtenea() === 'SGI'"
+                  (click)="filtroGrupoAtenea.set('SGI')"
+                >
+                  SGI <span class="pill-count">{{ conteoAteneaSgi() }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="pill-btn"
+                  [class.active]="filtroGrupoAtenea() === 'AEA'"
+                  (click)="filtroGrupoAtenea.set('AEA')"
+                >
+                  AEA <span class="pill-count">{{ conteoAteneaAea() }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="pill-btn"
+                  [class.active]="filtroGrupoAtenea() === 'OTRAS_AREAS'"
+                  (click)="filtroGrupoAtenea.set('OTRAS_AREAS')"
+                >
+                  Otras áreas <span class="pill-count">{{ conteoAteneaOtras() }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="pill-btn"
+                  [class.active]="filtroGrupoAtenea() === 'COMISION_AUTOEVALUACION'"
+                  (click)="filtroGrupoAtenea.set('COMISION_AUTOEVALUACION')"
+                >
+                  Comisión de Autoevaluación <span class="pill-count">{{ conteoAteneaCa() }}</span>
+                </button>
+              </div>
+
+              @if (filtroGrupoAtenea() === 'OTRAS_AREAS' && !regU?.finalizado && canManage()) {
+                <button
+                  type="button"
+                  class="btn-agregar-otra-area"
+                  (click)="abrirModalNuevoUsuario('OTRAS_AREAS')"
+                >
+                  + Agregar personal
                 </button>
               }
             </div>
-          </div>
 
-          <!-- 3. Barra de Pills de Filtro de Grupo (nodo 9:162) -->
-          <div class="atenea-pills-bar">
-            <div class="pills-grupo">
-              <button
-                type="button"
-                class="pill-btn"
-                [class.active]="filtroGrupoAtenea() === 'TODOS'"
-                (click)="filtroGrupoAtenea.set('TODOS')"
-              >
-                Todos {{ conteoAteneaTodos() }}
-              </button>
-              <button
-                type="button"
-                class="pill-btn"
-                [class.active]="filtroGrupoAtenea() === 'SGI'"
-                (click)="filtroGrupoAtenea.set('SGI')"
-              >
-                SGI {{ conteoAteneaSgi() }}
-              </button>
-              <button
-                type="button"
-                class="pill-btn"
-                [class.active]="filtroGrupoAtenea() === 'AEA'"
-                (click)="filtroGrupoAtenea.set('AEA')"
-              >
-                AEA {{ conteoAteneaAea() }}
-              </button>
-              <button
-                type="button"
-                class="pill-btn"
-                [class.active]="filtroGrupoAtenea() === 'OTRAS_AREAS'"
-                (click)="filtroGrupoAtenea.set('OTRAS_AREAS')"
-              >
-                Otras áreas {{ conteoAteneaOtras() }}
-              </button>
-              <button
-                type="button"
-                class="pill-btn"
-                [class.active]="filtroGrupoAtenea() === 'COMISION_AUTOEVALUACION'"
-                (click)="filtroGrupoAtenea.set('COMISION_AUTOEVALUACION')"
-              >
-                Comisión de Autoevaluación {{ conteoAteneaCa() }}
-              </button>
-            </div>
-
-            @if (filtroGrupoAtenea() === 'OTRAS_AREAS' && !regU?.finalizado && canManage()) {
-              <button
-                type="button"
-                class="btn-agregar-otra-area"
-                (click)="abrirModalNuevoUsuario('OTRAS_AREAS')"
-              >
-                + Agregar personal
-              </button>
-            }
-          </div>
-
-          <!-- 4. Tabla Figma de Usuarios ATENEA (nodo 9:173) -->
-          <div class="table-container-figma">
-            <div class="table-scroll">
-              <table class="tabla-figma tabla-atenea-figma">
+            <!-- 4. Tabla Figma de Usuarios ATENEA Enmarcada -->
+            <div class="tabla-atenea-container">
+              <table class="tabla-atenea-figma">
                 <thead>
                   <tr>
-                    <th style="width: 220px;">Usuario</th>
-                    <th style="width: 270px;">Grupo</th>
-                    <th style="width: 200px;">Correo</th>
-                    <th style="width: 190px;">Tipo de acceso</th>
-                    <th>Estado</th>
+                    <th class="th-user" style="width: 250px;">Usuario</th>
+                    <th class="th-grupo" style="width: 270px;">Grupo / Dependencia</th>
+                    <th class="th-correo" style="width: 210px;">Correo Institucional</th>
+                    <th class="th-acceso" style="width: 200px;">Tipo de acceso</th>
+                    <th class="th-estado" style="width: 190px;">Estado CONEAU</th>
                     @if (!regU?.finalizado && canManage()) {
-                      <th style="width: 60px; text-align: center;"></th>
+                      <th class="th-quitar" style="width: 50px; text-align: center;"></th>
                     }
                   </tr>
                 </thead>
                 <tbody>
                   @for (u of usuariosAteneaFiltrados(); track u.id || $index) {
-                    <tr>
+                    <tr class="fila-usuario-atenea">
                       <td class="td-usuario">
-                        <span class="user-name">{{ u.nombreCompleto || (u.apellido + ', ' + u.nombre) }}</span>
-                        <span class="user-dni">DNI: {{ u.dniCuil }}</span>
+                        <div class="user-avatar-info">
+                          <div class="user-avatar-initials">
+                            {{ (u.nombreCompleto || u.apellido || 'U').substring(0, 2).toUpperCase() }}
+                          </div>
+                          <div class="user-details">
+                            <span class="user-name">{{ u.nombreCompleto || (u.apellido + ', ' + u.nombre) }}</span>
+                            <span class="user-dni">DNI: {{ u.dniCuil }}</span>
+                          </div>
+                        </div>
                       </td>
-                      <td>
+                      <td class="td-grupo">
                         <span class="user-grupo">{{ formatearGrupoAtenea(u.grupoUsuario) }}</span>
                         @if (u.areaDependencia || u.cargoFuncion) {
                           <span class="user-cargo">
@@ -2399,8 +2420,10 @@
                           </span>
                         }
                       </td>
-                      <td class="td-correo">{{ u.correo }}</td>
-                      <td>
+                      <td class="td-correo">
+                        <span class="correo-texto">{{ u.correo }}</span>
+                      </td>
+                      <td class="td-acceso">
                         @if (!regU?.finalizado && canManage()) {
                           <select
                             [(ngModel)]="u.tipoAcceso"
@@ -2412,26 +2435,32 @@
                             <option value="ADMINISTRACION">Administración</option>
                           </select>
                         } @else {
-                          <span class="tipo-acceso-text">{{ formatearTipoAcceso(u.tipoAcceso) }}</span>
+                          <span class="badge-acceso-pill">{{ formatearTipoAcceso(u.tipoAcceso) }}</span>
                         }
                       </td>
-                      <td>
+                      <td class="td-estado">
                         @if (u.habilitadoEnConeau) {
-                          <span class="estado-habilitado">Habilitado</span>
+                          <span class="badge-estado-atenea habilitado">
+                            <span class="dot-status"></span> Habilitado
+                          </span>
                         } @else if (u.requiereCuentaNuevaConeauGlobal) {
-                          <span class="estado-cuenta-nueva">Requiere cuenta nueva</span>
+                          <span class="badge-estado-atenea cuenta-nueva">
+                            <span class="dot-status"></span> Requiere cuenta nueva
+                          </span>
                         } @else {
-                          <span class="estado-pendiente">Pendiente</span>
+                          <span class="badge-estado-atenea pendiente">
+                            <span class="dot-status"></span> Pendiente
+                          </span>
                         }
                       </td>
                       @if (!regU?.finalizado && canManage()) {
-                        <td style="text-align: center;">
+                        <td class="td-quitar" style="text-align: center;">
                           @if (u.grupoUsuario === 'OTRAS_AREAS') {
                             <button
                               type="button"
                               class="btn-quitar-usuario"
                               (click)="eliminarUsuarioAtenea(u)"
-                              title="Quitar usuario"
+                              title="Quitar usuario de Otras áreas"
                             >
                               ✕
                             </button>
@@ -2442,7 +2471,15 @@
                   } @empty {
                     <tr>
                       <td [attr.colspan]="(!regU?.finalizado && canManage()) ? 6 : 5" class="empty-atenea">
-                        No se encontraron usuarios para el grupo seleccionado.
+                        <div class="empty-atenea-box">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 32px; height: 32px; color: #9ca3af; margin: 0 auto 8px auto; display: block;">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                          </svg>
+                          <span>No se encontraron usuarios para el grupo seleccionado.</span>
+                        </div>
                       </td>
                     </tr>
                   }
@@ -2686,7 +2723,6 @@
                       <th class="th-ext">Plazo extendido</th>
                       <th class="th-estado">Estado</th>
                       <th class="th-doc">Documento asociado</th>
-                      <th class="th-accion">Acción</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2848,16 +2884,6 @@
                           } @else {
                             <span class="sin-dato-figma">—</span>
                           }
-                        </td>
-                        <td class="td-accion">
-                          <button
-                            type="button"
-                            class="btn-accion-puntos-figma"
-                            (click)="abrirDrawer(act); $event.stopPropagation()"
-                            [title]="'Ver detalle y gestión de ' + act.codigoActividad"
-                          >
-                            ···
-                          </button>
                         </td>
                       </tr>
                     }
@@ -3176,6 +3202,20 @@
                             </button>
                           }
                         </div>
+                      </div>
+                    }
+
+                    @if (actDrawer.codigoActividad === '4.1' || actDrawer.codigoActividad === '4.2' || actDrawer.nombre.toLowerCase().includes('infraestructura') || actDrawer.nombre.toLowerCase().includes('higiene')) {
+                      <div class="drawer-acciones-box mt-md">
+                        <a
+                          class="btn-primario-accion w-full"
+                          style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: #6b4c5b;"
+                          [routerLink]="['/autoevaluacion/infraestructura']"
+                          [queryParams]="{ procesoId: convocatoria()?.id }"
+                          (click)="cerrarDrawer()"
+                        >
+                          <span>Gestionar en Autoevaluación (RG-005 / GT-003) &rarr;</span>
+                        </a>
                       </div>
                     }
 
