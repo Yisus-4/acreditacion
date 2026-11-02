@@ -278,186 +278,167 @@
       <!-- VISTA INDIVIDUAL DE CARRERA: ACTIVIDADES Y FICHA FT-012        -->
       <!-- ============================================================= -->
 
-    <!-- 1. Encabezado Institucional (DESIGN.md 7.1 y 4) -->
-    <header class="institucional-header">
-      <div class="membrete-container">
-        <div class="membrete-textos">
-          <div class="membrete-superior">Área de Evaluación y Acreditación (AEA)</div>
-          <h1 class="membrete-intermedia">
-            {{ c.carreraNombre }} <span class="separador-codigo">·</span> <span class="codigo-convocatoria">{{ c.codigo }}</span>
-          </h1>
-          <div class="membrete-inferior">UNIVERSIDAD NACIONAL DE CHILECITO</div>
+    <!-- 1. Encabezado Figma con borde dorado inferior (node 9:114 / 9:207) -->
+    <header class="carrera-header-figma">
+      <nav class="breadcrumb-figma">
+        <a routerLink="/dashboard">Inicio</a>
+        <span class="sep">/</span>
+        <a routerLink="/acreditacion/convocatorias">Convocatorias</a>
+        @if (c.unidadAcademicaNombre) {
+          <span class="sep">/</span>
+          <span>{{ c.unidadAcademicaNombre }}</span>
+        }
+        <span class="sep">/</span>
+        <span class="curr">{{ c.codigo }}</span>
+      </nav>
+
+      <div class="carrera-header-main">
+        <div class="carrera-header-text">
+          <p class="escuela-subtitulo">{{ c.unidadAcademicaNombre || 'Escuela de Ingeniería' }}</p>
+          <h1 class="carrera-titulo-figma">{{ c.carreraNombre }} · {{ c.codigo }}</h1>
+          <p class="carrera-meta-figma">
+            Grado · {{ c.tipoProceso === 'EN_FUNCIONAMIENTO' ? 'En funcionamiento' : 'Nueva' }} · Estado del proceso: {{ c.estado }}
+          </p>
         </div>
-        <div class="header-acciones">
+
+        <div class="carrera-header-actions">
           @if (c.convocatoriaEscuelaId) {
-            <a [routerLink]="['/acreditacion/convocatorias', c.convocatoriaEscuelaId]" class="btn-volver-link">
-              &larr; Volver a Carreras de la Escuela
+            <a [routerLink]="['/acreditacion/convocatorias', c.convocatoriaEscuelaId]" class="btn-figma-outline">
+              &larr; Volver a carreras
             </a>
           } @else {
-            <a routerLink="/acreditacion/convocatorias" class="btn-volver-link">
-              &larr; Volver a Convocatorias
+            <a routerLink="/acreditacion/convocatorias" class="btn-figma-outline">
+              &larr; Volver a convocatorias
             </a>
           }
           @if (canManage()) {
             <button
               type="button"
-              class="btn-reiniciar-convocatoria"
+              class="btn-reiniciar-convocatoria-figma"
               (click)="confirmarReinicio()"
               [disabled]="reiniciando()"
               title="Reiniciar y borrar datos de prueba para comenzar desde cero"
             >
-              @if (reiniciando()) {
-                <span class="spinner-sm"></span>
-                <span>Reiniciando...</span>
-              } @else {
-                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                  <path d="M3 3v5h5" />
-                </svg>
-                <span>Reiniciar Convocatoria</span>
-              }
+              ···
             </button>
           }
         </div>
       </div>
-
-      <div class="header-metadatos-bar">
-        <div class="meta-item-box">
-          <span class="meta-rotulo">Nivel:</span>
-          <span class="badge-nivel-grado">GRADO</span>
-        </div>
-        <div class="meta-divisor"></div>
-        <div class="meta-item-box">
-          <span class="meta-rotulo">Tipo de Proceso:</span>
-          <span class="meta-valor">{{ c.tipoProceso === 'EN_FUNCIONAMIENTO' ? 'En Funcionamiento' : 'Nueva' }}</span>
-        </div>
-        <div class="meta-divisor"></div>
-        <div class="meta-item-box">
-          <span class="meta-rotulo">Carrera:</span>
-          <span class="meta-valor">{{ c.carreraNombre }} ({{ c.carreraSigla || 'S/S' }})</span>
-        </div>
-        <div class="meta-divisor"></div>
-        <div class="meta-item-box">
-          <span class="meta-rotulo">Estado del Proceso:</span>
-          <span
-            class="badge-estado-institucional"
-            [class.estado-iniciado]="c.estado === 'INICIADO'"
-            [class.estado-autoevaluacion]="c.estado === 'EN_AUTOEVALUACION'"
-            [class.estado-finalizado]="c.estado === 'FINALIZADO'"
-          >
-            {{ c.estado }}
-          </span>
-        </div>
-      </div>
     </header>
 
-    <!-- 3. Navegación en Pestañas Principal -->
-    <div class="nav-tabs-convocatoria" role="tablist">
+    <!-- 2. Navegación en 5 EtapaCards Figma (node 9:127 / 18:78) -->
+    <div class="etapa-cards-container" role="tablist">
+      <!-- Etapa 1 -->
       <button
         type="button"
         role="tab"
-        class="tab-nav-btn"
+        class="etapa-card"
         [class.active]="tabActiva() === 'ACTIVIDADES'"
         [attr.aria-selected]="tabActiva() === 'ACTIVIDADES'"
         (click)="seleccionarTab('ACTIVIDADES')"
       >
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
-          <polyline points="10 9 9 9 8 9" />
-        </svg>
-        <span class="tab-label">Formalización y Normativa</span>
+        <span class="etapa-num">1</span>
+        <span class="etapa-titulo">Formalización y Normativa</span>
+        <span class="etapa-estado estado-completada">Completada</span>
       </button>
 
+      <!-- Etapa 2 -->
       <button
         type="button"
         role="tab"
-        class="tab-nav-btn"
+        class="etapa-card"
         [class.active]="tabActiva() === 'PLAN_TRABAJO'"
         [attr.aria-selected]="tabActiva() === 'PLAN_TRABAJO'"
         (click)="seleccionarTab('PLAN_TRABAJO')"
       >
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 11l3 3L22 4" />
-          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-        </svg>
-        <span class="tab-label">Plan de Trabajo y RG-001</span>
-        @if (!planTrabajoDesbloqueado()) {
-          <span class="badge-tab-bloqueada">Bloqueada</span>
-        } @else if (actividadPlanFinalizada()) {
-          <span class="badge-tab-finalizada">Completada</span>
-        }
+        <span class="etapa-num">2</span>
+        <span class="etapa-titulo">Plan de Trabajo y RG-001</span>
+        <span
+          class="etapa-estado"
+          [class.estado-completada]="actividadPlanFinalizada()"
+          [class.estado-bloqueada]="!planTrabajoDesbloqueado()"
+        >
+          @if (!planTrabajoDesbloqueado()) {
+            Bloqueada
+          } @else if (actividadPlanFinalizada()) {
+            Completada
+          } @else {
+            Pendiente
+          }
+        </span>
       </button>
 
-            <button
+      <!-- Etapa 3 -->
+      <button
         type="button"
         role="tab"
-        class="tab-nav-btn"
+        class="etapa-card"
         [class.active]="tabActiva() === 'COMISION_AUTOEVALUACION'"
         [attr.aria-selected]="tabActiva() === 'COMISION_AUTOEVALUACION'"
         (click)="seleccionarTab('COMISION_AUTOEVALUACION')"
       >
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-        </svg>
-        <span class="tab-label">Comisión de Autoevaluación (CA · RG-002)</span>
-        @if (!conformacionCaDesbloqueada()) {
-          <span class="badge-tab-bloqueada">Bloqueada</span>
-        } @else if (registroCa()?.estado === 'APROBADA' && registroCa()?.resolucionStoragePath) {
-          <span class="badge-tab-finalizada">Completada</span>
-        } @else if (registroCa()?.estado === 'APROBADA' || registroCa()?.estado === 'REMITIDA_A_AEA') {
-          <span class="badge-tab-en-proceso">En progreso</span>
-        } @else if (registroCa()?.estado === 'OBSERVADA') {
-          <span class="badge-tab-observada">Observada</span>
-        }
+        <span class="etapa-num">3</span>
+        <span class="etapa-titulo">Comisión de Autoevaluación</span>
+        <span
+          class="etapa-estado"
+          [class.estado-completada]="registroCa()?.estado === 'APROBADA'"
+          [class.estado-progreso]="registroCa()?.estado === 'REMITIDA_A_AEA' || (registroCa()?.estado === 'APROBADA' && !registroCa()?.resolucionStoragePath)"
+          [class.estado-bloqueada]="!conformacionCaDesbloqueada()"
+        >
+          @if (!conformacionCaDesbloqueada()) {
+            Bloqueada
+          } @else if (registroCa()?.estado === 'APROBADA') {
+            Completada
+          } @else if (registroCa()?.estado === 'REMITIDA_A_AEA') {
+            En progreso
+          } @else if (registroCa()?.estado === 'OBSERVADA') {
+            Observada
+          } @else {
+            En definición
+          }
+        </span>
       </button>
 
+      <!-- Etapa 4 -->
       <button
         type="button"
         role="tab"
-        class="tab-nav-btn"
+        class="etapa-card"
         [class.active]="tabActiva() === 'USUARIOS_ATENEA'"
         [attr.aria-selected]="tabActiva() === 'USUARIOS_ATENEA'"
         (click)="seleccionarTab('USUARIOS_ATENEA')"
       >
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-          <circle cx="8.5" cy="7" r="4" />
-          <line x1="20" y1="8" x2="20" y2="14" />
-          <line x1="23" y1="11" x2="17" y2="11" />
-        </svg>
-        <span class="tab-label">Usuarios ATENEA (RG-003)</span>
-        @if (!usuariosAteneaDesbloqueado()) {
-          <span class="badge-tab-bloqueada">Bloqueada</span>
-        } @else if (registroUsuariosAtenea()?.finalizado) {
-          <span class="badge-tab-finalizada">Completada</span>
-        } @else {
-          <span class="badge-tab-en-proceso">En definición</span>
-        }
+        <span class="etapa-num">4</span>
+        <span class="etapa-titulo">Usuarios ATENEA (RG-003)</span>
+        <span
+          class="etapa-estado"
+          [class.estado-completada]="registroUsuariosAtenea()?.finalizado"
+          [class.estado-definicion]="usuariosAteneaDesbloqueado() && !registroUsuariosAtenea()?.finalizado"
+          [class.estado-bloqueada]="!usuariosAteneaDesbloqueado()"
+        >
+          @if (!usuariosAteneaDesbloqueado()) {
+            Bloqueada
+          } @else if (registroUsuariosAtenea()?.finalizado) {
+            Completada
+          } @else {
+            En definición
+          }
+        </span>
       </button>
 
+      <!-- Etapa 5 -->
       @if (canManage()) {
         <button
           type="button"
           role="tab"
-          class="tab-nav-btn"
+          class="etapa-card"
           [class.active]="tabActiva() === 'SEGUIMIENTO'"
           [attr.aria-selected]="tabActiva() === 'SEGUIMIENTO'"
           (click)="seleccionarTab('SEGUIMIENTO')"
         >
-          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="3" y1="10" x2="21" y2="10" />
-          </svg>
-          <span class="tab-label">Seguimiento del Plan de Trabajo (AEA)</span>
-          <span class="tab-counter-neutral">{{ conteoTotal() }} actividades</span>
+          <span class="etapa-num">5</span>
+          <span class="etapa-titulo">Seguimiento del Plan de Trabajo</span>
+          <span class="etapa-estado">{{ conteoTotal() }} actividades</span>
         </button>
       }
     </div>
@@ -2860,6 +2841,26 @@
                   </button>
                 </div>
               }
+            </div>
+
+            <!-- KPIs Figma (node 9:211) -->
+            <div class="kpi-metric-cards-figma">
+              <div class="kpi-card-figma">
+                <span class="kpi-rotulo">Actividades</span>
+                <span class="kpi-numero">{{ conteoTotal() }}</span>
+              </div>
+              <div class="kpi-card-figma">
+                <span class="kpi-rotulo">Completadas</span>
+                <span class="kpi-numero kpi-success">{{ conteoCompletadas() }}</span>
+              </div>
+              <div class="kpi-card-figma">
+                <span class="kpi-rotulo">Pendientes</span>
+                <span class="kpi-numero">{{ conteoPendientes() }}</span>
+              </div>
+              <div class="kpi-card-figma kpi-gold">
+                <span class="kpi-rotulo">Con plazo extendido</span>
+                <span class="kpi-numero">{{ conteoConPlazoExtendido() }}</span>
+              </div>
             </div>
 
             <!-- Barra de Filtros y Búsqueda (Sin Prioridad) -->

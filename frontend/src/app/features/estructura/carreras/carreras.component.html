@@ -1,272 +1,271 @@
-<div class="page-layout">
-  <header class="page-header">
-    <div class="page-header__content">
-      <div class="page-header__left">
-        <a class="back-link" routerLink="/admin/estructura">Volver a Administración Institucional</a>
-        <h1 class="page-header__title">Carreras de Grado</h1>
-        <p class="page-header__desc">
-          Gestión de la oferta académica de nivel Grado por escuela y sede de dictado.
-        </p>
-      </div>
-      <div class="page-header__actions">
-        <button class="btn btn--primary" type="button" (click)="toggleForm()">
-          @if (showForm()) {
-            Cancelar
-          } @else {
-            Registrar carrera
-          }
-        </button>
-      </div>
+<div class="vista-gestion-layout">
+  <app-subnav-gestion-institucional seccionActual="Carreras"></app-subnav-gestion-institucional>
+
+  @if (errorMessage()) {
+    <div class="alert-banner-figma error">
+      <span>{{ errorMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="errorMessage.set(null)">✕</button>
     </div>
-  </header>
+  }
 
-  <main class="page-container">
-    @if (errorMessage()) {
-      <div class="alert alert--danger">
-        <span>{{ errorMessage() }}</span>
+  @if (successMessage()) {
+    <div class="alert-banner-figma success">
+      <span>{{ successMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="successMessage.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Toolbar de Búsqueda y Acción Nuevo -->
+  <div class="vista-toolbar">
+    <div style="display: flex; gap: 12px; align-items: center; flex: 1 1 500px; flex-wrap: wrap;">
+      <div class="search-box-figma" style="flex: 1 1 300px;">
+        <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+        </svg>
+        <input
+          type="text"
+          placeholder="Buscar por nombre o sigla"
+          [value]="searchQuery()"
+          (input)="onSearch($event)"
+        />
       </div>
-    }
 
-    @if (successMessage()) {
-      <div class="alert alert--success">
-        <span>{{ successMessage() }}</span>
+      <!-- Filtro por Escuela -->
+      <select
+        [value]="selectedUaFilter()"
+        (change)="onFilterUa($event)"
+        style="padding: 10px 14px; border: 1px solid var(--border-color, #e5e7eb); border-radius: var(--radius-md, 8px); background: #ffffff; font-size: 14px; color: var(--color-text, #1f1a1d);"
+      >
+        <option value="">Todas las escuelas</option>
+        @for (ua of unidades(); track ua.id) {
+          <option [value]="ua.id">{{ ua.nombre }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="toolbar-actions-right">
+      <span class="stats-count-figma">
+        {{ filteredCarreras().length }} {{ filteredCarreras().length === 1 ? 'carrera' : 'carreras' }}
+      </span>
+      <button class="btn-nuevo-figma" type="button" (click)="toggleForm()">
+        + Nueva carrera
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabla de Carreras -->
+  @if (loading()) {
+    <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
+      Cargando carreras de grado...
+    </div>
+  } @else if (filteredCarreras().length === 0) {
+    <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
+      No se encontraron carreras registradas.
+    </div>
+  } @else {
+    <div class="tabla-figma-wrapper">
+      <table class="tabla-figma">
+        <thead>
+          <tr>
+            <th style="width: 260px;">Carrera</th>
+            <th style="width: 80px;">Sigla</th>
+            <th>Escuela</th>
+            <th style="width: 140px;">Modalidad</th>
+            <th style="width: 100px;">Estado</th>
+            <th class="col-acciones" style="width: 180px;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of filteredCarreras(); track c.id) {
+            <tr>
+              <td class="col-nombre">
+                <div>{{ c.nombre }}</div>
+                @if (c.tituloOtorgado) {
+                  <small style="color: var(--color-text-muted); font-size: 12px; font-weight: normal;">
+                    Título: {{ c.tituloOtorgado }}
+                  </small>
+                }
+              </td>
+              <td><code>{{ c.sigla || '-' }}</code></td>
+              <td class="col-desc">{{ getNombreUnidad(c.unidadAcademicaId) }}</td>
+              <td>
+                <span style="font-size: 13px; color: var(--color-text-muted);">
+                  {{ formatearModalidad(c.modalidad) }}
+                </span>
+              </td>
+              <td>
+                <span class="badge-estado-figma" [class.activa]="c.activo" [class.inactiva]="!c.activo">
+                  {{ c.activo ? 'Activa' : 'Inactiva' }}
+                </span>
+              </td>
+              <td class="col-acciones">
+                <button
+                  class="btn-accion-icono"
+                  type="button"
+                  (click)="iniciarEdicion(c)"
+                  title="Editar carrera"
+                >
+                  Editar
+                </button>
+                <button
+                  class="btn-accion-icono"
+                  type="button"
+                  (click)="cambiarEstado(c)"
+                  [title]="c.activo ? 'Desactivar carrera' : 'Activar carrera'"
+                >
+                  {{ c.activo ? 'Desactivar' : 'Activar' }}
+                </button>
+                <button
+                  class="btn-accion-icono btn-peligro"
+                  type="button"
+                  (click)="eliminar(c)"
+                  title="Eliminar carrera"
+                >
+                  ✕
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Panel Lateral Deslizante (Drawer) Figma Frame 8:201 -->
+  @if (showForm()) {
+    <div class="drawer-backdrop" (click)="cancelarFormulario()"></div>
+
+    <aside class="drawer-panel-figma" role="dialog" aria-modal="true" style="width: 480px;">
+      <div class="drawer-header-figma">
+        <h2>{{ editingId() ? 'Editar carrera' : 'Nueva carrera' }}</h2>
+        <button type="button" class="btn-cerrar-drawer" (click)="cancelarFormulario()" aria-label="Cerrar">✕</button>
       </div>
-    }
 
-    @if (showForm()) {
-      <section class="form-panel">
-        <h2 class="form-panel__title">
-          {{ editingId() ? 'Editar carrera de grado' : 'Nueva carrera de grado' }}
-        </h2>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="drawer-body-figma">
+        <div class="form-group-figma">
+          <label for="unidadAcademicaId">Escuela *</label>
+          <select id="unidadAcademicaId" formControlName="unidadAcademicaId">
+            @for (ua of unidades(); track ua.id) {
+              <option [value]="ua.id">{{ ua.nombre }}</option>
+            }
+          </select>
+        </div>
 
-        <form [formGroup]="form" (ngSubmit)="onSubmit()">
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="unidadAcademicaId" class="form-label">Escuela *</label>
-              <select id="unidadAcademicaId" class="form-control" formControlName="unidadAcademicaId">
-                @for (ua of unidades(); track ua.id) {
-                  <option [value]="ua.id">{{ ua.nombre }}</option>
-                }
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="sigla" class="form-label">Sigla / Código</label>
-              <input id="sigla" type="text" class="form-control" placeholder="Ej. ISI, LSI" formControlName="sigla" />
-            </div>
-
-            <div class="form-group form-group--full">
-              <label for="nombre" class="form-label">Nombre de la carrera *</label>
-              <input
-                id="nombre"
-                type="text"
-                class="form-control"
-                [class.form-control--invalid]="isFieldInvalid(form.controls.nombre)"
-                placeholder="Ej. Ingeniería en Sistemas de Información"
-                formControlName="nombre"
-              />
-              @if (isFieldInvalid(form.controls.nombre)) {
-                <span class="field-error">El nombre de la carrera es obligatorio.</span>
-              }
-            </div>
-
-            <div class="form-group">
-              <label for="areaDisciplinaria" class="form-label">Área disciplinaria *</label>
-              <input
-                id="areaDisciplinaria"
-                type="text"
-                class="form-control"
-                [class.form-control--invalid]="isFieldInvalid(form.controls.areaDisciplinaria)"
-                placeholder="Ej. Ciencias Aplicadas"
-                formControlName="areaDisciplinaria"
-              />
-              @if (isFieldInvalid(form.controls.areaDisciplinaria)) {
-                <span class="field-error">El área disciplinaria es obligatoria.</span>
-              }
-            </div>
-
-            <div class="form-group">
-              <label for="tituloOtorgado" class="form-label">Título otorgado</label>
-              <input
-                id="tituloOtorgado"
-                type="text"
-                class="form-control"
-                placeholder="Ej. Ingeniero/a en Sistemas"
-                formControlName="tituloOtorgado"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="modalidad" class="form-label">Modalidad *</label>
-              <select id="modalidad" class="form-control" formControlName="modalidad">
-                <option value="PRESENCIAL">Presencial</option>
-                <option value="DISTANCIA">A Distancia</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="estado" class="form-label">Estado *</label>
-              <select id="estado" class="form-control" formControlName="estado">
-                <option value="EN_FUNCIONAMIENTO">En funcionamiento</option>
-                <option value="NUEVA">Nueva</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="duracionAnios" class="form-label">Duración (años)</label>
-              <input
-                id="duracionAnios"
-                type="number"
-                min="1"
-                max="10"
-                class="form-control"
-                formControlName="duracionAnios"
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Nivel</label>
-              <input type="text" class="form-control" value="GRADO" disabled />
-            </div>
-
-            <div class="form-group form-group--full">
-              <label for="descripcion" class="form-label">Descripción</label>
-              <textarea
-                id="descripcion"
-                class="form-control"
-                rows="2"
-                placeholder="Descripción de la carrera..."
-                formControlName="descripcion"
-              ></textarea>
-            </div>
-
-            <div class="form-group form-group--full switch-group">
-              <label class="switch-control">
-                <input type="checkbox" formControlName="activo" />
-                <span class="switch-slider"></span>
-                <span class="switch-label">Carrera activa</span>
-              </label>
-            </div>
-
-            <div class="form-group form-group--full">
-              <label class="form-label">Sedes de dictado</label>
-              <div class="sedes-list">
-                @for (sede of sedes(); track sede.id) {
-                  <label class="checkbox-item">
-                    <input
-                      type="checkbox"
-                      [checked]="isSedeSelected(sede.id)"
-                      (change)="onSedeCheckboxChange($event, sede.id)"
-                    />
-                    <span>{{ sede.nombre }} ({{ sede.direccionCompleta }})</span>
-                  </label>
-                }
-              </div>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button class="btn btn--secondary" type="button" (click)="cancelarFormulario()">
-              Cancelar
-            </button>
-            <button class="btn btn--primary" type="submit" [disabled]="submitting()">
-              @if (editingId()) {
-                {{ submitting() ? 'Guardando cambios...' : 'Guardar cambios' }}
-              } @else {
-                {{ submitting() ? 'Guardando...' : 'Guardar carrera' }}
-              }
-            </button>
-          </div>
-        </form>
-      </section>
-    }
-
-    <div class="table-toolbar">
-      <div class="toolbar-filters">
-        <div class="search-box">
+        <div class="form-group-figma">
+          <label for="nombre">Nombre de la carrera *</label>
           <input
+            id="nombre"
             type="text"
-            placeholder="Filtrar por nombre, sigla o título..."
-            [value]="searchQuery()"
-            (input)="onSearch($event)"
+            [class.input-error]="isFieldInvalid(form.controls.nombre)"
+            placeholder="Ej. Ingeniería en Sistemas de Información"
+            formControlName="nombre"
+          />
+          @if (isFieldInvalid(form.controls.nombre)) {
+            <span class="error-texto">El nombre de la carrera es obligatorio.</span>
+          }
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group-figma">
+            <label for="sigla">Sigla / Código</label>
+            <input
+              id="sigla"
+              type="text"
+              placeholder="Ej. ISI"
+              formControlName="sigla"
+            />
+          </div>
+          <div class="form-group-figma">
+            <label for="duracionAnios">Duración (años)</label>
+            <input
+              id="duracionAnios"
+              type="number"
+              min="1"
+              max="10"
+              placeholder="5"
+              formControlName="duracionAnios"
+            />
+          </div>
+        </div>
+
+        <div class="form-group-figma">
+          <label for="tituloOtorgado">Título otorgado</label>
+          <input
+            id="tituloOtorgado"
+            type="text"
+            placeholder="Ej. Ingeniero/a en Sistemas de Información"
+            formControlName="tituloOtorgado"
           />
         </div>
-        <select class="form-control filter-select" (change)="onFilterUaChange($event)" [value]="selectedUaFilter()">
-          <option value="">Todas las escuelas</option>
-          @for (ua of unidades(); track ua.id) {
-            <option [value]="ua.id">{{ ua.nombre }}</option>
-          }
-        </select>
-      </div>
-      <div class="table-stats">
-        Total: <strong>{{ filteredCarreras().length }}</strong> registros
-      </div>
-    </div>
 
-    @if (loading()) {
-      <div class="state-box">Cargando carreras de grado...</div>
-    } @else if (filteredCarreras().length === 0) {
-      <div class="state-box">No se encontraron carreras de grado registradas.</div>
-    } @else {
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Carrera</th>
-              <th>Escuela</th>
-              <th>Área Disciplinaria</th>
-              <th>Modalidad</th>
-              <th>Duración</th>
-              <th>Sedes</th>
-              <th>Estado Carrera</th>
-              <th>Activa/Inactiva</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (carrera of filteredCarreras(); track carrera.id) {
-              <tr>
-                <td>
-                  <div class="font-medium">{{ carrera.nombre }}</div>
-                  @if (carrera.tituloOtorgado || carrera.sigla) {
-                    <div class="text-sub">
-                      {{ carrera.sigla ? carrera.sigla + ' — ' : '' }}{{ carrera.tituloOtorgado || '' }}
-                    </div>
-                  }
-                </td>
-                <td>{{ getNombreUnidad(carrera.unidadAcademicaId) }}</td>
-                <td>{{ carrera.areaDisciplinaria }}</td>
-                <td>{{ carrera.modalidad === 'PRESENCIAL' ? 'Presencial' : 'Distancia' }}</td>
-                <td>{{ carrera.duracionAnios ? carrera.duracionAnios + ' años' : '-' }}</td>
-                <td>
-                  @for (sedeId of carrera.sedesIds; track sedeId; let last = $last) {
-                    <span>{{ getNombreSede(sedeId) }}{{ !last ? ', ' : '' }}</span>
-                  }
-                  @if (carrera.sedesIds.length === 0) {
-                    <span class="text-sub">Sin asignar</span>
-                  }
-                </td>
-                <td>{{ carrera.estado === 'EN_FUNCIONAMIENTO' ? 'En funcionamiento' : 'Nueva' }}</td>
-                <td>
-                  <span class="badge" [class.badge--success]="carrera.activo" [class.badge--neutral]="!carrera.activo">
-                    {{ carrera.activo ? 'Activa' : 'Inactiva' }}
-                  </span>
-                </td>
-                <td>
-                  <div class="table-actions">
-                    <button class="btn btn--sm btn--secondary" type="button" (click)="iniciarEdicion(carrera)">
-                      Editar
-                    </button>
-                    <button class="btn btn--sm btn--danger-outline" type="button" (click)="eliminar(carrera)">
-                      Eliminar
-                    </button>
-                  </div>
-                </td>
-              </tr>
+        <div class="form-row-2">
+          <div class="form-group-figma">
+            <label for="modalidad">Modalidad *</label>
+            <select id="modalidad" formControlName="modalidad">
+              <option value="PRESENCIAL">Presencial</option>
+              <option value="A_DISTANCIA">A Distancia</option>
+              <option value="HIBRIDA">Híbrida</option>
+            </select>
+          </div>
+          <div class="form-group-figma">
+            <label for="estado">Estado de la carrera *</label>
+            <select id="estado" formControlName="estado">
+              <option value="EN_FUNCIONAMIENTO">En Funcionamiento</option>
+              <option value="NUEVA">Nueva (sin egresados)</option>
+              <option value="CERRADA">Cerrada</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group-figma">
+          <label for="areaDisciplinaria">Área Disciplinaria *</label>
+          <input
+            id="areaDisciplinaria"
+            type="text"
+            placeholder="Ej. Ciencias Aplicadas - Informática"
+            formControlName="areaDisciplinaria"
+          />
+        </div>
+
+        <div class="form-group-figma">
+          <label>Sedes de dictado</label>
+          <div class="sedes-chips-selector">
+            @for (s of sedes(); track s.id) {
+              <label class="chip-item">
+                <input
+                  type="checkbox"
+                  [checked]="isSedeSelected(s.id)"
+                  (change)="toggleSede(s.id)"
+                />
+                <span>{{ s.nombre }}</span>
+              </label>
             }
-          </tbody>
-        </table>
-      </div>
-    }
-  </main>
+          </div>
+        </div>
+
+        <div class="form-group-figma">
+          <label for="descripcion">Descripción</label>
+          <textarea
+            id="descripcion"
+            rows="2"
+            placeholder="Alcance del título o perfil del graduado..."
+            formControlName="descripcion"
+          ></textarea>
+        </div>
+
+        <div class="drawer-footer-figma">
+          <button class="btn-cancelar-figma" type="button" (click)="cancelarFormulario()">
+            Cancelar
+          </button>
+          <button class="btn-guardar-figma" type="submit" [disabled]="submitting()">
+            @if (editingId()) {
+              {{ submitting() ? 'Guardando...' : 'Guardar cambios' }}
+            } @else {
+              {{ submitting() ? 'Guardando...' : 'Guardar carrera' }}
+            }
+          </button>
+        </div>
+      </form>
+    </aside>
+  }
 </div>

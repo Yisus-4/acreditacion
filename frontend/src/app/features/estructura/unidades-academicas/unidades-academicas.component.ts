@@ -19,10 +19,11 @@ import { finalize } from 'rxjs';
 import { EstructuraService, UnidadAcademicaResponse } from '../../../core/estructura/estructura.service';
 import { InstitucionService } from '../../../core/instituciones/institucion.service';
 import { InstitucionResponse } from '../../../core/instituciones/institucion.types';
+import { SubnavGestionInstitucionalComponent } from '../subnav-gestion-institucional/subnav-gestion-institucional.component';
 
 @Component({
   selector: 'app-unidades-academicas',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, SubnavGestionInstitucionalComponent],
   templateUrl: './unidades-academicas.component.html',
   styleUrl: './unidades-academicas.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

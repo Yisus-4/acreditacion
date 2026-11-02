@@ -1,88 +1,74 @@
-<div class="dashboard-layout">
-  <!-- Contenido principal -->
-  <main class="dashboard-main">
-    <section class="dashboard-welcome">
-      <h2>Bienvenido, {{ user?.displayName || 'Usuario' }}</h2>
+<div class="inicio-container">
+  <div class="inicio-content">
+    <h1 class="inicio-title">Bienvenido, {{ user?.displayName || 'admin' }}</h1>
+
+    <!-- Sección Convocatorias en curso -->
+    <section class="inicio-section">
+      <h2 class="section-title">Convocatorias en curso</h2>
+
+      @if (cargandoConvocatorias()) {
+        <div class="convocatoria-card loading-card">
+          <p class="text-muted">Cargando convocatorias en curso...</p>
+        </div>
+      } @else if (convocatoriasEnCurso().length > 0) {
+        @for (c of convocatoriasEnCurso(); track c.id) {
+          <a class="convocatoria-card" [routerLink]="['/acreditacion/convocatorias', c.id]">
+            <div class="convocatoria-info">
+              <h3 class="convocatoria-nombre">
+                {{ c.codigo }} · {{ c.escuelaNombre || 'Escuela de Ingeniería' }}
+              </h3>
+              <p class="convocatoria-detalles">
+                {{ c.cantidadCarreras ?? 3 }} carreras ·
+                Resolución {{ c.nroResolucionConeau || 'RESFC-2026-APN' }} ·
+                Plazo: {{ c.fechaInicio }} &rarr; {{ c.fechaCierre }}
+              </p>
+            </div>
+            <span class="btn-link-action">Ver convocatoria &rarr;</span>
+          </a>
+        }
+      } @else {
+        <div class="convocatoria-card empty-card">
+          <p class="text-muted">No hay convocatorias activas en este momento.</p>
+          <a routerLink="/acreditacion/convocatorias" class="btn-link-action">Ir a Convocatorias &rarr;</a>
+        </div>
+      }
     </section>
 
-    <div class="modules-grid">
-      <!-- Módulo Administración de Usuarios (Solo ADMINISTRATOR) -->
-      @if (isAdmin) {
-        <a class="module-card module-card--active" routerLink="/admin/users">
-          <div class="module-card__icon">
-            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-          </div>
-          <div class="module-card__body">
-            <div class="module-card__header">
-              <h3 class="module-card__title">Administración de Usuarios</h3>
-              <span class="status-chip status-chip--enabled">Disponible</span>
-            </div>
-            <p class="module-card__desc">
+    <!-- Sección Módulos -->
+    <section class="inicio-section">
+      <h2 class="section-title">Módulos</h2>
+      <div class="modulos-grid">
+        <!-- Módulo 1: Administración de Usuarios -->
+        @if (isAdmin) {
+          <a class="modulo-card" routerLink="/admin/users">
+            <h3 class="modulo-title">Administración de Usuarios</h3>
+            <p class="modulo-desc">
               Gestión centralizada de cuentas de usuario, asignación de roles y permisos del sistema.
             </p>
-          </div>
-          <div class="module-card__action">
-            <span>Acceder al módulo &rarr;</span>
-          </div>
-        </a>
-      }
+            <span class="btn-link-action">Acceder &rarr;</span>
+          </a>
+        }
 
-      <!-- Módulo Gestión Institucional y Académica (ADMINISTRATOR o AEA) -->
-      @if (canManageInstitutions) {
-        <a class="module-card module-card--active" routerLink="/admin/estructura">
-          <div class="module-card__icon">
-            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 21h18" />
-              <path d="M5 21V9l7-5 7 5v12" />
-              <path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6" />
-              <path d="M9 9h.01" />
-              <path d="M15 9h.01" />
-            </svg>
-          </div>
-          <div class="module-card__body">
-            <div class="module-card__header">
-              <h3 class="module-card__title">Gestión Institucional y Académica</h3>
-              <span class="status-chip status-chip--enabled">Disponible</span>
-            </div>
-            <p class="module-card__desc">
+        <!-- Módulo 2: Gestión Institucional y Académica -->
+        @if (canManageInstitutions) {
+          <a class="modulo-card" routerLink="/admin/estructura">
+            <h3 class="modulo-title">Gestión Institucional y Académica</h3>
+            <p class="modulo-desc">
               Administración de instituciones universitarias, sedes, escuelas y carreras de grado.
             </p>
-          </div>
-          <div class="module-card__action">
-            <span>Acceder al panel &rarr;</span>
-          </div>
-        </a>
-      }
+            <span class="btn-link-action">Acceder &rarr;</span>
+          </a>
+        }
 
-      <!-- Módulo Procesos de Acreditación y Convocatorias (Disponible) -->
-      <a class="module-card module-card--active" routerLink="/acreditacion/convocatorias">
-        <div class="module-card__icon">
-          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-            <polyline points="10 9 9 9 8 9" />
-          </svg>
-        </div>
-        <div class="module-card__body">
-          <div class="module-card__header">
-            <h3 class="module-card__title">Convocatorias y Plan de Trabajo</h3>
-            <span class="status-chip status-chip--enabled">Disponible</span>
-          </div>
-          <p class="module-card__desc">
-            Apertura formal de convocatorias CONEAU (RG-001) y gestión incremental del Plan de Trabajo (AEA).
+        <!-- Módulo 3: Convocatorias y Plan de Trabajo -->
+        <a class="modulo-card" routerLink="/acreditacion/convocatorias">
+          <h3 class="modulo-title">Convocatorias y Plan de Trabajo</h3>
+          <p class="modulo-desc">
+            Apertura formal de convocatorias CONEAU
           </p>
-        </div>
-        <div class="module-card__action">
-          <span>Acceder a Convocatorias &rarr;</span>
-        </div>
-      </a>
-    </div>
-  </main>
+          <span class="btn-link-action">Acceder &rarr;</span>
+        </a>
+      </div>
+    </section>
+  </div>
 </div>

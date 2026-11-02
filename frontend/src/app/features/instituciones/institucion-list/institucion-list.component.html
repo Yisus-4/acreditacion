@@ -1,271 +1,154 @@
-<div class="instituciones-layout">
-  <!-- Cabecera de la sección -->
-  <header class="instituciones-header">
-    <div class="instituciones-header__content">
-      <div class="instituciones-header__left">
-        <a class="back-link" routerLink="/admin/estructura">Volver a Administración Institucional</a>
-        <h1 class="instituciones-header__title">Administrar Instituciones</h1>
-        <p class="instituciones-header__desc">
-          Gestión de instituciones universitarias, sedes centrales y autoridades académicas.
-        </p>
-      </div>
+<div class="vista-gestion-layout">
+  <app-subnav-gestion-institucional seccionActual="Institución"></app-subnav-gestion-institucional>
 
-      <div class="instituciones-header__actions">
-        <a class="btn btn--primary" routerLink="/admin/instituciones/nueva">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
-            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-          </svg>
-          <span>Registrar Institución</span>
-        </a>
-      </div>
+  @if (errorMessage()) {
+    <div class="alert-banner-figma error">
+      <span>{{ errorMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="errorMessage.set(null)">✕</button>
     </div>
-  </header>
+  }
 
-  <main class="instituciones-container">
-    <!-- Banner de éxito -->
-    @if (successMessage()) {
-      <div class="alert alert--success" role="alert">
-        <div class="alert__content">
-          <svg class="alert__icon" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-          </svg>
-          <span>{{ successMessage() }}</span>
-        </div>
-        <button type="button" class="alert__close" (click)="successMessage.set(null)" aria-label="Cerrar">&times;</button>
-      </div>
-    }
-
-    <!-- Alerta de error -->
-    @if (errorMessage()) {
-      <div class="alert alert--danger" role="alert">
-        <div class="alert__content">
-          <svg class="alert__icon" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-          </svg>
-          <span>{{ errorMessage() }}</span>
-        </div>
-        <div class="alert__actions">
-          <button type="button" class="btn btn--secondary btn--sm" (click)="cargarInstituciones()">
-            Reintentar
-          </button>
-          <button type="button" class="alert__close" (click)="errorMessage.set(null)" aria-label="Cerrar">&times;</button>
-        </div>
-      </div>
-    }
-
-    <!-- Toolbar de búsqueda y filtros -->
-    <div class="table-toolbar">
-      <div class="search-box">
-        <input
-          type="text"
-          placeholder="Buscar por nombre, sigla o autoridad..."
-          [value]="searchQuery()"
-          (input)="onSearch($event)"
-        />
-      </div>
-
-      <div class="table-stats">
-        <span>Total: <strong>{{ filteredInstituciones().length }}</strong> de <strong>{{ instituciones().length }}</strong> instituciones</span>
-      </div>
+  @if (successMessage()) {
+    <div class="alert-banner-figma success">
+      <span>{{ successMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="successMessage.set(null)">✕</button>
     </div>
+  }
 
-    <!-- Estado de carga -->
-    @if (loading()) {
-      <div class="card-state loading-state">
-        <div class="spinner" aria-hidden="true"></div>
-        <span>Cargando instituciones universitarias...</span>
-      </div>
-    } @else if (instituciones().length === 0) {
-      <!-- Estado vacío (ninguna institución en el sistema) -->
-      <div class="card-state empty-state">
-        <div class="empty-state__icon">
-          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M12 21v-7m0-4V3m0 0L3 8l9 5 9-5-9-5z" />
-            <path d="M5 10v7a7 7 0 0 0 14 0v-7" />
-          </svg>
-        </div>
-        <h2 class="empty-state__title">No hay instituciones registradas aún</h2>
-        <p class="empty-state__desc">
-          Comience registrando la institución central y sus autoridades para habilitar los procesos de acreditación y autoevaluación universitaria.
-        </p>
-        <a class="btn btn--primary" routerLink="/admin/instituciones/nueva">
-          Registrar Primera Institución
-        </a>
-      </div>
-    } @else if (filteredInstituciones().length === 0) {
-      <!-- Estado sin resultados de búsqueda -->
-      <div class="card-state empty-state">
-        <p class="empty-state__desc">No se encontraron instituciones que coincidan con "{{ searchQuery() }}".</p>
-      </div>
-    } @else {
-      <!-- Listado de instituciones en tabla -->
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
+  <!-- Toolbar de Búsqueda y Acción Nuevo -->
+  <div class="vista-toolbar">
+    <div class="search-box-figma">
+      <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+      </svg>
+      <input
+        type="text"
+        placeholder="Buscar por nombre, sigla o rector"
+        [value]="searchQuery()"
+        (input)="onSearch($event)"
+      />
+    </div>
+    <div class="toolbar-actions-right">
+      <span class="stats-count-figma">
+        {{ filteredInstituciones().length }} {{ filteredInstituciones().length === 1 ? 'institución' : 'instituciones' }}
+      </span>
+      <a class="btn-nuevo-figma" routerLink="/admin/instituciones/nueva">
+        + Registrar Institución
+      </a>
+    </div>
+  </div>
+
+  <!-- Tabla de Instituciones -->
+  @if (loading()) {
+    <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
+      Cargando instituciones...
+    </div>
+  } @else if (filteredInstituciones().length === 0) {
+    <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
+      No se encontraron instituciones registradas.
+    </div>
+  } @else {
+    <div class="tabla-figma-wrapper">
+      <table class="tabla-figma">
+        <thead>
+          <tr>
+            <th style="width: 60px;">Logo</th>
+            <th style="width: 250px;">Nombre</th>
+            <th style="width: 90px;">Sigla</th>
+            <th>Autoridad Máxima</th>
+            <th>Sede Central</th>
+            <th style="width: 100px;">Estado</th>
+            <th class="col-acciones" style="width: 180px;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (inst of filteredInstituciones(); track inst.id) {
             <tr>
-              <th class="th-institucion">Institución</th>
-              <th>Sede Central</th>
-              <th>Máxima Autoridad</th>
-              <th>Administrador</th>
-              <th class="text-center">Estado</th>
-              <th class="text-center th-acciones">Acciones</th>
+              <td>
+                @if (inst.logoUrl && !isImageBroken(inst.id)) {
+                  <img
+                    [src]="inst.logoUrl"
+                    [alt]="'Logo ' + inst.sigla"
+                    class="institucion-logo-thumb"
+                    (error)="handleImageError(inst.id)"
+                  />
+                } @else {
+                  <div class="institucion-logo-placeholder">
+                    {{ inst.sigla || 'UN' }}
+                  </div>
+                }
+              </td>
+              <td class="col-nombre">{{ inst.nombre }}</td>
+              <td><code>{{ inst.sigla || '-' }}</code></td>
+              <td>{{ inst.maximaAutoridad?.nombreCompleto || '-' }}</td>
+              <td class="col-desc">{{ inst.sedeCentral?.direccionCompleta || '-' }}</td>
+              <td>
+                <span class="badge-estado-figma" [class.activa]="inst.activo" [class.inactiva]="!inst.activo">
+                  {{ inst.activo ? 'Activa' : 'Inactiva' }}
+                </span>
+              </td>
+              <td class="col-acciones">
+                <a
+                  class="btn-accion-link"
+                  [routerLink]="['/admin/instituciones', inst.id, 'editar']"
+                  title="Editar institución"
+                >
+                  Editar
+                </a>
+                <button
+                  class="btn-accion-icono"
+                  type="button"
+                  (click)="cambiarEstado(inst)"
+                  [disabled]="procesandoEstadoId() === inst.id"
+                  [title]="inst.activo ? 'Desactivar institución' : 'Activar institución'"
+                >
+                  {{ inst.activo ? 'Desactivar' : 'Activar' }}
+                </button>
+                <button
+                  class="btn-accion-icono btn-peligro"
+                  type="button"
+                  (click)="abrirModalEliminar(inst)"
+                  title="Eliminar institución"
+                >
+                  ✕
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            @for (inst of filteredInstituciones(); track inst.id) {
-              <tr>
-                <td class="td-institucion">
-                  <div class="institucion-cell">
-                    <div class="institucion-cell__logo-wrapper">
-                      @if (inst.logoUrl && !isImageBroken(inst.id)) {
-                        <img
-                          [src]="inst.logoUrl"
-                          [alt]="inst.nombre"
-                          class="institucion-cell__logo"
-                          (error)="handleImageError(inst.id)"
-                        />
-                      } @else {
-                        <div class="institucion-cell__placeholder" [title]="inst.nombre">
-                          <span>{{ inst.sigla.slice(0, 3).toUpperCase() }}</span>
-                        </div>
-                      }
-                    </div>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 
-                    <div class="institucion-cell__info">
-                      <strong class="institucion-cell__nombre">{{ inst.nombre }}</strong>
-                      <div class="institucion-cell__meta">
-                        <span class="badge badge--sigla">{{ inst.sigla }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </td>
-
-                <td>
-                  @if (inst.sedeCentral) {
-                    <div class="sede-info">
-                      <span class="font-medium">{{ inst.sedeCentral.direccionCompleta || (inst.sedeCentral.calle + ' ' + inst.sedeCentral.numero) }}</span>
-                      <span class="text-muted text-xs">CP: {{ inst.sedeCentral.codigoPostal }}</span>
-                    </div>
-                  } @else {
-                    <span class="text-muted">-</span>
-                  }
-                </td>
-
-                <td>
-                  @if (inst.maximaAutoridad) {
-                    <div class="autoridad-info">
-                      <span class="font-medium">{{ inst.maximaAutoridad.nombreCompleto }}</span>
-                      <span class="text-muted text-xs">{{ inst.maximaAutoridad.email }}</span>
-                      @if (inst.maximaAutoridad.telefono) {
-                        <span class="text-muted text-xs">{{ inst.maximaAutoridad.telefono }}</span>
-                      }
-                    </div>
-                  } @else {
-                    <span class="text-muted">-</span>
-                  }
-                </td>
-
-                <td>
-                  @if (inst.administradorInstitucional) {
-                    <div class="autoridad-info">
-                      <span class="font-medium">{{ inst.administradorInstitucional.nombreCompleto }}</span>
-                      <span class="text-muted text-xs">{{ inst.administradorInstitucional.cargo || 'Administrador' }}</span>
-                      <span class="text-muted text-xs">{{ inst.administradorInstitucional.email }}</span>
-                    </div>
-                  } @else {
-                    <span class="text-muted">-</span>
-                  }
-                </td>
-
-                <td class="text-center">
-                  @if (inst.activo) {
-                    <span class="badge badge--active">Activa</span>
-                  } @else {
-                    <span class="badge badge--inactive">Inactiva</span>
-                  }
-                </td>
-
-                <td class="text-center">
-                  <div class="table-actions">
-                    <a
-                      class="btn btn--sm btn--secondary"
-                      [routerLink]="['/admin/instituciones', inst.id, 'editar']"
-                      title="Editar institución"
-                    >
-                      Editar
-                    </a>
-                    <button
-                      type="button"
-                      class="btn btn--sm"
-                      [class.btn--warning]="inst.activo"
-                      [class.btn--outline]="!inst.activo"
-                      [disabled]="procesandoEstadoId() === inst.id"
-                      (click)="cambiarEstado(inst)"
-                      [title]="inst.activo ? 'Desactivar institución' : 'Activar institución'"
-                    >
-                      @if (procesandoEstadoId() === inst.id) {
-                        <span class="spinner-sm" aria-hidden="true"></span>
-                      } @else {
-                        {{ inst.activo ? 'Desactivar' : 'Activar' }}
-                      }
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn--sm btn--danger-outline"
-                      (click)="abrirModalEliminar(inst)"
-                      title="Eliminar institución"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-  </main>
-
-  <!-- Modal institucional de confirmación de eliminación -->
+  <!-- Modal Confirmación Eliminación -->
   @if (institucionAEliminar(); as inst) {
-    <div class="modal-backdrop" (click)="cerrarModalEliminar()">
-      <div class="modal-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h3 class="modal-title">Confirmar Eliminación</h3>
-          <button type="button" class="modal-close" (click)="cerrarModalEliminar()" aria-label="Cerrar">&times;</button>
-        </div>
-        <div class="modal-body">
-          <p>
-            ¿Está seguro de que desea eliminar la institución <strong>{{ inst.nombre }}</strong> ({{ inst.sigla }})?
-          </p>
-          <p class="modal-warning">
-            Esta acción eliminará de forma permanente los registros y datos institucionales vinculados.
-          </p>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn--secondary"
-            [disabled]="eliminando()"
-            (click)="cerrarModalEliminar()"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            class="btn btn--danger"
-            [disabled]="eliminando()"
-            (click)="confirmarEliminar()"
-          >
-            @if (eliminando()) {
-              <span class="spinner-sm" aria-hidden="true"></span>
-              <span>Eliminando...</span>
-            } @else {
-              <span>Eliminar Definitivamente</span>
-            }
-          </button>
-        </div>
+    <div class="drawer-backdrop" (click)="cerrarModalEliminar()"></div>
+    <div class="drawer-panel-figma" role="dialog" aria-modal="true" style="width: 420px;">
+      <div class="drawer-header-figma">
+        <h2>Eliminar Institución</h2>
+        <button type="button" class="btn-cerrar-drawer" (click)="cerrarModalEliminar()">✕</button>
+      </div>
+      <div class="drawer-body-figma">
+        <p style="font-size: 15px; color: var(--color-text); line-height: 1.5;">
+          ¿Está seguro de que desea eliminar la institución <strong>"{{ inst.nombre }}"</strong>?
+        </p>
+        <p style="font-size: 13px; color: #dc2626; line-height: 1.4;">
+          Esta acción no se puede deshacer y fallará si existen sedes, escuelas o convocatorias asociadas.
+        </p>
+      </div>
+      <div class="drawer-footer-figma">
+        <button class="btn-cancelar-figma" type="button" (click)="cerrarModalEliminar()" [disabled]="eliminando()">
+          Cancelar
+        </button>
+        <button
+          class="btn-guardar-figma"
+          style="background: #dc2626;"
+          type="button"
+          (click)="confirmarEliminar()"
+          [disabled]="eliminando()"
+        >
+          {{ eliminando() ? 'Eliminando...' : 'Eliminar' }}
+        </button>
       </div>
     </div>
   }

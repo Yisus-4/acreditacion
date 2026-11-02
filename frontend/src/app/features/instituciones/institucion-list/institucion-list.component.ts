@@ -12,10 +12,11 @@ import { finalize } from 'rxjs';
 
 import { InstitucionService } from '../../../core/instituciones/institucion.service';
 import { InstitucionResponse } from '../../../core/instituciones/institucion.types';
+import { SubnavGestionInstitucionalComponent } from '../../estructura/subnav-gestion-institucional/subnav-gestion-institucional.component';
 
 @Component({
   selector: 'app-institucion-list',
-  imports: [RouterLink],
+  imports: [RouterLink, SubnavGestionInstitucionalComponent],
   templateUrl: './institucion-list.component.html',
   styleUrl: './institucion-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

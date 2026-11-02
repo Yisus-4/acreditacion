@@ -26,9 +26,11 @@ import {
   UnidadAcademicaResponse,
 } from '../../../core/estructura/estructura.service';
 
+import { SubnavGestionInstitucionalComponent } from '../subnav-gestion-institucional/subnav-gestion-institucional.component';
+
 @Component({
   selector: 'app-carreras',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, SubnavGestionInstitucionalComponent],
   templateUrl: './carreras.component.html',
   styleUrl: './carreras.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -362,6 +364,19 @@ export class CarrerasComponent implements OnInit {
   onFilterUaChange(event: Event): void {
     const select = event.target as HTMLSelectElement;
     this.selectedUaFilter.set(select.value);
+  }
+
+  onFilterUa(event: Event): void {
+    this.onFilterUaChange(event);
+  }
+
+  toggleSede(sedeId: string): void {
+    const isSelected = this.isSedeSelected(sedeId);
+    this.toggleSedeSeleccionada(sedeId, !isSelected);
+  }
+
+  formatearModalidad(modalidad: string): string {
+    return modalidad === 'PRESENCIAL' ? 'Presencial' : 'A distancia';
   }
 
   filteredCarreras(): CarreraResponse[] {

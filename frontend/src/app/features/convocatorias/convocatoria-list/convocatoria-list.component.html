@@ -1,177 +1,166 @@
-<div class="convocatorias-container">
-  <div class="header-section">
-    <div>
-      <nav class="breadcrumb">
-        <a routerLink="/dashboard">Inicio</a>
-        <span class="separator">/</span>
-        <span class="current">Convocatorias de Acreditación</span>
-      </nav>
-      <h1 class="page-title">Convocatorias de Acreditación CONEAU</h1>
-      <p class="page-subtitle">
-        Gestión institucional de procesos de acreditación de carreras de grado y seguimiento del Plan de Trabajo (Área de Evaluación y Acreditación — AEA).
-      </p>
-    </div>
+<div class="convocatorias-page">
+  <div class="convocatorias-content">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb-figma">
+      <a routerLink="/dashboard">Inicio</a>
+      <span class="sep">/</span>
+      <span>Convocatorias</span>
+    </nav>
 
-    @if (canCreate()) {
-      <div class="header-actions">
-        <a routerLink="/acreditacion/convocatorias/nueva" class="btn-primary">
-          <span class="icon">+</span> Iniciar Convocatoria
-        </a>
-      </div>
-    }
-  </div>
-
-  <!-- Barra de Filtros -->
-  <div class="filter-card">
-    <div class="filter-group">
-      <label for="filtroEscuela">Escuela</label>
-      <select
-        id="filtroEscuela"
-        [ngModel]="filtroEscuelaId()"
-        (ngModelChange)="filtroEscuelaId.set($event); cargarConvocatorias()"
-      >
-        <option value="">Todas las escuelas</option>
-        @for (escuela of escuelas(); track escuela.id) {
-          <option [value]="escuela.id">{{ escuela.nombre }} ({{ escuela.sigla || 'S/S' }})</option>
-        }
-      </select>
-    </div>
-
-    <div class="filter-group">
-      <label for="filtroEstado">Estado de la Convocatoria</label>
-      <select
-        id="filtroEstado"
-        [ngModel]="filtroEstado()"
-        (ngModelChange)="filtroEstado.set($event); cargarConvocatorias()"
-      >
-        <option value="">Todos los estados</option>
-        <option value="PENDIENTE_DIRECTOR_ESCUELA">Pendiente Director de Escuela</option>
-        <option value="CONFIRMADA_DIRECTOR_ESCUELA">Confirmada Director de Escuela</option>
-      </select>
-    </div>
-
-    <div class="filter-group">
-      <label for="filtroAnio">Año</label>
-      <input
-        id="filtroAnio"
-        type="number"
-        placeholder="Ej: 2026"
-        [ngModel]="filtroAnio()"
-        (ngModelChange)="filtroAnio.set($event); cargarConvocatorias()"
-      />
-    </div>
-
-    <div class="filter-actions">
-      <button type="button" class="btn-secondary" (click)="limpiarFiltros()">Limpiar Filtros</button>
-    </div>
-  </div>
-
-  @if (error()) {
-    <div class="alert-error" role="alert">
-      {{ error() }}
-    </div>
-  }
-
-  <!-- Tabla de Convocatorias -->
-  <div class="table-card">
-    @if (loading()) {
-      <div class="loading-state">
-        <span class="spinner"></span>
-        <p>Cargando convocatorias...</p>
-      </div>
-    } @else if (convocatorias().length === 0) {
-      <div class="empty-state">
-        <p class="empty-title">No se encontraron convocatorias</p>
-        <p class="empty-subtitle">
-          No hay convocatorias de acreditación registradas para las escuelas con los filtros seleccionados.
+    <!-- Header & Action -->
+    <div class="convocatorias-header">
+      <div class="header-text">
+        <h1 class="page-title">Convocatorias de Acreditación CONEAU</h1>
+        <p class="page-subtitle">
+          Procesos de acreditación de carreras de grado y seguimiento del Plan de Trabajo.
         </p>
-        @if (canCreate()) {
-          <a routerLink="/acreditacion/convocatorias/nueva" class="btn-primary">
-            + Iniciar Nueva Convocatoria
-          </a>
-        }
       </div>
-    } @else {
-      <div class="table-responsive">
-        <table class="table-institucional">
-          <thead>
-            <tr>
-              <th>Código</th>
-              <th>Escuela Convocada</th>
-              <th>Resolución CONEAU</th>
-              <th>Tipo</th>
-              <th>Plazo Oficial</th>
-              <th>Plan de Trabajo</th>
-              <th>Estado</th>
-              <th class="text-right">Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (c of convocatorias(); track c.id) {
-              <tr>
-                <td class="font-bold">{{ c.codigo }}</td>
-                <td>
-                  @if (c.unidadAcademicaId) {
-                    <span class="carrera-nombre">{{ c.escuelaNombre || c.carreraNombre }}</span>
-                    <span class="badge-escuela">{{ c.cantidadCarreras }} carrera(s)</span>
-                  } @else {
-                    <span class="carrera-nombre">{{ c.carreraNombre }}</span>
-                    <span class="badge-nivel">{{ c.nivel }}</span>
-                  }
-                </td>
-                <td>{{ c.nroResolucionConeau || '—' }}</td>
-                <td>
-                  <span class="tipo-tag">{{ c.tipoProceso === 'EN_FUNCIONAMIENTO' ? 'En Funcionamiento' : 'Nueva' }}</span>
-                </td>
-                <td>
-                  <span class="fechas-rango">
-                    {{ c.fechaInicio }} &rarr; {{ c.fechaCierre }}
-                  </span>
-                </td>
-                <td>
-                  @if (c.planTrabajoCodigo) {
-                    <code>{{ c.planTrabajoCodigo }}</code>
-                  } @else if (c.unidadAcademicaId) {
-                    <span class="texto-secundario">Por carrera</span>
-                  } @else {
-                    <code>—</code>
-                  }
-                </td>
-                <td>
-                  <span
-                    class="badge-estado"
-                    [class.badge-iniciado]="c.estado === 'INICIADO'"
-                    [class.badge-autoevaluacion]="c.estado === 'EN_AUTOEVALUACION'"
-                    [class.badge-finalizado]="c.estado === 'FINALIZADO'"
-                    [class.badge-cancelado]="c.estado === 'CANCELADO'"
-                    [class.badge-pendiente-de]="c.estado === 'PENDIENTE_DIRECTOR_ESCUELA'"
-                    [class.badge-confirmada-de]="c.estado === 'CONFIRMADA_DIRECTOR_ESCUELA'"
-                  >
-                    @if (c.estado === 'PENDIENTE_DIRECTOR_ESCUELA') {
-                      Pendiente DE
-                    } @else if (c.estado === 'CONFIRMADA_DIRECTOR_ESCUELA') {
-                      Confirmada DE
-                    } @else {
-                      {{ c.estado }}
-                    }
-                  </span>
-                </td>
-                <td class="text-right">
-                  <a [routerLink]="['/acreditacion/convocatorias', c.id]" class="btn-table">
-                    @if (c.estado === 'PENDIENTE_DIRECTOR_ESCUELA') {
-                      Revisar Selección DE &rarr;
-                    } @else if (c.estado === 'CONFIRMADA_DIRECTOR_ESCUELA') {
-                      Ver Carreras de la Escuela &rarr;
-                    } @else {
-                      Ver Carreras &rarr;
-                    }
-                  </a>
-                </td>
-              </tr>
+
+      @if (canCreate()) {
+        <a routerLink="/acreditacion/convocatorias/nueva" class="btn-figma-primary">
+          + Iniciar convocatoria
+        </a>
+      }
+    </div>
+
+    <!-- Barra de Filtros Figma -->
+    <div class="filter-bar-figma">
+      <div class="filter-col">
+        <label for="filtroEscuela">Escuela</label>
+        <div class="select-wrapper">
+          <select
+            id="filtroEscuela"
+            [ngModel]="filtroEscuelaId()"
+            (ngModelChange)="filtroEscuelaId.set($event); cargarConvocatorias()"
+          >
+            <option value="">Todas las escuelas</option>
+            @for (escuela of escuelas(); track escuela.id) {
+              <option [value]="escuela.id">{{ escuela.nombre }} ({{ escuela.sigla || 'S/S' }})</option>
             }
-          </tbody>
-        </table>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-col">
+        <label for="filtroEstado">Estado de la convocatoria</label>
+        <div class="select-wrapper">
+          <select
+            id="filtroEstado"
+            [ngModel]="filtroEstado()"
+            (ngModelChange)="filtroEstado.set($event); cargarConvocatorias()"
+          >
+            <option value="">Todos los estados</option>
+            <option value="PENDIENTE_DIRECTOR_ESCUELA">Pendiente Director de Escuela</option>
+            <option value="CONFIRMADA_DIRECTOR_ESCUELA">Confirmada Director de Escuela</option>
+            <option value="INICIADO">Iniciado</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-col">
+        <label for="filtroAnio">Año</label>
+        <input
+          id="filtroAnio"
+          type="number"
+          placeholder="Ej: 2026"
+          [ngModel]="filtroAnio()"
+          (ngModelChange)="filtroAnio.set($event); cargarConvocatorias()"
+        />
+      </div>
+
+      <button type="button" class="btn-figma-outline" (click)="limpiarFiltros()">
+        Limpiar filtros
+      </button>
+    </div>
+
+    @if (error()) {
+      <div class="alert-error" role="alert">
+        {{ error() }}
       </div>
     }
+
+    <!-- Tabla Figma -->
+    <div class="table-container-figma">
+      @if (loading()) {
+        <div class="loading-state">
+          <span class="spinner"></span>
+          <p>Cargando convocatorias...</p>
+        </div>
+      } @else if (convocatorias().length === 0) {
+        <div class="empty-state">
+          <p class="empty-title">No se encontraron convocatorias</p>
+          <p class="empty-subtitle">
+            No hay convocatorias de acreditación registradas para las escuelas con los filtros seleccionados.
+          </p>
+          @if (canCreate()) {
+            <a routerLink="/acreditacion/convocatorias/nueva" class="btn-figma-primary">
+              + Iniciar convocatoria
+            </a>
+          }
+        </div>
+      } @else {
+        <div class="table-scroll">
+          <table class="tabla-figma">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Código</th>
+                <th style="width: 220px;">Escuela convocada</th>
+                <th style="width: 160px;">Resolución CONEAU</th>
+                <th style="width: 140px;">Tipo</th>
+                <th style="width: 200px;">Plazo oficial</th>
+                <th style="width: 120px;">Estado</th>
+                <th style="text-align: right;">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of convocatorias(); track c.id) {
+                <tr>
+                  <td class="td-codigo">{{ c.codigo }}</td>
+                  <td>
+                    @if (c.unidadAcademicaId) {
+                      <span class="escuela-texto">{{ c.escuelaNombre || c.carreraNombre }}</span>
+                      <span class="carreras-badge">· {{ c.cantidadCarreras }} carrera(s)</span>
+                    } @else {
+                      <span class="escuela-texto">{{ c.carreraNombre }}</span>
+                    }
+                  </td>
+                  <td>{{ c.nroResolucionConeau || 'RESFC-2026-APN' }}</td>
+                  <td>
+                    {{ c.tipoProceso === 'EN_FUNCIONAMIENTO' ? 'En funcionamiento' : 'Nueva' }}
+                  </td>
+                  <td>
+                    {{ c.fechaInicio }} &rarr; {{ c.fechaCierre }}
+                  </td>
+                  <td>
+                    <span
+                      class="estado-badge"
+                      [class.confirmada]="c.estado === 'CONFIRMADA_DIRECTOR_ESCUELA' || c.estado === 'INICIADO'"
+                      [class.pendiente]="c.estado === 'PENDIENTE_DIRECTOR_ESCUELA'"
+                    >
+                      @if (c.estado === 'PENDIENTE_DIRECTOR_ESCUELA') {
+                        Pendiente DE
+                      } @else if (c.estado === 'CONFIRMADA_DIRECTOR_ESCUELA') {
+                        Confirmada
+                      } @else {
+                        {{ c.estado }}
+                      }
+                    </span>
+                  </td>
+                  <td style="text-align: right;">
+                    <a [routerLink]="['/acreditacion/convocatorias', c.id]" class="btn-link-carreras">
+                      @if (c.estado === 'PENDIENTE_DIRECTOR_ESCUELA') {
+                        Revisar selección &rarr;
+                      } @else {
+                        Ver carreras &rarr;
+                      }
+                    </a>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
   </div>
 </div>

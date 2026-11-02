@@ -476,6 +476,18 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     return this.planTrabajo()?.actividades?.length ?? 0;
   });
 
+  readonly conteoCompletadas = computed(() => {
+    return this.planTrabajo()?.actividades?.filter((a) => a.estado === 'COMPLETADA').length ?? 0;
+  });
+
+  readonly conteoPendientes = computed(() => {
+    return this.planTrabajo()?.actividades?.filter((a) => a.estado !== 'COMPLETADA').length ?? 0;
+  });
+
+  readonly conteoConPlazoExtendido = computed(() => {
+    return this.planTrabajo()?.actividades?.filter((a) => a.plazosExtendidos && a.plazosExtendidos.length > 0).length ?? 0;
+  });
+
   readonly maxPlazosExtendidos = computed(() => {
     const acts = this.planTrabajo()?.actividades ?? [];
     return acts.reduce((max, a) => Math.max(max, a.plazosExtendidos?.length ?? 0), 0);

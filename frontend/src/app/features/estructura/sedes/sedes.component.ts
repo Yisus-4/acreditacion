@@ -25,10 +25,11 @@ import {
 } from '../../../core/geografia/geografia.service';
 import { InstitucionService } from '../../../core/instituciones/institucion.service';
 import { InstitucionResponse } from '../../../core/instituciones/institucion.types';
+import { SubnavGestionInstitucionalComponent } from '../subnav-gestion-institucional/subnav-gestion-institucional.component';
 
 @Component({
   selector: 'app-sedes',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, SubnavGestionInstitucionalComponent],
   templateUrl: './sedes.component.html',
   styleUrl: './sedes.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -391,6 +392,19 @@ export class SedesComponent implements OnInit {
       const cp = s.codigoPostal.toLowerCase();
       return nom.includes(q) || dir.includes(q) || cp.includes(q);
     });
+  }
+
+  formatearDomicilio(s: SedeLocalizacionResponse): string {
+    return s.direccionCompleta || `${s.calle} ${s.numero}${s.piso ? ', ' + s.piso : ''}`;
+  }
+
+  formatearUbicacion(s: SedeLocalizacionResponse): string {
+    const loc = this.localidades().find((l) => l.id === s.localidadId)?.nombre;
+    const prov = this.provincias().find((p) => p.id === s.provinciaId)?.nombre;
+    if (loc && prov) return `${loc}, ${prov}`;
+    if (loc) return loc;
+    if (prov) return prov;
+    return `CP ${s.codigoPostal}`;
   }
 
   isFieldInvalid(control: FormControl | null): boolean {
