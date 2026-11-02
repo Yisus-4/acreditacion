@@ -564,7 +564,9 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   });
 
   readonly columnasPlazosExtendidos = computed(() => {
-    return Array.from({ length: this.maxPlazosExtendidos() }, (_, i) => i);
+    const max = this.maxPlazosExtendidos();
+    const count = Math.max(max, 1);
+    return Array.from({ length: count }, (_, i) => i);
   });
 
   readonly actividadReunion = computed(() => {
@@ -1874,6 +1876,13 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     return this.calcularDiaSiguienteISO([act.fechaFinEstimada, ultimoExt]);
   }
 
+  obtenerFechaVencimientoEfectiva(act: ActividadPlanTrabajoDto): string | null {
+    if (act.plazosExtendidos && act.plazosExtendidos.length > 0) {
+      return act.plazosExtendidos[act.plazosExtendidos.length - 1];
+    }
+    return act.fechaFinEstimada || null;
+  }
+
   obtenerUltimoPlazoExtendido(act: ActividadPlanTrabajoDto): string | null {
     if (!act.plazosExtendidos || act.plazosExtendidos.length === 0) return null;
     return act.plazosExtendidos[act.plazosExtendidos.length - 1];
@@ -1891,7 +1900,8 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
 
   esFilaAlerta(act: ActividadPlanTrabajoDto): boolean {
     if (act.estado === 'COMPLETADA') return false;
-    const dias = this.calcularDiasRestantes(act.fechaFinEstimada);
+    const fechaVence = this.obtenerFechaVencimientoEfectiva(act);
+    const dias = this.calcularDiasRestantes(fechaVence);
     const tieneExtensiones = !!(act.plazosExtendidos && act.plazosExtendidos.length > 0);
     return (dias !== null && dias <= 10) || tieneExtensiones;
   }

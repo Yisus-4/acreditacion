@@ -1153,7 +1153,7 @@
       &.th-act { width: auto; }
       &.th-resp { width: 220px; }
       &.th-plazo { width: 260px; }
-      &.th-ext { width: 170px; }
+      &.th-ext { min-width: 160px; white-space: nowrap; }
       &.th-estado { width: 120px; }
       &.th-doc { width: 180px; }
     }
@@ -1314,6 +1314,9 @@
       }
 
       &.td-ext {
+        min-width: 160px;
+        white-space: nowrap;
+
         .badge-plazo-extendido-figma {
           display: inline-flex;
           align-items: center;

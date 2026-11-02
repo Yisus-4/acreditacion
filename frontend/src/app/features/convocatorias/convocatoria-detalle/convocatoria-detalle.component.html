@@ -2639,7 +2639,15 @@
                       <th class="th-act">Actividad</th>
                       <th class="th-resp">Responsable</th>
                       <th class="th-plazo">Plazo estimado</th>
-                      <th class="th-ext">Plazo extendido</th>
+                      @for (colIdx of columnasPlazosExtendidos(); track colIdx) {
+                        <th class="th-ext">
+                          @if (columnasPlazosExtendidos().length > 1) {
+                            Plazo extendido {{ colIdx + 1 }}
+                          } @else {
+                            Plazo extendido
+                          }
+                        </th>
+                      }
                       <th class="th-estado">Estado</th>
                       <th class="th-doc">Documento asociado</th>
                     </tr>
@@ -2674,7 +2682,8 @@
                               @if (act.fechaFinEstimada) {
                                 <span class="fecha-base-figma">{{ act.fechaFinEstimada | date:'dd/MM/yyyy' }}</span>
                                 @if (act.estado !== 'COMPLETADA') {
-                                  @let dias = calcularDiasRestantes(act.fechaFinEstimada);
+                                  @let fechaVence = obtenerFechaVencimientoEfectiva(act);
+                                  @let dias = calcularDiasRestantes(fechaVence);
                                   @if (dias !== null && dias >= 0) {
                                     <span class="dias-restantes-alerta">· faltan {{ dias }} {{ dias === 1 ? 'día' : 'días' }}</span>
                                   } @else if (dias !== null && dias < 0) {
@@ -2730,15 +2739,17 @@
                             }
                           </div>
                         </td>
-                        <td class="td-ext">
-                          @if (obtenerUltimoPlazoExtendido(act); as ultimoExt) {
-                            <span class="badge-plazo-extendido-figma">
-                              ⏱ {{ ultimoExt | date:'dd/MM/yyyy' }}
-                            </span>
-                          } @else {
-                            <span class="sin-dato-figma">—</span>
-                          }
-                        </td>
+                        @for (colIdx of columnasPlazosExtendidos(); track colIdx) {
+                          <td class="td-ext">
+                            @if (act.plazosExtendidos && act.plazosExtendidos[colIdx]) {
+                              <span class="badge-plazo-extendido-figma">
+                                ⏱ {{ act.plazosExtendidos[colIdx] | date:'dd/MM/yyyy' }}
+                              </span>
+                            } @else {
+                              <span class="sin-dato-figma">—</span>
+                            }
+                          </td>
+                        }
                         <td class="td-estado">
                           <span
                             class="estado-texto-figma"
