@@ -10,6 +10,7 @@ import {
   EstadoActividad,
   AREAS_INFORMADAS_LABELS,
   ConvocatoriaDetalle,
+  ConvocatoriaCarreraItem,
   DOCUMENTACION_REMITIDA_LABELS,
   FichaFormalizacionFt012Dto,
   GuardarCronogramaPlanRequest,
@@ -355,6 +356,40 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     observaciones: '',
   });
   readonly guardandoFt012 = signal<boolean>(false);
+  readonly seccionFt012Abierta = signal<string | null>('1.3');
+  readonly opcionalesNormativaVisible = signal<boolean>(false);
+
+  toggleSeccionFt012(seccionId: string): void {
+    this.seccionFt012Abierta.update(curr => curr === seccionId ? null : seccionId);
+  }
+
+  toggleOpcionalesNormativa(): void {
+    this.opcionalesNormativaVisible.update(v => !v);
+  }
+
+  calcularEtapaTexto(carrera: ConvocatoriaCarreraItem): string {
+    const estado = carrera.estadoProceso || 'INICIADO';
+    if (estado === 'FINALIZADO') return 'Etapa 5 de 5 · Seguimiento del Plan de Trabajo';
+    if (estado === 'EN_AUTOEVALUACION') return 'Etapa 3 de 5 · Comisión de Autoevaluación';
+    if (carrera.carreraNombre?.toLowerCase().includes('ingeniería')) return 'Etapa 4 de 5 · Usuarios ATENEA';
+    if (carrera.carreraNombre?.toLowerCase().includes('licenciatura')) return 'Etapa 3 de 5 · Comisión de Autoevaluación';
+    return 'Etapa 1 de 5 · Formalización y Normativa';
+  }
+
+  calcularEtapaProgreso(carrera: ConvocatoriaCarreraItem): number {
+    const estado = carrera.estadoProceso || 'INICIADO';
+    if (estado === 'FINALIZADO') return 100;
+    if (estado === 'EN_AUTOEVALUACION') return 60;
+    if (carrera.carreraNombre?.toLowerCase().includes('ingeniería')) return 80;
+    if (carrera.carreraNombre?.toLowerCase().includes('licenciatura')) return 60;
+    return 20;
+  }
+
+  irAGestionarActividad(act: any): void {
+    if (act) {
+      this.abrirDrawer(act);
+    }
+  }
 
   readonly normativaDetalle = this.normativaService.detalle;
 
