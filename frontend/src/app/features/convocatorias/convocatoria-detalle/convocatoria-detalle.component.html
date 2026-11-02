@@ -217,6 +217,10 @@
             @for (carrera of carrerasConfirmadasDe(); track carrera.carreraId) {
               <div class="carrera-card-figma">
                 <div class="card-info-top">
+                  <div class="carrera-top-header">
+                    <span class="carrera-tipo-badge">{{ (carrera.modalidad || 'GRADO').toUpperCase() }}</span>
+                    <span class="carrera-estado-tag">Confirmada</span>
+                  </div>
                   <h3 class="carrera-titulo">{{ carrera.carreraNombre }}</h3>
                   <p class="carrera-modalidad-area">
                     {{ carrera.modalidad || 'Presencial' }} · {{ carrera.areaDisciplinaria || 'Ciencias Aplicadas' }}
@@ -480,7 +484,7 @@
           </div>
 
           <!-- Sección 1: Datos de la institución -->
-          <div class="seccion-accordion-item-figma">
+          <div class="seccion-accordion-item-figma" [class.abierta]="seccionFt012Abierta() === '1'">
             <div class="seccion-accordion-header" (click)="toggleSeccionFt012('1')">
               <span class="seccion-nombre">1. Datos de la institución</span>
               <span class="seccion-estado-tag completada">Completa</span>
@@ -523,7 +527,7 @@
           </div>
 
           <!-- Sección 1.2: Unidad académica y sede -->
-          <div class="seccion-accordion-item-figma">
+          <div class="seccion-accordion-item-figma" [class.abierta]="seccionFt012Abierta() === '1.2'">
             <div class="seccion-accordion-header" (click)="toggleSeccionFt012('1.2')">
               <span class="seccion-nombre">1.2 Unidad académica y sede</span>
               <span class="seccion-estado-tag completada">Completa</span>
@@ -574,7 +578,7 @@
           </div>
 
           <!-- Sección 1.3: Persona nexo con la CONEAU (Figma 33:201) -->
-          <div class="seccion-accordion-item-figma">
+          <div class="seccion-accordion-item-figma" [class.abierta]="seccionFt012Abierta() === '1.3'">
             <div class="seccion-accordion-header" (click)="toggleSeccionFt012('1.3')">
               <span class="seccion-nombre">1.3 Persona nexo con la CONEAU</span>
               @if (ft.nexoApellido && ft.nexoPrimerNombre && ft.nexoCargo && ft.nexoCorreo) {
@@ -621,7 +625,7 @@
           </div>
 
           <!-- Sección 2: Datos de la carrera -->
-          <div class="seccion-accordion-item-figma">
+          <div class="seccion-accordion-item-figma" [class.abierta]="seccionFt012Abierta() === '2'">
             <div class="seccion-accordion-header" (click)="toggleSeccionFt012('2')">
               <span class="seccion-nombre">2. Datos de la carrera</span>
               <span class="seccion-estado-tag completada">Completa</span>
@@ -650,7 +654,7 @@
           </div>
 
           <!-- Sección 3: Responsable de la carrera -->
-          <div class="seccion-accordion-item-figma">
+          <div class="seccion-accordion-item-figma" [class.abierta]="seccionFt012Abierta() === '3'">
             <div class="seccion-accordion-header" (click)="toggleSeccionFt012('3')">
               <span class="seccion-nombre">3. Responsable de la carrera</span>
               @if (ft.responsableApellido && ft.responsablePrimerNombre && ft.responsableCargo && ft.responsableCorreo) {
@@ -701,7 +705,7 @@
           </div>
 
           <!-- Sección 4: Coordinador del Comité de Autoevaluación -->
-          <div class="seccion-accordion-item-figma">
+          <div class="seccion-accordion-item-figma" [class.abierta]="seccionFt012Abierta() === '4'">
             <div class="seccion-accordion-header" (click)="toggleSeccionFt012('4')">
               <span class="seccion-nombre">4. Coordinador del Comité de Autoevaluación</span>
               @if (ft.coordinadorCaApellido && ft.coordinadorCaPrimerNombre && ft.coordinadorCaCorreo) {
