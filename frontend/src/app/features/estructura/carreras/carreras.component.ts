@@ -30,7 +30,7 @@ import { SubnavGestionInstitucionalComponent } from '../subnav-gestion-instituci
 
 @Component({
   selector: 'app-carreras',
-  imports: [ReactiveFormsModule, RouterLink, SubnavGestionInstitucionalComponent],
+  imports: [ReactiveFormsModule, SubnavGestionInstitucionalComponent],
   templateUrl: './carreras.component.html',
   styleUrl: './carreras.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

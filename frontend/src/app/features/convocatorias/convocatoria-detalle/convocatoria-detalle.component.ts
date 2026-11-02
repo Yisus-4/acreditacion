@@ -109,6 +109,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly subTabAtenea = signal<'USUARIOS' | 'MATRIZ'>('USUARIOS');
   readonly filtroProcesoMatriz = signal<string>('TODOS');
   readonly busquedaItemMatriz = signal<string>('');
+  readonly mostrarMatrizAtenea = signal<boolean>(false);
 
   readonly procesosUnicosMatriz = computed(() => {
     const items = this.registroUsuariosAtenea()?.matrizPermisos ?? [];
@@ -163,10 +164,44 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly nuevoUsuarioHabilitado = signal(false);
 
   // Grupos filtrados para visualización por pestaña y tablas
+  readonly filtroGrupoAtenea = signal<'TODOS' | 'SGI' | 'AEA' | 'OTRAS_AREAS' | 'COMISION_AUTOEVALUACION'>('TODOS');
   readonly usuariosSgi = computed(() => (this.registroUsuariosAtenea()?.usuarios ?? []).filter(u => u.grupoUsuario === 'SGI'));
   readonly usuariosAea = computed(() => (this.registroUsuariosAtenea()?.usuarios ?? []).filter(u => u.grupoUsuario === 'AEA'));
   readonly usuariosOtrasAreas = computed(() => (this.registroUsuariosAtenea()?.usuarios ?? []).filter(u => u.grupoUsuario === 'OTRAS_AREAS'));
   readonly usuariosCa = computed(() => (this.registroUsuariosAtenea()?.usuarios ?? []).filter(u => u.grupoUsuario === 'COMISION_AUTOEVALUACION'));
+
+  readonly usuariosAteneaFiltrados = computed(() => {
+    const list = this.registroUsuariosAtenea()?.usuarios ?? [];
+    const filtro = this.filtroGrupoAtenea();
+    if (filtro === 'TODOS') return list;
+    return list.filter((u) => u.grupoUsuario === filtro);
+  });
+
+  readonly conteoAteneaTodos = computed(() => (this.registroUsuariosAtenea()?.usuarios ?? []).length);
+  readonly conteoAteneaSgi = computed(() => this.usuariosSgi().length);
+  readonly conteoAteneaAea = computed(() => this.usuariosAea().length);
+  readonly conteoAteneaOtras = computed(() => this.usuariosOtrasAreas().length);
+  readonly conteoAteneaCa = computed(() => this.usuariosCa().length);
+
+  formatearGrupoAtenea(grupo: string): string {
+    switch (grupo) {
+      case 'SGI': return 'Secretaría de Gestión Institucional';
+      case 'AEA': return 'Área de Evaluación y Acreditación';
+      case 'OTRAS_AREAS': return 'Otras Áreas Institucionales';
+      case 'COMISION_AUTOEVALUACION': return 'Comisión de Autoevaluación · Director de Carrera';
+      default: return grupo;
+    }
+  }
+
+  formatearTipoAcceso(tipo: string): string {
+    switch (tipo) {
+      case 'VISUALIZACION': return 'Visualización';
+      case 'CARGA': return 'Carga';
+      case 'CARGA_Y_VISUALIZACION': return 'Carga y visualización';
+      case 'ADMINISTRACION': return 'Administración';
+      default: return tipo;
+    }
+  }
 
   // Estado Comisión de Autoevaluación (CA · RG-002)
   readonly registroCa = signal<RegistroCaDto | null>(null);
@@ -1809,6 +1844,28 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       ? act.plazosExtendidos[act.plazosExtendidos.length - 1]
       : null;
     return this.calcularDiaSiguienteISO([act.fechaFinEstimada, ultimoExt]);
+  }
+
+  obtenerUltimoPlazoExtendido(act: ActividadPlanTrabajoDto): string | null {
+    if (!act.plazosExtendidos || act.plazosExtendidos.length === 0) return null;
+    return act.plazosExtendidos[act.plazosExtendidos.length - 1];
+  }
+
+  calcularDiasRestantes(fechaFin?: string | null): number | null {
+    if (!fechaFin) return null;
+    const partes = fechaFin.split('-');
+    if (partes.length < 3) return null;
+    const fin = new Date(parseInt(partes[0], 10), parseInt(partes[1], 10) - 1, parseInt(partes[2], 10));
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    return Math.ceil((fin.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  esFilaAlerta(act: ActividadPlanTrabajoDto): boolean {
+    if (act.estado === 'COMPLETADA') return false;
+    const dias = this.calcularDiasRestantes(act.fechaFinEstimada);
+    const tieneExtensiones = !!(act.plazosExtendidos && act.plazosExtendidos.length > 0);
+    return (dias !== null && dias <= 10) || tieneExtensiones;
   }
 
   abrirEdicionPlazoActividad(act: ActividadPlanTrabajoDto): void {

@@ -1,32 +1,69 @@
 @if (user()) {
-  <header class="app-global-header">
-    <div class="app-global-header__brand">
-      <a routerLink="/dashboard" class="brand-link" title="Ir al Panel Principal">
-        <img
-          class="app-global-header__logo"
-          src="/assets/images/UNdeC_ISOLOGO_EMBLEMA-_1_.webp"
-          alt="UNdeC Logo"
-        />
-        <div class="app-global-header__title-group">
-          <span class="app-global-header__title">Sistema de Acreditación UNdeC</span>
-          <span class="app-global-header__subtitle">Universidad Nacional de Chilecito</span>
+  <header class="app-global-header" data-name="AppHeader">
+    <div class="header-inner">
+      <!-- Izquierda: Isologotipo + Sistema de Acreditación -->
+      <a routerLink="/dashboard" class="brand-link" title="Ir al Inicio">
+        <div class="brand-logo-frame">
+          <img
+            class="brand-logo-img"
+            src="/assets/images/UNdeC_ISOLOGO_EMBLEMA-_1_.webp"
+            alt="Isologotipo UNdeC"
+          />
         </div>
+        <span class="brand-title">Sistema de Acreditación</span>
       </a>
-    </div>
 
-    <div class="app-global-header__user">
-      <app-notificaciones-campana />
-      <div class="user-info">
-        <span class="user-info__name">{{ user()?.displayName || user()?.email }}</span>
-        <div class="user-info__roles">
-          @for (role of user()?.roleCodes || []; track role) {
-            <span class="role-badge">{{ role }}</span>
+      <!-- Derecha: Notificaciones + Usuario ▾ -->
+      <div class="header-actions">
+        <!-- Notificaciones -->
+        <div class="notificaciones-wrapper">
+          <app-notificaciones-campana />
+          <span class="notificaciones-label">Notificaciones</span>
+        </div>
+
+        <!-- Usuario con dropdown -->
+        <div class="user-menu-wrapper">
+          <button
+            type="button"
+            class="user-dropdown-btn"
+            (click)="toggleMenuUsuario()"
+            [attr.aria-expanded]="menuUsuarioAbierto()"
+            title="Perfil de usuario y acciones"
+          >
+            <span class="user-name-role">{{ nombreUsuario() }} · {{ rolPrincipal() }} ▾</span>
+          </button>
+
+          @if (menuUsuarioAbierto()) {
+            <div class="user-dropdown-panel" (mouseleave)="cerrarMenuUsuario()">
+              <div class="user-panel-header">
+                <p class="panel-name">{{ user()?.displayName || nombreUsuario() }}</p>
+                <p class="panel-email">{{ user()?.email }}</p>
+                <div class="panel-roles">
+                  @for (role of user()?.roleCodes || []; track role) {
+                    <span class="role-pill">{{ role }}</span>
+                  }
+                </div>
+              </div>
+
+              <div class="user-panel-divider"></div>
+
+              <a routerLink="/dashboard" class="user-panel-item" (click)="cerrarMenuUsuario()">
+                <span>Inicio / Tablero</span>
+              </a>
+
+              @if (user()?.roleCodes?.includes('ADMINISTRATOR')) {
+                <a routerLink="/admin/users" class="user-panel-item" (click)="cerrarMenuUsuario()">
+                  <span>Administración de usuarios</span>
+                </a>
+              }
+
+              <button type="button" class="user-panel-item logout-item" (click)="onSignOut()">
+                <span>Cerrar sesión</span>
+              </button>
+            </div>
           }
         </div>
       </div>
-      <button class="btn-logout" (click)="onSignOut()" type="button" title="Cerrar sesión actual">
-        Cerrar sesión
-      </button>
     </div>
   </header>
 }

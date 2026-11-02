@@ -29,7 +29,7 @@ import { SubnavGestionInstitucionalComponent } from '../subnav-gestion-instituci
 
 @Component({
   selector: 'app-sedes',
-  imports: [ReactiveFormsModule, RouterLink, SubnavGestionInstitucionalComponent],
+  imports: [ReactiveFormsModule, SubnavGestionInstitucionalComponent],
   templateUrl: './sedes.component.html',
   styleUrl: './sedes.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

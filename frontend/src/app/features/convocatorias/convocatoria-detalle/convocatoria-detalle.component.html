@@ -2207,405 +2207,244 @@
             </div>
           }
 
-          <!-- Header Card RG-003 -->
-          <div class="card header-atenea-card" style="margin-bottom: 1.5rem;">
-            <div class="header-atenea-content" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
-              <div>
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                  <span class="badge-rg003" style="background-color: var(--color-primary, #826170); color: #fff; font-weight: 600; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px;">
-                    RG-003: REGISTRO DE USUARIOS DE ATENEA
-                  </span>
-                  @if (regU?.finalizado) {
-                    <span class="badge badge-success" style="background-color: #16a34a; color: #fff; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px;">
-                      Finalizado y Notificado
-                    </span>
+          <!-- 1. Tarjeta Siguiente Paso Figma (nodo 9:148) -->
+          <div class="siguiente-paso-card-figma">
+            <div class="paso-info">
+              <span class="paso-label">Siguiente paso</span>
+              <h3 class="paso-titulo">Definir usuarios y permisos de ATENEA (RG-003)</h3>
+              @if (regU?.finalizado) {
+                <p class="paso-vencimiento paso-completado">
+                  ✓ Formalizado en CONEAU Global y Registro RG-003 generado
+                </p>
+              } @else if (regU?.fechaLimite) {
+                <p class="paso-vencimiento" [class.vencido]="(regU?.diasRestantes ?? 0) < 0">
+                  Vence el {{ regU?.fechaLimite | date:'dd/MM/yyyy' }} ·
+                  @if ((regU?.diasRestantes ?? 0) >= 0) {
+                    quedan {{ regU?.diasRestantes }} días hábiles
                   } @else {
-                    <span class="badge badge-warning" style="background-color: #d97706; color: #fff; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px;">
-                      En Definición
-                    </span>
+                    plazo reglamentario vencido
                   }
-                </div>
-                <h2 style="font-family: var(--font-title, Candara, sans-serif); color: var(--color-primary-dark, #6a4d5a); margin: 0 0 4px 0;">
-                  Definición de Usuarios y Permisos para CONEAU Global ATENEA
-                </h2>
-                <p style="color: var(--color-text-muted, #5a4a53); font-size: 0.9rem; margin: 0;">
-                  Registro formal de acceso para el formulario de acreditación de carrera. El Área de Evaluación y Acreditación (AEA) dispone de un plazo reglamentario no mayor a dos (2) días hábiles.
                 </p>
-
-                <!-- Semáforo de Plazo y Vínculo con Plan de Trabajo -->
-                <div style="margin-top: 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                  <div
-                    class="semaforo-badge"
-                    [class.semaforo-ok]="(regU?.diasRestantes ?? 0) > 1 || regU?.finalizado"
-                    [class.semaforo-alerta]="(regU?.diasRestantes ?? 0) <= 1 && (regU?.diasRestantes ?? 0) >= 0 && !regU?.finalizado"
-                    [class.semaforo-vencido]="(regU?.diasRestantes ?? 0) < 0 && !regU?.finalizado"
-                    style="padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 0.85rem;"
-                  >
-                    {{ regU?.semaforoTexto || 'Dentro del plazo reglamentario' }}
-                  </div>
-                  @if (regU?.fechaLimite) {
-                    <span style="font-size: 0.85rem; color: #334155;">
-                      <strong>Vencimiento:</strong> {{ regU?.fechaLimite | date:'dd/MM/yyyy' }}
-                    </span>
-                  }
-                  @if (canManage() && !regU?.finalizado) {
-                    @if (!editandoPlazoAtenea()) {
-                      <button
-                        type="button"
-                        (click)="abrirEdicionPlazoAtenea()"
-                        style="font-size: 0.78rem; padding: 4px 10px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer; font-weight: 600;"
-                      >
-                        ⏱ Extender Plazo (Calendario)
-                      </button>
-                    } @else {
-                      <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                        <span style="font-size: 0.78rem; font-weight: 600;">Nuevo vencimiento:</span>
-                        <input
-                          type="date"
-                          [min]="obtenerFechaMinimaPlazoAtenea()"
-                          [ngModel]="fechaPlazoAteneaInput()"
-                          (ngModelChange)="fechaPlazoAteneaInput.set($event)"
-                          style="padding: 3px 6px; border-radius: 4px; border: 1px solid #94a3b8; font-size: 0.8rem;"
-                        />
-                        <button
-                          type="button"
-                          (click)="guardarPlazoAtenea()"
-                          style="font-size: 0.78rem; padding: 4px 10px; border-radius: 4px; border: none; background: var(--color-primary, #826170); color: #fff; cursor: pointer; font-weight: 600;"
-                        >
-                          Aplicar
-                        </button>
-                        <button
-                          type="button"
-                          (click)="editandoPlazoAtenea.set(false)"
-                          style="font-size: 0.78rem; padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; color: #64748b; cursor: pointer;"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    }
-                  }
-                  <button
-                    type="button"
-                    class="btn btn-outline"
-                    style="font-size: 0.825rem; padding: 4px 10px; border: 1px solid var(--color-primary, #826170); color: var(--color-primary, #826170); background: transparent; border-radius: 4px; cursor: pointer;"
-                    (click)="seleccionarTab('PLAN_TRABAJO')"
-                  >
-                    Ver Actividad 3.3 en Plan de Trabajo (Hoja INFO)
-                  </button>
-                </div>
-              </div>
-
-              <!-- Botones de Acción de AEA -->
-              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                @if (canManage() && !regU?.finalizado) {
-                  <button
-                    type="button"
-                    class="btn btn-secondary"
-                    style="background: #fff; border: 1px solid var(--color-primary, #826170); color: var(--color-primary, #826170); padding: 8px 14px; border-radius: 6px; font-weight: 600; cursor: pointer;"
-                    [disabled]="guardandoUsuariosAtenea()"
-                    (click)="guardarUsuariosAtenea()"
-                  >
-                    {{ guardandoUsuariosAtenea() ? 'Guardando...' : 'Guardar Permisos' }}
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-primary"
-                    style="background: var(--color-primary, #826170); border: none; color: #fff; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;"
-                    [disabled]="finalizandoUsuariosAtenea()"
-                    (click)="abrirModalFinalizarRg003()"
-                  >
-                    Finalizar y Generar RG-003
-                  </button>
-                }
-                @if (regU?.finalizado) {
-                  <button
-                    type="button"
-                    class="btn btn-primary"
-                    style="background: #16a34a; border: none; color: #fff; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;"
-                    (click)="descargarPdfRg003()"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    Descargar RG-003 Oficial (PDF)
-                  </button>
-                }
-              </div>
-            </div>
-          </div>
-
-          <!-- SECCIÓN 1: PERSONAL DE SGI -->
-          <div class="card grupo-atenea-card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--color-primary, #826170);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border, #e5e7eb); padding-bottom: 8px;">
-              <div>
-                <h3 style="font-family: var(--font-title, Candara, sans-serif); color: var(--color-primary-dark, #6a4d5a); margin: 0 0 4px 0;">
-                  1. Personal de SGI (Secretaría de Gestión Institucional)
-                </h3>
-                <p style="color: var(--color-text-muted, #5a4a53); font-size: 0.85rem; margin: 0;">
-                  Usuarios responsables de la carga y visualización de información institucional y dependencias centrales.
+              } @else {
+                <p class="paso-vencimiento">
+                  Plazo reglamentario no mayor a 2 días hábiles
                 </p>
-              </div>
-            </div>
-
-            <div class="table-responsive">
-              <table class="table-atenea" style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
-                <thead>
-                  <tr style="background: var(--color-surface-alt, #f5f5f6); text-align: left; border-bottom: 2px solid var(--color-border, #e5e7eb);">
-                    <th style="padding: 8px 12px;">Usuario / Nombre</th>
-                    <th style="padding: 8px 12px;">DNI / CUIL</th>
-                    <th style="padding: 8px 12px;">Correo Electrónico</th>
-                    <th style="padding: 8px 12px;">Área / Cargo</th>
-                    <th style="padding: 8px 12px;">Tipo de Acceso</th>
-                    <th style="padding: 8px 12px;">Alcance / Sección</th>
-                    <th style="padding: 8px 12px; text-align: center;">Req. Cuenta Nueva</th>
-                    <th style="padding: 8px 12px; text-align: center;">Habilitado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (u of usuariosSgi(); track u.id || $index) {
-                    <tr style="border-bottom: 1px solid var(--color-border, #e5e7eb);">
-                      <td style="padding: 8px 12px; font-weight: 600;">{{ u.nombreCompleto || (u.apellido + ', ' + u.nombre) }}</td>
-                      <td style="padding: 8px 12px;">{{ u.dniCuil }}</td>
-                      <td style="padding: 8px 12px;">{{ u.correo }}</td>
-                      <td style="padding: 8px 12px;">
-                        <div>{{ u.areaDependencia || 'SGI' }}</div>
-                        <small style="color: var(--color-text-muted, #5a4a53);">{{ u.cargoFuncion || '-' }}</small>
-                      </td>
-                      <td style="padding: 8px 12px;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <select [(ngModel)]="u.tipoAcceso" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db;">
-                            <option value="VISUALIZACION">VISUALIZACION</option>
-                            <option value="CARGA">CARGA</option>
-                            <option value="CARGA_Y_VISUALIZACION">CARGA_Y_VISUALIZACION</option>
-                            <option value="ADMINISTRACION">ADMINISTRACION</option>
-                          </select>
-                        } @else {
-                          <span class="badge" style="background: #e0e7ff; color: #3730a3; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem;">{{ u.tipoAcceso }}</span>
-                        }
-                      </td>
-                      <td style="padding: 8px 12px;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <input type="text" [(ngModel)]="u.seccionAlcance" placeholder="Sección o dimensión" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db; width: 100%; max-width: 180px;" />
-                        } @else {
-                          {{ u.seccionAlcance || 'Institucional' }}
-                        }
-                      </td>
-                      <td style="padding: 8px 12px; text-align: center;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <input type="checkbox" [(ngModel)]="u.requiereCuentaNuevaConeauGlobal" />
-                        } @else {
-                          <span>{{ u.requiereCuentaNuevaConeauGlobal ? 'SÍ' : 'NO' }}</span>
-                        }
-                      </td>
-                      <td style="padding: 8px 12px; text-align: center;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <input type="checkbox" [(ngModel)]="u.habilitadoEnConeau" />
-                        } @else {
-                          <span style="color: #16a34a; font-weight: 600;">{{ u.habilitadoEnConeau ? 'SÍ' : 'NO' }}</span>
-                        }
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="8" style="padding: 16px; text-align: center; color: var(--color-text-muted, #5a4a53);">
-                        No hay usuarios de SGI cargados.
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- SECCIÓN 2: PERSONAL DE AEA -->
-          <div class="card grupo-atenea-card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--color-primary, #826170);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border, #e5e7eb); padding-bottom: 8px;">
-              <div>
-                <h3 style="font-family: var(--font-title, Candara, sans-serif); color: var(--color-primary-dark, #6a4d5a); margin: 0 0 4px 0;">
-                  2. Personal de AEA (Área de Evaluación y Acreditación)
-                </h3>
-                <p style="color: var(--color-text-muted, #5a4a53); font-size: 0.85rem; margin: 0;">
-                  Equipo técnico del Área de Evaluación y Acreditación (AEA) para coordinación y administración integral de CONEAU Global ATENEA.
-                </p>
-              </div>
-            </div>
-
-            <div class="table-responsive">
-              <table class="table-atenea" style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
-                <thead>
-                  <tr style="background: var(--color-surface-alt, #f5f5f6); text-align: left; border-bottom: 2px solid var(--color-border, #e5e7eb);">
-                    <th style="padding: 8px 12px;">Usuario / Nombre</th>
-                    <th style="padding: 8px 12px;">DNI / CUIL</th>
-                    <th style="padding: 8px 12px;">Correo Electrónico</th>
-                    <th style="padding: 8px 12px;">Área / Cargo</th>
-                    <th style="padding: 8px 12px;">Tipo de Acceso</th>
-                    <th style="padding: 8px 12px;">Alcance / Sección</th>
-                    <th style="padding: 8px 12px; text-align: center;">Req. Cuenta Nueva</th>
-                    <th style="padding: 8px 12px; text-align: center;">Habilitado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (u of usuariosAea(); track u.id || $index) {
-                    <tr style="border-bottom: 1px solid var(--color-border, #e5e7eb);">
-                      <td style="padding: 8px 12px; font-weight: 600;">{{ u.nombreCompleto || (u.apellido + ', ' + u.nombre) }}</td>
-                      <td style="padding: 8px 12px;">{{ u.dniCuil }}</td>
-                      <td style="padding: 8px 12px;">{{ u.correo }}</td>
-                      <td style="padding: 8px 12px;">
-                        <div>{{ u.areaDependencia || 'Área de Evaluación y Acreditación (AEA)' }}</div>
-                        <small style="color: var(--color-text-muted, #5a4a53);">{{ u.cargoFuncion || 'Técnico AEA' }}</small>
-                      </td>
-                      <td style="padding: 8px 12px;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <select [(ngModel)]="u.tipoAcceso" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db;">
-                            <option value="ADMINISTRACION">ADMINISTRACION</option>
-                            <option value="CARGA_Y_VISUALIZACION">CARGA_Y_VISUALIZACION</option>
-                            <option value="CARGA">CARGA</option>
-                            <option value="VISUALIZACION">VISUALIZACION</option>
-                          </select>
-                        } @else {
-                          <span class="badge" style="background: #fef3c7; color: #92400e; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem;">{{ u.tipoAcceso }}</span>
-                        }
-                      </td>
-                      <td style="padding: 8px 12px;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <input type="text" [(ngModel)]="u.seccionAlcance" placeholder="Sección o dimensión" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db; width: 100%; max-width: 180px;" />
-                        } @else {
-                          {{ u.seccionAlcance || 'Gestión Integral' }}
-                        }
-                      </td>
-                      <td style="padding: 8px 12px; text-align: center;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <input type="checkbox" [(ngModel)]="u.requiereCuentaNuevaConeauGlobal" />
-                        } @else {
-                          <span>{{ u.requiereCuentaNuevaConeauGlobal ? 'SÍ' : 'NO' }}</span>
-                        }
-                      </td>
-                      <td style="padding: 8px 12px; text-align: center;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <input type="checkbox" [(ngModel)]="u.habilitadoEnConeau" />
-                        } @else {
-                          <span style="color: #16a34a; font-weight: 600;">{{ u.habilitadoEnConeau ? 'SÍ' : 'NO' }}</span>
-                        }
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="8" style="padding: 16px; text-align: center; color: var(--color-text-muted, #5a4a53);">
-                        No hay usuarios de AEA cargados.
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- SECCIÓN 3: PERSONAL DE OTRAS ÁREAS INSTITUCIONALES -->
-          <div class="card grupo-atenea-card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--color-primary, #826170);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border, #e5e7eb); padding-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-              <div>
-                <h3 style="font-family: var(--font-title, Candara, sans-serif); color: var(--color-primary-dark, #6a4d5a); margin: 0 0 4px 0;">
-                  3. Personal de Otras Áreas de la Institución
-                </h3>
-                <p style="color: var(--color-text-muted, #5a4a53); font-size: 0.85rem; margin: 0;">
-                  Personal de dependencias institucionales que proveerán información específica (Infraestructura, Biblioteca, etc.).
-                </p>
-              </div>
-              @if (!regU?.finalizado && canManage()) {
-                <button
-                  type="button"
-                  class="btn btn-outline"
-                  style="border: 1px dashed var(--color-primary, #826170); color: var(--color-primary, #826170); background: #fff; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer;"
-                  (click)="abrirModalNuevoUsuario('OTRAS_AREAS')"
-                >
-                  + Agregar Personal de Otra Área
-                </button>
               }
             </div>
 
-            <div class="table-responsive">
-              <table class="table-atenea" style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+            <div class="paso-acciones">
+              @if (canManage() && !regU?.finalizado) {
+                @if (!editandoPlazoAtenea()) {
+                  <button
+                    type="button"
+                    class="btn-figma-outline"
+                    (click)="abrirEdicionPlazoAtenea()"
+                    title="Extender plazo de vencimiento en calendario"
+                  >
+                    Extender plazo
+                  </button>
+                } @else {
+                  <div class="edicion-plazo-inline">
+                    <input
+                      type="date"
+                      [min]="obtenerFechaMinimaPlazoAtenea()"
+                      [ngModel]="fechaPlazoAteneaInput()"
+                      (ngModelChange)="fechaPlazoAteneaInput.set($event)"
+                      class="input-fecha-atenea"
+                    />
+                    <button
+                      type="button"
+                      class="btn-figma-primary btn-sm"
+                      (click)="guardarPlazoAtenea()"
+                    >
+                      OK
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-figma-outline btn-sm"
+                      (click)="editandoPlazoAtenea.set(false)"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                }
+
+                <button
+                  type="button"
+                  class="btn-figma-primary"
+                  [disabled]="finalizandoUsuariosAtenea()"
+                  (click)="abrirModalFinalizarRg003()"
+                >
+                  Finalizar y generar RG-003
+                </button>
+              }
+
+              @if (regU?.finalizado) {
+                <button
+                  type="button"
+                  class="btn-figma-success"
+                  (click)="descargarPdfRg003()"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  Descargar RG-003 Oficial (PDF)
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- 2. Barra de Título y Acción Guardar Permisos (nodo 9:158) -->
+          <div class="atenea-toolbar-figma">
+            <h2 class="atenea-titulo-figma">Usuarios y permisos de CONEAU Global ATENEA</h2>
+
+            <div class="atenea-toolbar-acciones">
+              @if (!regU?.finalizado && canManage()) {
+                <button
+                  type="button"
+                  class="btn-figma-outline"
+                  [disabled]="guardandoUsuariosAtenea()"
+                  (click)="guardarUsuariosAtenea()"
+                >
+                  {{ guardandoUsuariosAtenea() ? 'Guardando...' : 'Guardar permisos' }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- 3. Barra de Pills de Filtro de Grupo (nodo 9:162) -->
+          <div class="atenea-pills-bar">
+            <div class="pills-grupo">
+              <button
+                type="button"
+                class="pill-btn"
+                [class.active]="filtroGrupoAtenea() === 'TODOS'"
+                (click)="filtroGrupoAtenea.set('TODOS')"
+              >
+                Todos {{ conteoAteneaTodos() }}
+              </button>
+              <button
+                type="button"
+                class="pill-btn"
+                [class.active]="filtroGrupoAtenea() === 'SGI'"
+                (click)="filtroGrupoAtenea.set('SGI')"
+              >
+                SGI {{ conteoAteneaSgi() }}
+              </button>
+              <button
+                type="button"
+                class="pill-btn"
+                [class.active]="filtroGrupoAtenea() === 'AEA'"
+                (click)="filtroGrupoAtenea.set('AEA')"
+              >
+                AEA {{ conteoAteneaAea() }}
+              </button>
+              <button
+                type="button"
+                class="pill-btn"
+                [class.active]="filtroGrupoAtenea() === 'OTRAS_AREAS'"
+                (click)="filtroGrupoAtenea.set('OTRAS_AREAS')"
+              >
+                Otras áreas {{ conteoAteneaOtras() }}
+              </button>
+              <button
+                type="button"
+                class="pill-btn"
+                [class.active]="filtroGrupoAtenea() === 'COMISION_AUTOEVALUACION'"
+                (click)="filtroGrupoAtenea.set('COMISION_AUTOEVALUACION')"
+              >
+                Comisión de Autoevaluación {{ conteoAteneaCa() }}
+              </button>
+            </div>
+
+            @if (filtroGrupoAtenea() === 'OTRAS_AREAS' && !regU?.finalizado && canManage()) {
+              <button
+                type="button"
+                class="btn-agregar-otra-area"
+                (click)="abrirModalNuevoUsuario('OTRAS_AREAS')"
+              >
+                + Agregar personal
+              </button>
+            }
+          </div>
+
+          <!-- 4. Tabla Figma de Usuarios ATENEA (nodo 9:173) -->
+          <div class="table-container-figma">
+            <div class="table-scroll">
+              <table class="tabla-figma tabla-atenea-figma">
                 <thead>
-                  <tr style="background: var(--color-surface-alt, #f5f5f6); text-align: left; border-bottom: 2px solid var(--color-border, #e5e7eb);">
-                    <th style="padding: 8px 12px;">Usuario / Nombre</th>
-                    <th style="padding: 8px 12px;">DNI / CUIL</th>
-                    <th style="padding: 8px 12px;">Correo Electrónico</th>
-                    <th style="padding: 8px 12px;">Área / Cargo</th>
-                    <th style="padding: 8px 12px;">Tipo de Acceso</th>
-                    <th style="padding: 8px 12px;">Alcance / Sección</th>
-                    <th style="padding: 8px 12px; text-align: center;">Req. Cuenta Nueva</th>
-                    <th style="padding: 8px 12px; text-align: center;">Habilitado</th>
+                  <tr>
+                    <th style="width: 220px;">Usuario</th>
+                    <th style="width: 270px;">Grupo</th>
+                    <th style="width: 200px;">Correo</th>
+                    <th style="width: 190px;">Tipo de acceso</th>
+                    <th>Estado</th>
                     @if (!regU?.finalizado && canManage()) {
-                      <th style="padding: 8px 12px; text-align: center;">Acciones</th>
+                      <th style="width: 60px; text-align: center;"></th>
                     }
                   </tr>
                 </thead>
                 <tbody>
-                  @for (u of usuariosOtrasAreas(); track u.id || $index) {
-                    <tr style="border-bottom: 1px solid var(--color-border, #e5e7eb);">
-                      <td style="padding: 8px 12px; font-weight: 600;">{{ u.nombreCompleto || (u.apellido + ', ' + u.nombre) }}</td>
-                      <td style="padding: 8px 12px;">{{ u.dniCuil }}</td>
-                      <td style="padding: 8px 12px;">{{ u.correo }}</td>
-                      <td style="padding: 8px 12px;">
-                        <div>{{ u.areaDependencia || '-' }}</div>
-                        <small style="color: var(--color-text-muted, #5a4a53);">{{ u.cargoFuncion || '-' }}</small>
+                  @for (u of usuariosAteneaFiltrados(); track u.id || $index) {
+                    <tr>
+                      <td class="td-usuario">
+                        <span class="user-name">{{ u.nombreCompleto || (u.apellido + ', ' + u.nombre) }}</span>
+                        <span class="user-dni">DNI: {{ u.dniCuil }}</span>
                       </td>
-                      <td style="padding: 8px 12px;">
+                      <td>
+                        <span class="user-grupo">{{ formatearGrupoAtenea(u.grupoUsuario) }}</span>
+                        @if (u.areaDependencia || u.cargoFuncion) {
+                          <span class="user-cargo">
+                            {{ u.areaDependencia ? u.areaDependencia : '' }}{{ u.areaDependencia && u.cargoFuncion ? ' · ' : '' }}{{ u.cargoFuncion ? u.cargoFuncion : '' }}
+                          </span>
+                        }
+                      </td>
+                      <td class="td-correo">{{ u.correo }}</td>
+                      <td>
                         @if (!regU?.finalizado && canManage()) {
-                          <select [(ngModel)]="u.tipoAcceso" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db;">
-                            <option value="CARGA">CARGA</option>
-                            <option value="VISUALIZACION">VISUALIZACION</option>
-                            <option value="CARGA_Y_VISUALIZACION">CARGA_Y_VISUALIZACION</option>
-                            <option value="ADMINISTRACION">ADMINISTRACION</option>
+                          <select
+                            [(ngModel)]="u.tipoAcceso"
+                            class="select-tipo-acceso-figma"
+                          >
+                            <option value="VISUALIZACION">Visualización</option>
+                            <option value="CARGA">Carga</option>
+                            <option value="CARGA_Y_VISUALIZACION">Carga y visualización</option>
+                            <option value="ADMINISTRACION">Administración</option>
                           </select>
                         } @else {
-                          <span class="badge" style="background: #e0e7ff; color: #3730a3; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem;">{{ u.tipoAcceso }}</span>
+                          <span class="tipo-acceso-text">{{ formatearTipoAcceso(u.tipoAcceso) }}</span>
                         }
                       </td>
-                      <td style="padding: 8px 12px;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <input type="text" [(ngModel)]="u.seccionAlcance" placeholder="Sección o dimensión" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db; width: 100%; max-width: 180px;" />
+                      <td>
+                        @if (u.habilitadoEnConeau) {
+                          <span class="estado-habilitado">Habilitado</span>
+                        } @else if (u.requiereCuentaNuevaConeauGlobal) {
+                          <span class="estado-cuenta-nueva">Requiere cuenta nueva</span>
                         } @else {
-                          {{ u.seccionAlcance || '-' }}
-                        }
-                      </td>
-                      <td style="padding: 8px 12px; text-align: center;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <input type="checkbox" [(ngModel)]="u.requiereCuentaNuevaConeauGlobal" />
-                        } @else {
-                          <span>{{ u.requiereCuentaNuevaConeauGlobal ? 'SÍ' : 'NO' }}</span>
-                        }
-                      </td>
-                      <td style="padding: 8px 12px; text-align: center;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <input type="checkbox" [(ngModel)]="u.habilitadoEnConeau" />
-                        } @else {
-                          <span style="color: #16a34a; font-weight: 600;">{{ u.habilitadoEnConeau ? 'SÍ' : 'NO' }}</span>
+                          <span class="estado-pendiente">Pendiente</span>
                         }
                       </td>
                       @if (!regU?.finalizado && canManage()) {
-                        <td style="padding: 8px 12px; text-align: center;">
-                          <button
-                            type="button"
-                            class="btn-icon"
-                            style="background: none; border: none; color: #dc2626; cursor: pointer;"
-                            title="Quitar usuario"
-                            (click)="eliminarUsuarioAtenea(u)"
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                            </svg>
-                          </button>
+                        <td style="text-align: center;">
+                          @if (u.grupoUsuario === 'OTRAS_AREAS') {
+                            <button
+                              type="button"
+                              class="btn-quitar-usuario"
+                              (click)="eliminarUsuarioAtenea(u)"
+                              title="Quitar usuario"
+                            >
+                              ✕
+                            </button>
+                          }
                         </td>
                       }
                     </tr>
                   } @empty {
                     <tr>
-                      <td [attr.colspan]="(!regU?.finalizado && canManage()) ? 9 : 8" style="padding: 16px; text-align: center; color: var(--color-text-muted, #5a4a53);">
-                        No hay personal de otras áreas institucionales agregado.
+                      <td [attr.colspan]="(!regU?.finalizado && canManage()) ? 6 : 5" class="empty-atenea">
+                        No se encontraron usuarios para el grupo seleccionado.
                       </td>
                     </tr>
                   }
@@ -2614,87 +2453,72 @@
             </div>
           </div>
 
-          <!-- SECCIÓN 4: USUARIOS DE LA COMISIÓN DE AUTOEVALUACIÓN (CA) -->
-          <div class="card grupo-atenea-card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--color-primary, #826170);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border, #e5e7eb); padding-bottom: 8px;">
-              <div>
-                <h3 style="font-family: var(--font-title, Candara, sans-serif); color: var(--color-primary-dark, #6a4d5a); margin: 0 0 4px 0;">
-                  4. Usuarios de la Comisión de Autoevaluación (CA)
-                </h3>
-                <p style="color: var(--color-text-muted, #5a4a53); font-size: 0.85rem; margin: 0;">
-                  Miembros pre-poblados a partir del Registro Oficial RG-002 aprobado para la carrera.
-                </p>
-              </div>
-            </div>
+          <!-- 5. Sección Colapsable para Matriz Detallada de Permisos (RG-003) -->
+          <div class="matriz-permisos-seccion">
+            <button
+              type="button"
+              class="btn-toggle-matriz"
+              (click)="mostrarMatrizAtenea.set(!mostrarMatrizAtenea())"
+            >
+              <span>{{ mostrarMatrizAtenea() ? '▼' : '►' }} Matriz Detallada de Permisos por Sección (RG-003)</span>
+              <span class="matriz-subtexto">Configuración granular de permisos por proceso CONEAU Global</span>
+            </button>
 
-            <div class="table-responsive">
-              <table class="table-atenea" style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
-                <thead>
-                  <tr style="background: var(--color-surface-alt, #f5f5f6); text-align: left; border-bottom: 2px solid var(--color-border, #e5e7eb);">
-                    <th style="padding: 8px 12px;">Miembro CA / Nombre</th>
-                    <th style="padding: 8px 12px;">DNI / CUIL</th>
-                    <th style="padding: 8px 12px;">Correo Electrónico</th>
-                    <th style="padding: 8px 12px;">Rol / Cargo en CA</th>
-                    <th style="padding: 8px 12px;">Tipo de Acceso</th>
-                    <th style="padding: 8px 12px;">Alcance / Sección</th>
-                    <th style="padding: 8px 12px; text-align: center;">Req. Cuenta Nueva</th>
-                    <th style="padding: 8px 12px; text-align: center;">Habilitado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (u of usuariosCa(); track u.id || $index) {
-                    <tr style="border-bottom: 1px solid var(--color-border, #e5e7eb);">
-                      <td style="padding: 8px 12px; font-weight: 600;">{{ u.nombreCompleto || (u.apellido + ', ' + u.nombre) }}</td>
-                      <td style="padding: 8px 12px;">{{ u.dniCuil }}</td>
-                      <td style="padding: 8px 12px;">{{ u.correo }}</td>
-                      <td style="padding: 8px 12px;">
-                        <div>{{ u.cargoFuncion || 'Miembro CA' }}</div>
-                        <small style="color: var(--color-text-muted, #5a4a53);">{{ u.areaDependencia || 'Comisión de Autoevaluación' }}</small>
-                      </td>
-                      <td style="padding: 8px 12px;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <select [(ngModel)]="u.tipoAcceso" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db;">
-                            <option value="CARGA_Y_VISUALIZACION">CARGA_Y_VISUALIZACION</option>
-                            <option value="CARGA">CARGA</option>
-                            <option value="VISUALIZACION">VISUALIZACION</option>
-                            <option value="ADMINISTRACION">ADMINISTRACION</option>
-                          </select>
-                        } @else {
-                          <span class="badge" style="background: #e0e7ff; color: #3730a3; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem;">{{ u.tipoAcceso }}</span>
-                        }
-                      </td>
-                      <td style="padding: 8px 12px;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <input type="text" [(ngModel)]="u.seccionAlcance" placeholder="Sección o dimensión" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d5db; width: 100%; max-width: 180px;" />
-                        } @else {
-                          {{ u.seccionAlcance || 'Formulario Carrera' }}
-                        }
-                      </td>
-                      <td style="padding: 8px 12px; text-align: center;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <input type="checkbox" [(ngModel)]="u.requiereCuentaNuevaConeauGlobal" />
-                        } @else {
-                          <span>{{ u.requiereCuentaNuevaConeauGlobal ? 'SÍ' : 'NO' }}</span>
-                        }
-                      </td>
-                      <td style="padding: 8px 12px; text-align: center;">
-                        @if (!regU?.finalizado && canManage()) {
-                          <input type="checkbox" [(ngModel)]="u.habilitadoEnConeau" />
-                        } @else {
-                          <span style="color: #16a34a; font-weight: 600;">{{ u.habilitadoEnConeau ? 'SÍ' : 'NO' }}</span>
-                        }
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="8" style="padding: 16px; text-align: center; color: var(--color-text-muted, #5a4a53);">
-                        No hay miembros de CA importados.
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
+            @if (mostrarMatrizAtenea()) {
+              <div class="matriz-content-card">
+                <div class="table-responsive">
+                  <table class="tabla-matriz-detallada">
+                    <thead>
+                      <tr>
+                        <th>Proceso / Actividad</th>
+                        <th>Ítem / Sección</th>
+                        <th>Tipo de Permiso</th>
+                        <th style="text-align: center;">Permiso SGI / AEA</th>
+                        <th style="text-align: center;">Permiso Comisión Autoevaluación</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (m of itemsMatrizFiltrados(); track m.id || $index) {
+                        <tr>
+                          <td class="font-semibold">{{ m.procesoActividad }}</td>
+                          <td>
+                            <span>{{ m.item }}</span>
+                            @if (m.seccion) {
+                              <small class="text-muted d-block">{{ m.seccion }}</small>
+                            }
+                          </td>
+                          <td>
+                            <span class="badge-permiso">{{ m.tipoPermiso === 'LECTURA' ? 'Lectura' : 'Lectura y Modificación' }}</span>
+                          </td>
+                          <td style="text-align: center;">
+                            @if (!regU?.finalizado && canManage()) {
+                              <input
+                                type="checkbox"
+                                [checked]="m.permisoSgiAea"
+                                (change)="togglePermisoSgiAea(m)"
+                              />
+                            } @else {
+                              <span>{{ m.permisoSgiAea ? '✓' : '—' }}</span>
+                            }
+                          </td>
+                          <td style="text-align: center;">
+                            @if (!regU?.finalizado && canManage()) {
+                              <input
+                                type="checkbox"
+                                [checked]="m.permisoCa"
+                                (change)="togglePermisoCa(m)"
+                              />
+                            } @else {
+                              <span>{{ m.permisoCa ? '✓' : '—' }}</span>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
           </div>
 
         }
@@ -2863,41 +2687,41 @@
               </div>
             </div>
 
-            <!-- Barra de Filtros y Búsqueda (Sin Prioridad) -->
-            <div class="supervision-toolbar">
-              <div class="tab-filters">
+            <!-- Barra de Filtros y Búsqueda Figma (node 9:224) -->
+            <div class="supervision-toolbar-figma">
+              <div class="pills-hoja-figma">
                 <button
                   type="button"
-                  class="tab-btn"
+                  class="pill-btn-figma"
                   [class.active]="filtroHoja() === 'TODAS'"
                   (click)="cambiarFiltroHoja('TODAS')"
                 >
-                  Todas <span class="tab-counter">{{ conteoTotal() }}</span>
+                  Todas {{ conteoTotal() }}
                 </button>
                 <button
                   type="button"
-                  class="tab-btn"
+                  class="pill-btn-figma"
                   [class.active]="filtroHoja() === 'INFO'"
                   (click)="cambiarFiltroHoja('INFO')"
                 >
-                  Hoja INFO <span class="tab-counter">{{ conteoInfo() }}</span>
+                  Hoja INFO {{ conteoInfo() }}
                 </button>
                 <button
                   type="button"
-                  class="tab-btn"
+                  class="pill-btn-figma"
                   [class.active]="filtroHoja() === 'CONEAU'"
                   (click)="cambiarFiltroHoja('CONEAU')"
                 >
-                  Hoja CONEAU <span class="tab-counter">{{ conteoConeau() }}</span>
+                  Hoja CONEAU {{ conteoConeau() }}
                 </button>
               </div>
 
-              <div class="dropdown-filters">
-                <div class="filter-item">
-                  <label for="filtroEstado" class="filter-label">Estado:</label>
+              <div class="search-filters-figma">
+                <div class="filter-item-figma">
+                  <label for="filtroEstado" class="filter-label-figma">Estado:</label>
                   <select
                     id="filtroEstado"
-                    class="filter-select"
+                    class="select-estado-figma"
                     [value]="filtroEstado()"
                     (change)="filtroEstado.set($any($event.target).value)"
                   >
@@ -2908,10 +2732,10 @@
                   </select>
                 </div>
 
-                <div class="filter-search">
+                <div class="input-search-wrap-figma">
                   <input
                     type="text"
-                    class="search-input"
+                    class="input-search-figma"
                     placeholder="Buscar por código, actividad o responsable..."
                     [value]="busquedaTexto()"
                     (input)="busquedaTexto.set($any($event.target).value)"
@@ -2920,85 +2744,97 @@
               </div>
             </div>
 
-            <!-- Tabla de Actividades (Sin columna Prioridad) -->
+            <!-- Tabla de Actividades Figma (node 9:234) -->
             @if (actividadesFiltradas().length > 0) {
-              <div class="tabla-responsive">
-                <table class="tabla-plan">
+              <div class="tabla-responsive-figma">
+                <table class="tabla-plan-figma">
                   <thead>
                     <tr>
-                      <th style="width: 70px;">Cód.</th>
-                      <th style="width: 80px;">Hoja</th>
-                      <th>Actividad Plan de Trabajo</th>
-                      <th>Responsable(s)</th>
-                      <th style="width: 175px;">Plazo Estimado</th>
-                      @for (colIdx of columnasPlazosExtendidos(); track colIdx) {
-                        <th style="width: 145px; background: #fdf8fa; color: #6a4d5a;">
-                          Plazo Extendido {{ colIdx + 1 }}
-                        </th>
-                      }
-                      <th style="width: 105px;">Estado</th>
-                      <th style="width: 190px;">Documento Asociado</th>
-                      <th style="min-width: 180px;">Observaciones</th>
-                      <th style="width: 130px; text-align: center;">Acción</th>
+                      <th class="th-cod">Cód.</th>
+                      <th class="th-act">Actividad</th>
+                      <th class="th-resp">Responsable</th>
+                      <th class="th-plazo">Plazo estimado</th>
+                      <th class="th-ext">Plazo extendido</th>
+                      <th class="th-estado">Estado</th>
+                      <th class="th-doc">Documento asociado</th>
+                      <th class="th-accion">Acción</th>
                     </tr>
                   </thead>
                   <tbody>
                     @for (act of actividadesFiltradas(); track act.id) {
                       <tr
-                        [class.fila-completada]="act.estado === 'COMPLETADA'"
-                        [class.fila-seleccionada]="actividadSeleccionadaDrawer()?.id === act.id"
+                        [class.fila-alerta-figma]="esFilaAlerta(act)"
+                        [class.fila-completada-figma]="act.estado === 'COMPLETADA'"
+                        [class.fila-seleccionada-figma]="actividadSeleccionadaDrawer()?.id === act.id"
                       >
-                        <td class="col-codigo"><code>{{ act.codigoActividad }}</code></td>
-                        <td>
-                          <span class="badge-hoja" [class.badge-hoja-coneau]="act.hoja === 'CONEAU'">
-                            {{ act.hoja || 'INFO' }}
-                          </span>
+                        <td class="td-cod">
+                          <span class="cod-tag-figma">{{ act.codigoActividad }}</span>
                         </td>
-                        <td class="col-nombre">
-                          <span class="nombre-texto">{{ act.nombre }}</span>
-                        </td>
-                        <td class="col-resp">{{ act.responsable || '—' }}</td>
-                        <td class="col-fechas">
-                          <div style="display: flex; flex-direction: column; gap: 4px;">
-                            @if (act.fechaInicioEstimada || act.fechaFinEstimada) {
-                              <span class="fechas-rango">
-                                {{ act.fechaInicioEstimada ? (act.fechaInicioEstimada | date:'dd/MM/yyyy') : '—' }} al {{ act.fechaFinEstimada ? (act.fechaFinEstimada | date:'dd/MM/yyyy') : '—' }}
-                              </span>
-                            } @else {
-                              <span class="sin-fechas">—</span>
+                        <td class="td-act">
+                          <div class="act-col-wrap">
+                            <span class="act-nombre-figma">{{ act.nombre }}</span>
+                            @if (act.hoja === 'CONEAU') {
+                              <span class="badge-hoja-coneau-inline">CONEAU</span>
                             }
+                          </div>
+                        </td>
+                        <td class="td-resp">
+                          <span class="resp-texto-figma">{{ act.responsable || '—' }}</span>
+                        </td>
+                        <td class="td-plazo">
+                          <div class="plazo-estimado-wrap">
+                            <div class="plazo-texto-linea">
+                              @if (act.fechaFinEstimada) {
+                                <span class="fecha-base-figma">{{ act.fechaFinEstimada | date:'dd/MM/yyyy' }}</span>
+                                @if (act.estado !== 'COMPLETADA') {
+                                  @let dias = calcularDiasRestantes(act.fechaFinEstimada);
+                                  @if (dias !== null && dias >= 0) {
+                                    <span class="dias-restantes-alerta">· faltan {{ dias }} {{ dias === 1 ? 'día' : 'días' }}</span>
+                                  } @else if (dias !== null && dias < 0) {
+                                    <span class="dias-restantes-alerta dias-vencidos">· vencido hace {{ -dias }} días</span>
+                                  }
+                                }
+                                @if (act.plazosExtendidos && act.plazosExtendidos.length > 0) {
+                                  <span class="veces-extendido">· extendido {{ act.plazosExtendidos.length }} {{ act.plazosExtendidos.length === 1 ? 'vez' : 'veces' }}</span>
+                                }
+                              } @else if (act.fechaInicioEstimada) {
+                                <span class="fecha-base-figma">{{ act.fechaInicioEstimada | date:'dd/MM/yyyy' }}</span>
+                              } @else {
+                                <span class="sin-dato-figma">—</span>
+                              }
+                            </div>
 
                             @if (canManage() && act.estado !== 'COMPLETADA') {
                               @if (actividadEditandoPlazoId() !== act.id) {
                                 <button
                                   type="button"
+                                  class="btn-extender-plazo-mini"
                                   (click)="abrirEdicionPlazoActividad(act)"
-                                  style="align-self: flex-start; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; border: 1px dashed #826170; background: #fff; color: #826170; cursor: pointer; font-weight: 600;"
-                                  title="Extender plazo seleccionando una nueva fecha en calendario (no admite fechas hacia atrás)"
+                                  title="Extender plazo seleccionando una nueva fecha"
                                 >
                                   + Extender Plazo
                                 </button>
                               } @else {
-                                <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 2px;">
+                                <div class="inline-date-picker-wrap">
                                   <input
                                     type="date"
                                     [min]="obtenerFechaMinimaPlazoActividad(act)"
                                     [ngModel]="fechaPlazoActividadInput()"
                                     (ngModelChange)="fechaPlazoActividadInput.set($event)"
-                                    style="padding: 2px 5px; border-radius: 4px; border: 1px solid #94a3b8; font-size: 0.75rem;"
+                                    class="input-fecha-mini"
                                   />
                                   <button
                                     type="button"
                                     [disabled]="guardandoPlazoActividad()"
                                     (click)="guardarPlazoExtendidoActividad(act)"
-                                    style="font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; border: none; background: var(--color-primary, #826170); color: #fff; cursor: pointer; font-weight: 600;"
+                                    class="btn-confirmar-fecha-mini"
                                   >
                                     OK
                                   </button>
                                   <button
                                     type="button"
                                     (click)="cancelarEdicionPlazoActividad()"
-                                    style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; color: #64748b; cursor: pointer;"
+                                    class="btn-cancelar-fecha-mini"
                                   >
                                     ✕
                                   </button>
@@ -3007,145 +2843,89 @@
                             }
                           </div>
                         </td>
-                        @for (colIdx of columnasPlazosExtendidos(); track colIdx) {
-                          <td class="col-fechas" style="background: #fdfbfc;">
-                            @if (act.plazosExtendidos && act.plazosExtendidos[colIdx]; as fechaExt) {
-                              <span
-                                style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 600;"
-                                [style.background]="colIdx === act.plazosExtendidos.length - 1 ? '#fef3c7' : '#f1f5f9'"
-                                [style.color]="colIdx === act.plazosExtendidos.length - 1 ? '#92400e' : '#475569'"
-                                [style.border]="colIdx === act.plazosExtendidos.length - 1 ? '1px solid #fcd34d' : '1px solid #cbd5e1'"
-                                [title]="'Plazo extendido #' + (colIdx + 1)"
-                              >
-                                ⏱ {{ fechaExt | date:'dd/MM/yyyy' }}
-                              </span>
-                            } @else {
-                              <span class="sin-fechas">—</span>
-                            }
-                          </td>
-                        }
-                        <td>
+                        <td class="td-ext">
+                          @if (obtenerUltimoPlazoExtendido(act); as ultimoExt) {
+                            <span class="badge-plazo-extendido-figma">
+                              ⏱ {{ ultimoExt | date:'dd/MM/yyyy' }}
+                            </span>
+                          } @else {
+                            <span class="sin-dato-figma">—</span>
+                          }
+                        </td>
+                        <td class="td-estado">
                           <span
-                            class="badge-estado-pills"
-                            [class.pendiente]="act.estado === 'PENDIENTE'"
-                            [class.progreso]="act.estado === 'EN_PROGRESO'"
-                            [class.completado]="act.estado === 'COMPLETADA'"
+                            class="estado-texto-figma"
+                            [class.estado-completada]="act.estado === 'COMPLETADA'"
+                            [class.estado-pendiente]="act.estado === 'PENDIENTE'"
+                            [class.estado-progreso]="act.estado === 'EN_PROGRESO'"
                           >
-                            {{ act.estado === 'EN_PROGRESO' ? 'En Progreso' : act.estado }}
+                            {{ act.estado === 'COMPLETADA' ? 'Completada' : (act.estado === 'EN_PROGRESO' ? 'En Progreso' : 'Pendiente') }}
                           </span>
                         </td>
-                        <td class="col-documento">
+                        <td class="td-doc">
                           @if (esActividadNormativa(act)) {
                             @let normDto = normativaDetalle();
                             @if (normDto && normDto.documentos && normDto.documentos.length > 0) {
-                              <div class="doc-asociado-item">
-                                <span class="badge-doc-count">{{ normDto.documentos.length }} actos</span>
-                                <button
-                                  type="button"
-                                  class="btn-link-doc"
-                                  (click)="abrirDrawer(act)"
-                                  title="Ver o gestionar actos de normativa"
-                                >
-                                  Ver actos
-                                </button>
-                              </div>
+                              <button
+                                type="button"
+                                class="btn-doc-link-figma"
+                                (click)="abrirDrawer(act)"
+                                title="Ver o gestionar actos de normativa"
+                              >
+                                {{ normDto.documentos.length }} actos (Ver)
+                              </button>
                             } @else {
-                              <span class="sin-doc">—</span>
+                              <span class="sin-dato-figma">—</span>
                             }
                           } @else if (esActividadFormalizacion(act)) {
                             @let ft = fichaFt012();
                             @if (ft.comprobanteStoragePath || ft.comprobanteNombre) {
                               <button
                                 type="button"
-                                class="btn-descarga-doc"
+                                class="btn-doc-link-figma"
                                 (click)="descargarComprobanteConeau()"
                                 [title]="'Descargar ' + (ft.comprobanteNombre || 'Comprobante_ATENEA.pdf')"
                               >
-                                <svg class="icon-svg-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                  <polyline points="14 2 14 8 20 8" />
-                                </svg>
-                                <span>Comprobante ATENEA</span>
+                                Comprobante ATENEA
                               </button>
                             } @else {
-                              <span class="sin-doc">—</span>
+                              <span class="sin-dato-figma">—</span>
                             }
                           } @else if (esActividadDocumentacionInteres(act)) {
                             @if (act.documentos && act.documentos.length > 0) {
-                              <div class="doc-asociado-item">
-                                <span class="badge-doc-count">{{ act.documentos.length }} anexo(s)</span>
-                                <button
-                                  type="button"
-                                  class="btn-link-doc"
-                                  (click)="irAGestionarActividadDesdeDrawer(act)"
-                                >
-                                  Ver anexos
-                                </button>
-                              </div>
+                              <button
+                                type="button"
+                                class="btn-doc-link-figma"
+                                (click)="irAGestionarActividadDesdeDrawer(act)"
+                              >
+                                {{ act.documentos.length }} anexo(s) (Ver)
+                              </button>
                             } @else {
-                              <span class="sin-doc">—</span>
+                              <span class="sin-dato-figma">—</span>
                             }
                           } @else if (act.documentos && act.documentos.length > 0) {
                             @let doc = act.documentos[0];
                             <button
                               type="button"
-                              class="btn-descarga-doc"
+                              class="btn-doc-link-figma"
                               (click)="descargar(doc.id, doc.nombreOriginal || 'Documento.pdf')"
                               [title]="'Descargar ' + (doc.nombreOriginal || 'documento')"
                             >
-                              <svg class="icon-svg-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                <polyline points="14 2 14 8 20 8" />
-                              </svg>
-                              <span>{{ doc.nombreOriginal || 'Descargar' }}</span>
+                              {{ doc.nombreOriginal || 'Descargar' }}
                             </button>
                           } @else {
-                            <span class="sin-doc">—</span>
+                            <span class="sin-dato-figma">—</span>
                           }
                         </td>
-                        <td class="col-observaciones">
-                          <span class="obs-texto" [title]="obtenerTextoObservaciones(act)">
-                            {{ obtenerTextoObservaciones(act) }}
-                          </span>
-                        </td>
-                        <td class="col-acciones">
-                          @if (esActividadTallerConeau(act)) {
-                            @if (act.estado !== 'COMPLETADA' && canManage()) {
-                              <button
-                                type="button"
-                                class="btn-accion-tabla btn-completar-taller"
-                                (click)="marcarComoCompleta(act)"
-                                title="Marcar como completa la participación en taller CONEAU"
-                                style="background: #166534; color: #fff; font-weight: 600; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;"
-                              >
-                                Marcar como completa
-                              </button>
-                            } @else if (act.estado === 'COMPLETADA') {
-                              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 600; color: #166534; background: #dcfce7; padding: 3px 8px; border-radius: 4px;">
-                                ✓ Completada
-                              </span>
-                            } @else {
-                              <span class="sin-doc">—</span>
-                            }
-                          } @else if (esActividadInformar(act)) {
-                            <button
-                              type="button"
-                              class="btn-accion-tabla"
-                              (click)="abrirDrawer(act)"
-                              [title]="'Abrir panel lateral para ' + act.codigoActividad"
-                            >
-                              Ver Detalle
-                            </button>
-                          } @else {
-                            <button
-                              type="button"
-                              class="btn-accion-tabla"
-                              (click)="abrirDrawer(act)"
-                              [title]="'Abrir panel lateral para ' + act.codigoActividad"
-                            >
-                              {{ (esActividadNormativa(act) || esActividadPlanTrabajo(act)) ? 'Gestionar' : 'Ver Detalle' }}
-                            </button>
-                          }
+                        <td class="td-accion">
+                          <button
+                            type="button"
+                            class="btn-accion-puntos-figma"
+                            (click)="abrirDrawer(act)"
+                            [title]="'Ver detalle y gestión de ' + act.codigoActividad"
+                          >
+                            ···
+                          </button>
                         </td>
                       </tr>
                     }

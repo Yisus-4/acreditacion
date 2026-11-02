@@ -1,112 +1,217 @@
 .app-global-header {
   background-color: var(--color-surface, #ffffff);
-  border-bottom: 1px solid var(--border-color, #e2e8f0);
-  padding: 0.65rem 1.75rem;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  padding: 14px 40px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  @media (max-width: 768px) {
+    padding: 12px 16px;
+  }
+}
+
+.header-inner {
+  max-width: 1440px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  gap: 16px;
+}
 
-  &__brand {
+/* ── Brand Figma (nodo 8:102) ── */
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  text-decoration: none;
+  cursor: pointer;
+
+  .brand-logo-frame {
+    border: 1px solid var(--color-primary, #826170);
+    border-radius: 4px;
+    padding: 4px 8px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    box-sizing: border-box;
 
-    .brand-link {
+    .brand-logo-img {
+      height: 28px;
+      width: auto;
+      object-fit: contain;
+      display: block;
+    }
+  }
+
+  .brand-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-primary-dark, #6b4c5b);
+    white-space: nowrap;
+    line-height: normal;
+    letter-spacing: -0.01em;
+
+    @media (max-width: 600px) {
+      font-size: 16px;
+    }
+  }
+}
+
+/* ── Acciones Header Figma (nodo 8:106) ── */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-size: 15px;
+}
+
+.notificaciones-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-muted, #5a4a53);
+  font-weight: 400;
+
+  .notificaciones-label {
+    font-size: 15px;
+    color: var(--color-text-muted, #5a4a53);
+    cursor: pointer;
+
+    @media (max-width: 700px) {
+      display: none;
+    }
+  }
+}
+
+/* ── Menú de usuario con Dropdown ── */
+.user-menu-wrapper {
+  position: relative;
+}
+
+.user-dropdown-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  font-family: inherit;
+
+  .user-name-role {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text, #1f1a1d);
+    white-space: nowrap;
+    transition: color 0.15s ease-in-out;
+  }
+
+  &:hover .user-name-role {
+    color: var(--color-primary, #826170);
+  }
+}
+
+.user-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 1100;
+  animation: fadeIn 0.12s ease-out;
+
+  .user-panel-header {
+    padding: 8px 16px 12px;
+
+    .panel-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--color-text, #1f1a1d);
+      margin: 0 0 2px 0;
+    }
+
+    .panel-email {
+      font-size: 13px;
+      color: var(--color-text-muted, #5a4a53);
+      margin: 0 0 8px 0;
+      word-break: break-all;
+    }
+
+    .panel-roles {
       display: flex;
-      align-items: center;
-      gap: 0.85rem;
-      text-decoration: none;
-      color: inherit;
+      flex-wrap: wrap;
+      gap: 4px;
 
-      &:hover .app-global-header__title {
-        color: var(--color-primary, #826170);
+      .role-pill {
+        font-size: 11px;
+        font-weight: 700;
+        background: var(--color-primary-tint, #eae3e7);
+        color: var(--color-primary-dark, #6b4c5b);
+        padding: 2px 6px;
+        border-radius: 4px;
       }
     }
   }
 
-  &__logo {
-    object-fit: contain;
-    height: 38px;
-    width: auto;
+  .user-panel-divider {
+    height: 1px;
+    background: var(--color-border, #e5e7eb);
+    margin: 4px 0;
   }
 
-  &__title-group {
-    display: flex;
-    flex-direction: column;
-  }
-
-  &__title {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--color-primary-dark, #2b2b2b);
-    line-height: 1.2;
-    transition: color 0.15s;
-  }
-
-  &__subtitle {
-    font-size: 0.75rem;
-    color: var(--color-gray-500, #64748b);
-  }
-
-  &__user {
+  .user-panel-item {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text, #1f1a1d);
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.12s ease-in-out;
+
+    &:hover {
+      background-color: #f8fafc;
+      color: var(--color-primary, #826170);
+    }
+
+    &.logout-item {
+      color: #dc2626;
+
+      &:hover {
+        background-color: #fef2f2;
+        color: #b91c1c;
+      }
+    }
   }
 }
 
-.user-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.2rem;
-
-  &__name {
-    font-size: 0.84rem;
-    font-weight: 600;
-    color: var(--color-text, #1e293b);
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
   }
-
-  &__roles {
-    display: flex;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-  }
-}
-
-.role-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 0.1rem 0.45rem;
-  background-color: var(--color-primary-tint, #f5f3f4);
-  color: var(--color-primary, #826170);
-  border: 1px solid rgba(130, 97, 112, 0.25);
-  border-radius: 4px;
-}
-
-.btn-logout {
-  padding: 0.4rem 0.85rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  font-family: inherit;
-  color: var(--color-danger, #dc2626);
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  transition: all 0.15s;
-
-  &:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 .app-main-content {
-  flex: 1;
+  min-height: calc(100vh - 65px);
 }
