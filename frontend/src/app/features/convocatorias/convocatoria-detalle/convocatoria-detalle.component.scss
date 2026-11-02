@@ -1798,6 +1798,100 @@
   p { margin: 0; }
 }
 
+.fila-clickeable-figma {
+  cursor: pointer;
+}
+
+.drawer-ficha-actividad-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  background-color: #ffffff;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+
+  .drawer-actividad-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    .drawer-subtitulo-campo {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--color-text-muted, #5a4a53);
+    }
+
+    .drawer-texto-desc {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text, #1f1a1d);
+      margin: 0;
+      line-height: 1.35;
+    }
+
+    .drawer-texto-resp {
+      font-size: 13px;
+      color: #374151;
+      margin: 0;
+    }
+
+    .drawer-texto-obs {
+      font-size: 13px;
+      color: #4b5563;
+      background: #f9fafb;
+      padding: 8px 10px;
+      border-radius: 4px;
+      border-left: 3px solid var(--color-primary, #826170);
+      margin: 0;
+      line-height: 1.4;
+    }
+  }
+
+  .drawer-lista-documentos {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .btn-descarga-doc-drawer {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-primary, #826170);
+      background: #ffffff;
+      border: 1px solid var(--color-border, #e5e7eb);
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background: var(--color-primary-tint, #eae3e7);
+        border-color: var(--color-primary, #826170);
+      }
+    }
+  }
+
+  .alerta-completada-drawer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background-color: #dcfce7;
+    color: #166534;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    text-align: center;
+  }
+}
+
 /* ── PESTAÑA 3: Ficha y RG-001 ── */
 .info-grid {
   display: grid;

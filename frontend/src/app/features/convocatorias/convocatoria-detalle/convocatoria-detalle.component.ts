@@ -608,9 +608,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    if (!this.canManage() && this.tabActiva() === 'SEGUIMIENTO') {
-      this.tabActiva.set('ACTIVIDADES');
-    }
     this.routeSub = this.route.paramMap.subscribe((params) => {
       const id = params.get('id');
       if (id) {
@@ -1103,10 +1100,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   }
 
   seleccionarTab(tab: 'ACTIVIDADES' | 'PLAN_TRABAJO' | 'COMISION_AUTOEVALUACION' | 'USUARIOS_ATENEA' | 'SEGUIMIENTO'): void {
-    if (tab === 'SEGUIMIENTO' && !this.canManage()) {
-      this.tabActiva.set('ACTIVIDADES');
-      return;
-    }
     if (tab === 'USUARIOS_ATENEA' && !this.usuariosAteneaDesbloqueado()) {
       return;
     }

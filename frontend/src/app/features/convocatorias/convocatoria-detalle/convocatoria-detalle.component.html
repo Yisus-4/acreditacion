@@ -427,20 +427,18 @@
       </button>
 
       <!-- Etapa 5 -->
-      @if (canManage()) {
-        <button
-          type="button"
-          role="tab"
-          class="etapa-card"
-          [class.active]="tabActiva() === 'SEGUIMIENTO'"
-          [attr.aria-selected]="tabActiva() === 'SEGUIMIENTO'"
-          (click)="seleccionarTab('SEGUIMIENTO')"
-        >
-          <span class="etapa-num">5</span>
-          <span class="etapa-titulo">Seguimiento del Plan de Trabajo</span>
-          <span class="etapa-estado">{{ conteoTotal() }} actividades</span>
-        </button>
-      }
+      <button
+        type="button"
+        role="tab"
+        class="etapa-card"
+        [class.active]="tabActiva() === 'SEGUIMIENTO'"
+        [attr.aria-selected]="tabActiva() === 'SEGUIMIENTO'"
+        (click)="seleccionarTab('SEGUIMIENTO')"
+      >
+        <span class="etapa-num">5</span>
+        <span class="etapa-titulo">Seguimiento del Plan de Trabajo</span>
+        <span class="etapa-estado">{{ conteoTotal() }} actividades</span>
+      </button>
     </div>
 
     <!-- PESTAÑA: FORMALIZACIÓN Y NORMATIVA DE LA CARRERA -->
@@ -2452,75 +2450,6 @@
               </table>
             </div>
           </div>
-
-          <!-- 5. Sección Colapsable para Matriz Detallada de Permisos (RG-003) -->
-          <div class="matriz-permisos-seccion">
-            <button
-              type="button"
-              class="btn-toggle-matriz"
-              (click)="mostrarMatrizAtenea.set(!mostrarMatrizAtenea())"
-            >
-              <span>{{ mostrarMatrizAtenea() ? '▼' : '►' }} Matriz Detallada de Permisos por Sección (RG-003)</span>
-              <span class="matriz-subtexto">Configuración granular de permisos por proceso CONEAU Global</span>
-            </button>
-
-            @if (mostrarMatrizAtenea()) {
-              <div class="matriz-content-card">
-                <div class="table-responsive">
-                  <table class="tabla-matriz-detallada">
-                    <thead>
-                      <tr>
-                        <th>Proceso / Actividad</th>
-                        <th>Ítem / Sección</th>
-                        <th>Tipo de Permiso</th>
-                        <th style="text-align: center;">Permiso SGI / AEA</th>
-                        <th style="text-align: center;">Permiso Comisión Autoevaluación</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (m of itemsMatrizFiltrados(); track m.id || $index) {
-                        <tr>
-                          <td class="font-semibold">{{ m.procesoActividad }}</td>
-                          <td>
-                            <span>{{ m.item }}</span>
-                            @if (m.seccion) {
-                              <small class="text-muted d-block">{{ m.seccion }}</small>
-                            }
-                          </td>
-                          <td>
-                            <span class="badge-permiso">{{ m.tipoPermiso === 'LECTURA' ? 'Lectura' : 'Lectura y Modificación' }}</span>
-                          </td>
-                          <td style="text-align: center;">
-                            @if (!regU?.finalizado && canManage()) {
-                              <input
-                                type="checkbox"
-                                [checked]="m.permisoSgiAea"
-                                (change)="togglePermisoSgiAea(m)"
-                              />
-                            } @else {
-                              <span>{{ m.permisoSgiAea ? '✓' : '—' }}</span>
-                            }
-                          </td>
-                          <td style="text-align: center;">
-                            @if (!regU?.finalizado && canManage()) {
-                              <input
-                                type="checkbox"
-                                [checked]="m.permisoCa"
-                                (change)="togglePermisoCa(m)"
-                              />
-                            } @else {
-                              <span>{{ m.permisoCa ? '✓' : '—' }}</span>
-                            }
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            }
-          </div>
-
         }
       </div>
 
@@ -2766,6 +2695,9 @@
                         [class.fila-alerta-figma]="esFilaAlerta(act)"
                         [class.fila-completada-figma]="act.estado === 'COMPLETADA'"
                         [class.fila-seleccionada-figma]="actividadSeleccionadaDrawer()?.id === act.id"
+                        (click)="abrirDrawer(act)"
+                        class="fila-clickeable-figma"
+                        title="Haga clic para ver el panel de detalle de la actividad"
                       >
                         <td class="td-cod">
                           <span class="cod-tag-figma">{{ act.codigoActividad }}</span>
@@ -2809,13 +2741,13 @@
                                 <button
                                   type="button"
                                   class="btn-extender-plazo-mini"
-                                  (click)="abrirEdicionPlazoActividad(act)"
+                                  (click)="abrirEdicionPlazoActividad(act); $event.stopPropagation()"
                                   title="Extender plazo seleccionando una nueva fecha"
                                 >
                                   + Extender Plazo
                                 </button>
                               } @else {
-                                <div class="inline-date-picker-wrap">
+                                <div class="inline-date-picker-wrap" (click)="$event.stopPropagation()">
                                   <input
                                     type="date"
                                     [min]="obtenerFechaMinimaPlazoActividad(act)"
@@ -2826,14 +2758,14 @@
                                   <button
                                     type="button"
                                     [disabled]="guardandoPlazoActividad()"
-                                    (click)="guardarPlazoExtendidoActividad(act)"
+                                    (click)="guardarPlazoExtendidoActividad(act); $event.stopPropagation()"
                                     class="btn-confirmar-fecha-mini"
                                   >
                                     OK
                                   </button>
                                   <button
                                     type="button"
-                                    (click)="cancelarEdicionPlazoActividad()"
+                                    (click)="cancelarEdicionPlazoActividad(); $event.stopPropagation()"
                                     class="btn-cancelar-fecha-mini"
                                   >
                                     ✕
@@ -2869,7 +2801,7 @@
                               <button
                                 type="button"
                                 class="btn-doc-link-figma"
-                                (click)="abrirDrawer(act)"
+                                (click)="abrirDrawer(act); $event.stopPropagation()"
                                 title="Ver o gestionar actos de normativa"
                               >
                                 {{ normDto.documentos.length }} actos (Ver)
@@ -2883,7 +2815,7 @@
                               <button
                                 type="button"
                                 class="btn-doc-link-figma"
-                                (click)="descargarComprobanteConeau()"
+                                (click)="descargarComprobanteConeau(); $event.stopPropagation()"
                                 [title]="'Descargar ' + (ft.comprobanteNombre || 'Comprobante_ATENEA.pdf')"
                               >
                                 Comprobante ATENEA
@@ -2896,7 +2828,7 @@
                               <button
                                 type="button"
                                 class="btn-doc-link-figma"
-                                (click)="irAGestionarActividadDesdeDrawer(act)"
+                                (click)="irAGestionarActividadDesdeDrawer(act); $event.stopPropagation()"
                               >
                                 {{ act.documentos.length }} anexo(s) (Ver)
                               </button>
@@ -2908,7 +2840,7 @@
                             <button
                               type="button"
                               class="btn-doc-link-figma"
-                              (click)="descargar(doc.id, doc.nombreOriginal || 'Documento.pdf')"
+                              (click)="descargar(doc.id, doc.nombreOriginal || 'Documento.pdf'); $event.stopPropagation()"
                               [title]="'Descargar ' + (doc.nombreOriginal || 'documento')"
                             >
                               {{ doc.nombreOriginal || 'Descargar' }}
@@ -2921,7 +2853,7 @@
                           <button
                             type="button"
                             class="btn-accion-puntos-figma"
-                            (click)="abrirDrawer(act)"
+                            (click)="abrirDrawer(act); $event.stopPropagation()"
                             [title]="'Ver detalle y gestión de ' + act.codigoActividad"
                           >
                             ···
@@ -3208,8 +3140,63 @@
               <!-- CASO 5: Otras actividades del plan -->
               @else {
                 <div class="drawer-seccion">
-                  <div class="drawer-empty-notice">
-                    <p>Esta actividad se encuentra programada dentro de la secuencia del plan de trabajo institucional.</p>
+                  <div class="drawer-ficha-actividad-card">
+                    <div class="drawer-actividad-item">
+                      <span class="drawer-subtitulo-campo">Actividad:</span>
+                      <p class="drawer-texto-desc">{{ actDrawer.nombre }}</p>
+                    </div>
+
+                    <div class="drawer-actividad-item">
+                      <span class="drawer-subtitulo-campo">Responsables asignados:</span>
+                      <p class="drawer-texto-resp">{{ actDrawer.responsable || 'Equipo de Acreditación / AEA' }}</p>
+                    </div>
+
+                    @if (actDrawer.observaciones || actDrawer.sintesisAcuerdos) {
+                      <div class="drawer-actividad-item">
+                        <span class="drawer-subtitulo-campo">Observaciones / Notas metodológicas:</span>
+                        <p class="drawer-texto-obs">{{ actDrawer.observaciones || actDrawer.sintesisAcuerdos }}</p>
+                      </div>
+                    }
+
+                    @if (actDrawer.documentos && actDrawer.documentos.length > 0) {
+                      <div class="drawer-actividad-item">
+                        <span class="drawer-subtitulo-campo">Evidencias y respaldos adjuntos ({{ actDrawer.documentos.length }}):</span>
+                        <div class="drawer-lista-documentos">
+                          @for (doc of actDrawer.documentos; track doc.id) {
+                            <button
+                              type="button"
+                              class="btn-descarga-doc-drawer"
+                              (click)="descargar(doc.id, doc.nombreOriginal || 'Evidencia.pdf')"
+                            >
+                              <svg class="icon-svg-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                              </svg>
+                              <span>{{ doc.nombreOriginal || 'Documento de respaldo' }}</span>
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    }
+
+                    @if (canManage() && actDrawer.estado !== 'COMPLETADA') {
+                      <div class="drawer-acciones-box mt-md">
+                        <button
+                          type="button"
+                          class="btn-primario-accion w-full"
+                          (click)="abrirModalCompletar(actDrawer)"
+                        >
+                          Registrar Avance / Completar Actividad
+                        </button>
+                      </div>
+                    } @else if (actDrawer.estado === 'COMPLETADA') {
+                      <div class="alerta-completada-drawer mt-md">
+                        ✓ Actividad completada
+                        @if (actDrawer.completadaEn) {
+                          el {{ actDrawer.completadaEn | date:'dd/MM/yyyy' }}
+                        }
+                      </div>
+                    }
                   </div>
                 </div>
               }
