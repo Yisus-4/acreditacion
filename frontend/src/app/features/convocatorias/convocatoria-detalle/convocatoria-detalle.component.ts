@@ -366,6 +366,9 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly opcionalesNormativaVisible = signal<boolean>(true);
   readonly seccionesConfirmadasFt012 = signal<Set<string>>(new Set());
   readonly subiendoTipoNormativa = signal<TipoDocumentoNormativa | null>(null);
+  readonly mostrarPanelRevisionNormativa = signal<boolean>(false);
+  readonly enviandoNormativa = signal<boolean>(false);
+  readonly aprobandoNormativa = signal<boolean>(false);
 
   private readonly TIPOS_NORMATIVA_OBLIGATORIOS: TipoDocumentoNormativa[] = [
     'CREACION_CARRERA',
@@ -628,6 +631,91 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     return `${(kb / 1024).toFixed(2).replace('.', ',')} MB`;
   }
 
+  togglePanelRevisionNormativa(): void {
+    this.mostrarPanelRevisionNormativa.update((v) => !v);
+  }
+
+  enviarNormativaDefinitivaInline(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    if (this.normativaObligatoriosCargadosCount() < 5) {
+      alert('Debe cargar los 5 documentos obligatorios de normativa antes de enviarlos.');
+      return;
+    }
+
+    this.enviandoNormativa.set(true);
+    this.normativaService.enviarDefinitiva(c.id).subscribe({
+      next: () => {
+        this.enviandoNormativa.set(false);
+        this.bannerExitoPlan.set(
+          'Los documentos de Normativa de la carrera fueron enviados formalmente a revisión por el Área de Evaluación y Acreditación (AEA).'
+        );
+        this.refrescarPlanTrabajo();
+      },
+      error: (err) => {
+        this.enviandoNormativa.set(false);
+        alert(
+          err?.error?.message ||
+            err?.error?.error ||
+            'No fue posible enviar la documentación de normativa.'
+        );
+      },
+    });
+  }
+
+  aprobarNormativaInline(): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    if (this.normativaObligatoriosCargadosCount() < 5) {
+      alert('Debe cargar los 5 documentos obligatorios antes de aprobar la normativa.');
+      return;
+    }
+
+    this.aprobandoNormativa.set(true);
+    const estadoActual = this.normativaDetalle()?.estado;
+
+    const ejecutarAprobacion = () => {
+      this.normativaService
+        .revisarNormativa(c.id, {
+          decision: 'APROBADO',
+          observaciones: 'Normativa verificada y aprobada por AEA.',
+        })
+        .subscribe({
+          next: () => {
+            this.aprobandoNormativa.set(false);
+            this.bannerExitoPlan.set(
+              '¡Normativa de la carrera aprobada exitosamente por la AEA! La actividad ha quedado completada.'
+            );
+            this.onNormativaActualizada();
+          },
+          error: (err) => {
+            this.aprobandoNormativa.set(false);
+            alert(
+              err?.error?.message ||
+                err?.error?.error ||
+                'No fue posible aprobar la normativa.'
+            );
+          },
+        });
+    };
+
+    if (estadoActual !== 'ENVIADA_A_REVISION') {
+      this.normativaService.enviarDefinitiva(c.id).subscribe({
+        next: () => ejecutarAprobacion(),
+        error: (err) => {
+          this.aprobandoNormativa.set(false);
+          alert(
+            err?.error?.message ||
+              err?.error?.error ||
+              'No fue posible enviar la normativa previa a la aprobación.'
+          );
+        },
+      });
+    } else {
+      ejecutarAprobacion();
+    }
+  }
+
   // =========================================================================
   // Estado Pestaña 2: Plan de Trabajo y Formulario RG-001
   // =========================================================================
@@ -702,8 +790,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       norm?.estado === 'COMPLETADA' ||
       norm?.estado === 'ENVIADA_A_REVISION' ||
       actNorm?.estado === 'COMPLETADA' ||
-      this.actividad2Completa() ||
-      this.normativaObligatoriosCargadosCount() >= 5;
+      this.actividad2Completa();
     return ftOk && normOk;
   });
 
