@@ -83,6 +83,15 @@
               <span>Reiniciar Proceso (Modo Test)</span>
               <span class="badge-solo-test">SOLO TEST</span>
             </button>
+            <button
+              type="button"
+              class="btn-reiniciar-test"
+              style="border-color: #fecaca; background: #fef2f2; color: #b91c1c;"
+              (click)="confirmarReinicio()"
+              [disabled]="reiniciando()"
+              title="Eliminar convocatoria completa y sus procesos asociados (Modo Desarrollo)">
+              <span>🗑 {{ reiniciando() ? 'Eliminando...' : 'Eliminar Convocatoria (Dev)' }}</span>
+            </button>
             <a routerLink="/acreditacion/convocatorias" class="btn-volver-link">
               &larr; Volver a Convocatorias
             </a>
@@ -309,11 +318,12 @@
             <button
               type="button"
               class="btn-reiniciar-convocatoria-figma"
+              style="padding: 0.45rem 0.75rem; width: auto; color: #b91c1c; border-color: #fecaca; background: #fef2f2; font-size: 0.78rem; font-weight: 600;"
               (click)="confirmarReinicio()"
               [disabled]="reiniciando()"
-              title="Reiniciar y borrar datos de prueba para comenzar desde cero"
+              title="Eliminar y reiniciar datos de prueba para comenzar desde cero"
             >
-              ···
+              🗑 {{ reiniciando() ? 'Eliminando...' : 'Eliminar (Dev)' }}
             </button>
           }
         </div>
@@ -333,7 +343,20 @@
       >
         <span class="etapa-num">1</span>
         <span class="etapa-titulo">Formalización y Normativa</span>
-        <span class="etapa-estado estado-completada">Completada</span>
+        <span
+          class="etapa-estado"
+          [class.estado-completada]="planTrabajoDesbloqueado()"
+          [class.estado-progreso]="!planTrabajoDesbloqueado() && tareasFormalizacionCompletadas() > 0"
+          [class.estado-definicion]="!planTrabajoDesbloqueado() && tareasFormalizacionCompletadas() === 0"
+        >
+          @if (planTrabajoDesbloqueado()) {
+            Completada
+          } @else if (tareasFormalizacionCompletadas() > 0) {
+            En progreso ({{ progresoFormalizacionPorcentaje() }}%)
+          } @else {
+            Pendiente (0%)
+          }
+        </span>
       </button>
 
       <!-- Etapa 2 -->
@@ -440,18 +463,51 @@
       <div class="formalizacion-normativa-figma-container">
         @let ft = fichaFt012();
 
+        <!-- Barra de progreso dinámica de Formalización y Normativa -->
+        <div class="card" style="padding: 1rem 1.25rem; margin-bottom: 1rem; border: 1px solid #e2e8f0; border-radius: 10px; background: #ffffff;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <strong style="font-size: 0.92rem; color: #1e293b;">Progreso de Formalización y Normativa</strong>
+              <span style="margin-left: 0.65rem; font-size: 0.82rem; color: #64748b;">
+                {{ tareasFormalizacionCompletadas() }} de {{ tareasFormalizacionTotal }} tareas completadas
+                ({{ seccionesFt012CompletasCount() }}/6 secciones FT-012 · {{ normativaObligatoriosCargadosCount() }}/5 documentos obligatorios)
+              </span>
+            </div>
+            <span
+              style="font-size: 0.85rem; font-weight: 700; padding: 0.2rem 0.65rem; border-radius: 999px;"
+              [style.background]="progresoFormalizacionPorcentaje() === 100 ? '#dcfce7' : (progresoFormalizacionPorcentaje() > 0 ? '#fef3c7' : '#f1f5f9')"
+              [style.color]="progresoFormalizacionPorcentaje() === 100 ? '#166534' : (progresoFormalizacionPorcentaje() > 0 ? '#92400e' : '#475569')"
+            >
+              {{ progresoFormalizacionPorcentaje() }}%
+            </span>
+          </div>
+          <div class="carrera-progreso-track" style="height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+            <div
+              class="carrera-progreso-fill"
+              [style.width.%]="progresoFormalizacionPorcentaje()"
+              style="height: 100%; transition: width 0.3s ease;"
+            ></div>
+          </div>
+        </div>
+
         <!-- 1. Tarjeta Alerta Superior (Figma nodo 33:179) -->
         <div class="paso-card-alerta-figma">
           <div class="paso-alerta-info">
             <h3 class="paso-alerta-titulo">
               @if (esFt012Enviada()) {
-                Ficha FT-012 remitida a la AEA · Normativa completa (5 de 5 obligatorios)
+                Ficha FT-012 remitida a la AEA
               } @else {
-                Ficha FT-012 sin remitir · Normativa completa (5 de 5 obligatorios)
+                Ficha FT-012 en carga ({{ seccionesFt012CompletasCount() }} de 6 secciones completas)
+              }
+              ·
+              @if (normativaObligatoriosCargadosCount() >= 5) {
+                Normativa obligatoria completa (5 de 5 obligatorios)
+              } @else {
+                Normativa pendiente ({{ normativaObligatoriosCargadosCount() }} de 5 obligatorios cargados)
               }
             </h3>
             <p class="paso-alerta-vencimiento">
-              Plazo para la normativa: 5 días hábiles · vence el {{ (c.registroConvocatoria?.fechaCierre | date:'dd/MM/yyyy') || '09/11/2026' }}
+              Plazo para la normativa: {{ normativaDetalle()?.diasHabilesPlazo || 5 }} días hábiles · vence el {{ (normativaDetalle()?.fechaLimiteEntrega || c.registroConvocatoria?.fechaCierre | date:'dd/MM/yyyy') || '09/11/2026' }}
             </p>
           </div>
           <div class="paso-alerta-acciones">
@@ -480,16 +536,22 @@
         <div class="card panel-formalizacion-card-figma">
           <div class="panel-header-figma">
             <h3 class="panel-titulo">Ficha de formalización (FT-012)</h3>
-            <p class="panel-subtitulo">Completá cada sección. Se guarda como borrador mientras no la remitas.</p>
+            <p class="panel-subtitulo">Completá y verificá cada sección ({{ seccionesFt012CompletasCount() }} de 6 secciones completadas). Se guarda como borrador mientras no la remitas.</p>
           </div>
 
           <!-- Sección 1: Datos de la institución -->
           <div class="seccion-accordion-item-figma" [class.abierta]="seccionFt012Abierta() === '1'">
             <div class="seccion-accordion-header" (click)="toggleSeccionFt012('1')">
               <span class="seccion-nombre">1. Datos de la institución</span>
-              <span class="seccion-estado-tag completada">Completa</span>
+              <span
+                class="seccion-estado-tag"
+                [class.completada]="esSeccionFt012Completa('1')"
+                [class.incompleta]="!esSeccionFt012Completa('1')"
+              >
+                {{ etiquetaEstadoSeccionFt012('1') }}
+              </span>
               <button type="button" class="btn-toggle-seccion">
-                {{ seccionFt012Abierta() === '1' ? 'Ocultar' : 'Ver' }}
+                {{ seccionFt012Abierta() === '1' ? 'Ocultar' : (esSeccionFt012Completa('1') ? 'Ver' : 'Verificar') }}
               </button>
             </div>
             @if (seccionFt012Abierta() === '1') {
@@ -522,6 +584,17 @@
                     <input type="text" class="input-figma" [disabled]="!puedeEditarFt012()" [ngModel]="ft.autoridadTelefono" (ngModelChange)="actualizarCampoFt012('autoridadTelefono', $event)" />
                   </div>
                 </div>
+                @if (!esSeccionFt012Completa('1') && puedeEditarFt012()) {
+                  <div style="margin-top: 0.75rem; display: flex; justify-content: flex-end;">
+                    <button
+                      type="button"
+                      class="btn-figma-outline"
+                      (click)="confirmarSeccionFt012('1', $event); toggleSeccionFt012('1.2')"
+                    >
+                      ✓ Confirmar datos de sección 1
+                    </button>
+                  </div>
+                }
               </div>
             }
           </div>
@@ -530,9 +603,15 @@
           <div class="seccion-accordion-item-figma" [class.abierta]="seccionFt012Abierta() === '1.2'">
             <div class="seccion-accordion-header" (click)="toggleSeccionFt012('1.2')">
               <span class="seccion-nombre">1.2 Unidad académica y sede</span>
-              <span class="seccion-estado-tag completada">Completa</span>
+              <span
+                class="seccion-estado-tag"
+                [class.completada]="esSeccionFt012Completa('1.2')"
+                [class.incompleta]="!esSeccionFt012Completa('1.2')"
+              >
+                {{ etiquetaEstadoSeccionFt012('1.2') }}
+              </span>
               <button type="button" class="btn-toggle-seccion">
-                {{ seccionFt012Abierta() === '1.2' ? 'Ocultar' : 'Ver' }}
+                {{ seccionFt012Abierta() === '1.2' ? 'Ocultar' : (esSeccionFt012Completa('1.2') ? 'Ver' : 'Verificar') }}
               </button>
             </div>
             @if (seccionFt012Abierta() === '1.2') {
@@ -573,6 +652,17 @@
                     <input type="text" class="input-figma" [disabled]="!puedeEditarFt012()" placeholder="S/N" [ngModel]="ft.sedePiso" (ngModelChange)="actualizarCampoFt012('sedePiso', $event)" />
                   </div>
                 </div>
+                @if (!esSeccionFt012Completa('1.2') && puedeEditarFt012()) {
+                  <div style="margin-top: 0.75rem; display: flex; justify-content: flex-end;">
+                    <button
+                      type="button"
+                      class="btn-figma-outline"
+                      (click)="confirmarSeccionFt012('1.2', $event); toggleSeccionFt012('1.3')"
+                    >
+                      ✓ Confirmar datos de sección 1.2
+                    </button>
+                  </div>
+                }
               </div>
             }
           </div>
@@ -581,13 +671,15 @@
           <div class="seccion-accordion-item-figma" [class.abierta]="seccionFt012Abierta() === '1.3'">
             <div class="seccion-accordion-header" (click)="toggleSeccionFt012('1.3')">
               <span class="seccion-nombre">1.3 Persona nexo con la CONEAU</span>
-              @if (ft.nexoApellido && ft.nexoPrimerNombre && ft.nexoCargo && ft.nexoCorreo) {
-                <span class="seccion-estado-tag completada">Completa</span>
-              } @else {
-                <span class="seccion-estado-tag incompleta">Faltan 4 campos obligatorios</span>
-              }
+              <span
+                class="seccion-estado-tag"
+                [class.completada]="esSeccionFt012Completa('1.3')"
+                [class.incompleta]="!esSeccionFt012Completa('1.3')"
+              >
+                {{ etiquetaEstadoSeccionFt012('1.3') }}
+              </span>
               <button type="button" class="btn-toggle-seccion">
-                {{ seccionFt012Abierta() === '1.3' ? 'Ocultar' : 'Completar' }}
+                {{ seccionFt012Abierta() === '1.3' ? 'Ocultar' : (esSeccionFt012Completa('1.3') ? 'Ver' : 'Completar') }}
               </button>
             </div>
             @if (seccionFt012Abierta() === '1.3') {
@@ -628,9 +720,15 @@
           <div class="seccion-accordion-item-figma" [class.abierta]="seccionFt012Abierta() === '2'">
             <div class="seccion-accordion-header" (click)="toggleSeccionFt012('2')">
               <span class="seccion-nombre">2. Datos de la carrera</span>
-              <span class="seccion-estado-tag completada">Completa</span>
+              <span
+                class="seccion-estado-tag"
+                [class.completada]="esSeccionFt012Completa('2')"
+                [class.incompleta]="!esSeccionFt012Completa('2')"
+              >
+                {{ etiquetaEstadoSeccionFt012('2') }}
+              </span>
               <button type="button" class="btn-toggle-seccion">
-                {{ seccionFt012Abierta() === '2' ? 'Ocultar' : 'Ver' }}
+                {{ seccionFt012Abierta() === '2' ? 'Ocultar' : (esSeccionFt012Completa('2') ? 'Ver' : 'Completar') }}
               </button>
             </div>
             @if (seccionFt012Abierta() === '2') {
@@ -645,7 +743,7 @@
                     <input type="text" class="input-figma" [disabled]="!puedeEditarFt012()" [ngModel]="ft.tituloAsimilado" (ngModelChange)="actualizarCampoFt012('tituloAsimilado', $event)" />
                   </div>
                   <div class="campo-wrap">
-                    <label>Año de Inicio del Dictado</label>
+                    <label>Año de Inicio del Dictado *</label>
                     <input type="number" class="input-figma" [disabled]="!puedeEditarFt012()" placeholder="Ej: 2010" [ngModel]="ft.anioInicioDictado" (ngModelChange)="actualizarCampoFt012('anioInicioDictado', $event)" />
                   </div>
                 </div>
@@ -657,13 +755,15 @@
           <div class="seccion-accordion-item-figma" [class.abierta]="seccionFt012Abierta() === '3'">
             <div class="seccion-accordion-header" (click)="toggleSeccionFt012('3')">
               <span class="seccion-nombre">3. Responsable de la carrera</span>
-              @if (ft.responsableApellido && ft.responsablePrimerNombre && ft.responsableCargo && ft.responsableCorreo) {
-                <span class="seccion-estado-tag completada">Completa</span>
-              } @else {
-                <span class="seccion-estado-tag incompleta">Incompleta</span>
-              }
+              <span
+                class="seccion-estado-tag"
+                [class.completada]="esSeccionFt012Completa('3')"
+                [class.incompleta]="!esSeccionFt012Completa('3')"
+              >
+                {{ etiquetaEstadoSeccionFt012('3') }}
+              </span>
               <button type="button" class="btn-toggle-seccion">
-                {{ seccionFt012Abierta() === '3' ? 'Ocultar' : 'Completar' }}
+                {{ seccionFt012Abierta() === '3' ? 'Ocultar' : (esSeccionFt012Completa('3') ? 'Ver' : 'Completar') }}
               </button>
             </div>
             @if (seccionFt012Abierta() === '3') {
@@ -708,13 +808,15 @@
           <div class="seccion-accordion-item-figma" [class.abierta]="seccionFt012Abierta() === '4'">
             <div class="seccion-accordion-header" (click)="toggleSeccionFt012('4')">
               <span class="seccion-nombre">4. Coordinador del Comité de Autoevaluación</span>
-              @if (ft.coordinadorCaApellido && ft.coordinadorCaPrimerNombre && ft.coordinadorCaCorreo) {
-                <span class="seccion-estado-tag completada">Completa</span>
-              } @else {
-                <span class="seccion-estado-tag incompleta">Incompleta</span>
-              }
+              <span
+                class="seccion-estado-tag"
+                [class.completada]="esSeccionFt012Completa('4')"
+                [class.incompleta]="!esSeccionFt012Completa('4')"
+              >
+                {{ etiquetaEstadoSeccionFt012('4') }}
+              </span>
               <button type="button" class="btn-toggle-seccion">
-                {{ seccionFt012Abierta() === '4' ? 'Ocultar' : 'Completar' }}
+                {{ seccionFt012Abierta() === '4' ? 'Ocultar' : (esSeccionFt012Completa('4') ? 'Ver' : 'Completar') }}
               </button>
             </div>
             @if (seccionFt012Abierta() === '4') {
@@ -766,15 +868,20 @@
           <div class="panel-header-figma flex-between">
             <div>
               <h3 class="panel-titulo">Normativa de la carrera</h3>
-              <p class="panel-subtitulo">5 de 5 documentos obligatorios cargados</p>
+              <p class="panel-subtitulo">
+                {{ normativaObligatoriosCargadosCount() }} de 5 documentos obligatorios cargados
+                @if (normativaOpcionalesCargadosCount() > 0) {
+                  · {{ normativaOpcionalesCargadosCount() }} de 7 opcionales cargados
+                }
+              </p>
             </div>
-            @if (canManage()) {
+            @if (canManage() && actividadNormativa()) {
               <button
                 type="button"
                 class="btn-figma-outline"
                 (click)="irAGestionarActividad(actividadNormativa())"
               >
-                + Subir documento
+                Panel avanzado de revisión
               </button>
             }
           </div>
@@ -784,81 +891,129 @@
               <thead>
                 <tr>
                   <th style="width: 42%;">Documento</th>
-                  <th style="width: 15%;">Requisito</th>
-                  <th style="width: 15%;">Estado</th>
-                  <th style="width: 28%;">Archivo</th>
+                  <th style="width: 14%;">Requisito</th>
+                  <th style="width: 14%;">Estado</th>
+                  <th style="width: 30%;">Archivo</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td class="td-nombre">Creación de la carrera</td>
-                  <td class="td-requisito">Obligatorio</td>
-                  <td class="td-estado cargado">Cargado</td>
-                  <td class="td-archivo">
-                    <span class="archivo-link" (click)="irAGestionarActividad(actividadNormativa())">
-                      Plan de trabajo.pdf · 0,91 MB &nbsp; <strong class="link-descargar">Descargar</strong>
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="td-nombre">Plan de estudios vigente y modificatorias</td>
-                  <td class="td-requisito">Obligatorio</td>
-                  <td class="td-estado cargado">Cargado</td>
-                  <td class="td-archivo">
-                    <span class="archivo-link" (click)="irAGestionarActividad(actividadNormativa())">
-                      Plan de trabajo.pdf · 0,91 MB &nbsp; <strong class="link-descargar">Descargar</strong>
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="td-nombre">Designación del Director/a de la carrera</td>
-                  <td class="td-requisito">Obligatorio</td>
-                  <td class="td-estado cargado">Cargado</td>
-                  <td class="td-archivo">
-                    <span class="archivo-link" (click)="irAGestionarActividad(actividadNormativa())">
-                      Plan de trabajo.pdf · 0,91 MB &nbsp; <strong class="link-descargar">Descargar</strong>
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="td-nombre">Conformación de la Comisión Curricular</td>
-                  <td class="td-requisito">Obligatorio</td>
-                  <td class="td-estado cargado">Cargado</td>
-                  <td class="td-archivo">
-                    <span class="archivo-link" (click)="irAGestionarActividad(actividadNormativa())">
-                      Plan de trabajo.pdf · 0,91 MB &nbsp; <strong class="link-descargar">Descargar</strong>
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="td-nombre">Aprobación del Plan de Desarrollo</td>
-                  <td class="td-requisito">Obligatorio</td>
-                  <td class="td-estado cargado">Cargado</td>
-                  <td class="td-archivo">
-                    <span class="archivo-link" (click)="irAGestionarActividad(actividadNormativa())">
-                      Plan de trabajo.pdf · 0,91 MB &nbsp; <strong class="link-descargar">Descargar</strong>
-                    </span>
-                  </td>
-                </tr>
-
-                @if (opcionalesNormativaVisible()) {
+                @for (item of ranurasNormativaObligatorias(); track item.tipo) {
                   <tr>
-                    <td class="td-nombre">Reglamento interno de laboratorios y gabinetes</td>
-                    <td class="td-requisito">Opcional</td>
-                    <td class="td-estado pendiente">Pendiente</td>
+                    <td class="td-nombre">
+                      <div>{{ item.titulo }}</div>
+                      @if (item.descripcion) {
+                        <div style="font-size: 0.75rem; color: #64748b; font-weight: 400; margin-top: 2px;">{{ item.descripcion }}</div>
+                      }
+                    </td>
+                    <td class="td-requisito">Obligatorio</td>
+                    <td class="td-estado" [class.cargado]="!!item.documento" [class.pendiente]="!item.documento">
+                      {{ item.documento ? 'Cargado' : 'Pendiente' }}
+                    </td>
                     <td class="td-archivo">
-                      <button type="button" class="btn-subir-pdf-mini" (click)="irAGestionarActividad(actividadNormativa())">
-                        Subir PDF
-                      </button>
+                      @if (item.documento; as doc) {
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                          <span class="archivo-link" (click)="descargarDocNormativaInline(doc)" title="Descargar PDF">
+                            {{ doc.nombreOriginal }} · {{ formatearBytesNormativa(doc.tamanioBytes) }} &nbsp;
+                            <strong class="link-descargar">Descargar</strong>
+                          </span>
+                          <label class="btn-subir-pdf-mini" style="cursor: pointer; margin: 0;" title="Reemplazar PDF">
+                            {{ subiendoTipoNormativa() === item.tipo ? 'Subiendo...' : 'Cambiar' }}
+                            <input
+                              type="file"
+                              accept=".pdf,application/pdf"
+                              style="display: none;"
+                              [disabled]="subiendoTipoNormativa() === item.tipo"
+                              (change)="onSubirDocNormativaInline($event, item.tipo)"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            class="btn-subir-pdf-mini"
+                            style="color: #b91c1c; border-color: #fecaca; background: #fef2f2; padding: 0.2rem 0.45rem;"
+                            (click)="eliminarDocNormativaInline(doc.id)"
+                            title="Eliminar archivo cargado"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      } @else {
+                        <label class="btn-subir-pdf-mini" style="cursor: pointer; display: inline-block; margin: 0;">
+                          {{ subiendoTipoNormativa() === item.tipo ? 'Subiendo...' : 'Subir PDF' }}
+                          <input
+                            type="file"
+                            accept=".pdf,application/pdf"
+                            style="display: none;"
+                            [disabled]="subiendoTipoNormativa() === item.tipo"
+                            (change)="onSubirDocNormativaInline($event, item.tipo)"
+                          />
+                        </label>
+                      }
                     </td>
                   </tr>
+                }
+
+                @if (opcionalesNormativaVisible()) {
+                  @for (item of ranurasNormativaOpcionales(); track item.tipo) {
+                    <tr>
+                      <td class="td-nombre">
+                        <div>{{ item.titulo }}</div>
+                        @if (item.descripcion) {
+                          <div style="font-size: 0.75rem; color: #64748b; font-weight: 400; margin-top: 2px;">{{ item.descripcion }}</div>
+                        }
+                      </td>
+                      <td class="td-requisito">Opcional</td>
+                      <td class="td-estado" [class.cargado]="!!item.documento" [class.pendiente]="!item.documento">
+                        {{ item.documento ? 'Cargado' : 'Pendiente' }}
+                      </td>
+                      <td class="td-archivo">
+                        @if (item.documento; as doc) {
+                          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <span class="archivo-link" (click)="descargarDocNormativaInline(doc)" title="Descargar PDF">
+                              {{ doc.nombreOriginal }} · {{ formatearBytesNormativa(doc.tamanioBytes) }} &nbsp;
+                              <strong class="link-descargar">Descargar</strong>
+                            </span>
+                            <label class="btn-subir-pdf-mini" style="cursor: pointer; margin: 0;" title="Reemplazar PDF">
+                              {{ subiendoTipoNormativa() === item.tipo ? 'Subiendo...' : 'Cambiar' }}
+                              <input
+                                type="file"
+                                accept=".pdf,application/pdf"
+                                style="display: none;"
+                                [disabled]="subiendoTipoNormativa() === item.tipo"
+                                (change)="onSubirDocNormativaInline($event, item.tipo)"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              class="btn-subir-pdf-mini"
+                              style="color: #b91c1c; border-color: #fecaca; background: #fef2f2; padding: 0.2rem 0.45rem;"
+                              (click)="eliminarDocNormativaInline(doc.id)"
+                              title="Eliminar archivo cargado"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        } @else {
+                          <label class="btn-subir-pdf-mini" style="cursor: pointer; display: inline-block; margin: 0;">
+                            {{ subiendoTipoNormativa() === item.tipo ? 'Subiendo...' : 'Subir PDF' }}
+                            <input
+                              type="file"
+                              accept=".pdf,application/pdf"
+                              style="display: none;"
+                              [disabled]="subiendoTipoNormativa() === item.tipo"
+                              (change)="onSubirDocNormativaInline($event, item.tipo)"
+                            />
+                          </label>
+                        }
+                      </td>
+                    </tr>
+                  }
                 }
               </tbody>
             </table>
 
             <div class="normativa-opcionales-toggle">
               <button type="button" class="btn-toggle-opcionales" (click)="toggleOpcionalesNormativa()">
-                {{ opcionalesNormativaVisible() ? 'Ocultar documentos opcionales ▴' : 'Ver 5 documentos opcionales más ▾' }}
+                {{ opcionalesNormativaVisible() ? 'Ocultar 7 documentos opcionales ▴' : 'Ver 7 documentos opcionales ▾' }}
               </button>
             </div>
           </div>

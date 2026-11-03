@@ -34,7 +34,13 @@ import {
 import { CompletarActividadModalComponent } from '../completar-actividad-modal/completar-actividad-modal.component';
 import { NormativaDetalleComponent } from '../../normativa/normativa-detalle/normativa-detalle.component';
 import { NormativaService } from '../../../core/normativa/services/normativa.service';
-import { BadgePlazoDto, formatearEstadoNormativa } from '../../../core/normativa/models/normativa.model';
+import {
+  BadgePlazoDto,
+  DocumentoNormativaDto,
+  formatearEstadoNormativa,
+  METADATOS_DOCUMENTOS_NORMATIVA,
+  TipoDocumentoNormativa,
+} from '../../../core/normativa/models/normativa.model';
 import { NotificationService } from '../../../core/notifications/notification.service';
 
 export interface SiguientePasoInfo {
@@ -356,8 +362,28 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     observaciones: '',
   });
   readonly guardandoFt012 = signal<boolean>(false);
-  readonly seccionFt012Abierta = signal<string | null>('1.3');
-  readonly opcionalesNormativaVisible = signal<boolean>(false);
+  readonly seccionFt012Abierta = signal<string | null>('1');
+  readonly opcionalesNormativaVisible = signal<boolean>(true);
+  readonly seccionesConfirmadasFt012 = signal<Set<string>>(new Set());
+  readonly subiendoTipoNormativa = signal<TipoDocumentoNormativa | null>(null);
+
+  private readonly TIPOS_NORMATIVA_OBLIGATORIOS: TipoDocumentoNormativa[] = [
+    'CREACION_CARRERA',
+    'ORDENANZA_PLAN_ESTUDIOS',
+    'RESOLUCION_DIRECTOR_CARRERA',
+    'RESOLUCION_COMISION_CURRICULAR',
+    'PLAN_DESARROLLO_CARRERA',
+  ];
+
+  private readonly TIPOS_NORMATIVA_OPCIONALES: TipoDocumentoNormativa[] = [
+    'RM_VALIDEZ_NACIONAL',
+    'APROBACION_PROGRAMAS_ANALITICOS',
+    'REGLAMENTO_CARRERA',
+    'ACTA_COMISION_CURRICULAR',
+    'RM_ESTANDARES_CARRERA',
+    'RM_INCLUSION_ART_43',
+    'RESOLUCION_CONEAU_ANTERIOR',
+  ];
 
   toggleSeccionFt012(seccionId: string): void {
     this.seccionFt012Abierta.update(curr => curr === seccionId ? null : seccionId);
@@ -367,13 +393,116 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     this.opcionalesNormativaVisible.update(v => !v);
   }
 
+  confirmarSeccionFt012(seccionId: string, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.seccionesConfirmadasFt012.update((prev) => {
+      const next = new Set(prev);
+      next.add(seccionId);
+      return next;
+    });
+  }
+
+  esSeccionFt012Completa(sec: string): boolean {
+    const ft = this.fichaFt012();
+    const fichaGuardadaOEnviada =
+      ft.estado !== 'PENDIENTE_SOLICITUD' && ft.estado !== '';
+
+    switch (sec) {
+      case '1': {
+        const camposOk = !!(
+          ft.institucionUniversitaria?.trim() &&
+          ft.autoridadApellido?.trim() &&
+          ft.autoridadPrimerNombre?.trim() &&
+          ft.autoridadCorreo?.trim()
+        );
+        return (
+          camposOk &&
+          (this.seccionesConfirmadasFt012().has('1') || fichaGuardadaOEnviada)
+        );
+      }
+      case '1.2': {
+        const camposOk = !!(
+          ft.unidadAcademica?.trim() &&
+          ft.sedeCalle?.trim() &&
+          ft.sedeNumero?.trim() &&
+          ft.sedeCodigoPostal?.trim() &&
+          ft.sedeProvincia?.trim() &&
+          ft.sedeLocalidad?.trim()
+        );
+        return (
+          camposOk &&
+          (this.seccionesConfirmadasFt012().has('1.2') || fichaGuardadaOEnviada)
+        );
+      }
+      case '1.3':
+        return !!(
+          ft.nexoApellido?.trim() &&
+          ft.nexoPrimerNombre?.trim() &&
+          ft.nexoCargo?.trim() &&
+          ft.nexoCorreo?.trim()
+        );
+      case '2':
+        return !!(
+          ft.carreraNombre?.trim() &&
+          ft.tituloAsimilado?.trim() &&
+          ft.anioInicioDictado
+        );
+      case '3':
+        return !!(
+          ft.responsableApellido?.trim() &&
+          ft.responsablePrimerNombre?.trim() &&
+          ft.responsableCargo?.trim() &&
+          ft.responsableCorreo?.trim()
+        );
+      case '4':
+        return !!(
+          ft.coordinadorCaApellido?.trim() &&
+          ft.coordinadorCaPrimerNombre?.trim() &&
+          ft.coordinadorCaCorreo?.trim()
+        );
+      default:
+        return false;
+    }
+  }
+
+  etiquetaEstadoSeccionFt012(sec: string): string {
+    if (this.esSeccionFt012Completa(sec)) {
+      return 'Completa';
+    }
+    if (sec === '1' || sec === '1.2') {
+      return 'Pendiente de verificar';
+    }
+    const ft = this.fichaFt012();
+    if (sec === '1.3') {
+      const faltan = [
+        ft.nexoApellido?.trim(),
+        ft.nexoPrimerNombre?.trim(),
+        ft.nexoCargo?.trim(),
+        ft.nexoCorreo?.trim(),
+      ].filter((v) => !v).length;
+      return `Faltan ${faltan} campo(s) obligatorio(s)`;
+    }
+    if (sec === '2') {
+      const faltan = [
+        ft.carreraNombre?.trim(),
+        ft.tituloAsimilado?.trim(),
+        ft.anioInicioDictado,
+      ].filter((v) => !v).length;
+      return `Faltan ${faltan} campo(s) obligatorio(s)`;
+    }
+    return 'Incompleta';
+  }
+
   calcularEtapaTexto(carrera: ConvocatoriaCarreraItem): string {
     const estado = carrera.estadoProceso || 'INICIADO';
     if (estado === 'FINALIZADO' || estado === 'SEGUIMIENTO') return 'Etapa 5 de 5 · Seguimiento del Plan de Trabajo';
     if (estado === 'USUARIOS_ATENEA') return 'Etapa 4 de 5 · Usuarios ATENEA';
     if (estado === 'EN_AUTOEVALUACION') return 'Etapa 3 de 5 · Comisión de Autoevaluación';
-    if (estado === 'PLAN_TRABAJO' || estado === 'EN_FORMALIZACION') return 'Etapa 2 de 5 · Plan de Trabajo y RG-001';
-    return 'Etapa 1 de 5 · Formalización y Normativa';
+    if (estado === 'PLAN_TRABAJO') return 'Etapa 2 de 5 · Plan de Trabajo y RG-001';
+    if (estado === 'EN_FORMALIZACION') return 'Etapa 1 de 5 · Formalización y Normativa (en curso)';
+    return 'Etapa 1 de 5 · Formalización y Normativa (sin iniciar)';
   }
 
   calcularEtapaProgreso(carrera: ConvocatoriaCarreraItem): number {
@@ -381,8 +510,9 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     if (estado === 'FINALIZADO' || estado === 'SEGUIMIENTO') return 100;
     if (estado === 'USUARIOS_ATENEA') return 80;
     if (estado === 'EN_AUTOEVALUACION') return 60;
-    if (estado === 'PLAN_TRABAJO' || estado === 'EN_FORMALIZACION') return 40;
-    return 20;
+    if (estado === 'PLAN_TRABAJO') return 40;
+    if (estado === 'EN_FORMALIZACION') return 20;
+    return 0;
   }
 
   irAGestionarActividad(act: any): void {
@@ -392,6 +522,111 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   }
 
   readonly normativaDetalle = this.normativaService.detalle;
+
+  readonly ranurasNormativaObligatorias = computed(() => {
+    const docs = this.normativaDetalle()?.documentos ?? [];
+    return this.TIPOS_NORMATIVA_OBLIGATORIOS.map((tipo) => {
+      const meta = METADATOS_DOCUMENTOS_NORMATIVA[tipo];
+      const doc = docs.find((d) => d.tipoDocumento === tipo) ?? null;
+      return {
+        tipo,
+        titulo: meta?.titulo ?? tipo,
+        descripcion: meta?.descripcion ?? '',
+        esObligatorio: true,
+        documento: doc,
+      };
+    });
+  });
+
+  readonly ranurasNormativaOpcionales = computed(() => {
+    const docs = this.normativaDetalle()?.documentos ?? [];
+    return this.TIPOS_NORMATIVA_OPCIONALES.map((tipo) => {
+      const meta = METADATOS_DOCUMENTOS_NORMATIVA[tipo];
+      const doc = docs.find((d) => d.tipoDocumento === tipo) ?? null;
+      return {
+        tipo,
+        titulo: meta?.titulo ?? tipo,
+        descripcion: meta?.descripcion ?? '',
+        esObligatorio: false,
+        documento: doc,
+      };
+    });
+  });
+
+  readonly normativaObligatoriosCargadosCount = computed(() => {
+    return this.ranurasNormativaObligatorias().filter((r) => !!r.documento).length;
+  });
+
+  readonly normativaOpcionalesCargadosCount = computed(() => {
+    return this.ranurasNormativaOpcionales().filter((r) => !!r.documento).length;
+  });
+
+  readonly seccionesFt012CompletasCount = computed(() => {
+    const ids = ['1', '1.2', '1.3', '2', '3', '4'];
+    return ids.filter((id) => this.esSeccionFt012Completa(id)).length;
+  });
+
+  readonly tareasFormalizacionTotal = 11;
+
+  readonly tareasFormalizacionCompletadas = computed(() => {
+    return this.seccionesFt012CompletasCount() + this.normativaObligatoriosCargadosCount();
+  });
+
+  readonly progresoFormalizacionPorcentaje = computed(() => {
+    return Math.round((this.tareasFormalizacionCompletadas() / this.tareasFormalizacionTotal) * 100);
+  });
+
+  onSubirDocNormativaInline(event: Event, tipo: TipoDocumentoNormativa): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    input.value = '';
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      alert('Solo se permiten archivos en formato PDF.');
+      return;
+    }
+
+    const c = this.convocatoria();
+    if (!c) return;
+
+    this.subiendoTipoNormativa.set(tipo);
+    this.normativaService.cargarBorrador(c.id, tipo, file).subscribe({
+      next: () => {
+        this.subiendoTipoNormativa.set(null);
+      },
+      error: (err) => {
+        this.subiendoTipoNormativa.set(null);
+        alert(err?.error?.message || err?.error?.error || 'Error al subir el documento de normativa.');
+      },
+    });
+  }
+
+  descargarDocNormativaInline(doc: DocumentoNormativaDto): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    this.normativaService.descargarDocumento(c.id, doc.id, doc.nombreOriginal);
+  }
+
+  eliminarDocNormativaInline(docId: string): void {
+    const c = this.convocatoria();
+    if (!c) return;
+    this.normativaService.eliminarBorrador(c.id, docId).subscribe({
+      next: () => {},
+      error: (err) => {
+        alert(err?.error?.message || err?.error?.error || 'No fue posible eliminar el documento.');
+      },
+    });
+  }
+
+  formatearBytesNormativa(bytes?: number | null): string {
+    if (!bytes || bytes <= 0) return '0 KB';
+    const kb = bytes / 1024;
+    if (kb < 1024) {
+      return `${kb.toFixed(1)} KB`;
+    }
+    return `${(kb / 1024).toFixed(2).replace('.', ',')} MB`;
+  }
 
   // =========================================================================
   // Estado Pestaña 2: Plan de Trabajo y Formulario RG-001
@@ -456,7 +691,12 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     const ftOk = this.esFt012Enviada();
     const norm = this.normativaDetalle();
     const actNorm = this.actividadNormativa();
-    const normOk = norm?.estado === 'COMPLETADA' || actNorm?.estado === 'COMPLETADA' || this.actividad2Completa();
+    const normOk =
+      norm?.estado === 'COMPLETADA' ||
+      norm?.estado === 'ENVIADA_A_REVISION' ||
+      actNorm?.estado === 'COMPLETADA' ||
+      this.actividad2Completa() ||
+      this.normativaObligatoriosCargadosCount() >= 5;
     return ftOk && normOk;
   });
 
@@ -671,6 +911,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     this.error.set(null);
     this.convocatoria.set(null);
     this.planTrabajo.set(null);
+    this.seccionesConfirmadasFt012.set(new Set());
 
     this.convocatoriaService.obtenerConvocatoria(id).subscribe({
       next: (conv) => {
@@ -840,6 +1081,9 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
           sedeDepartamento: ficha.sedeDepartamento ?? '',
           responsableCargo: ficha.responsableCargo || '',
         });
+        if (ficha.estado && ficha.estado !== 'PENDIENTE_SOLICITUD') {
+          this.seccionesConfirmadasFt012.set(new Set(['1', '1.2']));
+        }
         this.actualizarFocoPorDefecto();
 
         // Si la etapa de formalización y normativa está completada, avanzar a la carga del RG-001 y Plan de Trabajo, o a Comisión de Autoevaluación
@@ -1032,6 +1276,29 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       ...prev,
       [campo]: valor,
     }));
+    const camposSec1: (keyof FichaFormalizacionFt012Dto)[] = [
+      'institucionUniversitaria',
+      'autoridadApellido',
+      'autoridadPrimerNombre',
+      'autoridadSegundoNombre',
+      'autoridadCorreo',
+      'autoridadTelefono',
+    ];
+    const camposSec12: (keyof FichaFormalizacionFt012Dto)[] = [
+      'unidadAcademica',
+      'sedeCalle',
+      'sedeNumero',
+      'sedeCodigoPostal',
+      'sedeProvincia',
+      'sedeLocalidad',
+      'sedeDepartamentoPartido',
+      'sedePiso',
+    ];
+    if (camposSec1.includes(campo)) {
+      this.confirmarSeccionFt012('1');
+    } else if (camposSec12.includes(campo)) {
+      this.confirmarSeccionFt012('1.2');
+    }
   }
 
   guardarORemitirFt012(enviar: boolean): void {

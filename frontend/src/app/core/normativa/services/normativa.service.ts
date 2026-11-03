@@ -67,6 +67,7 @@ export class NormativaService {
   obtenerDetalle(procesoId: string): Observable<NormativaDetalleDto> {
     this.loading.set(true);
     this.error.set(null);
+    this.detalle.set(null);
     return this.http
       .get<NormativaDetalleDto>(`/api/v1/procesos/${procesoId}/normativa`)
       .pipe(
@@ -76,6 +77,7 @@ export class NormativaService {
             this.loading.set(false);
           },
           error: (err) => {
+            this.detalle.set(null);
             this.error.set(err?.error?.error || 'No se pudo obtener el detalle de normativa.');
             this.loading.set(false);
           },
@@ -198,7 +200,7 @@ export class NormativaService {
   }
 
   descargarDocumento(procesoId: string, documentoId: string, nombreArchivo: string): void {
-    const url = `/api/v1/procesos/${procesoId}/normativa/documentos/${documentoId}/descargar`;
+    const url = `/api/v1/procesos/${procesoId}/normativa/documentos/${documentoId}/descargar?direct=true`;
     this.http.get(url, { responseType: 'blob' }).subscribe({
       next: (blob) => {
         const objectUrl = window.URL.createObjectURL(blob);

@@ -279,8 +279,11 @@ public class UseCaseConfiguration {
 
     @Bean
     @Transactional
-    public EliminarConvocatoriaUseCase eliminarConvocatoriaUseCase(ProcesoAcreditacionRepositoryPort procesoRepository) {
-        return new EliminarConvocatoriaService(procesoRepository);
+    public EliminarConvocatoriaUseCase eliminarConvocatoriaUseCase(
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            com.undec.acreditacion.domain.ports.ConvocatoriaEscuelaRepositoryPort convocatoriaEscuelaRepository
+    ) {
+        return new EliminarConvocatoriaService(procesoRepository, convocatoriaEscuelaRepository);
     }
 
     @Bean

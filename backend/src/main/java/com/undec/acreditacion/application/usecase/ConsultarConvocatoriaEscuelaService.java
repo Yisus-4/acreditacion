@@ -138,10 +138,23 @@ public class ConsultarConvocatoriaEscuelaService implements ConsultarConvocatori
         if (planTrabajoRepository != null) {
             Optional<PlanTrabajo> planOpt = planTrabajoRepository.findByProcesoId(procesoId);
             if (planOpt.isPresent()) {
-                boolean tieneActividadesCompletadas = planOpt.get().getActividades().stream()
+                PlanTrabajo plan = planOpt.get();
+                if (plan.isEnviado()) {
+                    return "EN_AUTOEVALUACION";
+                }
+                boolean normativaCompletada = plan.getActividades().stream()
+                        .filter(PlanTrabajo::esActividadNormativa)
                         .anyMatch(a -> a.getEstado() == EstadoActividad.COMPLETADA);
-                if (tieneActividadesCompletadas) {
+                boolean formalizacionIniciadaOCompleta = plan.getActividades().stream()
+                        .filter(PlanTrabajo::esActividadFormalizacionElectronica)
+                        .anyMatch(a -> a.getEstado() == EstadoActividad.COMPLETADA || a.getEstado() == EstadoActividad.EN_PROGRESO);
+                if (normativaCompletada && formalizacionIniciadaOCompleta) {
                     return "PLAN_TRABAJO";
+                }
+                boolean algunaEnProgresoOCompletada = plan.getActividades().stream()
+                        .anyMatch(a -> a.getEstado() == EstadoActividad.COMPLETADA || a.getEstado() == EstadoActividad.EN_PROGRESO);
+                if (algunaEnProgresoOCompletada) {
+                    return "EN_FORMALIZACION";
                 }
             }
         }

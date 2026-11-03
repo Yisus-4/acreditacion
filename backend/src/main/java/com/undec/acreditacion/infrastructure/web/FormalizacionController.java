@@ -461,7 +461,7 @@ public class FormalizacionController {
         entity.setId(UUID.randomUUID());
         entity.setProcesoId(procesoId);
         entity.setModalidadDictado(modalidad);
-        entity.setEstado("BORRADOR");
+        entity.setEstado("PENDIENTE_SOLICITUD");
         entity.setInstitucionUniversitaria("Universidad Nacional de Chilecito");
         entity.setAutoridadApellido("Salcedo");
         entity.setAutoridadPrimerNombre("César");

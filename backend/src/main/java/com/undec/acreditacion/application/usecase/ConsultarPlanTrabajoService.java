@@ -71,37 +71,41 @@ public class ConsultarPlanTrabajoService implements ConsultarPlanTrabajoUseCase 
             modificado = true;
         }
 
-        // 1. Sincronizar Actividad 1 (Informar proceso) siempre COMPLETADA (se realiza fuera del sistema)
-        plan.getActividades().stream()
-                .filter(a -> ActividadPlanTrabajo.CODIGO_ACT_01.equals(a.getCodigoActividad())
-                        || (a.getNombre() != null && a.getNombre().toLowerCase().contains("informar sobre el proceso")))
-                .forEach(a -> {
-                    if (a.getEstado() != EstadoActividad.COMPLETADA) {
-                        a.marcarCompletadaAutomatica("Informado sobre el proceso de acreditación (realizado fuera del sistema)");
-                        planTrabajoRepository.saveActividad(a);
-                    }
-                });
+        boolean tieneEtapasPosteriores = (registroCaRepository != null && registroCaRepository.findByProcesoId(procesoId).isPresent())
+                || (registroUsuariosAteneaRepository != null && registroUsuariosAteneaRepository.findByProcesoId(procesoId).isPresent())
+                || plan.isEnviado();
 
-        // 1.b. Sincronizar Actividad 2 (Elaborar Plan de Trabajo) si ya se remitieron etapas posteriores o el plan fue enviado
-        plan.getActividades().stream()
-                .filter(a -> ActividadPlanTrabajo.CODIGO_ACT_02.equals(a.getCodigoActividad())
-                        || (a.getNombre() != null && a.getNombre().toLowerCase().contains("elaborar plan de trabajo")))
-                .forEach(a -> {
-                    if (a.getEstado() != EstadoActividad.COMPLETADA) {
-                        boolean tieneEtapasPosteriores = (registroCaRepository != null && registroCaRepository.findByProcesoId(procesoId).isPresent())
-                                || (registroUsuariosAteneaRepository != null && registroUsuariosAteneaRepository.findByProcesoId(procesoId).isPresent())
-                                || plan.isEnviado();
-                        if (tieneEtapasPosteriores) {
-                            a.marcarCompletadaAutomatica("Cronograma institucional y formulario RG-001 formulados y vigentes");
-                            planTrabajoRepository.saveActividad(a);
-                        }
-                    }
-                });
-
-        // 2. Sincronizar Actividad 1.4 / ACT-04 si Normativa ya está aprobada / completada
         boolean normativaCompletada = plan.getActividades().stream()
                 .filter(PlanTrabajo::esActividadNormativa)
                 .anyMatch(a -> a.getEstado() == EstadoActividad.COMPLETADA);
+
+        // 1. Sincronizar Actividad 1 (Informar proceso) solo si ya se completó normativa o etapas posteriores
+        if (normativaCompletada || tieneEtapasPosteriores) {
+            plan.getActividades().stream()
+                    .filter(a -> ActividadPlanTrabajo.CODIGO_ACT_01.equals(a.getCodigoActividad())
+                            || (a.getNombre() != null && a.getNombre().toLowerCase().contains("informar sobre el proceso")))
+                    .forEach(a -> {
+                        if (a.getEstado() != EstadoActividad.COMPLETADA) {
+                            a.marcarCompletadaAutomatica("Informado sobre el proceso de acreditación");
+                            planTrabajoRepository.saveActividad(a);
+                        }
+                    });
+        }
+
+        // 1.b. Sincronizar Actividad 2 (Elaborar Plan de Trabajo) si ya se remitieron etapas posteriores o el plan fue enviado
+        if (tieneEtapasPosteriores) {
+            plan.getActividades().stream()
+                    .filter(a -> ActividadPlanTrabajo.CODIGO_ACT_02.equals(a.getCodigoActividad())
+                            || (a.getNombre() != null && a.getNombre().toLowerCase().contains("elaborar plan de trabajo")))
+                    .forEach(a -> {
+                        if (a.getEstado() != EstadoActividad.COMPLETADA) {
+                            a.marcarCompletadaAutomatica("Cronograma institucional y formulario RG-001 formulados y vigentes");
+                            planTrabajoRepository.saveActividad(a);
+                        }
+                    });
+        }
+
+        // 2. Sincronizar Actividad 1.4 / ACT-04 si Normativa ya está aprobada / completada
         if (normativaCompletada) {
             plan.getActividades().stream()
                     .filter(PlanTrabajo::esActividadIdentificarDocumentacionInteres)

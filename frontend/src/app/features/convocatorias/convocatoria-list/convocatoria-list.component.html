@@ -146,14 +146,25 @@
                       }
                     </span>
                   </td>
-                  <td style="text-align: right;">
-                    <a [routerLink]="['/acreditacion/convocatorias', c.id]" class="btn-link-carreras">
-                      @if (c.estado === 'PENDIENTE_DIRECTOR_ESCUELA') {
-                        Revisar selección &rarr;
-                      } @else {
-                        Ver carreras &rarr;
-                      }
-                    </a>
+                  <td style="text-align: right; white-space: nowrap;">
+                    <div style="display: inline-flex; align-items: center; gap: 10px;">
+                      <a [routerLink]="['/acreditacion/convocatorias', c.id]" class="btn-link-carreras">
+                        @if (c.estado === 'PENDIENTE_DIRECTOR_ESCUELA') {
+                          Revisar selección &rarr;
+                        } @else {
+                          Ver carreras &rarr;
+                        }
+                      </a>
+                      <button
+                        type="button"
+                        (click)="eliminarConvocatoriaDev(c, $event)"
+                        [disabled]="eliminandoId() === c.id"
+                        title="Eliminar convocatoria y sus procesos (Modo Desarrollo)"
+                        style="padding: 4px 10px; font-size: 0.78rem; font-weight: 600; color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer;"
+                      >
+                        {{ eliminandoId() === c.id ? 'Eliminando...' : '🗑 Eliminar' }}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               }

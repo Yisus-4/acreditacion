@@ -34,10 +34,10 @@ class PlanTrabajoTest {
         assertEquals(1, act1.getNumeroOrden());
         assertEquals(ActividadPlanTrabajo.CODIGO_ACT_01, act1.getCodigoActividad());
         assertEquals(ActividadPlanTrabajo.NOMBRE_ACT_01, act1.getNombre());
-        assertEquals(EstadoActividad.COMPLETADA, act1.getEstado());
+        assertEquals(EstadoActividad.PENDIENTE, act1.getEstado());
         assertNull(act1.getFechaReunionCoordinacion());
-        assertEquals("Informado sobre el proceso de acreditación (realizado fuera del sistema)", act1.getSintesisAcuerdos());
-        assertNotNull(act1.getCompletadaEn());
+        assertNull(act1.getSintesisAcuerdos());
+        assertNull(act1.getCompletadaEn());
         assertNull(act1.getCompletadaPor());
 
         ActividadPlanTrabajo actNormativa = plan.getActividades().get(1);

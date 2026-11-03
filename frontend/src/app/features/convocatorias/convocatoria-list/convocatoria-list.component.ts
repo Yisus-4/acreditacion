@@ -27,6 +27,7 @@ export class ConvocatoriaListComponent implements OnInit {
   readonly filtroEscuelaId = signal<string>('');
   readonly filtroEstado = signal<string>('');
   readonly filtroAnio = signal<string>('');
+  readonly eliminandoId = signal<string | null>(null);
 
   readonly canCreate = computed(() => {
     const session = this.auth.currentSession;
@@ -81,5 +82,26 @@ export class ConvocatoriaListComponent implements OnInit {
     this.filtroEstado.set('');
     this.filtroAnio.set('');
     this.cargarConvocatorias();
+  }
+
+  eliminarConvocatoriaDev(c: ConvocatoriaResumen, event: Event): void {
+    event.stopPropagation();
+    const ok = window.confirm(
+      `¿Está seguro de que desea eliminar la convocatoria "${c.codigo}" (Modo Desarrollo)?\n\n` +
+        `Esta acción eliminará la convocatoria y todos sus procesos de carrera vinculados en cascada.`
+    );
+    if (!ok) return;
+
+    this.eliminandoId.set(c.id);
+    this.convocatoriaService.eliminarConvocatoria(c.id).subscribe({
+      next: () => {
+        this.eliminandoId.set(null);
+        this.cargarConvocatorias();
+      },
+      error: (err) => {
+        this.eliminandoId.set(null);
+        this.error.set(err?.error?.error || err?.error?.message || 'No fue posible eliminar la convocatoria.');
+      },
+    });
   }
 }

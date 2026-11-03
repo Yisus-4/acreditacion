@@ -192,7 +192,8 @@ public class NormativaController {
     @PreAuthorize("@normativaSecurity.canAccess(authentication, #procesoId)")
     public ResponseEntity<?> descargarDocumento(
             @PathVariable UUID procesoId,
-            @PathVariable UUID documentoId
+            @PathVariable UUID documentoId,
+            @RequestParam(name = "direct", defaultValue = "false") boolean direct
     ) {
         Optional<DocumentoNormativa> docOpt = documentoRepository.findById(documentoId);
         if (docOpt.isEmpty()) {
@@ -200,11 +201,17 @@ public class NormativaController {
         }
         DocumentoNormativa doc = docOpt.get();
 
-        String presignedUrl = storagePort.getPresignedDownloadUrl(doc.getStoragePath(), 3600);
-        if (presignedUrl != null && !presignedUrl.isBlank()) {
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(presignedUrl))
-                    .build();
+        if (!direct) {
+            try {
+                String presignedUrl = storagePort.getPresignedDownloadUrl(doc.getStoragePath(), 3600);
+                if (presignedUrl != null && !presignedUrl.isBlank()) {
+                    return ResponseEntity.status(HttpStatus.FOUND)
+                            .location(URI.create(presignedUrl))
+                            .build();
+                }
+            } catch (Exception ignored) {
+                // Fallback a descarga directa de bytes
+            }
         }
 
         byte[] contenido = storagePort.downloadFile(doc.getStoragePath());

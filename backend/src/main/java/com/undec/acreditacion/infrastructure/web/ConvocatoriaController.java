@@ -277,7 +277,7 @@ public class ConvocatoriaController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'ADMIN', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<Void> eliminarConvocatoria(@PathVariable UUID id) {
         eliminarConvocatoriaUseCase.ejecutar(id);
         return ResponseEntity.noContent().build();

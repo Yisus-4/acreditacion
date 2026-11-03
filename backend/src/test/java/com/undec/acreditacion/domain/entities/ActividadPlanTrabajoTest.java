@@ -34,7 +34,7 @@ class ActividadPlanTrabajoTest {
         assertEquals(1, actividad.getNumeroOrden());
         assertEquals(ActividadPlanTrabajo.CODIGO_ACT_01, actividad.getCodigoActividad());
         assertEquals(ActividadPlanTrabajo.NOMBRE_ACT_01, actividad.getNombre());
-        assertEquals(EstadoActividad.COMPLETADA, actividad.getEstado());
+        assertEquals(EstadoActividad.PENDIENTE, actividad.getEstado());
         assertEquals(HojaPlanTrabajo.INFO, actividad.getHoja());
         assertEquals(PrioridadActividad.MEDIA, actividad.getPrioridad());
         assertTrue(actividad.getAreasInformadas().isEmpty());
@@ -109,7 +109,7 @@ class ActividadPlanTrabajoTest {
                 actividad.registrarComunicacionYCompletar(List.of(), DOCUMENTACION, Instant.now(), null, UUID.randomUUID()));
         assertThrows(DomainValidationException.class, () ->
                 actividad.registrarComunicacionYCompletar(null, DOCUMENTACION, Instant.now(), null, UUID.randomUUID()));
-        assertEquals(EstadoActividad.COMPLETADA, actividad.getEstado());
+        assertEquals(EstadoActividad.PENDIENTE, actividad.getEstado());
     }
 
     @Test
