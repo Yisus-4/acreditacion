@@ -51,6 +51,10 @@
                 <span>Inicio / Tablero</span>
               </a>
 
+              <a routerLink="/autoevaluacion" class="user-panel-item" (click)="cerrarMenuUsuario()">
+                <span>Autoevaluación Institucional</span>
+              </a>
+
               @if (user()?.roleCodes?.includes('ADMINISTRATOR')) {
                 <a routerLink="/admin/users" class="user-panel-item" (click)="cerrarMenuUsuario()">
                   <span>Administración de usuarios</span>

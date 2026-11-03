@@ -1,0 +1,843 @@
+<div class="vista-gestion-layout">
+  <app-subnav-autoevaluacion seccionActual="Infraestructura, equipamiento para enseñanza-aprendizaje y biblioteca"></app-subnav-autoevaluacion>
+
+  <!-- Mensajes de Alerta -->
+  @if (errorMessage()) {
+    <div class="alert-banner-figma error">
+      <span>{{ errorMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="errorMessage.set(null)">✕</button>
+    </div>
+  }
+
+  @if (successMessage()) {
+    <div class="alert-banner-figma success">
+      <span>{{ successMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="successMessage.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Barra de Actividades de la Dimensión -->
+  <div class="autoeval-actividades-bar">
+    <span class="actividad-pill-title">Actividades del eje:</span>
+    <button
+      type="button"
+      class="actividad-pill"
+      [class.active]="actividadSeleccionada() === 'INFRAESTRUCTURA'"
+      (click)="seleccionarActividad('INFRAESTRUCTURA')"
+    >
+      Gestionar información sobre infraestructura (RG-005)
+    </button>
+    <button
+      type="button"
+      class="actividad-pill"
+      [class.active]="actividadSeleccionada() === 'HIGIENE_SEGURIDAD'"
+      (click)="seleccionarActividad('HIGIENE_SEGURIDAD')"
+    >
+      Gestionar información sobre Higiene y Seguridad
+    </button>
+    <button
+      type="button"
+      class="actividad-pill"
+      [class.active]="actividadSeleccionada() === 'EQUIPAMIENTO_BIBLIOTECA'"
+      (click)="seleccionarActividad('EQUIPAMIENTO_BIBLIOTECA')"
+    >
+      Equipamiento didáctico y biblioteca
+    </button>
+  </div>
+
+  @if (actividadSeleccionada() === 'INFRAESTRUCTURA') {
+    <!-- Barra de Control: Padrón Maestro vs Snapshot + Acciones de Plan de Trabajo -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; background: #ffffff; padding: 12px 18px; border-radius: 8px; border: 1px solid #e5e7eb;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-weight: 600; font-size: 14px; color: var(--color-primary-dark, #6b4c5b);">Modo de datos:</span>
+        <button
+          type="button"
+          class="btn-tabla-accion"
+          [style.background]="modoVista() === 'MAESTRO' ? 'var(--color-primary, #826170)' : '#f3f4f6'"
+          [style.color]="modoVista() === 'MAESTRO' ? '#ffffff' : '#374151'"
+          (click)="cambiarModoVista('MAESTRO')"
+        >
+          Padrón Maestro Institucional
+        </button>
+        <button
+          type="button"
+          class="btn-tabla-accion"
+          [style.background]="modoVista() === 'PROCESO' ? 'var(--color-primary, #826170)' : '#f3f4f6'"
+          [style.color]="modoVista() === 'PROCESO' ? '#ffffff' : '#374151'"
+          (click)="cambiarModoVista('PROCESO')"
+        >
+          Copia Autoevaluación Carrera (Snapshot)
+        </button>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button
+          type="button"
+          class="btn-tabla-accion"
+          style="border: 1px solid #d1d5db; color: #4b5563;"
+          (click)="abrirModalExtensionPlazo()"
+          title="Extiende la fecha límite de esta actividad y la sincroniza en la hoja INFO del Plan de Trabajo PT-001"
+        >
+          ⏱ Extender Plazo (PT-001)
+        </button>
+
+        <button
+          type="button"
+          class="btn-tabla-accion"
+          style="background: #166534; color: #ffffff;"
+          (click)="remitirADeaPorProceso()"
+          title="Informa la tarea completa a la AEA y actualiza la Actividad 4.1 a COMPLETADA en el Plan de Trabajo"
+        >
+          ✓ Remitir a AEA (Completar Tarea 4.1)
+        </button>
+      </div>
+    </div>
+
+    <!-- Toolbar de Búsqueda y Acción Nuevo -->
+    <div class="vista-toolbar">
+      <div style="display: flex; gap: 12px; align-items: center; flex: 1 1 500px; flex-wrap: wrap;">
+        <div class="search-box-figma" style="flex: 1 1 320px;">
+          <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar por nombre, domicilio, localidad o condición..."
+            [value]="searchQuery()"
+            (input)="onSearch($event)"
+          />
+        </div>
+
+        <select
+          [value]="selectedTenenciaFilter()"
+          (change)="onFilterTenencia($event)"
+          style="padding: 10px 14px; border: 1px solid var(--border-color, #e5e7eb); border-radius: var(--radius-md, 8px); background: #ffffff; font-size: 14px; color: var(--color-text, #1f1a1d);"
+        >
+          <option value="">Todas las situaciones</option>
+          <option value="PROPIO">Propiedad</option>
+          <option value="Propiedad">Propiedad</option>
+          <option value="ALQUILER">Alquiler</option>
+          <option value="Alquiler">Alquiler</option>
+          <option value="COMODATO">Comodato</option>
+          <option value="Usufructo">Usufructo</option>
+          <option value="Convenio">Convenio</option>
+        </select>
+      </div>
+
+      <div class="toolbar-actions-right">
+        <span class="stats-count-figma">
+          {{ filteredInmuebles().length }} {{ filteredInmuebles().length === 1 ? 'inmueble' : 'inmuebles' }}
+        </span>
+        <button class="btn-nuevo-figma" type="button" (click)="abrirFormularioNuevo()">
+          + Nuevo inmueble (RG-005)
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabla Oficial Figma de Inmuebles (RG-005) -->
+    @if (loading()) {
+      <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
+        Cargando registro de infraestructura e inmuebles (RG-005)...
+      </div>
+    } @else if (filteredInmuebles().length === 0) {
+      <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
+        No se encontraron inmuebles registrados para el criterio de búsqueda.
+      </div>
+    } @else {
+      <div class="tabla-figma-wrapper">
+        <table class="tabla-figma">
+          <thead>
+            <tr>
+              <th style="width: 50px;">ORD.</th>
+              <th>Denominación del Inmueble (SGEF)</th>
+              <th>Ubicación Geográfica</th>
+              <th>Construcción / Inicio</th>
+              <th>Situación Jurídica</th>
+              <th>Carreras Vinculadas</th>
+              <th>Espacios Físicos (RG-005)</th>
+              <th>Estado CONEAU</th>
+              <th class="col-acciones">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (inm of filteredInmuebles(); track inm.id) {
+              <tr>
+                <td style="font-weight: 700; color: var(--color-primary-dark, #6b4c5b); text-align: center;">
+                  {{ inm.numeroOrden || '-' }}
+                </td>
+                <td class="col-nombre">
+                  <strong>{{ inm.nombre }}</strong>
+                  <div style="font-size: 13px; font-weight: 400; color: var(--color-text-muted);">
+                    {{ inm.domicilio }}
+                  </div>
+                </td>
+                <td>
+                  <div>{{ inm.calle || inm.domicilio }} {{ inm.numero ? ('Nº ' + inm.numero) : '' }}</div>
+                  <div style="font-size: 12px; color: var(--color-text-muted);">
+                    {{ inm.localidadNombre || 'Chilecito' }} · {{ inm.departamentoNombre || 'Chilecito' }}
+                  </div>
+                </td>
+                <td>
+                  <div>Const: <strong>{{ inm.anioConstruccion || '-' }}</strong></div>
+                  <div style="font-size: 12px; color: var(--color-text-muted);">
+                    Inicio: <strong>{{ inm.anioInicioInstitucion || '-' }}</strong>
+                  </div>
+                </td>
+                <td>
+                  <span
+                    class="badge-estado-figma"
+                    [style.background]="inm.condicionTenencia === 'PROPIO' || inm.situacion === 'Propiedad' ? '#dcfce7' : '#fef3c7'"
+                    [style.color]="inm.condicionTenencia === 'PROPIO' || inm.situacion === 'Propiedad' ? '#166534' : '#92400e'"
+                  >
+                    {{ inm.situacion || inm.condicionTenencia }}
+                  </span>
+                </td>
+                <td>
+                  @if (inm.vinculaTodasCarreras) {
+                    <span style="font-weight: 600; color: var(--color-primary-dark, #6b4c5b);">Todas las carreras</span>
+                  } @else if (inm.carreras && inm.carreras.length > 0) {
+                    <div style="font-size: 13px;">
+                      @for (c of inm.carreras; track c.id) {
+                        <div>• {{ c.nombre }}</div>
+                      }
+                    </div>
+                  } @else {
+                    <span style="color: var(--color-text-muted); font-size: 13px;">Sin vinculación específica</span>
+                  }
+                </td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-weight: 700; color: var(--color-primary-dark, #6b4c5b);">
+                      {{ inm.cantidadEspacios || (inm.espacios ? inm.espacios.length : 0) }} espacios
+                    </span>
+                    @if (inm.espacios && inm.espacios.length > 0) {
+                      <button
+                        type="button"
+                        class="btn-tabla-accion"
+                        style="padding: 2px 8px; font-size: 12px;"
+                        (click)="toggleEspacios(inm.id)"
+                      >
+                        {{ espacioExpandidoId() === inm.id ? 'Ocultar' : 'Ver detalle' }}
+                      </button>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <span class="badge-estado-figma activa">
+                    {{ inm.estadoConeau || 'CARGADO' }}
+                  </span>
+                  @if (inm.verificado) {
+                    <div style="font-size: 11px; color: #166534; font-weight: 600; margin-top: 2px;">✓ Verificado AEA</div>
+                  }
+                </td>
+                <td class="col-acciones">
+                  <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button type="button" class="btn-tabla-accion" (click)="abrirEditar(inm)">
+                      Editar
+                    </button>
+                    @if (!inm.verificado) {
+                      <button type="button" class="btn-tabla-accion" style="color: var(--color-success);" (click)="verificarInmueble(inm)">
+                        Verificar
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Fila Expandible con el detalle agrupado de espacios físicos (RG-005) -->
+              @if (espacioExpandidoId() === inm.id && inm.espacios && inm.espacios.length > 0) {
+                <tr>
+                  <td colspan="9" style="background: #faf9fa; padding: 16px 24px; border-bottom: 2px solid #e5b115;">
+                    <div style="font-weight: 700; font-size: 13.5px; color: var(--color-primary-dark); margin-bottom: 8px;">
+                      Espacios físicos declarados en RG-005 para: {{ inm.nombre }}
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px;">
+                      <thead>
+                        <tr style="background: #f3f4f6; text-align: left; border-bottom: 1px solid #e5e7eb;">
+                          <th style="padding: 8px 12px;">Descripción área Infraestructura</th>
+                          <th style="padding: 8px 12px;">Tipo de espacio físico</th>
+                          <th style="padding: 8px 12px; text-align: center;">Cantidad disp.</th>
+                          <th style="padding: 8px 12px; text-align: center;">Capacidad promedio (personas sentadas)</th>
+                          <th style="padding: 8px 12px; text-align: center;">Estado CONEAU</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (esp of inm.espacios; track esp.id || esp.denominacion) {
+                          <tr style="border-bottom: 1px solid #f3f4f6;">
+                            <td style="padding: 8px 12px; font-weight: 500;">
+                              {{ esp.descripcionInfraestructura || esp.denominacion }}
+                            </td>
+                            <td style="padding: 8px 12px; color: var(--color-text-muted);">
+                              {{ esp.tipoEspacioDenominacion || esp.denominacion }}
+                            </td>
+                            <td style="padding: 8px 12px; text-align: center; font-weight: 600;">
+                              {{ esp.cantidad || 1 }}
+                            </td>
+                            <td style="padding: 8px 12px; text-align: center; font-weight: 600; color: #1e3a8a;">
+                              {{ esp.capacidadPersonasSentadas || esp.capacidadEstudiantes || 0 }} pers.
+                            </td>
+                            <td style="padding: 8px 12px; text-align: center;">
+                              <span style="font-size: 11px; padding: 2px 6px; background: #dcfce7; color: #166534; border-radius: 4px; font-weight: 600;">
+                                {{ esp.estadoConeau || 'CARGADO' }}
+                              </span>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+  } @else if (actividadSeleccionada() === 'HIGIENE_SEGURIDAD') {
+    <!-- Barra Superior de Control de la Guía GT-003 -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; background: #ffffff; padding: 14px 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h3 style="font-size: 17px; font-weight: 700; color: var(--color-primary-dark, #6b4c5b); margin: 0;">
+            GT-003: Guía de Higiene y Seguridad de la UA
+          </h3>
+          <span class="badge-estado-figma" [style.background]="guiaHigiene()?.verificado ? '#dcfce7' : '#fef3c7'" [style.color]="guiaHigiene()?.verificado ? '#166534' : '#92400e'">
+            {{ guiaHigiene()?.verificado ? '✓ Verificado AEA' : 'En Verificación (Plazo 10 días)' }}
+          </span>
+        </div>
+        <div style="font-size: 12px; color: var(--color-text-muted); margin-top: 4px;">
+          Edición N° {{ guiaHigiene()?.edicion || '01' }} · Elaborado por: {{ guiaHigiene()?.elaboradoPor }} · SGI / AEA
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button
+          type="button"
+          class="btn-tabla-accion"
+          style="border: 1px solid #d1d5db; color: #4b5563;"
+          (click)="abrirModalExtensionPlazo()"
+          title="Extiende la fecha de la Actividad 4.2 en el Plan de Trabajo (PT-001)"
+        >
+          ⏱ Extender Plazo (PT-001)
+        </button>
+
+        <button
+          type="button"
+          class="btn-nuevo-figma"
+          [disabled]="guardandoHigiene()"
+          (click)="guardarGuiaHigiene()"
+        >
+          {{ guardandoHigiene() ? 'Guardando...' : 'Guardar Cambios GT-003' }}
+        </button>
+
+        <button
+          type="button"
+          class="btn-tabla-accion"
+          style="background: #166534; color: #ffffff;"
+          (click)="remitirHigieneADea()"
+          title="Informa la tarea completa a la AEA y actualiza la Actividad 4.2 a COMPLETADA en el Plan de Trabajo"
+        >
+          ✓ Remitir a AEA (Completar Tarea 4.2)
+        </button>
+      </div>
+    </div>
+
+    <!-- Contenido de la Guía GT-003 -->
+    @if (loadingHigiene()) {
+      <div class="tabla-figma-wrapper" style="padding: 40px; text-align: center; color: var(--color-text-muted);">
+        Cargando Guía de Higiene y Seguridad (GT-003)...
+      </div>
+    } @else {
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+
+        <!-- Formulario Secciones 6.2 y 5.1 -->
+        <div class="tabla-figma-wrapper" style="padding: 24px; background: #ffffff;">
+          <form [formGroup]="formHigiene">
+            <!-- Sección Unidad Académica -->
+            <div style="margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+                <label style="font-size: 15px; font-weight: 700; color: var(--color-primary-dark);">
+                  Sección Unidad Académica — 6.2. Instancia responsable de la seguridad e higiene de la UA *
+                </label>
+                <span style="font-size: 12px; color: var(--color-text-muted);">
+                  Máx. 2000 caracteres
+                </span>
+              </div>
+              <p style="font-size: 13px; color: var(--color-text-muted); margin-bottom: 8px;">
+                Verificar/actualizar lo informado respecto a cuál es la instancia responsable de la seguridad e higiene de la unidad académica.
+              </p>
+              <textarea
+                formControlName="instanciaResponsableUa"
+                rows="4"
+                maxlength="2000"
+                class="form-input-figma"
+                style="width: 100%; font-size: 13.5px; line-height: 1.5; padding: 12px;"
+                placeholder="Describa el área u oficina responsable de la seguridad e higiene institucional..."
+              ></textarea>
+            </div>
+
+            <!-- Sección Carrera -->
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                <input type="checkbox" id="chkApoyo" formControlName="aplicaUnidadesApoyo" />
+                <label for="chkApoyo" style="font-size: 14.5px; font-weight: 700; color: var(--color-primary-dark); cursor: pointer;">
+                  Sección Carrera — 5.1. Política institucional para unidades de apoyo
+                </label>
+                <span style="font-size: 12px; color: var(--color-text-muted);">(Completar sólo si la carrera utiliza Unidades de Apoyo)</span>
+              </div>
+
+              @if (formHigiene.get('aplicaUnidadesApoyo')?.value) {
+                <p style="font-size: 13px; color: var(--color-text-muted); margin-bottom: 8px;">
+                  Indicar cuál es la política institucional para asegurar el cumplimiento de las condiciones de seguridad e higiene en las unidades de apoyo (Máx. 1600 caracteres).
+                </p>
+                <textarea
+                  formControlName="politicaUnidadesApoyo"
+                  rows="3"
+                  maxlength="1600"
+                  class="form-input-figma"
+                  style="width: 100%; font-size: 13.5px; line-height: 1.5; padding: 12px;"
+                  placeholder="Detalle la política para unidades de apoyo y centros de práctica externos..."
+                ></textarea>
+              }
+            </div>
+          </form>
+        </div>
+
+        <!-- Documentación de Respaldo Mínima Requerida -->
+        <div class="tabla-figma-wrapper" style="padding: 24px; background: #ffffff;">
+          <h4 style="font-size: 16px; font-weight: 700; color: var(--color-primary-dark); margin: 0 0 8px 0;">
+            Documentación de Respaldo Mínima Exigida
+          </h4>
+          <p style="font-size: 13px; color: var(--color-text-muted); margin-bottom: 16px;">
+            El área debe adjuntar la siguiente documentación obligatoria para su custodia en la subcarpeta:
+            <code style="background: #f3f4f6; padding: 2px 6px; border-radius: 4px;">03-Autoevaluación/03_01-Infraestructura equipamiento y biblioteca/Normativa</code>
+          </p>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 24px;">
+            @for (doc of guiaHigiene()?.documentos; track doc.id) {
+              @if (doc.obligatorio) {
+                <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; background: #fafafa; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                      <span style="font-size: 13px; font-weight: 700; color: #1f2937;">
+                        {{ doc.tipoDocumentoNombre }}
+                      </span>
+                      <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 700;"
+                        [style.background]="doc.cargado ? '#dcfce7' : '#fee2e2'"
+                        [style.color]="doc.cargado ? '#166534' : '#991b1b'">
+                        {{ doc.cargado ? '✓ Cargado' : 'Pendiente' }}
+                      </span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 6px;">
+                      {{ doc.descripcion }}
+                    </div>
+                  </div>
+
+                  @if (doc.nombreArchivo) {
+                    <div style="font-size: 12px; font-weight: 600; color: var(--color-primary-dark); border-top: 1px dashed #d1d5db; padding-top: 6px;">
+                      📄 {{ doc.nombreArchivo }}
+                    </div>
+                  }
+                </div>
+              }
+            }
+          </div>
+
+          <!-- Tabla de Normativa de Respaldo (Ord HCS, RR, Disposiciones) -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-top: 1px solid #e5e7eb; padding-top: 16px;">
+            <h5 style="font-size: 14.5px; font-weight: 700; color: var(--color-primary-dark); margin: 0;">
+              Tabla de Normativa de Respaldo (Resoluciones, Ordenanzas y Actos Administrativos)
+            </h5>
+            <button
+              type="button"
+              class="btn-nuevo-figma"
+              style="padding: 6px 12px; font-size: 12.5px;"
+              (click)="abrirModalNormativaHigiene()"
+            >
+              + Agregar normativa
+            </button>
+          </div>
+
+          <table class="tabla-figma" style="font-size: 13px;">
+            <thead>
+              <tr>
+                <th>Tipo de Documento</th>
+                <th>Organismo Emisor</th>
+                <th>Descripción</th>
+                <th>Número</th>
+                <th>Archivo en Normativa MinIO</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (doc of guiaHigiene()?.documentos; track doc.id) {
+                @if (!doc.obligatorio) {
+                  <tr>
+                    <td><strong>{{ doc.tipoDocumentoNombre }}</strong></td>
+                    <td>{{ doc.organismoEmisor || '-' }}</td>
+                    <td>{{ doc.descripcion || '-' }}</td>
+                    <td style="font-weight: 600;">{{ doc.numeroNormativa || '-' }}</td>
+                    <td>
+                      <span style="color: #166534; font-weight: 500;">
+                        📄 {{ doc.nombreArchivo || 'Archivo no cargado' }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    }
+
+  } @else if (actividadSeleccionada() === 'EQUIPAMIENTO_BIBLIOTECA') {
+    <div class="tabla-figma-wrapper" style="padding: 40px; text-align: center;">
+      <h3 style="font-size: 18px; color: var(--color-primary-dark); margin-bottom: 8px;">
+        Gestión de Información sobre Equipamiento Didáctico y Biblioteca
+      </h3>
+      <p style="color: var(--color-text-muted); font-size: 14.5px; max-width: 600px; margin: 0 auto;">
+        Registro del acervo bibliográfico físico y virtual, licencias de software, equipamiento especializado de laboratorio y centros de cómputo para las carreras de la institución.
+      </p>
+    </div>
+  }
+
+  <!-- Modal para Extender Plazo de la Actividad (PT-001) -->
+  @if (mostrarModalExtension()) {
+    <div class="drawer-backdrop" (click)="cerrarModalExtension()"></div>
+    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; max-width: 90vw; background: #ffffff; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); z-index: 1000; padding: 24px; border: 1px solid #e5e7eb;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 18px; font-weight: 700; color: var(--color-primary-dark, #6b4c5b); margin: 0;">
+          {{ actividadSeleccionada() === 'HIGIENE_SEGURIDAD' ? 'Extender Plazo — Actividad 4.2 (Higiene y Seguridad)' : 'Extender Plazo — Actividad 4.1 (Infraestructura)' }}
+        </h3>
+        <button type="button" class="btn-accion-icono" (click)="cerrarModalExtension()">✕</button>
+      </div>
+
+      <p style="font-size: 13.5px; color: var(--color-text-muted); margin-bottom: 16px;">
+        Configure una nueva fecha límite para la verificación de
+        <strong>{{ actividadSeleccionada() === 'HIGIENE_SEGURIDAD' ? 'la GT-003: Guía de Higiene y Seguridad' : 'el RG-005: Registro de Inmuebles' }}</strong>.
+        Esta actualización se reflejará automáticamente en el cronograma de la hoja <strong>INFO</strong> del Plan de Trabajo.
+      </p>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px;">Nueva Fecha Límite *</label>
+        <input
+          type="date"
+          style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+          [value]="nuevaFechaLimite()"
+          (input)="nuevaFechaLimite.set($any($event.target).value)"
+        />
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px;">Motivo de la prórroga</label>
+        <textarea
+          rows="3"
+          style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+          [value]="motivoExtension()"
+          (input)="motivoExtension.set($any($event.target).value)"
+          placeholder="Indique la justificación de la extensión de plazo..."
+        ></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-tabla-accion" (click)="cerrarModalExtension()">Cancelar</button>
+        <button type="button" class="btn-nuevo-figma" (click)="confirmarExtensionPlazo()">Confirmar y Sincronizar</button>
+      </div>
+    </div>
+  }
+
+  <!-- Modal para Agregar Normativa de Respaldo en Higiene y Seguridad -->
+  @if (mostrarModalNormativaHigiene()) {
+    <div class="drawer-backdrop" (click)="cerrarModalNormativaHigiene()"></div>
+    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 550px; max-width: 90vw; background: #ffffff; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); z-index: 1000; padding: 24px; border: 1px solid #e5e7eb;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 18px; font-weight: 700; color: var(--color-primary-dark, #6b4c5b); margin: 0;">
+          Agregar Normativa de Respaldo — GT-003
+        </h3>
+        <button type="button" class="btn-accion-icono" (click)="cerrarModalNormativaHigiene()">✕</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px;">Tipo de Documento *</label>
+          <input
+            type="text"
+            class="form-input-figma"
+            placeholder="Ej: Ordenanza HCS, Resolución Rectoral"
+            [value]="nuevaNormativaTipo()"
+            (input)="nuevaNormativaTipo.set($any($event.target).value)"
+          />
+        </div>
+
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px;">Número *</label>
+          <input
+            type="text"
+            class="form-input-figma"
+            placeholder="Ej: Ord. HCS 008/2018"
+            [value]="nuevaNormativaNumero()"
+            (input)="nuevaNormativaNumero.set($any($event.target).value)"
+          />
+        </div>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px;">Organismo Emisor *</label>
+        <input
+          type="text"
+          class="form-input-figma"
+          placeholder="Ej: Consejo Superior UNdeC, Rectorado"
+          [value]="nuevaNormativaEmisor()"
+          (input)="nuevaNormativaEmisor.set($any($event.target).value)"
+        />
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px;">Descripción</label>
+        <textarea
+          rows="2"
+          class="form-input-figma"
+          placeholder="Breve detalle de la disposición o reglamento..."
+          [value]="nuevaNormativaDesc()"
+          (input)="nuevaNormativaDesc.set($any($event.target).value)"
+        ></textarea>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px;">Archivo en Normativa MinIO *</label>
+        <input
+          type="text"
+          class="form-input-figma"
+          placeholder="Ej: Ord_HCS_008_2018_Reglamento_HyS.pdf"
+          [value]="nuevaNormativaArchivo()"
+          (input)="nuevaNormativaArchivo.set($any($event.target).value)"
+        />
+        <span style="font-size: 12px; color: var(--color-text-muted);">
+          Destino: <code>03-Autoevaluación/03_01-Infraestructura equipamiento y biblioteca/Normativa</code>
+        </span>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-tabla-accion" (click)="cerrarModalNormativaHigiene()">Cancelar</button>
+        <button type="button" class="btn-nuevo-figma" (click)="guardarNormativaHigiene()">Guardar y Archivar</button>
+      </div>
+    </div>
+  }
+
+  <!-- Drawer Lateral para Alta / Edición de Inmueble (RG-005) -->
+  @if (formAbierto()) {
+    <div class="drawer-backdrop" (click)="cerrarFormulario()"></div>
+    <div class="drawer-panel-figma" style="width: 650px;">
+      <div class="drawer-header">
+        <h3 class="drawer-title">
+          {{ modoEdicion() ? 'Editar Inmueble (RG-005)' : 'Nuevo Inmueble en Registro (RG-005)' }}
+        </h3>
+        <button type="button" class="btn-accion-icono" (click)="cerrarFormulario()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+          <!-- Datos Generales -->
+          <div style="display: grid; grid-template-columns: 100px 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group-figma">
+              <label class="form-label-figma">ORD.</label>
+              <input type="number" formControlName="numeroOrden" class="form-input-figma" placeholder="1" />
+            </div>
+
+            <div class="form-group-figma">
+              <label class="form-label-figma">Denominación del Inmueble * (Validar con SGEF)</label>
+              <input type="text" formControlName="nombre" class="form-input-figma" placeholder="Ej: Campus Universitario (Sede Los Sarmientos)" />
+            </div>
+          </div>
+
+          <div class="form-group-figma">
+            <label class="form-label-figma">Domicilio Completo *</label>
+            <input type="text" formControlName="domicilio" class="form-input-figma" placeholder="Ej: Ruta Los Peregrinos S/N, Los Sarmientos" />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group-figma">
+              <label class="form-label-figma">Calle</label>
+              <input type="text" formControlName="calle" class="form-input-figma" placeholder="Ej: Ruta Los Peregrinos" />
+            </div>
+            <div class="form-group-figma">
+              <label class="form-label-figma">Número</label>
+              <input type="text" formControlName="numero" class="form-input-figma" placeholder="S/N o 22" />
+            </div>
+          </div>
+
+          <!-- Ubicación Geográfica -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group-figma">
+              <label class="form-label-figma">Provincia *</label>
+              <select formControlName="provinciaId" (change)="onProvinciaChange()" class="form-input-figma">
+                @for (p of provincias(); track p.id) {
+                  <option [value]="p.id">{{ p.nombre }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group-figma">
+              <label class="form-label-figma">Departamento *</label>
+              <select formControlName="departamentoId" (change)="onDepartamentoChange()" class="form-input-figma">
+                @for (d of departamentos(); track d.id) {
+                  <option [value]="d.id">{{ d.nombre }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group-figma">
+              <label class="form-label-figma">Localidad *</label>
+              <select formControlName="localidadId" class="form-input-figma">
+                @for (loc of localidades(); track loc.id) {
+                  <option [value]="loc.id">{{ loc.nombre }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <!-- Antigüedad y Situación Jurídica -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group-figma">
+              <label class="form-label-figma">Año Construcción</label>
+              <input type="number" formControlName="anioConstruccion" class="form-input-figma" placeholder="Ej: 2002" />
+            </div>
+
+            <div class="form-group-figma">
+              <label class="form-label-figma">Año Inicio Funcionamiento</label>
+              <input type="number" formControlName="anioInicioInstitucion" class="form-input-figma" placeholder="Ej: 2004" />
+            </div>
+
+            <div class="form-group-figma">
+              <label class="form-label-figma">Situación *</label>
+              <select formControlName="situacion" class="form-input-figma">
+                <option value="Propiedad">Propiedad</option>
+                <option value="Alquiler">Alquiler</option>
+                <option value="Usufructo">Usufructo</option>
+                <option value="Comodato">Comodato</option>
+                <option value="Convenio">Convenio</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group-figma" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+            <input type="checkbox" id="chkTodas" formControlName="vinculaTodasCarreras" />
+            <label for="chkTodas" style="font-size: 13.5px; font-weight: 600; cursor: pointer;">
+              Vincula con Todas las Carreras de la Institución
+            </label>
+          </div>
+
+          <!-- Espacios Físicos (RG-005) -->
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <h4 style="font-size: 14.5px; font-weight: 700; color: var(--color-primary-dark); margin: 0;">
+                Espacios Físicos Declarados ({{ espaciosAgregados().length }})
+              </h4>
+              <button
+                type="button"
+                class="btn-tabla-accion"
+                (click)="mostrarFormEspacio.set(!mostrarFormEspacio())"
+              >
+                + Agregar espacio
+              </button>
+            </div>
+
+            @if (mostrarFormEspacio()) {
+              <div style="background: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 12px;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 8px;">
+                  <input
+                    type="text"
+                    placeholder="Descripción Infraestructura (Ej: Aula 1-2-3-4-17-18)"
+                    class="form-input-figma"
+                    [value]="nuevoEspacioDescInfra()"
+                    (input)="nuevoEspacioDescInfra.set($any($event.target).value)"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Denominación resumida"
+                    class="form-input-figma"
+                    [value]="nuevoEspacioNombre()"
+                    (input)="nuevoEspacioNombre.set($any($event.target).value)"
+                  />
+                </div>
+
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                  <select
+                    class="form-input-figma"
+                    [value]="nuevoEspacioTipoId()"
+                    (change)="nuevoEspacioTipoId.set($any($event.target).value)"
+                  >
+                    <option value="">Seleccione tipo de espacio...</option>
+                    @for (t of tiposEspacio(); track t.id) {
+                      <option [value]="t.id">{{ t.denominacion }}</option>
+                    }
+                  </select>
+
+                  <input
+                    type="number"
+                    placeholder="Cantidad"
+                    class="form-input-figma"
+                    [value]="nuevoEspacioCantidad()"
+                    (input)="nuevoEspacioCantidad.set(+$any($event.target).value)"
+                  />
+
+                  <input
+                    type="number"
+                    placeholder="Capacidad sentados"
+                    class="form-input-figma"
+                    [value]="nuevoEspacioCapacidad()"
+                    (input)="nuevoEspacioCapacidad.set(+$any($event.target).value)"
+                  />
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                  <button type="button" class="btn-tabla-accion" (click)="mostrarFormEspacio.set(false)">Cancelar</button>
+                  <button type="button" class="btn-nuevo-figma" (click)="agregarEspacioFisico()">Guardar espacio</button>
+                </div>
+              </div>
+            }
+
+            @if (espaciosAgregados().length > 0) {
+              <div style="max-height: 180px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px;">
+                @for (esp of espaciosAgregados(); track esp.denominacion) {
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 13px;">
+                    <div>
+                      <strong>{{ esp.cantidad || 1 }}x</strong> {{ esp.descripcionInfraestructura || esp.denominacion }}
+                      <span style="color: var(--color-text-muted);">({{ esp.capacidadPersonasSentadas || esp.capacidadEstudiantes }} personas sentadas)</span>
+                    </div>
+                    <button type="button" class="btn-accion-icono" style="color: #dc2626;" (click)="eliminarEspacioFisico(esp)">✕</button>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Documentación de Respaldo -->
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 16px;">
+            <label class="form-label-figma">Documento de Respaldo (Contrato / Convenio / Comodato)</label>
+            <input
+              type="text"
+              placeholder="Ej: Convenio_Comodato_2025_2028.pdf (Normativa MinIO)"
+              class="form-input-figma"
+              [value]="nuevoDocNombre()"
+              (input)="nuevoDocNombre.set($any($event.target).value)"
+            />
+            <span style="font-size: 12px; color: var(--color-text-muted);">
+              Destino en repositorio: <code>03-Autoevaluación/03_01-Infraestructura equipamiento y biblioteca/Normativa</code>
+            </span>
+          </div>
+
+          <div class="drawer-actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn-tabla-accion" (click)="cerrarFormulario()">Cancelar</button>
+            <button type="submit" class="btn-nuevo-figma" [disabled]="submitting()">
+              {{ submitting() ? 'Guardando...' : (modoEdicion() ? 'Guardar Cambios' : 'Registrar Inmueble') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

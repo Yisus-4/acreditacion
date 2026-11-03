@@ -1,0 +1,73 @@
+<div class="vista-gestion-layout">
+  <app-subnav-autoevaluacion [seccionActual]="datosDimension().titulo"></app-subnav-autoevaluacion>
+
+  <!-- Banner Informativo de la Dimensión -->
+  <div class="banner-procedimiento">
+    <strong>Dimensión de Acreditación CONEAU:</strong> {{ datosDimension().titulo }}
+    <span class="subtexto-banner">
+      {{ datosDimension().descripcion }}
+    </span>
+  </div>
+
+  <!-- Toolbar de Búsqueda -->
+  <div class="vista-toolbar">
+    <div class="search-box-figma" style="flex: 1 1 360px;">
+      <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+      </svg>
+      <input
+        type="text"
+        placeholder="Buscar actividad o procedimiento..."
+        [value]="filtroTexto()"
+        (input)="filtroTexto.set($any($event.target).value)"
+      />
+    </div>
+
+    <div class="toolbar-actions-right">
+      <span class="stats-count-figma">
+        {{ actividadesFiltradas().length }} {{ actividadesFiltradas().length === 1 ? 'actividad' : 'actividades' }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Tabla Oficial de Actividades -->
+  <div class="tabla-figma-wrapper">
+    <table class="tabla-figma">
+      <thead>
+        <tr>
+          <th>Actividad Operativa</th>
+          <th>Responsable Sugerido</th>
+          <th>Normativa / Instrumento</th>
+          <th>Estado</th>
+          <th class="col-acciones">Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (act of actividadesFiltradas(); track act.nombre) {
+          <tr>
+            <td class="col-nombre">
+              {{ act.nombre }}
+            </td>
+            <td>{{ act.responsable }}</td>
+            <td>{{ act.instrumento }}</td>
+            <td>
+              <span class="badge-estado-figma inactiva" style="color: #5a4a53;">
+                {{ act.estado }}
+              </span>
+            </td>
+            <td class="col-acciones">
+              <button
+                type="button"
+                class="btn-nuevo-figma"
+                style="padding: 6px 14px; font-size: 13px;"
+                (click)="iniciarActividad(act.nombre)"
+              >
+                Gestionar
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

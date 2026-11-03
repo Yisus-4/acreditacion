@@ -123,5 +123,28 @@ export const routes: Routes = [
         './features/normativa/normativa-detalle/normativa-detalle.component'
       ).then((m) => m.NormativaDetalleComponent),
   },
+  {
+    path: 'autoevaluacion',
+    pathMatch: 'full',
+    redirectTo: 'autoevaluacion/infraestructura',
+  },
+  {
+    path: 'autoevaluacion/infraestructura',
+    title: 'Infraestructura, Equipamiento y Biblioteca — Autoevaluación UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/autoevaluacion/infraestructura/infraestructura.component'
+      ).then((m) => m.InfraestructuraComponent),
+  },
+  {
+    path: 'autoevaluacion/:dimension',
+    title: 'Autoevaluación y Gestión de Información — UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/autoevaluacion/dimension-detalle/dimension-detalle.component'
+      ).then((m) => m.DimensionDetalleComponent),
+  },
   { path: '**', redirectTo: 'dashboard' },
 ];

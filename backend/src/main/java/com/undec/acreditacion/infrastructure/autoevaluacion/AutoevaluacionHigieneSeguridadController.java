@@ -1,0 +1,382 @@
+package com.undec.acreditacion.infrastructure.autoevaluacion;
+
+import com.undec.acreditacion.application.output.UserRepository;
+import com.undec.acreditacion.domain.entities.ActividadPlanTrabajo;
+import com.undec.acreditacion.domain.entities.PlanTrabajo;
+import com.undec.acreditacion.domain.entities.User;
+import com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort;
+import com.undec.acreditacion.infrastructure.autoevaluacion.dto.*;
+import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.*;
+import com.undec.acreditacion.infrastructure.persistence.postgres.InstitucionJpaEntity;
+import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataInstitucionRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("/api/autoevaluacion/higiene-seguridad")
+public class AutoevaluacionHigieneSeguridadController {
+
+    private final SpringDataGuiaHigieneSeguridadRepository guiaRepository;
+    private final SpringDataGuiaHigieneDocumentoRepository documentoRepository;
+    private final SpringDataInstitucionRepository institucionRepository;
+    private final PlanTrabajoRepositoryPort planTrabajoRepository;
+    private final UserRepository userRepository;
+
+    public AutoevaluacionHigieneSeguridadController(
+            SpringDataGuiaHigieneSeguridadRepository guiaRepository,
+            SpringDataGuiaHigieneDocumentoRepository documentoRepository,
+            SpringDataInstitucionRepository institucionRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            UserRepository userRepository
+    ) {
+        this.guiaRepository = guiaRepository;
+        this.documentoRepository = documentoRepository;
+        this.institucionRepository = institucionRepository;
+        this.planTrabajoRepository = planTrabajoRepository;
+        this.userRepository = userRepository;
+    }
+
+    // -------------------------------------------------------------------------
+    // 1. Guía Maestra Institucional (GT-003)
+    // -------------------------------------------------------------------------
+
+    @GetMapping("/maestro")
+    @Transactional(readOnly = true)
+    public ResponseEntity<GuiaHigieneSeguridadResponse> obtenerGuiaMaestra() {
+        return guiaRepository.findGuiaMaestraCompleta()
+                .map(this::mapToResponse)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. Guía por Proceso / Carrera (Snapshot de Autoevaluación)
+    // -------------------------------------------------------------------------
+
+    @GetMapping("/procesos/{procesoId}")
+    @Transactional
+    public ResponseEntity<GuiaHigieneSeguridadResponse> obtenerGuiaPorProceso(@PathVariable UUID procesoId) {
+        Optional<GuiaHigieneSeguridadJpaEntity> opt = guiaRepository.findByProcesoIdCompleta(procesoId);
+        GuiaHigieneSeguridadJpaEntity guia;
+
+        if (opt.isPresent()) {
+            guia = opt.get();
+        } else {
+            guia = clonarGuiaMaestraParaProceso(procesoId);
+        }
+
+        return ResponseEntity.ok(mapToResponse(guia));
+    }
+
+    @PutMapping("/{id}")
+    @Transactional
+    public ResponseEntity<GuiaHigieneSeguridadResponse> actualizarGuia(
+            @PathVariable UUID id,
+            @RequestBody ActualizarGuiaHigieneRequest request
+    ) {
+        Optional<GuiaHigieneSeguridadJpaEntity> opt = guiaRepository.findByIdCompleta(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        GuiaHigieneSeguridadJpaEntity entity = opt.get();
+        if (request.instanciaResponsableUa() != null) {
+            entity.setInstanciaResponsableUa(request.instanciaResponsableUa());
+        }
+        if (request.politicaUnidadesApoyo() != null) {
+            entity.setPoliticaUnidadesApoyo(request.politicaUnidadesApoyo());
+        }
+        if (request.aplicaUnidadesApoyo() != null) {
+            entity.setAplicaUnidadesApoyo(request.aplicaUnidadesApoyo());
+        }
+        if (request.observaciones() != null) {
+            entity.setObservaciones(request.observaciones());
+        }
+        entity.setActualizadoEn(Instant.now());
+
+        GuiaHigieneSeguridadJpaEntity guardado = guiaRepository.save(entity);
+        return ResponseEntity.ok(mapToResponse(guardado));
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. Documentación de Respaldo y Normativa MinIO
+    // -------------------------------------------------------------------------
+
+    @PostMapping("/{id}/documentos")
+    @Transactional
+    public ResponseEntity<GuiaHigieneDocumentoResponse> agregarOActualizarDocumento(
+            @PathVariable UUID id,
+            @RequestBody DocumentoHigieneItemRequest request
+    ) {
+        Optional<GuiaHigieneSeguridadJpaEntity> opt = guiaRepository.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        GuiaHigieneSeguridadJpaEntity guia = opt.get();
+        GuiaHigieneDocumentoJpaEntity doc;
+
+        if (request.id() != null) {
+            doc = documentoRepository.findById(request.id())
+                    .orElse(new GuiaHigieneDocumentoJpaEntity());
+        } else {
+            doc = new GuiaHigieneDocumentoJpaEntity();
+            doc.setId(UUID.randomUUID());
+            doc.setGuia(guia);
+            doc.setCreadoEn(Instant.now());
+        }
+
+        doc.setTipoDocumentoClave(request.tipoDocumentoClave() != null ? request.tipoDocumentoClave() : "NORMATIVA_RESPALDO");
+        doc.setTipoDocumentoNombre(request.tipoDocumentoNombre() != null ? request.tipoDocumentoNombre() : "Documento de Respaldo");
+        doc.setOrganismoEmisor(request.organismoEmisor());
+        doc.setNumeroNormativa(request.numeroNormativa());
+        doc.setDescripcion(request.descripcion());
+        doc.setNombreArchivo(request.nombreArchivo());
+        doc.setUrlMinio(request.urlMinio() != null ? request.urlMinio() :
+                (request.nombreArchivo() != null ? "/minio/acreditacion/03_01/" + request.nombreArchivo() : null));
+        doc.setRutaRepositorio("03-Autoevaluación/03_01-Infraestructura equipamiento y biblioteca/Normativa");
+        doc.setObligatorio(request.obligatorio() != null ? request.obligatorio() : false);
+        doc.setCargado(request.nombreArchivo() != null && !request.nombreArchivo().isBlank());
+        doc.setSubidoPorUsuarioId(resolverUsuarioAutenticadoId());
+        doc.setFechaSubida(Instant.now());
+
+        GuiaHigieneDocumentoJpaEntity guardado = documentoRepository.save(doc);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapToDocumentoResponse(guardado));
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Extensión de Plazo sincronizada con PT-001 (Actividad 4.2)
+    // -------------------------------------------------------------------------
+
+    @PostMapping("/procesos/{procesoId}/extender-plazo")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> extenderPlazoActividad(
+            @PathVariable UUID procesoId,
+            @RequestBody ExtenderPlazoInfraestructuraRequest request
+    ) {
+        if (request.nuevaFechaLimite() == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "La nueva fecha límite es obligatoria"));
+        }
+
+        Optional<PlanTrabajo> planOpt = planTrabajoRepository.findByProcesoId(procesoId);
+        if (planOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        PlanTrabajo plan = planOpt.get();
+        Optional<ActividadPlanTrabajo> actOpt = plan.getActividades().stream()
+                .filter(a -> "4.2".equals(a.getCodigoActividad()) || a.getNombre().toLowerCase().contains("higiene"))
+                .findFirst();
+
+        if (actOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "No se encontró la actividad 4.2 de Higiene y Seguridad en el Plan de Trabajo"));
+        }
+
+        ActividadPlanTrabajo act = actOpt.get();
+        act.agregarPlazoExtendido(request.nuevaFechaLimite());
+        planTrabajoRepository.saveActividad(act);
+        planTrabajoRepository.save(plan);
+
+        // Actualizar fecha límite en la entidad GT-003 si existe
+        guiaRepository.findByProcesoIdCompleta(procesoId).ifPresent(g -> {
+            g.setFechaLimite(request.nuevaFechaLimite());
+            g.setActualizadoEn(Instant.now());
+            guiaRepository.save(g);
+        });
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("procesoId", procesoId);
+        resp.put("codigoActividad", act.getCodigoActividad());
+        resp.put("nuevaFechaLimite", act.getUltimoPlazoVigente());
+        resp.put("plazosExtendidos", act.getPlazosExtendidos());
+        resp.put("motivo", request.motivo());
+        resp.put("mensaje", "Plazo extendido exitosamente y sincronizado con el Plan de Trabajo (hoja INFO - Actividad 4.2)");
+        return ResponseEntity.ok(resp);
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. Verificación y Remisión a AEA (Completar Tarea 4.2)
+    // -------------------------------------------------------------------------
+
+    @PostMapping("/procesos/{procesoId}/verificar-y-remitir")
+    @Transactional
+    public ResponseEntity<VerificarInfraestructuraResponse> verificarYRemitirADea(
+            @PathVariable UUID procesoId
+    ) {
+        UUID usuarioId = resolverUsuarioAutenticadoId();
+        Instant now = Instant.now();
+
+        // 1. Marcar la GT-003 del proceso como verificada
+        Optional<GuiaHigieneSeguridadJpaEntity> guiaOpt = guiaRepository.findByProcesoIdCompleta(procesoId);
+        if (guiaOpt.isPresent()) {
+            GuiaHigieneSeguridadJpaEntity g = guiaOpt.get();
+            g.setVerificado(true);
+            g.setFechaVerificacion(now);
+            g.setEstado("COMPLETADO");
+            g.setActualizadoEn(now);
+            guiaRepository.save(g);
+        }
+
+        // 2. Actualizar automáticamente la actividad 4.2 en el Plan de Trabajo (PT-001)
+        String estadoActividad = "SIN_PLAN";
+        Optional<PlanTrabajo> planOpt = planTrabajoRepository.findByProcesoId(procesoId);
+        if (planOpt.isPresent()) {
+            PlanTrabajo plan = planOpt.get();
+            Optional<ActividadPlanTrabajo> actOpt = plan.getActividades().stream()
+                    .filter(a -> "4.2".equals(a.getCodigoActividad()) || a.getNombre().toLowerCase().contains("higiene"))
+                    .findFirst();
+
+            if (actOpt.isPresent()) {
+                ActividadPlanTrabajo act = actOpt.get();
+                act.completar(usuarioId, "GT-003 y documentación de respaldo de Higiene y Seguridad remitida a AEA y archivada en subcarpeta Normativa");
+                planTrabajoRepository.saveActividad(act);
+                planTrabajoRepository.save(plan);
+                estadoActividad = act.getEstado().name();
+            }
+        }
+
+        return ResponseEntity.ok(new VerificarInfraestructuraResponse(
+                procesoId,
+                true,
+                estadoActividad,
+                now,
+                "Guía GT-003 y documentación de respaldo verificadas. Tarea 4.2 finalizada y asentada en hoja INFO del PT-001"
+        ));
+    }
+
+    // -------------------------------------------------------------------------
+    // Helper: Clonar Guía Maestra
+    // -------------------------------------------------------------------------
+
+    private GuiaHigieneSeguridadJpaEntity clonarGuiaMaestraParaProceso(UUID procesoId) {
+        GuiaHigieneSeguridadJpaEntity maestro = guiaRepository.findGuiaMaestraCompleta()
+                .orElseThrow(() -> new IllegalStateException("No existe Guía Maestra GT-003 en el sistema"));
+
+        InstitucionJpaEntity institucion = institucionRepository.findAll().stream().findFirst()
+                .orElse(maestro.getInstitucion());
+
+        GuiaHigieneSeguridadJpaEntity c = new GuiaHigieneSeguridadJpaEntity();
+        c.setId(UUID.randomUUID());
+        c.setProcesoId(procesoId);
+        c.setInstitucion(institucion);
+        c.setEsMaestro(false);
+        c.setEdicion(maestro.getEdicion());
+        c.setFechaVigencia(maestro.getFechaVigencia());
+        c.setElaboradoPor(maestro.getElaboradoPor());
+        c.setRevisadoPor(maestro.getRevisadoPor());
+        c.setInstanciaResponsableUa(maestro.getInstanciaResponsableUa());
+        c.setPoliticaUnidadesApoyo(maestro.getPoliticaUnidadesApoyo());
+        c.setAplicaUnidadesApoyo(maestro.getAplicaUnidadesApoyo());
+        c.setVerificado(false);
+        c.setFechaSolicitud(Instant.now());
+        c.setFechaLimite(LocalDate.now().plusDays(10));
+        c.setEstado("PENDIENTE");
+        c.setCreadoEn(Instant.now());
+        c.setActualizadoEn(Instant.now());
+
+        GuiaHigieneSeguridadJpaEntity guardado = guiaRepository.save(c);
+
+        List<GuiaHigieneDocumentoJpaEntity> docsMaestros = documentoRepository.findByGuiaIdOrderByCreadoEnAsc(maestro.getId());
+        for (GuiaHigieneDocumentoJpaEntity docM : docsMaestros) {
+            GuiaHigieneDocumentoJpaEntity docC = new GuiaHigieneDocumentoJpaEntity();
+            docC.setId(UUID.randomUUID());
+            docC.setGuia(guardado);
+            docC.setTipoDocumentoClave(docM.getTipoDocumentoClave());
+            docC.setTipoDocumentoNombre(docM.getTipoDocumentoNombre());
+            docC.setOrganismoEmisor(docM.getOrganismoEmisor());
+            docC.setNumeroNormativa(docM.getNumeroNormativa());
+            docC.setDescripcion(docM.getDescripcion());
+            docC.setNombreArchivo(docM.getNombreArchivo());
+            docC.setUrlMinio(docM.getUrlMinio());
+            docC.setRutaRepositorio(docM.getRutaRepositorio());
+            docC.setObligatorio(docM.getObligatorio());
+            docC.setCargado(docM.getCargado());
+            docC.setFechaSubida(docM.getFechaSubida());
+            docC.setCreadoEn(Instant.now());
+            documentoRepository.save(docC);
+            guardado.getDocumentos().add(docC);
+        }
+
+        return guardado;
+    }
+
+    private GuiaHigieneSeguridadResponse mapToResponse(GuiaHigieneSeguridadJpaEntity g) {
+        List<GuiaHigieneDocumentoResponse> docs = g.getDocumentos() == null ? Collections.emptyList() :
+                g.getDocumentos().stream()
+                        .map(this::mapToDocumentoResponse)
+                        .collect(Collectors.toList());
+
+        int cargados = (int) docs.stream().filter(d -> Boolean.TRUE.equals(d.cargado())).count();
+        int obligatorios = (int) docs.stream().filter(d -> Boolean.TRUE.equals(d.obligatorio())).count();
+        int obligatoriosCargados = (int) docs.stream()
+                .filter(d -> Boolean.TRUE.equals(d.obligatorio()) && Boolean.TRUE.equals(d.cargado()))
+                .count();
+
+        boolean requisitosCompletos = obligatoriosCargados >= obligatorios && obligatorios > 0;
+
+        return new GuiaHigieneSeguridadResponse(
+                g.getId(),
+                g.getProcesoId(),
+                g.getEsMaestro(),
+                g.getEdicion(),
+                g.getFechaVigencia(),
+                g.getElaboradoPor(),
+                g.getRevisadoPor(),
+                g.getAprobadoPor(),
+                g.getInstanciaResponsableUa(),
+                g.getPoliticaUnidadesApoyo(),
+                g.getAplicaUnidadesApoyo(),
+                g.getVerificado(),
+                g.getFechaVerificacion(),
+                g.getFechaSolicitud(),
+                g.getFechaLimite(),
+                g.getEstado(),
+                g.getObservaciones(),
+                docs,
+                cargados,
+                obligatorios,
+                requisitosCompletos
+        );
+    }
+
+    private GuiaHigieneDocumentoResponse mapToDocumentoResponse(GuiaHigieneDocumentoJpaEntity d) {
+        return new GuiaHigieneDocumentoResponse(
+                d.getId(),
+                d.getTipoDocumentoClave(),
+                d.getTipoDocumentoNombre(),
+                d.getOrganismoEmisor(),
+                d.getNumeroNormativa(),
+                d.getDescripcion(),
+                d.getNombreArchivo(),
+                d.getUrlMinio(),
+                d.getRutaRepositorio(),
+                d.getObligatorio(),
+                d.getCargado(),
+                d.getFechaSubida()
+        );
+    }
+
+    private UUID resolverUsuarioAutenticadoId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() != null) {
+            String principal = auth.getPrincipal().toString();
+            Optional<User> userOpt = userRepository.findByEmail(principal);
+            if (userOpt.isPresent()) {
+                return userOpt.get().getId();
+            }
+        }
+        return userRepository.findByEmail("admin@undec.edu.ar")
+                .map(User::getId)
+                .orElse(UUID.fromString("b915837d-6a68-4ad1-95b9-5f6455e586ce"));
+    }
+}
