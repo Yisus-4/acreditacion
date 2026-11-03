@@ -1998,6 +1998,8 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const esDocente = f.claustroRol === 'DOCENTE' || f.claustroRol === 'COORDINADOR';
+
     const nuevo: MiembroCaDto = {
       apellido: f.apellido.trim(),
       primerNombre: f.nombreCompleto.trim(),
@@ -2009,9 +2011,9 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       correoGmail: f.correoGmail.trim().toLowerCase(),
       cargoFuncion: f.cargoFuncion.trim(),
       claustroRol: f.claustroRol,
-      esDocente: f.esDocente,
-      cuentaConeauGlobalCreada: f.cuentaConeauGlobalCreada,
-      cuentaCvarVinculada: f.cuentaCvarVinculada,
+      esDocente: esDocente,
+      cuentaConeauGlobalCreada: true,
+      cuentaCvarVinculada: false,
       pendienteAltaSistema: true,
       numeroOrden: actuales.length + 1
     };

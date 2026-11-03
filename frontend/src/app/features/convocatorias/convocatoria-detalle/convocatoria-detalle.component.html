@@ -2202,39 +2202,6 @@
                 </select>
               </div>
             </div>
-
-            <div class="form-checkboxes-row" style="margin-top: 1rem; display: flex; gap: 1.5rem; flex-wrap: wrap;">
-              <label class="checkbox-container">
-                <input
-                  type="checkbox"
-                  [checked]="nuevoMiembroForm().esDocente"
-                  (change)="actualizarCampoNuevoMiembro('esDocente', $any($event.target).checked)"
-                />
-                <span class="checkmark"></span>
-                <span class="checkbox-text">¿Es Docente de la Carrera?</span>
-              </label>
-
-              <label class="checkbox-container">
-                <input
-                  type="checkbox"
-                  [checked]="nuevoMiembroForm().cuentaConeauGlobalCreada"
-                  (change)="actualizarCampoNuevoMiembro('cuentaConeauGlobalCreada', $any($event.target).checked)"
-                />
-                <span class="checkmark"></span>
-                <span class="checkbox-text">Cuenta CONEAU Global creada</span>
-              </label>
-
-              <label class="checkbox-container">
-                <input
-                  type="checkbox"
-                  [checked]="nuevoMiembroForm().cuentaCvarVinculada"
-                  [disabled]="!nuevoMiembroForm().esDocente"
-                  (change)="actualizarCampoNuevoMiembro('cuentaCvarVinculada', $any($event.target).checked)"
-                />
-                <span class="checkmark"></span>
-                <span class="checkbox-text">Cuenta CVar vinculada</span>
-              </label>
-            </div>
           </div>
 
           <div class="modal-footer">

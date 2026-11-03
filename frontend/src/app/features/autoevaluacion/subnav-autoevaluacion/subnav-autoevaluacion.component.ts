@@ -7,7 +7,6 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   imports: [RouterLink, RouterLinkActive],
   template: `
     <header class="autoeval-header">
-      <p class="breadcrumb-text">Autoevaluación / {{ seccionActual() }}</p>
       <nav class="subnav-tabs-bar" aria-label="Navegación Dimensiones Autoevaluación">
         <a routerLink="/autoevaluacion/infraestructura" routerLinkActive="active" class="subnav-tab">
           Infraestructura y biblioteca
@@ -34,14 +33,8 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
     .autoeval-header {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
       margin-bottom: 16px;
-    }
-    .breadcrumb-text {
-      margin: 0;
-      font-size: 14px;
-      color: var(--color-text-muted, #5a4a53);
-      font-weight: 400;
     }
     .subnav-tabs-bar {
       display: flex;
@@ -80,5 +73,5 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SubnavAutoevaluacionComponent {
-  readonly seccionActual = input.required<string>();
+  readonly seccionActual = input<string>('');
 }

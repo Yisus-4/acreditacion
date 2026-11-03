@@ -60,7 +60,8 @@ export class InfraestructuraComponent implements OnInit {
   readonly modoEdicion = signal<boolean>(false);
   readonly inmuebleEditandoId = signal<string | null>(null);
 
-  readonly actividadSeleccionada = signal<'INFRAESTRUCTURA' | 'HIGIENE_SEGURIDAD' | 'EQUIPAMIENTO_BIBLIOTECA'>('INFRAESTRUCTURA');
+  readonly actividadSeleccionada = signal<'INFRAESTRUCTURA' | 'HIGIENE_SEGURIDAD' | 'EQUIPAMIENTO_BIBLIOTECA' | null>(null);
+  readonly filtroActividadesTexto = signal<string>('');
   readonly modoVista = signal<'MAESTRO' | 'PROCESO'>('MAESTRO');
   readonly procesoId = signal<string | null>(null);
 
@@ -150,6 +151,57 @@ export class InfraestructuraComponent implements OnInit {
     return list;
   });
 
+  readonly actividad41Completada = computed<boolean>(() => {
+    return this.inmuebles().length > 0 && this.inmuebles().some((i) => i.verificado);
+  });
+
+  readonly listaActividadesDimension = computed(() => {
+    const query = this.filtroActividadesTexto().toLowerCase().trim();
+    const estadoInfra = this.actividad41Completada() ? 'Completada' : 'Pendiente';
+    const estadoHigiene = this.guiaHigiene()?.verificado ? 'Completada' : 'Pendiente';
+
+    const actividades = [
+      {
+        id: 'INFRAESTRUCTURA' as const,
+        nombre: 'Gestionar información sobre infraestructura',
+        responsable: 'Planificación e Infraestructura',
+        instrumento: 'RG-005: Registro de Inmuebles',
+        estado: estadoInfra,
+        completada: this.actividad41Completada(),
+      },
+      {
+        id: 'HIGIENE_SEGURIDAD' as const,
+        nombre: 'Gestionar información sobre Higiene y Seguridad',
+        responsable: 'Área de Higiene, Seguridad y Medio Ambiente Laboral',
+        instrumento: 'GT-003: Guía de Higiene y Seguridad de la UA',
+        estado: estadoHigiene,
+        completada: !!this.guiaHigiene()?.verificado,
+      },
+      {
+        id: 'EQUIPAMIENTO_BIBLIOTECA' as const,
+        nombre: 'Gestionar información sobre equipamiento didáctico y centros de documentación',
+        responsable: 'Biblioteca Central / Informática',
+        instrumento: 'Formulario CONEAU / Inventario Bibliotecario',
+        estado: 'Pendiente',
+        completada: false,
+      },
+    ];
+
+    if (!query) return actividades;
+    return actividades.filter(
+      (a) =>
+        a.nombre.toLowerCase().includes(query) ||
+        a.responsable.toLowerCase().includes(query) ||
+        a.instrumento.toLowerCase().includes(query)
+    );
+  });
+
+  volverAlListado(): void {
+    this.actividadSeleccionada.set(null);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+  }
+
   ngOnInit(): void {
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -158,6 +210,10 @@ export class InfraestructuraComponent implements OnInit {
         if (pId) {
           this.procesoId.set(pId);
           this.modoVista.set('PROCESO');
+        }
+        const act = params.get('actividad');
+        if (act === 'INFRAESTRUCTURA' || act === 'HIGIENE_SEGURIDAD' || act === 'EQUIPAMIENTO_BIBLIOTECA') {
+          this.actividadSeleccionada.set(act);
         }
         this.cargarDatosIniciales();
       });
@@ -175,11 +231,8 @@ export class InfraestructuraComponent implements OnInit {
   }
 
   cargarDatosIniciales(): void {
-    if (this.actividadSeleccionada() === 'INFRAESTRUCTURA') {
-      this.cargarInmuebles();
-    } else if (this.actividadSeleccionada() === 'HIGIENE_SEGURIDAD') {
-      this.cargarGuiaHigiene();
-    }
+    this.cargarInmuebles();
+    this.cargarGuiaHigiene();
 
     this.autoevalService.listarTiposEspacio()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -277,7 +330,7 @@ export class InfraestructuraComponent implements OnInit {
     }
   }
 
-  seleccionarActividad(actividad: 'INFRAESTRUCTURA' | 'HIGIENE_SEGURIDAD' | 'EQUIPAMIENTO_BIBLIOTECA'): void {
+  seleccionarActividad(actividad: 'INFRAESTRUCTURA' | 'HIGIENE_SEGURIDAD' | 'EQUIPAMIENTO_BIBLIOTECA' | null): void {
     this.actividadSeleccionada.set(actividad);
     if (actividad === 'HIGIENE_SEGURIDAD') {
       this.cargarGuiaHigiene();

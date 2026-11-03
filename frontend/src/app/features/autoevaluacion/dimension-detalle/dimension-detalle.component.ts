@@ -5,7 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SubnavAutoevaluacionComponent } from '../subnav-autoevaluacion/subnav-autoevaluacion.component';
 
 interface ActividadDimension {
@@ -24,7 +24,7 @@ interface InfoDimension {
 @Component({
   selector: 'app-dimension-detalle',
   standalone: true,
-  imports: [SubnavAutoevaluacionComponent],
+  imports: [SubnavAutoevaluacionComponent, RouterLink],
   templateUrl: './dimension-detalle.component.html',
   styleUrls: ['../infraestructura/infraestructura.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

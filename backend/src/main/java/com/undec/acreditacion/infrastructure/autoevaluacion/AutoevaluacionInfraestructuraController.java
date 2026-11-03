@@ -121,7 +121,9 @@ public class AutoevaluacionInfraestructuraController {
         entity.setCondicionTenencia(request.condicionTenencia() != null ? request.condicionTenencia().toUpperCase() : "PROPIO");
         entity.setSituacion(request.situacion() != null ? request.situacion() : "Propiedad");
         entity.setVinculaTodasCarreras(request.vinculaTodasCarreras() != null ? request.vinculaTodasCarreras() : false);
-        entity.setEsMaestro(request.esMaestro() != null ? request.esMaestro() : true);
+        // Si no se asigna a un proceso particular, pertenece siempre al padrón maestro para no quedar huérfano
+        boolean esMaestro = (request.procesoId() == null) || Boolean.TRUE.equals(request.esMaestro());
+        entity.setEsMaestro(esMaestro);
         entity.setProcesoId(request.procesoId());
         entity.setSuperficieCubiertaM2(request.superficieCubiertaM2());
         entity.setSuperficieTotalM2(request.superficieTotalM2());

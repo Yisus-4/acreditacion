@@ -1,13 +1,18 @@
 <div class="vista-gestion-layout">
-  <app-subnav-autoevaluacion [seccionActual]="datosDimension().titulo"></app-subnav-autoevaluacion>
-
-  <!-- Banner Informativo de la Dimensión -->
-  <div class="banner-procedimiento">
-    <strong>Dimensión de Acreditación CONEAU:</strong> {{ datosDimension().titulo }}
-    <span class="subtexto-banner">
-      {{ datosDimension().descripcion }}
-    </span>
+  <!-- Barra de Navegación y Retorno (Atrás) - En la cabecera superior -->
+  <div class="nav-volver-bar" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+    <a
+      routerLink="/dashboard"
+      style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px; font-weight: 500; color: #4b5563; background: #ffffff; border: 1px solid #d1d5db; border-radius: 6px; text-decoration: none;"
+    >
+      <svg style="width: 16px; height: 16px;" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      <span>Volver al Inicio / Tablero</span>
+    </a>
   </div>
+
+  <app-subnav-autoevaluacion [seccionActual]="datosDimension().titulo"></app-subnav-autoevaluacion>
 
   <!-- Toolbar de Búsqueda -->
   <div class="vista-toolbar">
