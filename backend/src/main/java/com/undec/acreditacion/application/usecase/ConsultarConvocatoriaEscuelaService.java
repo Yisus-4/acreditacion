@@ -19,16 +19,33 @@ public class ConsultarConvocatoriaEscuelaService implements ConsultarConvocatori
     private final UnidadAcademicaRepositoryPort unidadAcademicaRepository;
     private final CarreraRepositoryPort carreraRepository;
     private final ProcesoAcreditacionRepositoryPort procesoRepository;
+    private final PlanTrabajoRepositoryPort planTrabajoRepository;
+    private final RegistroConformacionCaRepositoryPort registroCaRepository;
+    private final RegistroUsuariosAteneaRepositoryPort registroUsuariosAteneaRepository;
 
     public ConsultarConvocatoriaEscuelaService(
             ConvocatoriaEscuelaRepositoryPort convocatoriaRepository,
             UnidadAcademicaRepositoryPort unidadAcademicaRepository,
             CarreraRepositoryPort carreraRepository,
             ProcesoAcreditacionRepositoryPort procesoRepository) {
+        this(convocatoriaRepository, unidadAcademicaRepository, carreraRepository, procesoRepository, null, null, null);
+    }
+
+    public ConsultarConvocatoriaEscuelaService(
+            ConvocatoriaEscuelaRepositoryPort convocatoriaRepository,
+            UnidadAcademicaRepositoryPort unidadAcademicaRepository,
+            CarreraRepositoryPort carreraRepository,
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            RegistroConformacionCaRepositoryPort registroCaRepository,
+            RegistroUsuariosAteneaRepositoryPort registroUsuariosAteneaRepository) {
         this.convocatoriaRepository = Objects.requireNonNull(convocatoriaRepository);
         this.unidadAcademicaRepository = Objects.requireNonNull(unidadAcademicaRepository);
         this.carreraRepository = Objects.requireNonNull(carreraRepository);
         this.procesoRepository = Objects.requireNonNull(procesoRepository);
+        this.planTrabajoRepository = planTrabajoRepository;
+        this.registroCaRepository = registroCaRepository;
+        this.registroUsuariosAteneaRepository = registroUsuariosAteneaRepository;
     }
 
     @Override
@@ -55,9 +72,7 @@ public class ConsultarConvocatoriaEscuelaService implements ConsultarConvocatori
             Optional<Carrera> carreraOpt = carreraRepository.findById(item.getCarreraId());
             String estadoProceso = null;
             if (item.getProcesoId() != null) {
-                estadoProceso = procesoRepository.findById(item.getProcesoId())
-                        .map(p -> p.getEstado().name())
-                        .orElse(null);
+                estadoProceso = resolverEstadoProcesoReal(item.getProcesoId());
             }
 
             carrerasDto.add(new ConvocatoriaCarreraItemDto(
@@ -96,5 +111,43 @@ public class ConsultarConvocatoriaEscuelaService implements ConsultarConvocatori
                 c.getActualizadoEn(),
                 carrerasDto
         );
+    }
+
+    private String resolverEstadoProcesoReal(UUID procesoId) {
+        if (registroUsuariosAteneaRepository != null) {
+            Optional<RegistroUsuariosAtenea> ateneaOpt = registroUsuariosAteneaRepository.findByProcesoId(procesoId);
+            if (ateneaOpt.isPresent()) {
+                if (ateneaOpt.get().getEstado() == EstadoRegistroUsuariosAtenea.FINALIZADO) {
+                    return "FINALIZADO";
+                }
+                return "USUARIOS_ATENEA";
+            }
+        }
+
+        if (registroCaRepository != null) {
+            Optional<RegistroConformacionCa> caOpt = registroCaRepository.findByProcesoId(procesoId);
+            if (caOpt.isPresent()) {
+                if (caOpt.get().getEstado() == EstadoRegistroCa.APROBADA
+                        || (caOpt.get().getResolucionStoragePath() != null && !caOpt.get().getResolucionStoragePath().isBlank())) {
+                    return "USUARIOS_ATENEA";
+                }
+                return "EN_AUTOEVALUACION";
+            }
+        }
+
+        if (planTrabajoRepository != null) {
+            Optional<PlanTrabajo> planOpt = planTrabajoRepository.findByProcesoId(procesoId);
+            if (planOpt.isPresent()) {
+                boolean tieneActividadesCompletadas = planOpt.get().getActividades().stream()
+                        .anyMatch(a -> a.getEstado() == EstadoActividad.COMPLETADA);
+                if (tieneActividadesCompletadas) {
+                    return "PLAN_TRABAJO";
+                }
+            }
+        }
+
+        return procesoRepository.findById(procesoId)
+                .map(p -> p.getEstado().name())
+                .orElse("INICIADO");
     }
 }

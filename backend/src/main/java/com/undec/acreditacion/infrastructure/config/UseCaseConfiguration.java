@@ -452,9 +452,19 @@ public class UseCaseConfiguration {
             com.undec.acreditacion.domain.ports.ConvocatoriaEscuelaRepositoryPort convocatoriaRepository,
             com.undec.acreditacion.domain.ports.UnidadAcademicaRepositoryPort unidadAcademicaRepository,
             CarreraRepositoryPort carreraRepository,
-            ProcesoAcreditacionRepositoryPort procesoRepository) {
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort registroCaRepository,
+            com.undec.acreditacion.domain.ports.RegistroUsuariosAteneaRepositoryPort registroUsuariosAteneaRepository) {
         return new com.undec.acreditacion.application.usecase.ConsultarConvocatoriaEscuelaService(
-                convocatoriaRepository, unidadAcademicaRepository, carreraRepository, procesoRepository);
+                convocatoriaRepository,
+                unidadAcademicaRepository,
+                carreraRepository,
+                procesoRepository,
+                planTrabajoRepository,
+                registroCaRepository,
+                registroUsuariosAteneaRepository
+        );
     }
 
     @Bean

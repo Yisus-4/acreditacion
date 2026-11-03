@@ -369,19 +369,19 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
 
   calcularEtapaTexto(carrera: ConvocatoriaCarreraItem): string {
     const estado = carrera.estadoProceso || 'INICIADO';
-    if (estado === 'FINALIZADO') return 'Etapa 5 de 5 · Seguimiento del Plan de Trabajo';
+    if (estado === 'FINALIZADO' || estado === 'SEGUIMIENTO') return 'Etapa 5 de 5 · Seguimiento del Plan de Trabajo';
+    if (estado === 'USUARIOS_ATENEA') return 'Etapa 4 de 5 · Usuarios ATENEA';
     if (estado === 'EN_AUTOEVALUACION') return 'Etapa 3 de 5 · Comisión de Autoevaluación';
-    if (carrera.carreraNombre?.toLowerCase().includes('ingeniería')) return 'Etapa 4 de 5 · Usuarios ATENEA';
-    if (carrera.carreraNombre?.toLowerCase().includes('licenciatura')) return 'Etapa 3 de 5 · Comisión de Autoevaluación';
+    if (estado === 'PLAN_TRABAJO' || estado === 'EN_FORMALIZACION') return 'Etapa 2 de 5 · Plan de Trabajo y RG-001';
     return 'Etapa 1 de 5 · Formalización y Normativa';
   }
 
   calcularEtapaProgreso(carrera: ConvocatoriaCarreraItem): number {
     const estado = carrera.estadoProceso || 'INICIADO';
-    if (estado === 'FINALIZADO') return 100;
+    if (estado === 'FINALIZADO' || estado === 'SEGUIMIENTO') return 100;
+    if (estado === 'USUARIOS_ATENEA') return 80;
     if (estado === 'EN_AUTOEVALUACION') return 60;
-    if (carrera.carreraNombre?.toLowerCase().includes('ingeniería')) return 80;
-    if (carrera.carreraNombre?.toLowerCase().includes('licenciatura')) return 60;
+    if (estado === 'PLAN_TRABAJO' || estado === 'EN_FORMALIZACION') return 40;
     return 20;
   }
 

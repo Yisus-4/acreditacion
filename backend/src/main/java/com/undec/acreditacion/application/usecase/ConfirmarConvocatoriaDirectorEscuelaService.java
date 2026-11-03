@@ -55,56 +55,50 @@ public class ConfirmarConvocatoriaDirectorEscuelaService implements ConfirmarCon
                 Carrera carrera = carreraRepository.findById(carreraId)
                         .orElseThrow(() -> new ResourceNotFoundException("No se encontró la carrera ID: " + carreraId));
 
-                // Si ya tiene un proceso vinculado, lo mantenemos
+                // Si la carrera en esta convocatoria aún no tiene proceso creado, lo inicializamos de forma aislada
                 if (item.getProcesoId() == null) {
-                    Optional<ProcesoAcreditacion> activoOpt = procesoRepository.findActivoByCarreraId(carreraId);
-                    if (activoOpt.isPresent()) {
-                        item.vincularProceso(activoOpt.get().getId());
-                    } else {
-                        // Crear nuevo proceso formal para esta carrera dentro de la convocatoria
-                        long correlativo = procesoRepository.countByAnio(anio) + 1;
-                        String siglaCarrera = carrera.getSigla() != null && !carrera.getSigla().isBlank()
-                                ? carrera.getSigla().trim().toUpperCase()
-                                : "CARR";
-                        String codigoProceso = String.format("CONV-%d-%s-%02d", anio, siglaCarrera, correlativo);
-                        String tituloProceso = "Acreditación - " + carrera.getNombre() + " (" + anio + ")";
+                    long correlativo = procesoRepository.countByAnio(anio) + 1;
+                    String siglaCarrera = carrera.getSigla() != null && !carrera.getSigla().isBlank()
+                            ? carrera.getSigla().trim().toUpperCase()
+                            : "CARR";
+                    String codigoProceso = String.format("CONV-%d-%s-%02d", anio, siglaCarrera, correlativo);
+                    String tituloProceso = "Acreditación - " + carrera.getNombre() + " (" + anio + ")";
 
-                        ProcesoAcreditacion nuevoProceso = ProcesoAcreditacion.iniciar(
-                                carreraId,
-                                codigoProceso,
-                                tituloProceso,
-                                convocatoria.getTipoProceso(),
-                                command.confirmadoPorDe()
-                        );
-                        ProcesoAcreditacion guardado = procesoRepository.save(nuevoProceso);
-                        item.vincularProceso(guardado.getId());
+                    ProcesoAcreditacion nuevoProceso = ProcesoAcreditacion.iniciar(
+                            carreraId,
+                            codigoProceso,
+                            tituloProceso,
+                            convocatoria.getTipoProceso(),
+                            command.confirmadoPorDe()
+                    );
+                    ProcesoAcreditacion guardado = procesoRepository.save(nuevoProceso);
+                    item.vincularProceso(guardado.getId());
 
-                        // Crear RegistroConvocatoria (RG-001)
-                        String modalidadRg001 = carrera.getModalidad() == ModalidadCarrera.DISTANCIA ? "A_DISTANCIA" : "PRESENCIAL";
-                        RegistroConvocatoria registro = RegistroConvocatoria.crear(
-                                guardado.getId(),
-                                convocatoria.getNroResolucionConeau(),
-                                convocatoria.getFechaInicio(),
-                                convocatoria.getFechaCierre(),
-                                convocatoria.getObservaciones(),
-                                null,
-                                carrera.getAreaDisciplinaria(),
-                                modalidadRg001,
-                                convocatoria.getTipoProceso().name(),
-                                FaseEvaluacion.PRIMERA_FASE,
-                                null
-                        );
-                        registroRepository.save(registro);
+                    // Crear RegistroConvocatoria (RG-001)
+                    String modalidadRg001 = carrera.getModalidad() == ModalidadCarrera.DISTANCIA ? "A_DISTANCIA" : "PRESENCIAL";
+                    RegistroConvocatoria registro = RegistroConvocatoria.crear(
+                            guardado.getId(),
+                            convocatoria.getNroResolucionConeau(),
+                            convocatoria.getFechaInicio(),
+                            convocatoria.getFechaCierre(),
+                            convocatoria.getObservaciones(),
+                            null,
+                            carrera.getAreaDisciplinaria(),
+                            modalidadRg001,
+                            convocatoria.getTipoProceso().name(),
+                            FaseEvaluacion.PRIMERA_FASE,
+                            null
+                    );
+                    registroRepository.save(registro);
 
-                        // Crear Plan de Trabajo (PT-001)
-                        String codigoPlan = String.format("PT-001-%s-%d", siglaCarrera, anio);
-                        PlanTrabajo plan = PlanTrabajo.inicializar(
-                                guardado.getId(),
-                                codigoPlan,
-                                TipoPlanTrabajo.PT_001_ACREDITACION
-                        );
-                        planTrabajoRepository.save(plan);
-                    }
+                    // Crear Plan de Trabajo (PT-001)
+                    String codigoPlan = String.format("PT-001-%s-%d", siglaCarrera, anio);
+                    PlanTrabajo plan = PlanTrabajo.inicializar(
+                            guardado.getId(),
+                            codigoPlan,
+                            TipoPlanTrabajo.PT_001_ACREDITACION
+                    );
+                    planTrabajoRepository.save(plan);
                 }
             }
         }

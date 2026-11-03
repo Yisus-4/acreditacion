@@ -62,7 +62,6 @@ class ConfirmarConvocatoriaDirectorEscuelaServiceTest {
 
         when(convocatoriaRepository.findById(convId)).thenReturn(Optional.of(conv));
         when(carreraRepository.findById(c1)).thenReturn(Optional.of(carrera));
-        when(procesoRepository.findActivoByCarreraId(c1)).thenReturn(Optional.empty());
         when(procesoRepository.countByAnio(anyInt())).thenReturn(0L);
         when(procesoRepository.save(any(ProcesoAcreditacion.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(convocatoriaRepository.save(any(Convocatoria.class))).thenAnswer(invocation -> invocation.getArgument(0));
