@@ -284,13 +284,11 @@ public class AutoevaluacionHigieneSeguridadController {
         c.setCreadoEn(Instant.now());
         c.setActualizadoEn(Instant.now());
 
-        GuiaHigieneSeguridadJpaEntity guardado = guiaRepository.save(c);
-
         List<GuiaHigieneDocumentoJpaEntity> docsMaestros = documentoRepository.findByGuiaIdOrderByCreadoEnAsc(maestro.getId());
         for (GuiaHigieneDocumentoJpaEntity docM : docsMaestros) {
             GuiaHigieneDocumentoJpaEntity docC = new GuiaHigieneDocumentoJpaEntity();
             docC.setId(UUID.randomUUID());
-            docC.setGuia(guardado);
+            docC.setGuia(c);
             docC.setTipoDocumentoClave(docM.getTipoDocumentoClave());
             docC.setTipoDocumentoNombre(docM.getTipoDocumentoNombre());
             docC.setOrganismoEmisor(docM.getOrganismoEmisor());
@@ -303,11 +301,10 @@ public class AutoevaluacionHigieneSeguridadController {
             docC.setCargado(docM.getCargado());
             docC.setFechaSubida(docM.getFechaSubida());
             docC.setCreadoEn(Instant.now());
-            documentoRepository.save(docC);
-            guardado.getDocumentos().add(docC);
+            c.getDocumentos().add(docC);
         }
 
-        return guardado;
+        return guiaRepository.save(c);
     }
 
     private GuiaHigieneSeguridadResponse mapToResponse(GuiaHigieneSeguridadJpaEntity g) {

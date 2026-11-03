@@ -31,7 +31,6 @@ import {
   GrupoUsuarioAtenea,
   TipoAccesoAtenea,
 } from '../../../core/convocatorias/models/usuarios-atenea.model';
-import { CompletarActividadModalComponent } from '../completar-actividad-modal/completar-actividad-modal.component';
 import { NormativaDetalleComponent } from '../../normativa/normativa-detalle/normativa-detalle.component';
 import { NormativaService } from '../../../core/normativa/services/normativa.service';
 import {
@@ -62,7 +61,6 @@ export interface SiguientePasoInfo {
     CommonModule,
     FormsModule,
     RouterLink,
-    CompletarActividadModalComponent,
     NormativaDetalleComponent,
   ],
   templateUrl: './convocatoria-detalle.component.html',
@@ -264,7 +262,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   private focoSeleccionadoManualmente = false;
   readonly reiniciando = signal<boolean>(false);
 
-  readonly actividadSeleccionada = signal<ActividadPlanTrabajoDto | null>(null);
   readonly actividadSeleccionadaDrawer = signal<ActividadPlanTrabajoDto | null>(null);
   readonly bannerExitoPlan = signal<string | null>(null);
   readonly filtroHoja = signal<'TODAS' | 'INFO' | 'CONEAU'>('TODAS');
@@ -1290,6 +1287,15 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     if (!this.canManage()) return;
     this.convocatoriaService.completarActividadSimple(act.id).subscribe({
       next: (actActualizada) => {
+        if (this.actividadSeleccionadaDrawer()?.id === act.id) {
+          const actActual = this.actividadSeleccionadaDrawer();
+          this.actividadSeleccionadaDrawer.set({
+            ...actActual!,
+            ...actActualizada,
+            estado: 'COMPLETADA',
+            completadaEn: actActualizada.completadaEn || new Date().toISOString()
+          });
+        }
         this.refrescarPlanTrabajo();
         const c = this.convocatoria();
         if (c?.id) {
@@ -1478,20 +1484,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   irAGestionarActividadDesdeDrawer(act: ActividadPlanTrabajoDto): void {
     this.cerrarDrawer();
     this.tabActiva.set('ACTIVIDADES');
-  }
-
-  abrirModalCompletar(act: ActividadPlanTrabajoDto): void {
-    this.actividadSeleccionada.set(act);
-  }
-
-  cerrarModal(completada: boolean): void {
-    this.actividadSeleccionada.set(null);
-    if (completada) {
-      const id = this.route.snapshot.paramMap.get('id');
-      if (id) {
-        this.cargarDatos(id);
-      }
-    }
   }
 
   cambiarFiltroHoja(hoja: 'TODAS' | 'INFO' | 'CONEAU'): void {

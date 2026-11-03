@@ -3185,8 +3185,13 @@
                   }
                   @if (canManage() && actDrawer.estado !== 'COMPLETADA') {
                     <div class="drawer-acciones-box">
-                      <button type="button" class="btn-primario-accion w-full" (click)="abrirModalCompletar(actDrawer)">
-                        Registrar comunicación y reunión
+                      <button
+                        type="button"
+                        class="btn-primario-accion w-full"
+                        (click)="marcarComoCompleta(actDrawer)"
+                        style="background: #166534; border-color: #166534;"
+                      >
+                        ✓ Marcar como completa
                       </button>
                     </div>
                   }
@@ -3330,9 +3335,10 @@
                         <button
                           type="button"
                           class="btn-primario-accion w-full"
-                          (click)="abrirModalCompletar(actDrawer)"
+                          (click)="marcarComoCompleta(actDrawer)"
+                          style="background: #166534; border-color: #166534;"
                         >
-                          Registrar Avance / Completar Actividad
+                          ✓ Marcar como completa
                         </button>
                       </div>
                     } @else if (actDrawer.estado === 'COMPLETADA') {
@@ -3405,17 +3411,5 @@
         </div>
       </div>
     </div>
-  }
-
-  <!-- Modal para completar Actividad 1 -->
-  @if (actividadSeleccionada()) {
-    <app-completar-actividad-modal
-      [actividadId]="actividadSeleccionada()!.id"
-      [actividadNombre]="actividadSeleccionada()!.nombre"
-      [tipoProceso]="convocatoria()?.tipoProceso || 'EN_FUNCIONAMIENTO'"
-      [tipoPlan]="planTrabajo()?.tipo || 'PT_001_ACREDITACION'"
-      [actividad]="actividadSeleccionada()"
-      (cerrado)="cerrarModal($event)"
-    ></app-completar-actividad-modal>
   }
 </div>

@@ -231,8 +231,11 @@ export class InfraestructuraComponent implements OnInit {
   }
 
   cargarDatosIniciales(): void {
-    this.cargarInmuebles();
-    this.cargarGuiaHigiene();
+    if (this.actividadSeleccionada() === 'HIGIENE_SEGURIDAD') {
+      this.cargarGuiaHigiene();
+    } else {
+      this.cargarInmuebles();
+    }
 
     this.autoevalService.listarTiposEspacio()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -280,7 +283,12 @@ export class InfraestructuraComponent implements OnInit {
 
   cambiarModoVista(modo: 'MAESTRO' | 'PROCESO'): void {
     this.modoVista.set(modo);
-    this.cargarDatosIniciales();
+    this.errorMessage.set(null);
+    if (this.actividadSeleccionada() === 'HIGIENE_SEGURIDAD') {
+      this.cargarGuiaHigiene();
+    } else {
+      this.cargarInmuebles();
+    }
   }
 
   cargarDepartamentos(provinciaId: string | number): void {
@@ -332,6 +340,8 @@ export class InfraestructuraComponent implements OnInit {
 
   seleccionarActividad(actividad: 'INFRAESTRUCTURA' | 'HIGIENE_SEGURIDAD' | 'EQUIPAMIENTO_BIBLIOTECA' | null): void {
     this.actividadSeleccionada.set(actividad);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
     if (actividad === 'HIGIENE_SEGURIDAD') {
       this.cargarGuiaHigiene();
     } else if (actividad === 'INFRAESTRUCTURA') {
@@ -639,7 +649,11 @@ export class InfraestructuraComponent implements OnInit {
             observaciones: g.observaciones || '',
           });
         },
-        error: () => this.errorMessage.set('Error al cargar la Guía de Higiene y Seguridad (GT-003)'),
+        error: () => {
+          if (this.actividadSeleccionada() === 'HIGIENE_SEGURIDAD') {
+            this.errorMessage.set('Error al cargar la Guía de Higiene y Seguridad (GT-003)');
+          }
+        },
       });
   }
 
