@@ -50,7 +50,7 @@ class RegistroConformacionCaTest {
 
         MiembroComisionAutoevaluacion m1 = new MiembroComisionAutoevaluacion(
                 null, null, "Perez", "Juan", null, "12345678", "juan@undec.edu.ar",
-                "3825123456", RolClaustroCa.COORDINADOR, true, true, true, 1
+                "3825123456", RolClaustroCa.COORDINADOR, 1
         );
 
         ca.guardarBorrador(true, List.of(m1));
@@ -69,7 +69,7 @@ class RegistroConformacionCaTest {
 
         MiembroComisionAutoevaluacion mDocente = new MiembroComisionAutoevaluacion(
                 null, null, "Gomez", "Ana", null, "87654321", "ana@undec.edu.ar",
-                null, RolClaustroCa.DOCENTE, true, true, true, 1
+                null, RolClaustroCa.DOCENTE, 1
         );
 
         assertThatThrownBy(() -> ca.remitir(
@@ -80,18 +80,18 @@ class RegistroConformacionCaTest {
     }
 
     @Test
-    @DisplayName("Remitir a AEA permite enviar con docente sin CVar vinculada")
-    void remitirDocenteSinCvarEsValido() {
+    @DisplayName("Remitir a AEA permite enviar con coordinador docente")
+    void remitirDocenteEsValido() {
         RegistroConformacionCa ca = new RegistroConformacionCa(null, UUID.randomUUID());
         ca.solicitar(UUID.randomUUID());
 
-        MiembroComisionAutoevaluacion mCoordDocenteSinCvar = new MiembroComisionAutoevaluacion(
+        MiembroComisionAutoevaluacion mCoordDocente = new MiembroComisionAutoevaluacion(
                 null, null, "Perez", "Juan", null, "12345678", "juan@undec.edu.ar",
-                null, RolClaustroCa.COORDINADOR, true, true, false, 1 // sin CVar
+                null, RolClaustroCa.COORDINADOR, 1
         );
 
         ca.remitir(
-                UUID.randomUUID(), false, List.of(mCoordDocenteSinCvar),
+                UUID.randomUUID(), false, List.of(mCoordDocente),
                 "path/resolucion.pdf", "resolucion.pdf", 1024L
         );
 
@@ -106,7 +106,7 @@ class RegistroConformacionCaTest {
 
         MiembroComisionAutoevaluacion mCoord = new MiembroComisionAutoevaluacion(
                 null, null, "Perez", "Juan", null, "12345678", "juan@undec.edu.ar",
-                null, RolClaustroCa.COORDINADOR, true, true, true, 1
+                null, RolClaustroCa.COORDINADOR, 1
         );
 
         UUID dcUserId = UUID.randomUUID();
@@ -124,7 +124,7 @@ class RegistroConformacionCaTest {
 
         MiembroComisionAutoevaluacion mCoord = new MiembroComisionAutoevaluacion(
                 null, null, "Perez", "Juan", null, "12345678", "juan@undec.edu.ar",
-                null, RolClaustroCa.COORDINADOR, true, true, true, 1
+                null, RolClaustroCa.COORDINADOR, 1
         );
 
         UUID dcUserId = UUID.randomUUID();
@@ -144,7 +144,7 @@ class RegistroConformacionCaTest {
 
         MiembroComisionAutoevaluacion mCoord = new MiembroComisionAutoevaluacion(
                 null, null, "Perez", "Juan", null, "12345678", "juan@undec.edu.ar",
-                null, RolClaustroCa.COORDINADOR, true, true, true, 1
+                null, RolClaustroCa.COORDINADOR, 1
         );
         ca.remitir(UUID.randomUUID(), false, List.of(mCoord), "res.pdf", "res.pdf", 100L);
 
@@ -166,7 +166,7 @@ class RegistroConformacionCaTest {
 
         MiembroComisionAutoevaluacion mCoord = new MiembroComisionAutoevaluacion(
                 null, null, "Perez", "Juan", null, "12345678", "juan@undec.edu.ar",
-                null, RolClaustroCa.COORDINADOR, true, true, true, 1
+                null, RolClaustroCa.COORDINADOR, 1
         );
         ca.remitir(UUID.randomUUID(), false, List.of(mCoord), "res.pdf", "res.pdf", 100L);
 

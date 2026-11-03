@@ -64,7 +64,7 @@ class CatalogoMiembroComisionUseCasesTest {
         CatalogoMiembroComision item = new CatalogoMiembroComision(
                 UUID.randomUUID(), "Salerno", "Julio Luis", "8.386.710", "20-08386710-9",
                 "jsalerno@undec.edu.ar", "salernojulioluis@gmail.com", "Director de Carrera",
-                true, Instant.now()
+                Instant.now()
         );
         when(catalogoRepository.buscar("Salerno")).thenReturn(List.of(item));
 
@@ -85,7 +85,7 @@ class CatalogoMiembroComisionUseCasesTest {
         MiembroComisionAutoevaluacion m = new MiembroComisionAutoevaluacion(
                 miembroId, null, "Albagli", "Karen", "Janet", "35.850.007",
                 "27-35850007-8", "kalbagli91@gmail.com", "albaagrimensura@gmail.com",
-                "Docente", null, RolClaustroCa.DOCENTE, true, true, true, true, 1
+                "Docente", null, RolClaustroCa.DOCENTE, true, 1
         );
         ca.guardarBorrador(true, List.of(m));
 
@@ -116,7 +116,7 @@ class CatalogoMiembroComisionUseCasesTest {
         MiembroComisionAutoevaluacion m = new MiembroComisionAutoevaluacion(
                 miembroId, null, "Perez", "Juan", null, "12345678",
                 "20-12345678-9", "juan@undec.edu.ar", "juan@gmail.com",
-                "Docente", null, RolClaustroCa.DOCENTE, true, true, true, true, 1
+                "Docente", null, RolClaustroCa.DOCENTE, true, 1
         );
         ca.guardarBorrador(true, List.of(m));
 

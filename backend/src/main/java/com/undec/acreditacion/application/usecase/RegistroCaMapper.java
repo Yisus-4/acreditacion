@@ -50,9 +50,6 @@ public final class RegistroCaMapper {
                         m.getCargoFuncion(),
                         m.getTelefono(),
                         m.getClaustroRol(),
-                        m.isEsDocente(),
-                        m.isCuentaConeauGlobalCreada(),
-                        m.isCuentaCvarVinculada(),
                         m.isPendienteAltaSistema(),
                         m.getNumeroOrden()
                 ))
@@ -107,9 +104,6 @@ public final class RegistroCaMapper {
                             d.cargoFuncion(),
                             d.telefono(),
                             d.claustroRol(),
-                            d.esDocente(),
-                            d.cuentaConeauGlobalCreada(),
-                            d.cuentaCvarVinculada(),
                             d.pendienteAltaSistema(),
                             d.numeroOrden()
                     );

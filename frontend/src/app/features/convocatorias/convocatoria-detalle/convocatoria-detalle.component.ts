@@ -238,9 +238,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     correoGmail: string;
     cargoFuncion: string;
     claustroRol: RolClaustroCa;
-    esDocente: boolean;
-    cuentaConeauGlobalCreada: boolean;
-    cuentaCvarVinculada: boolean;
   }>({
     apellido: '',
     nombreCompleto: '',
@@ -249,10 +246,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     correo: '',
     correoGmail: '',
     cargoFuncion: '',
-    claustroRol: 'DOCENTE',
-    esDocente: true,
-    cuentaConeauGlobalCreada: false,
-    cuentaCvarVinculada: false
+    claustroRol: 'DOCENTE'
   });
 
   readonly conformacionCaDesbloqueada = computed(() => {
@@ -1912,9 +1906,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       correoGmail: item.correoGmail,
       cargoFuncion: item.cargoFuncion,
       claustroRol: actuales.length === 0 ? 'COORDINADOR' : 'DOCENTE',
-      esDocente: item.esDocente,
-      cuentaConeauGlobalCreada: false,
-      cuentaCvarVinculada: false,
       pendienteAltaSistema: false,
       numeroOrden: actuales.length + 1
     };
@@ -1935,10 +1926,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       correo: '',
       correoGmail: '',
       cargoFuncion: '',
-      claustroRol: actuales.length === 0 ? 'COORDINADOR' : 'DOCENTE',
-      esDocente: true,
-      cuentaConeauGlobalCreada: false,
-      cuentaCvarVinculada: false
+      claustroRol: actuales.length === 0 ? 'COORDINADOR' : 'DOCENTE'
     });
     this.modalNuevoMiembroCaAbierto.set(true);
   }
@@ -1950,9 +1938,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   actualizarCampoNuevoMiembro(campo: string, valor: any): void {
     const actual = { ...this.nuevoMiembroForm() };
     (actual as any)[campo] = valor;
-    if (campo === 'esDocente' && !valor) {
-      actual.cuentaCvarVinculada = false;
-    }
     this.nuevoMiembroForm.set(actual);
   }
 
@@ -1998,8 +1983,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const esDocente = f.claustroRol === 'DOCENTE' || f.claustroRol === 'COORDINADOR';
-
     const nuevo: MiembroCaDto = {
       apellido: f.apellido.trim(),
       primerNombre: f.nombreCompleto.trim(),
@@ -2011,9 +1994,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       correoGmail: f.correoGmail.trim().toLowerCase(),
       cargoFuncion: f.cargoFuncion.trim(),
       claustroRol: f.claustroRol,
-      esDocente: esDocente,
-      cuentaConeauGlobalCreada: true,
-      cuentaCvarVinculada: false,
       pendienteAltaSistema: true,
       numeroOrden: actuales.length + 1
     };
@@ -2081,9 +2061,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       correo: '',
       telefono: '',
       claustroRol: actuales.length === 0 ? 'COORDINADOR' : 'DOCENTE',
-      esDocente: true,
-      cuentaConeauGlobalCreada: false,
-      cuentaCvarVinculada: false,
       numeroOrden: actuales.length + 1
     };
     this.miembrosCa.set([...actuales, nuevo]);
@@ -2107,9 +2084,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     }
     if (campo === 'dniCuil') {
       actuales[index].documento = valor;
-    }
-    if (campo === 'esDocente' && !valor) {
-      actuales[index].cuentaCvarVinculada = false;
     }
     this.miembrosCa.set(actuales);
   }

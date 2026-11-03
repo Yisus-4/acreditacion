@@ -34,9 +34,6 @@ public class CatalogoMiembroComisionJpaEntity {
     @Column(name = "cargo_funcion", nullable = false, length = 150)
     private String cargoFuncion;
 
-    @Column(name = "es_docente", nullable = false)
-    private boolean esDocente;
-
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
 
@@ -104,14 +101,6 @@ public class CatalogoMiembroComisionJpaEntity {
 
     public void setCargoFuncion(String cargoFuncion) {
         this.cargoFuncion = cargoFuncion;
-    }
-
-    public boolean isEsDocente() {
-        return esDocente;
-    }
-
-    public void setEsDocente(boolean esDocente) {
-        this.esDocente = esDocente;
     }
 
     public Instant getCreadoEn() {

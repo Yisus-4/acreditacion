@@ -18,9 +18,6 @@ public record MiembroCaInputDto(
         String cargoFuncion,
         String telefono,
         RolClaustroCa claustroRol,
-        boolean esDocente,
-        boolean cuentaConeauGlobalCreada,
-        boolean cuentaCvarVinculada,
         boolean pendienteAltaSistema,
         int numeroOrden
 ) {
@@ -33,9 +30,6 @@ public record MiembroCaInputDto(
             String correo,
             String telefono,
             RolClaustroCa claustroRol,
-            boolean esDocente,
-            boolean cuentaConeauGlobalCreada,
-            boolean cuentaCvarVinculada,
             int numeroOrden
     ) {
         this(
@@ -52,9 +46,6 @@ public record MiembroCaInputDto(
                 null,
                 telefono,
                 claustroRol,
-                esDocente,
-                cuentaConeauGlobalCreada,
-                cuentaCvarVinculada,
                 false,
                 numeroOrden
         );

@@ -37,7 +37,7 @@ class CatalogoMiembroComisionControllerIntegrationTest {
         CatalogoMiembroComisionDto item = new CatalogoMiembroComisionDto(
                 UUID.randomUUID(), "Salerno", "Julio Luis", "8.386.710", "20-08386710-9",
                 "jsalerno@undec.edu.ar", "salernojulioluis@gmail.com", "Director de Carrera",
-                true, Instant.now()
+                Instant.now()
         );
         when(useCase.buscar("Salerno")).thenReturn(List.of(item));
 

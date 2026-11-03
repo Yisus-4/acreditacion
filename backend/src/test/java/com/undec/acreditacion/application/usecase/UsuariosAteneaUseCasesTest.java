@@ -91,7 +91,7 @@ class UsuariosAteneaUseCasesTest {
                 UUID.randomUUID(), UUID.randomUUID(), "Salerno", "Julio", "Luis",
                 "20-08386710-9", "20-08386710-9", "jsalerno@undec.edu.ar", "salerno@gmail.com",
                 "Director de Carrera", "3825000000", RolClaustroCa.DOCENTE,
-                true, false, true, false, 1
+                false, 1
         );
         RegistroConformacionCa ca = new RegistroConformacionCa(
                 UUID.randomUUID(), procesoId, EstadoRegistroCa.APROBADA, false,

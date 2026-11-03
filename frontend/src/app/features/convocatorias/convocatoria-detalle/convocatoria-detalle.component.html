@@ -1776,7 +1776,6 @@
                       <th style="width: 200px;">Cargo en carrera</th>
                       <th style="width: 140px;">Claustro / Rol</th>
                       <th style="width: 220px;">Correos (CVar / Gmail)</th>
-                      <th style="width: 140px; text-align: center;">Docente / CONEAU</th>
                       <th style="width: 120px; text-align: center;">Origen</th>
                       @if (puedeEditarCa()) {
                         <th style="width: 50px; text-align: center;"></th>
@@ -1799,9 +1798,6 @@
                           @if (m.correoGmail) {
                             <div class="correo-gmail-sub">{{ m.correoGmail }}</div>
                           }
-                        </td>
-                        <td style="text-align: center;">
-                          <span class="tag-docente" [class.es-doc]="m.esDocente">{{ m.esDocente ? 'Docente' : 'No Docente' }}</span>
                         </td>
                         <td style="text-align: center;">
                           @if (m.pendienteAltaSistema) {
@@ -2035,9 +2031,6 @@
                       <tr>
                         <td>
                           <strong>{{ c.apellido }}, {{ c.nombreCompleto }}</strong>
-                          @if (c.esDocente) {
-                            <span class="badge-docente-sm">Docente</span>
-                          }
                         </td>
                         <td>
                           <div class="cell-stack text-sm">

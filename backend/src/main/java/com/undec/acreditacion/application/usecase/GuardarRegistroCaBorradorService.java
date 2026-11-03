@@ -126,8 +126,7 @@ public class GuardarRegistroCaBorradorService implements GuardarRegistroCaBorrad
                         cuit,
                         m.correo(),
                         m.correoGmail(),
-                        m.cargoFuncion(),
-                        m.esDocente()
+                        m.cargoFuncion()
                 );
 
                 crearSolicitudNotificacionUseCase.registrarSolicitudAltaMiembro(

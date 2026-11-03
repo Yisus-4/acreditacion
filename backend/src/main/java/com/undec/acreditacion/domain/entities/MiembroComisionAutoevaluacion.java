@@ -22,9 +22,6 @@ public class MiembroComisionAutoevaluacion {
     private String cargoFuncion;
     private String telefono;
     private RolClaustroCa claustroRol;
-    private boolean esDocente;
-    private boolean cuentaConeauGlobalCreada;
-    private boolean cuentaCvarVinculada;
     private boolean pendienteAltaSistema;
     private int numeroOrden;
 
@@ -41,9 +38,6 @@ public class MiembroComisionAutoevaluacion {
             String cargoFuncion,
             String telefono,
             RolClaustroCa claustroRol,
-            boolean esDocente,
-            boolean cuentaConeauGlobalCreada,
-            boolean cuentaCvarVinculada,
             boolean pendienteAltaSistema,
             int numeroOrden
     ) {
@@ -60,9 +54,6 @@ public class MiembroComisionAutoevaluacion {
         this.cargoFuncion = cargoFuncion != null && !cargoFuncion.isBlank() ? cargoFuncion.trim() : null;
         this.telefono = telefono != null && !telefono.isBlank() ? telefono.trim() : null;
         this.claustroRol = claustroRol;
-        this.esDocente = esDocente;
-        this.cuentaConeauGlobalCreada = cuentaConeauGlobalCreada;
-        this.cuentaCvarVinculada = cuentaCvarVinculada;
         this.pendienteAltaSistema = pendienteAltaSistema;
         this.numeroOrden = numeroOrden;
     }
@@ -77,9 +68,6 @@ public class MiembroComisionAutoevaluacion {
             String correo,
             String telefono,
             RolClaustroCa claustroRol,
-            boolean esDocente,
-            boolean cuentaConeauGlobalCreada,
-            boolean cuentaCvarVinculada,
             int numeroOrden
     ) {
         this(
@@ -95,9 +83,6 @@ public class MiembroComisionAutoevaluacion {
                 null,
                 telefono,
                 claustroRol,
-                esDocente,
-                cuentaConeauGlobalCreada,
-                cuentaCvarVinculada,
                 false,
                 numeroOrden
         );
@@ -182,18 +167,6 @@ public class MiembroComisionAutoevaluacion {
 
     public RolClaustroCa getClaustroRol() {
         return claustroRol;
-    }
-
-    public boolean isEsDocente() {
-        return esDocente;
-    }
-
-    public boolean isCuentaConeauGlobalCreada() {
-        return cuentaConeauGlobalCreada;
-    }
-
-    public boolean isCuentaCvarVinculada() {
-        return cuentaCvarVinculada;
     }
 
     public boolean isPendienteAltaSistema() {

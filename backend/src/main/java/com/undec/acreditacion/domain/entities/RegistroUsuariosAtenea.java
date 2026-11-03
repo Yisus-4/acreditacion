@@ -136,8 +136,8 @@ public class RegistroUsuariosAtenea {
                     cargo,
                     TipoAccesoAtenea.CARGA_Y_VISUALIZACION,
                     "Formulario CONEAU Global ATENEA - Carrera",
-                    !m.isCuentaConeauGlobalCreada(),
-                    m.isCuentaConeauGlobalCreada(),
+                    true,
+                    false,
                     false
             );
             agregarUsuario(u);

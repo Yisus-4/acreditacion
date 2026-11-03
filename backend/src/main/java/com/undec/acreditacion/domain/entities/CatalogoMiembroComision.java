@@ -19,7 +19,6 @@ public class CatalogoMiembroComision {
     private String correoElectronico;
     private String correoGmail;
     private String cargoFuncion;
-    private boolean esDocente;
     private Instant creadoEn;
 
     public CatalogoMiembroComision(
@@ -31,7 +30,6 @@ public class CatalogoMiembroComision {
             String correoElectronico,
             String correoGmail,
             String cargoFuncion,
-            boolean esDocente,
             Instant creadoEn
     ) {
         validarCampos(apellido, nombreCompleto, documento, cuitPasaporte, correoElectronico, correoGmail, cargoFuncion);
@@ -43,7 +41,6 @@ public class CatalogoMiembroComision {
         this.correoElectronico = correoElectronico.trim().toLowerCase();
         this.correoGmail = correoGmail.trim().toLowerCase();
         this.cargoFuncion = cargoFuncion.trim();
-        this.esDocente = esDocente;
         this.creadoEn = creadoEn != null ? creadoEn : Instant.now();
     }
 
@@ -109,10 +106,6 @@ public class CatalogoMiembroComision {
 
     public String getCargoFuncion() {
         return cargoFuncion;
-    }
-
-    public boolean isEsDocente() {
-        return esDocente;
     }
 
     public Instant getCreadoEn() {

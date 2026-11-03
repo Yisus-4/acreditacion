@@ -58,7 +58,6 @@ public class PostgresCatalogoMiembroComisionRepositoryAdapter implements Catalog
                 entity.getCorreoElectronico(),
                 entity.getCorreoGmail(),
                 entity.getCargoFuncion(),
-                entity.isEsDocente(),
                 entity.getCreadoEn()
         );
     }
@@ -74,7 +73,6 @@ public class PostgresCatalogoMiembroComisionRepositoryAdapter implements Catalog
         entity.setCorreoElectronico(domain.getCorreoElectronico());
         entity.setCorreoGmail(domain.getCorreoGmail());
         entity.setCargoFuncion(domain.getCargoFuncion());
-        entity.setEsDocente(domain.isEsDocente());
         entity.setCreadoEn(domain.getCreadoEn());
         return entity;
     }

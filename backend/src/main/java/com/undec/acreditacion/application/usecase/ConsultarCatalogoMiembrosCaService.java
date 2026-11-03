@@ -30,7 +30,6 @@ public class ConsultarCatalogoMiembrosCaService implements ConsultarCatalogoMiem
                         m.getCorreoElectronico(),
                         m.getCorreoGmail(),
                         m.getCargoFuncion(),
-                        m.isEsDocente(),
                         m.getCreadoEn()
                 ))
                 .toList();

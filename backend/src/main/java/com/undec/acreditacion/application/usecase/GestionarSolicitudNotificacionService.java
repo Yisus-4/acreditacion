@@ -149,7 +149,6 @@ public class GestionarSolicitudNotificacionService implements GestionarSolicitud
                         payload.correoElectronico() != null ? payload.correoElectronico().trim() : "",
                         payload.correoGmail() != null ? payload.correoGmail().trim() : "",
                         payload.cargoFuncion() != null ? payload.cargoFuncion().trim() : "Docente",
-                        payload.esDocente(),
                         Instant.now()
                 );
                 catalogoRepository.save(nuevo);

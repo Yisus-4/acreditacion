@@ -162,7 +162,7 @@ class ComisionAutoevaluacionUseCasesTest {
 
         MiembroCaInputDto m = new MiembroCaInputDto(
                 null, "Perez", "Juan", null, "12345678", "juan@undec.edu.ar",
-                "123", RolClaustroCa.COORDINADOR, true, true, false, 1
+                "123", RolClaustroCa.COORDINADOR, 1
         );
 
         RegistroCaDto res = guardarBorradorService.guardarBorrador(procesoId, true, List.of(m));
@@ -184,7 +184,7 @@ class ComisionAutoevaluacionUseCasesTest {
 
         MiembroCaInputDto m = new MiembroCaInputDto(
                 null, "Perez", "Juan", null, "12345678", "juan@undec.edu.ar",
-                "123", RolClaustroCa.COORDINADOR, true, true, true, 1
+                "123", RolClaustroCa.COORDINADOR, 1
         );
 
         byte[] pdf = "dummy pdf".getBytes();
@@ -204,7 +204,7 @@ class ComisionAutoevaluacionUseCasesTest {
         ca.solicitar(usuarioAeaId);
         MiembroComisionAutoevaluacion m = new MiembroComisionAutoevaluacion(
                 null, null, "Perez", "Juan", null, "12345678", "juan@undec.edu.ar",
-                null, RolClaustroCa.COORDINADOR, true, true, true, 1
+                null, RolClaustroCa.COORDINADOR, 1
         );
         ca.remitir(usuarioDcId, true, List.of(m), "path/res.pdf", "res.pdf", 100L);
         when(registroCaRepository.findByProcesoId(procesoId)).thenReturn(Optional.of(ca));
@@ -242,7 +242,7 @@ class ComisionAutoevaluacionUseCasesTest {
                 null, "Albagli", "Karen Janet", null, "Karen Janet Albagli",
                 "35850007", "35850007", "27-35850007-8", "kalbagli91@gmail.com",
                 "albaagrimensura@gmail.com", "Docente", null, RolClaustroCa.DOCENTE,
-                true, false, false, true, 1
+                true, 1
         );
 
         RegistroCaDto res = guardarBorradorService.guardarBorrador(procesoId, usuarioDcId, true, List.of(miembroNuevo));

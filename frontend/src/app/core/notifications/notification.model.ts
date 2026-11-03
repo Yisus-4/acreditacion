@@ -6,7 +6,6 @@ export interface DatosPayloadAltaMiembro {
   correoElectronico: string;
   correoGmail: string;
   cargoFuncion: string;
-  esDocente: boolean;
 }
 
 export interface SolicitudNotificacion {

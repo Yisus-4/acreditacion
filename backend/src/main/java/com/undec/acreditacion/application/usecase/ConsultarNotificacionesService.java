@@ -92,8 +92,7 @@ public class ConsultarNotificacionesService implements ConsultarNotificacionesUs
                                 cuit,
                                 m.getCorreo(),
                                 m.getCorreoGmail(),
-                                m.getCargoFuncion(),
-                                m.isEsDocente()
+                                m.getCargoFuncion()
                         );
                         crearSolicitudNotificacionUseCase.registrarSolicitudAltaMiembro(
                                 ca.getProcesoId(),

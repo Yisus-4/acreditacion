@@ -46,9 +46,6 @@ public record RegistroCaDto(
             String cargoFuncion,
             String telefono,
             RolClaustroCa claustroRol,
-            boolean esDocente,
-            boolean cuentaConeauGlobalCreada,
-            boolean cuentaCvarVinculada,
             boolean pendienteAltaSistema,
             int numeroOrden
     ) {
@@ -62,9 +59,6 @@ public record RegistroCaDto(
                 String correo,
                 String telefono,
                 RolClaustroCa claustroRol,
-                boolean esDocente,
-                boolean cuentaConeauGlobalCreada,
-                boolean cuentaCvarVinculada,
                 int numeroOrden
         ) {
             this(
@@ -82,9 +76,6 @@ public record RegistroCaDto(
                     null,
                     telefono,
                     claustroRol,
-                    esDocente,
-                    cuentaConeauGlobalCreada,
-                    cuentaCvarVinculada,
                     false,
                     numeroOrden
             );

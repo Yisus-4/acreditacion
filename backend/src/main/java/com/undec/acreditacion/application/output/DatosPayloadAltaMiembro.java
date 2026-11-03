@@ -7,6 +7,5 @@ public record DatosPayloadAltaMiembro(
         String cuitPasaporte,
         String correoElectronico,
         String correoGmail,
-        String cargoFuncion,
-        boolean esDocente
+        String cargoFuncion
 ) {}

@@ -36,9 +36,6 @@ public final class GeneradorRegistroCaPdfService {
                     .append(m.getCargoFuncion() != null ? " | Cargo: " + m.getCargoFuncion() : "")
                     .append(" | Correo: ").append(m.getCorreo())
                     .append(m.getCorreoGmail() != null ? " | Gmail: " + m.getCorreoGmail() : "")
-                    .append(" | Docente: ").append(m.isEsDocente() ? "SI" : "NO")
-                    .append(" | CVar Vinculada: ").append(m.isCuentaCvarVinculada() ? "SI" : "NO")
-                    .append(" | CONEAU Global: ").append(m.isCuentaConeauGlobalCreada() ? "SI" : "NO")
                     .append("\n");
         }
         sb.append("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");

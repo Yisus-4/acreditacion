@@ -486,9 +486,6 @@ export interface MiembroCaDto {
   cargoFuncion?: string;
   telefono?: string;
   claustroRol: RolClaustroCa;
-  esDocente: boolean;
-  cuentaConeauGlobalCreada: boolean;
-  cuentaCvarVinculada: boolean;
   pendienteAltaSistema?: boolean;
   numeroOrden: number;
 }
@@ -502,7 +499,6 @@ export interface CatalogoMiembroComisionDto {
   correoElectronico: string;
   correoGmail: string;
   cargoFuncion: string;
-  esDocente: boolean;
   creadoEn: string;
 }
 

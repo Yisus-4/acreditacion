@@ -42,7 +42,7 @@ class RegistroUsuariosAteneaTest {
                 UUID.randomUUID(), registro.getId(), "Gomez", "Juan", "Carlos",
                 "20-30111222-3", "20-30111222-3", "jgomez@undec.edu.ar", "jgomez@gmail.com",
                 "Director de Carrera", "3825112233", RolClaustroCa.DOCENTE,
-                true, false, true, false, 1
+                false, 1
         );
 
         registro.importarMiembrosCa(List.of(m1));

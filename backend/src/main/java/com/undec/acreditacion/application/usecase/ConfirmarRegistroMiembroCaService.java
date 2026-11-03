@@ -112,7 +112,6 @@ public class ConfirmarRegistroMiembroCaService implements ConfirmarRegistroMiemb
                     correo,
                     correoGmail,
                     cargo,
-                    miembro.isEsDocente(),
                     Instant.now()
             );
             catalogoRepository.save(nuevo);

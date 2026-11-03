@@ -12,6 +12,5 @@ public record CatalogoMiembroComisionDto(
         String correoElectronico,
         String correoGmail,
         String cargoFuncion,
-        boolean esDocente,
         Instant creadoEn
 ) {}

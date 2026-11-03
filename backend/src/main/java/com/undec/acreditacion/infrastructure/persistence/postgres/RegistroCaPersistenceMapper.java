@@ -27,9 +27,6 @@ public final class RegistroCaPersistenceMapper {
                         m.getCargoFuncion(),
                         m.getTelefono(),
                         m.getClaustroRol(),
-                        m.isEsDocente(),
-                        m.isCuentaConeauGlobalCreada(),
-                        m.isCuentaCvarVinculada(),
                         m.isPendienteAltaSistema(),
                         m.getNumeroOrden()
                 ))
@@ -96,9 +93,6 @@ public final class RegistroCaPersistenceMapper {
             me.setCargoFuncion(m.getCargoFuncion());
             me.setTelefono(m.getTelefono());
             me.setClaustroRol(m.getClaustroRol());
-            me.setEsDocente(m.isEsDocente());
-            me.setCuentaConeauGlobalCreada(m.isCuentaConeauGlobalCreada());
-            me.setCuentaCvarVinculada(m.isCuentaCvarVinculada());
             me.setPendienteAltaSistema(m.isPendienteAltaSistema());
             me.setNumeroOrden(m.getNumeroOrden());
             me.setCreadoEn(domain.getActualizadoEn() != null ? domain.getActualizadoEn() : java.time.Instant.now());

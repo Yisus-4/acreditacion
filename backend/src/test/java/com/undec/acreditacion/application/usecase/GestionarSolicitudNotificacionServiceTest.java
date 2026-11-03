@@ -58,7 +58,7 @@ class GestionarSolicitudNotificacionServiceTest {
     @Test
     @DisplayName("Aceptar solicitud de alta registra en catálogo institucional y actualiza miembro en CA")
     void aceptarSolicitudAltaRegistraEnCatalogo() {
-        String payloadJson = "{\"apellido\":\"Salerno\",\"nombreCompleto\":\"Julio Luis\",\"documento\":\"8386710\",\"cuitPasaporte\":\"20-08386710-9\",\"correoElectronico\":\"jsalerno@undec.edu.ar\",\"correoGmail\":\"salerno@gmail.com\",\"cargoFuncion\":\"Director de Carrera\",\"esDocente\":true}";
+        String payloadJson = "{\"apellido\":\"Salerno\",\"nombreCompleto\":\"Julio Luis\",\"documento\":\"8386710\",\"cuitPasaporte\":\"20-08386710-9\",\"correoElectronico\":\"jsalerno@undec.edu.ar\",\"correoGmail\":\"salerno@gmail.com\",\"cargoFuncion\":\"Director de Carrera\"}";
 
         SolicitudNotificacion notif = new SolicitudNotificacion(
                 notifId,
@@ -85,7 +85,7 @@ class GestionarSolicitudNotificacionServiceTest {
         MiembroComisionAutoevaluacion miembro = new MiembroComisionAutoevaluacion(
                 UUID.randomUUID(), null, "Salerno", "Julio Luis", "", "8386710",
                 "20-08386710-9", "jsalerno@undec.edu.ar", "salerno@gmail.com",
-                "Director", null, RolClaustroCa.COORDINADOR, true, true, true, true, 1
+                "Director", null, RolClaustroCa.COORDINADOR, true, 1
         );
         RegistroConformacionCa ca = new RegistroConformacionCa(UUID.randomUUID(), procesoId);
         List<MiembroComisionAutoevaluacion> miembros = new ArrayList<>();

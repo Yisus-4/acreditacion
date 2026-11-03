@@ -49,15 +49,6 @@ public class MiembroComisionAutoevaluacionJpaEntity {
     @Column(name = "claustro_rol", nullable = false, length = 50)
     private RolClaustroCa claustroRol;
 
-    @Column(name = "es_docente", nullable = false)
-    private boolean esDocente;
-
-    @Column(name = "cuenta_coneau_global_creada", nullable = false)
-    private boolean cuentaConeauGlobalCreada;
-
-    @Column(name = "cuenta_cvar_vinculada", nullable = false)
-    private boolean cuentaCvarVinculada;
-
     @Column(name = "pendiente_alta_sistema", nullable = false)
     private boolean pendienteAltaSistema;
 
@@ -163,30 +154,6 @@ public class MiembroComisionAutoevaluacionJpaEntity {
 
     public void setClaustroRol(RolClaustroCa claustroRol) {
         this.claustroRol = claustroRol;
-    }
-
-    public boolean isEsDocente() {
-        return esDocente;
-    }
-
-    public void setEsDocente(boolean esDocente) {
-        this.esDocente = esDocente;
-    }
-
-    public boolean isCuentaConeauGlobalCreada() {
-        return cuentaConeauGlobalCreada;
-    }
-
-    public void setCuentaConeauGlobalCreada(boolean cuentaConeauGlobalCreada) {
-        this.cuentaConeauGlobalCreada = cuentaConeauGlobalCreada;
-    }
-
-    public boolean isCuentaCvarVinculada() {
-        return cuentaCvarVinculada;
-    }
-
-    public void setCuentaCvarVinculada(boolean cuentaCvarVinculada) {
-        this.cuentaCvarVinculada = cuentaCvarVinculada;
     }
 
     public boolean isPendienteAltaSistema() {

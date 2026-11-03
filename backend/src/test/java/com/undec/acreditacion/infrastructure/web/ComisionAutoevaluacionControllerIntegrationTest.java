@@ -86,7 +86,7 @@ class ComisionAutoevaluacionControllerIntegrationTest {
                         miembroId, UUID.randomUUID(), "Perez", "Juan", null, "Juan Perez",
                         "12345678", "12345678", "20-12345678-9", "juan@undec.edu.ar",
                         "juan@gmail.com", "Docente", "123", RolClaustroCa.COORDINADOR,
-                        true, true, true, false, 1
+                        false, 1
                 ))
         );
     }
@@ -134,7 +134,7 @@ class ComisionAutoevaluacionControllerIntegrationTest {
         GuardarRegistroCaBorradorRequest req = new GuardarRegistroCaBorradorRequest(
                 true, List.of(new MiembroCaInputDto(
                 null, "Perez", "Juan", null, "12345678", "juan@undec.edu.ar",
-                null, RolClaustroCa.COORDINADOR, true, true, true, 1
+                null, RolClaustroCa.COORDINADOR, 1
         )));
 
         mockMvc.perform(put("/api/convocatorias/{procesoId}/comision-autoevaluacion/borrador", procesoId)

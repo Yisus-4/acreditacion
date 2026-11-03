@@ -253,8 +253,7 @@ public class RemitirRegistroCaService implements RemitirRegistroCaUseCase {
                         cuit,
                         m.correo(),
                         m.correoGmail(),
-                        m.cargoFuncion(),
-                        m.esDocente()
+                        m.cargoFuncion()
                 );
 
                 crearSolicitudNotificacionUseCase.registrarSolicitudAltaMiembro(
