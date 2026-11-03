@@ -1836,11 +1836,23 @@
             <div class="panel-header-figma flex-between">
               <div>
                 <h3 class="panel-titulo">2. Resolución de designación</h3>
-                <p class="panel-subtitulo">Podés remitir la comisión ahora y adjuntar la resolución cuando esté firmada.</p>
+                <p class="panel-subtitulo">
+                  @if (registroCa()?.resolucionStoragePath) {
+                    Resolución oficial de designación de la Comisión de Autoevaluación cargada.
+                  } @else {
+                    Podés remitir la comisión ahora y adjuntar la resolución cuando esté firmada.
+                  }
+                </p>
               </div>
-              <div class="badge-opcional-figma">
-                Opcional por ahora
-              </div>
+              @if (registroCa()?.resolucionStoragePath) {
+                <div class="badge-opcional-figma" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-weight: 600; padding: 3px 9px; border-radius: 6px;">
+                  ✓ Adjuntada
+                </div>
+              } @else {
+                <div class="badge-opcional-figma">
+                  Opcional por ahora
+                </div>
+              }
             </div>
 
             @if (!registroCa()?.resolucionStoragePath) {
@@ -1877,7 +1889,7 @@
               <div class="resolucion-adjunta-box-figma">
                 <div class="res-info">
                   <span class="res-icon">📄</span>
-                  <div>
+                  <div class="res-textos">
                     <span class="res-nombre">{{ registroCa()?.resolucionNombreOriginal || 'Resolución_Designación_CA.pdf' }}</span>
                     <span class="res-sub">Resolución oficial de designación adjuntada</span>
                   </div>
