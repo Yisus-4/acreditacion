@@ -406,8 +406,8 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
 
   esSeccionFt012Completa(sec: string): boolean {
     const ft = this.fichaFt012();
-    const fichaGuardadaOEnviada =
-      ft.estado !== 'PENDIENTE_SOLICITUD' && ft.estado !== '';
+    const fichaRemitida =
+      ft.estado === 'REMITIDA_POR_DC' || ft.estado === 'FORMALIZADA_EN_CONEAU';
 
     switch (sec) {
       case '1': {
@@ -419,7 +419,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         );
         return (
           camposOk &&
-          (this.seccionesConfirmadasFt012().has('1') || fichaGuardadaOEnviada)
+          (this.seccionesConfirmadasFt012().has('1') || fichaRemitida)
         );
       }
       case '1.2': {
@@ -433,7 +433,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         );
         return (
           camposOk &&
-          (this.seccionesConfirmadasFt012().has('1.2') || fichaGuardadaOEnviada)
+          (this.seccionesConfirmadasFt012().has('1.2') || fichaRemitida)
         );
       }
       case '1.3':
@@ -675,9 +675,16 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     'Autoridad Institucional',
   ];
 
+  readonly esFt012Completa = computed(() => {
+    return this.seccionesFt012CompletasCount() === 6;
+  });
+
   readonly esFt012Enviada = computed(() => {
     const ft = this.fichaFt012();
-    return ft.estado === 'REMITIDA_POR_DC' || ft.estado === 'FORMALIZADA_EN_CONEAU' || !!ft.remitidoEn;
+    return (
+      (ft.estado === 'REMITIDA_POR_DC' || ft.estado === 'FORMALIZADA_EN_CONEAU') &&
+      this.esFt012Completa()
+    );
   });
 
   readonly puedeEditarFt012 = computed(() => {
@@ -1081,7 +1088,16 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
           sedeDepartamento: ficha.sedeDepartamento ?? '',
           responsableCargo: ficha.responsableCargo || '',
         });
-        if (ficha.estado && ficha.estado !== 'PENDIENTE_SOLICITUD') {
+        const tieneAvanceReal =
+          ficha.estado === 'REMITIDA_POR_DC' ||
+          ficha.estado === 'FORMALIZADA_EN_CONEAU' ||
+          !!(
+            ficha.nexoApellido?.trim() ||
+            ficha.responsableApellido?.trim() ||
+            ficha.coordinadorCaApellido?.trim() ||
+            ficha.anioInicioDictado
+          );
+        if (tieneAvanceReal) {
           this.seccionesConfirmadasFt012.set(new Set(['1', '1.2']));
         }
         this.actualizarFocoPorDefecto();
@@ -1305,6 +1321,27 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     const c = this.convocatoria();
     if (!c) return;
 
+    if (enviar) {
+      const nombresSecciones: Record<string, string> = {
+        '1': '1. Datos de la institución',
+        '1.2': '1.2 Unidad académica y sede',
+        '1.3': '1.3 Persona nexo con la CONEAU',
+        '2': '2. Datos de la carrera',
+        '3': '3. Responsable de la carrera',
+        '4': '4. Coordinador del Comité de Autoevaluación',
+      };
+      const ids = ['1', '1.2', '1.3', '2', '3', '4'];
+      const faltantes = ids.filter((id) => !this.esSeccionFt012Completa(id));
+      if (faltantes.length > 0) {
+        this.seccionFt012Abierta.set(faltantes[0]);
+        const lista = faltantes.map((id) => `• ${nombresSecciones[id]}`).join('\n');
+        alert(
+          `No es posible remitir la Ficha FT-012 porque aún faltan completar o verificar las siguientes secciones:\n\n${lista}`
+        );
+        return;
+      }
+    }
+
     this.guardandoFt012.set(true);
     this.convocatoriaService
       .guardarFichaFormalizacion(c.id, {
@@ -1324,7 +1361,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.guardandoFt012.set(false);
-          alert(err?.error?.error || 'No fue posible guardar la Ficha FT-012.');
+          alert(err?.error?.message || err?.error?.error || 'No fue posible guardar la Ficha FT-012.');
         },
       });
   }

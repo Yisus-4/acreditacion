@@ -515,7 +515,9 @@
               <button
                 type="button"
                 class="btn-figma-primary"
-                [disabled]="guardandoFt012()"
+                [disabled]="guardandoFt012() || !esFt012Completa()"
+                [style.opacity]="esFt012Completa() ? '1' : '0.6'"
+                [title]="!esFt012Completa() ? 'Debe completar y verificar las 6 secciones de la Ficha FT-012 antes de remitirla (' + seccionesFt012CompletasCount() + '/6 completadas)' : 'Remitir ficha completa a la AEA'"
                 (click)="guardarORemitirFt012(true)"
               >
                 {{ guardandoFt012() ? 'Remitiendo...' : 'Remitir ficha a la AEA' }}
@@ -850,15 +852,35 @@
           </div>
 
           @if (puedeEditarFt012()) {
-            <div class="ft012-footer-action-figma">
-              <button
-                type="button"
-                class="btn-figma-outline"
-                [disabled]="guardandoFt012()"
-                (click)="guardarORemitirFt012(false)"
-              >
-                {{ guardandoFt012() ? 'Guardando...' : 'Guardar borrador FT-012' }}
-              </button>
+            <div class="ft012-footer-action-figma" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+              <span style="font-size: 0.8rem; color: #64748b;">
+                @if (esFt012Completa()) {
+                  ✓ Las 6 secciones están completas. Ya podés remitir la ficha a la AEA.
+                } @else {
+                  Completá y verificá las 6 secciones ({{ seccionesFt012CompletasCount() }}/6) para habilitar la remisión de la ficha.
+                }
+              </span>
+              <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <button
+                  type="button"
+                  class="btn-figma-outline"
+                  [disabled]="guardandoFt012()"
+                  (click)="guardarORemitirFt012(false)"
+                >
+                  {{ guardandoFt012() ? 'Guardando...' : 'Guardar borrador FT-012' }}
+                </button>
+                @if (!esFt012Enviada()) {
+                  <button
+                    type="button"
+                    class="btn-figma-primary"
+                    [disabled]="guardandoFt012() || !esFt012Completa()"
+                    [style.opacity]="esFt012Completa() ? '1' : '0.6'"
+                    (click)="guardarORemitirFt012(true)"
+                  >
+                    {{ guardandoFt012() ? 'Remitiendo...' : 'Remitir ficha a la AEA' }}
+                  </button>
+                }
+              </div>
             </div>
           }
         </div>

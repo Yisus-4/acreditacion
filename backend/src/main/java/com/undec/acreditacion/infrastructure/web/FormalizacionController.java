@@ -219,10 +219,18 @@ public class FormalizacionController {
 
     @GetMapping("/formalizacion")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @Transactional
     public ResponseEntity<FichaFormalizacionFt012Response> obtenerFormalizacion(@PathVariable UUID procesoId) {
         Optional<FichaFormalizacionFt012JpaEntity> fichaOpt = fichaRepository.findByProcesoId(procesoId);
         if (fichaOpt.isPresent()) {
-            return ResponseEntity.ok(mapearFichaResponse(fichaOpt.get()));
+            FichaFormalizacionFt012JpaEntity existente = fichaOpt.get();
+            if ("REMITIDA_POR_DC".equals(existente.getEstado()) && !esFichaCompletaParaRemitir(existente)) {
+                existente.setEstado("BORRADOR");
+                existente.setRemitidoEn(null);
+                existente.setRemitidoPor(null);
+                existente = fichaRepository.save(existente);
+            }
+            return ResponseEntity.ok(mapearFichaResponse(existente));
         }
         FichaFormalizacionFt012JpaEntity inicial = construirFichaInicialConDefaultsUndec(procesoId);
         FichaFormalizacionFt012JpaEntity guardada = fichaRepository.save(inicial);
@@ -272,7 +280,8 @@ public class FormalizacionController {
 
         Optional<User> usuarioActualOpt = resolverUsuarioAutenticado();
         boolean esAdminOAEA = tienePermisoGlobal(usuarioActualOpt);
-        boolean yaEnviada = "REMITIDA_POR_DC".equals(entity.getEstado()) || "FORMALIZADA_EN_CONEAU".equals(entity.getEstado());
+        boolean yaEnviada = ("REMITIDA_POR_DC".equals(entity.getEstado()) && esFichaCompletaParaRemitir(entity))
+                || "FORMALIZADA_EN_CONEAU".equals(entity.getEstado());
         if (yaEnviada && !esAdminOAEA) {
             throw new DomainValidationException("La Ficha FT-012 ya ha sido remitida. Solo el Área de Evaluación y Acreditación (AEA) puede modificar los datos remitidos.");
         }
@@ -281,6 +290,7 @@ public class FormalizacionController {
 
         boolean enviar = Boolean.TRUE.equals(request.enviar());
         if (enviar) {
+            validarFichaCompletaParaRemitir(entity);
             entity.setEstado("REMITIDA_POR_DC");
             entity.setRemitidoPor(usuarioId);
             entity.setRemitidoEn(Instant.now());
@@ -552,6 +562,45 @@ public class FormalizacionController {
         if (req.observaciones() != null) {
             entity.setObservaciones(trimOrNull(req.observaciones()));
         }
+    }
+
+    private boolean esFichaCompletaParaRemitir(FichaFormalizacionFt012JpaEntity e) {
+        return hasText(e.getInstitucionUniversitaria())
+                && hasText(e.getAutoridadApellido())
+                && hasText(e.getAutoridadPrimerNombre())
+                && hasText(e.getAutoridadCorreo())
+                && hasText(e.getUnidadAcademica())
+                && hasText(e.getSedeCalle())
+                && hasText(e.getSedeNumero())
+                && hasText(e.getSedeCodigoPostal())
+                && hasText(e.getSedeProvincia())
+                && hasText(e.getSedeLocalidad())
+                && hasText(e.getNexoApellido())
+                && hasText(e.getNexoPrimerNombre())
+                && hasText(e.getNexoCargo())
+                && hasText(e.getNexoCorreo())
+                && hasText(e.getCarreraNombre())
+                && hasText(e.getTituloAsimilado())
+                && e.getAnioInicioDictado() != null
+                && hasText(e.getResponsableApellido())
+                && hasText(e.getResponsablePrimerNombre())
+                && hasText(e.getResponsableCargo())
+                && hasText(e.getResponsableCorreo())
+                && hasText(e.getCoordinadorCaApellido())
+                && hasText(e.getCoordinadorCaPrimerNombre())
+                && hasText(e.getCoordinadorCaCorreo());
+    }
+
+    private void validarFichaCompletaParaRemitir(FichaFormalizacionFt012JpaEntity e) {
+        if (!esFichaCompletaParaRemitir(e)) {
+            throw new DomainValidationException(
+                    "No se puede remitir la Ficha FT-012 porque faltan completar campos obligatorios en una o más secciones (Datos de la institución, Sede, Persona nexo, Datos de la carrera, Responsable de la carrera o Coordinador del Comité de Autoevaluación)."
+            );
+        }
+    }
+
+    private boolean hasText(String s) {
+        return s != null && !s.trim().isEmpty();
     }
 
     private FichaFormalizacionFt012Response mapearFichaResponse(FichaFormalizacionFt012JpaEntity e) {
