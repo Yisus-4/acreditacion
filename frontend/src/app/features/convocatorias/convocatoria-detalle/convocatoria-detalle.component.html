@@ -1036,9 +1036,7 @@
                   <strong style="color: #166534;">✓ Normativa verificada y aprobada por la AEA.</strong>
                 } @else if (normativaDetalle()?.estado === 'ENVIADA_A_REVISION') {
                   <strong style="color: #1e40af;">✓ Documentos enviados a la AEA para revisión.</strong>
-                } @else if (normativaObligatoriosCargadosCount() >= 5) {
-                  <span>Los 5 documentos obligatorios están cargados. Hacé clic en <strong>Enviar documentos de normativa</strong> para remitirlos formalmente.</span>
-                } @else {
+                } @else if (normativaObligatoriosCargadosCount() < 5) {
                   <span>Cargá los 5 documentos obligatorios ({{ normativaObligatoriosCargadosCount() }}/5) para habilitar el envío formal de la normativa.</span>
                 }
               </div>
