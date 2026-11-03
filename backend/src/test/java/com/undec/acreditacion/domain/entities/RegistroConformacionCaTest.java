@@ -80,8 +80,8 @@ class RegistroConformacionCaTest {
     }
 
     @Test
-    @DisplayName("Remitir a AEA falla si docente no vinculó CVar")
-    void remitirDocenteSinCvarFalla() {
+    @DisplayName("Remitir a AEA permite enviar con docente sin CVar vinculada")
+    void remitirDocenteSinCvarEsValido() {
         RegistroConformacionCa ca = new RegistroConformacionCa(null, UUID.randomUUID());
         ca.solicitar(UUID.randomUUID());
 
@@ -90,11 +90,12 @@ class RegistroConformacionCaTest {
                 null, RolClaustroCa.COORDINADOR, true, true, false, 1 // sin CVar
         );
 
-        assertThatThrownBy(() -> ca.remitir(
+        ca.remitir(
                 UUID.randomUUID(), false, List.of(mCoordDocenteSinCvar),
                 "path/resolucion.pdf", "resolucion.pdf", 1024L
-        )).isInstanceOf(DomainValidationException.class)
-                .hasMessageContaining("CVar");
+        );
+
+        assertThat(ca.getEstado()).isEqualTo(EstadoRegistroCa.REMITIDA_A_AEA);
     }
 
     @Test

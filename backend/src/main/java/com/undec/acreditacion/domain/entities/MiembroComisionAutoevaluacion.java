@@ -122,9 +122,7 @@ public class MiembroComisionAutoevaluacion {
     }
 
     public void validarRequisitosParaRemision() {
-        if (esDocente && !cuentaCvarVinculada) {
-            throw new DomainValidationException("El miembro docente " + apellido + ", " + primerNombre + " debe tener su cuenta CVar vinculada para remitir");
-        }
+        // Restricción de CVar obligatoria eliminada según requerimiento
     }
 
     public String getNombreCompleto() {

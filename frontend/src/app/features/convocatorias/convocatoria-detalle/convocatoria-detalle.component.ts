@@ -2177,10 +2177,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         alert('Todos los miembros deben tener completos Apellido, Nombre, Documento y Correo.');
         return;
       }
-      if (m.esDocente && !m.cuentaCvarVinculada) {
-        alert(`El miembro docente ${m.apellido}, ${nombre} debe tener confirmada la vinculación con CVar.`);
-        return;
-      }
     }
     const archivo = this.archivoResolucionCa();
 
