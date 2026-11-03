@@ -283,18 +283,6 @@
 
     <!-- 1. Encabezado Figma con borde dorado inferior (node 9:114 / 9:207) -->
     <header class="carrera-header-figma">
-      <nav class="breadcrumb-figma">
-        <a routerLink="/dashboard">Inicio</a>
-        <span class="sep">/</span>
-        <a routerLink="/acreditacion/convocatorias">Convocatorias</a>
-        @if (c.unidadAcademicaNombre) {
-          <span class="sep">/</span>
-          <span>{{ c.unidadAcademicaNombre }}</span>
-        }
-        <span class="sep">/</span>
-        <span class="curr">{{ c.codigo }}</span>
-      </nav>
-
       <div class="carrera-header-main">
         <div class="carrera-header-text">
           <p class="escuela-subtitulo">{{ c.unidadAcademicaNombre || 'Escuela de Ingeniería' }}</p>
@@ -908,39 +896,6 @@
                 }
               </p>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              @if (normativaDetalle()?.estado !== 'ENVIADA_A_REVISION' && normativaDetalle()?.estado !== 'COMPLETADA') {
-                <button
-                  type="button"
-                  class="btn-figma-primary"
-                  [disabled]="enviandoNormativa() || normativaObligatoriosCargadosCount() < 5"
-                  [style.opacity]="normativaObligatoriosCargadosCount() >= 5 ? '1' : '0.6'"
-                  [title]="normativaObligatoriosCargadosCount() < 5 ? 'Cargue los 5 documentos obligatorios para poder enviarlos (' + normativaObligatoriosCargadosCount() + '/5)' : 'Enviar documentos de normativa a la AEA'"
-                  (click)="enviarNormativaDefinitivaInline()"
-                >
-                  {{ enviandoNormativa() ? 'Enviando...' : 'Enviar documentos de normativa →' }}
-                </button>
-              }
-              @if (canManage() && normativaObligatoriosCargadosCount() >= 5 && normativaDetalle()?.estado !== 'COMPLETADA') {
-                <button
-                  type="button"
-                  class="btn-figma-success"
-                  [disabled]="aprobandoNormativa()"
-                  (click)="aprobarNormativaInline()"
-                >
-                  {{ aprobandoNormativa() ? 'Aprobando...' : '✓ Aprobar normativa (AEA)' }}
-                </button>
-              }
-              @if (canManage()) {
-                <button
-                  type="button"
-                  class="btn-figma-outline"
-                  (click)="togglePanelRevisionNormativa()"
-                >
-                  {{ mostrarPanelRevisionNormativa() ? 'Ocultar panel avanzado ▴' : 'Panel avanzado de revisión ▾' }}
-                </button>
-              }
-            </div>
           </div>
 
           <div class="tabla-normativa-container-figma">
@@ -1112,17 +1067,6 @@
                 }
               </div>
             </div>
-
-            @if (mostrarPanelRevisionNormativa()) {
-              <div style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 2px dashed #cbd5e1;">
-                <app-normativa-detalle
-                  [procesoId]="c.id"
-                  [planTrabajoId]="planTrabajo()?.id || ''"
-                  [embedded]="true"
-                  (normativaActualizada)="onNormativaActualizada()"
-                ></app-normativa-detalle>
-              </div>
-            }
           </div>
         </div>
 

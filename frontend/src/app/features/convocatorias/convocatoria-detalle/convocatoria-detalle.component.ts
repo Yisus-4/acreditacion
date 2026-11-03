@@ -366,7 +366,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly opcionalesNormativaVisible = signal<boolean>(true);
   readonly seccionesConfirmadasFt012 = signal<Set<string>>(new Set());
   readonly subiendoTipoNormativa = signal<TipoDocumentoNormativa | null>(null);
-  readonly mostrarPanelRevisionNormativa = signal<boolean>(false);
   readonly enviandoNormativa = signal<boolean>(false);
   readonly aprobandoNormativa = signal<boolean>(false);
 
@@ -629,10 +628,6 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       return `${kb.toFixed(1)} KB`;
     }
     return `${(kb / 1024).toFixed(2).replace('.', ',')} MB`;
-  }
-
-  togglePanelRevisionNormativa(): void {
-    this.mostrarPanelRevisionNormativa.update((v) => !v);
   }
 
   enviarNormativaDefinitivaInline(): void {
