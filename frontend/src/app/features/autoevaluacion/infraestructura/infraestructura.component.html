@@ -163,9 +163,9 @@
           type="button"
           class="btn-control-remitir"
           (click)="remitirADeaPorProceso()"
-          title="Informa la tarea completa a la AEA y actualiza la Actividad 4.1 a COMPLETADA en el Plan de Trabajo"
+          title="Valida los inmuebles y actualiza la Actividad 4.1 a COMPLETADA en el Plan de Trabajo"
         >
-          ✓ Remitir a AEA (Completar Tarea 4.1)
+          ✓ Validar inmuebles (Completar Tarea 4.1)
         </button>
       </div>
     </div>
@@ -880,69 +880,89 @@
             </div>
 
             @if (mostrarFormEspacio()) {
-              <div style="background: #f9fafb; padding: 14px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 14px;">
-                <div style="font-weight: 600; font-size: 13px; color: var(--color-primary-dark); margin-bottom: 8px;">
+              <div style="background: #f9fafb; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 16px;">
+                <div style="font-weight: 700; font-size: 13.5px; color: var(--color-primary-dark); margin-bottom: 12px;">
                   {{ espacioEditandoIndex() !== null ? 'Modificar Espacio Físico' : 'Registrar Nuevo Espacio Físico' }}
                 </div>
 
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 8px;">
-                  <input
-                    type="text"
-                    placeholder="Descripción Infraestructura (Ej: Aula 1-2-3-4-17-18)"
-                    class="form-input-figma"
-                    [value]="nuevoEspacioDescInfra()"
-                    (input)="nuevoEspacioDescInfra.set($any($event.target).value)"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Denominación resumida"
-                    class="form-input-figma"
-                    [value]="nuevoEspacioNombre()"
-                    (input)="nuevoEspacioNombre.set($any($event.target).value)"
-                  />
+                <!-- Fila 1: Descripción área Infraestructura y Denominación resumida -->
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 12px;">
+                  <div class="form-group-figma">
+                    <label style="font-size: 13px; font-weight: 600; color: #374151;">Descripción área Infraestructura *</label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Aula 1-2-3-4-17-18"
+                      class="form-input-figma"
+                      [value]="nuevoEspacioDescInfra()"
+                      (input)="nuevoEspacioDescInfra.set($any($event.target).value)"
+                    />
+                  </div>
+                  <div class="form-group-figma">
+                    <label style="font-size: 13px; font-weight: 600; color: #374151;">Denominación resumida *</label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Aula Común"
+                      class="form-input-figma"
+                      [value]="nuevoEspacioNombre()"
+                      (input)="nuevoEspacioNombre.set($any($event.target).value)"
+                    />
+                  </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                  <div>
-                    <div style="display: flex; gap: 6px;">
-                      <select
-                        class="form-input-figma"
-                        style="flex: 1;"
-                        [value]="nuevoEspacioTipoId()"
-                        (change)="nuevoEspacioTipoId.set($any($event.target).value)"
-                      >
-                        <option value="">Seleccione tipo de espacio...</option>
-                        @for (t of tiposEspacio(); track t.id) {
-                          <option [value]="t.id">{{ t.denominacion }}</option>
-                        }
-                      </select>
+                <!-- Fila 2: Tipo de espacio físico, Cantidad disponible y Capacidad sentados -->
+                <div style="display: grid; grid-template-columns: 1.8fr 1fr 1.2fr; gap: 12px; margin-bottom: 14px; align-items: flex-end;">
+                  <div class="form-group-figma">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                      <label style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 0;">Tipo de espacio físico *</label>
                       <button
                         type="button"
                         class="btn-tabla-accion"
-                        style="padding: 6px 10px; font-size: 11.5px; white-space: nowrap;"
-                        title="Caso 2: Agrega un nuevo tipo de espacio"
+                        style="padding: 2px 8px; font-size: 11px; white-space: nowrap; line-height: 1.2;"
+                        title="Caso 2: Agrega un nuevo tipo de espacio al catálogo"
                         (click)="abrirModalNuevoTipo()"
                       >
-                        + Tipo
+                        + Nuevo Tipo
                       </button>
                     </div>
+                    <select
+                      class="form-input-figma"
+                      [value]="nuevoEspacioTipoId()"
+                      (change)="nuevoEspacioTipoId.set($any($event.target).value)"
+                    >
+                      <option value="">Seleccione tipo de espacio...</option>
+                      @for (t of tiposEspacio(); track t.id) {
+                        <option [value]="t.id">{{ t.denominacion }}</option>
+                      }
+                    </select>
                   </div>
 
-                  <input
-                    type="number"
-                    placeholder="Cantidad"
-                    class="form-input-figma"
-                    [value]="nuevoEspacioCantidad()"
-                    (input)="nuevoEspacioCantidad.set(+$any($event.target).value)"
-                  />
+                  <div class="form-group-figma">
+                    <label style="font-size: 13px; font-weight: 600; color: #374151;">Cantidad disponible *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      class="form-input-figma"
+                      [value]="nuevoEspacioCantidad()"
+                      (input)="nuevoEspacioCantidad.set(+$any($event.target).value)"
+                    />
+                  </div>
 
-                  <input
-                    type="number"
-                    placeholder="Capacidad sentados"
-                    class="form-input-figma"
-                    [value]="nuevoEspacioCapacidad()"
-                    (input)="nuevoEspacioCapacidad.set(+$any($event.target).value)"
-                  />
+                  <div class="form-group-figma">
+                    <label style="font-size: 13px; font-weight: 600; color: #374151;">Capacidad sentados *</label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                      <input
+                        type="number"
+                        min="0"
+                        class="form-input-figma"
+                        style="padding-right: 48px;"
+                        [value]="nuevoEspacioCapacidad()"
+                        (input)="nuevoEspacioCapacidad.set(+$any($event.target).value)"
+                      />
+                      <span style="position: absolute; right: 10px; font-size: 12px; color: var(--color-text-muted); pointer-events: none;">
+                        pers.
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 8px;">
@@ -987,83 +1007,85 @@
             }
           </div>
 
-          <!-- Documentación de Respaldo con Tipología (CU-ACR-03.02 y Diagrama de Secuencia) -->
-          <div style="border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <h4 style="font-size: 14.5px; font-weight: 700; color: var(--color-primary-dark); margin: 0;">
-                Documentación de Respaldo ({{ documentosAgregados().length }})
-              </h4>
-            </div>
-            <p style="font-size: 12.5px; color: var(--color-text-muted); margin-bottom: 10px;">
-              Cargue los documentos que aseguran la disponibilidad jurídica de inmuebles (Contratos, Convenios, Comodatos o Planos).
-            </p>
+          <!-- Documentación de Respaldo (Oculto temporalmente a requerimiento) -->
+          @if (false) {
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h4 style="font-size: 14.5px; font-weight: 700; color: var(--color-primary-dark); margin: 0;">
+                  Documentación de Respaldo ({{ documentosAgregados().length }})
+                </h4>
+              </div>
+              <p style="font-size: 12.5px; color: var(--color-text-muted); margin-bottom: 10px;">
+                Cargue los documentos que aseguran la disponibilidad jurídica de inmuebles (Contratos, Convenios, Comodatos o Planos).
+              </p>
 
-            <div style="background: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 12px;">
-              <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 8px; margin-bottom: 8px;">
-                <input
-                  type="text"
-                  placeholder="Nombre de archivo (Ej: Contrato_Alquiler_2026.pdf)"
-                  class="form-input-figma"
-                  [value]="inputDocNombre()"
-                  (input)="inputDocNombre.set($any($event.target).value)"
-                />
-                <select
-                  class="form-input-figma"
-                  [value]="inputDocTipoAnexo()"
-                  (change)="inputDocTipoAnexo.set($any($event.target).value)"
-                >
-                  <option value="CONVENIO_COMODATO">Convenio / Comodato</option>
-                  <option value="CONTRATO_ALQUILER">Contrato de Alquiler</option>
-                  <option value="ESCRITURA_DOMINIO">Escritura de Dominio</option>
-                  <option value="HABILITACION_MUNICIPAL">Habilitación Municipal</option>
-                  <option value="OTRO">Otro anexo</option>
-                </select>
+              <div style="background: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 12px;">
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 8px; margin-bottom: 8px;">
+                  <input
+                    type="text"
+                    placeholder="Nombre de archivo (Ej: Contrato_Alquiler_2026.pdf)"
+                    class="form-input-figma"
+                    [value]="inputDocNombre()"
+                    (input)="inputDocNombre.set($any($event.target).value)"
+                  />
+                  <select
+                    class="form-input-figma"
+                    [value]="inputDocTipoAnexo()"
+                    (change)="inputDocTipoAnexo.set($any($event.target).value)"
+                  >
+                    <option value="CONVENIO_COMODATO">Convenio / Comodato</option>
+                    <option value="CONTRATO_ALQUILER">Contrato de Alquiler</option>
+                    <option value="ESCRITURA_DOMINIO">Escritura de Dominio</option>
+                    <option value="HABILITACION_MUNICIPAL">Habilitación Municipal</option>
+                    <option value="OTRO">Otro anexo</option>
+                  </select>
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                  <input
+                    type="text"
+                    placeholder="Descripción del anexo (Ej: Convenio específico trienal con cláusula de prórroga)"
+                    class="form-input-figma"
+                    style="flex: 1;"
+                    [value]="inputDocDescripcion()"
+                    (input)="inputDocDescripcion.set($any($event.target).value)"
+                  />
+                  <button
+                    type="button"
+                    class="btn-nuevo-figma"
+                    style="padding: 8px 14px; font-size: 12.5px; white-space: nowrap;"
+                    (click)="agregarDocumentoRespaldo()"
+                  >
+                    + Adjuntar documento
+                  </button>
+                </div>
               </div>
 
-              <div style="display: flex; gap: 8px;">
-                <input
-                  type="text"
-                  placeholder="Descripción del anexo (Ej: Convenio específico trienal con cláusula de prórroga)"
-                  class="form-input-figma"
-                  style="flex: 1;"
-                  [value]="inputDocDescripcion()"
-                  (input)="inputDocDescripcion.set($any($event.target).value)"
-                />
-                <button
-                  type="button"
-                  class="btn-nuevo-figma"
-                  style="padding: 8px 14px; font-size: 12.5px; white-space: nowrap;"
-                  (click)="agregarDocumentoRespaldo()"
-                >
-                  + Adjuntar documento
-                </button>
-              </div>
-            </div>
-
-            @if (documentosAgregados().length > 0) {
-              <div style="max-height: 160px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px; margin-bottom: 8px;">
-                @for (doc of documentosAgregados(); track $index) {
-                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 13px;">
-                    <div>
-                      <strong>📄 {{ doc.nombreArchivo }}</strong>
-                      <span style="color: var(--color-primary-dark); font-weight: 500; font-size: 12px; margin-left: 6px;">
-                        [{{ doc.tipoAnexo }}]
-                      </span>
-                      @if (doc.descripcion) {
-                        <div style="font-size: 12px; color: var(--color-text-muted);">{{ doc.descripcion }}</div>
-                      }
+              @if (documentosAgregados().length > 0) {
+                <div style="max-height: 160px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px; margin-bottom: 8px;">
+                  @for (doc of documentosAgregados(); track $index) {
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 13px;">
+                      <div>
+                        <strong>📄 {{ doc.nombreArchivo }}</strong>
+                        <span style="color: var(--color-primary-dark); font-weight: 500; font-size: 12px; margin-left: 6px;">
+                          [{{ doc.tipoAnexo }}]
+                        </span>
+                        @if (doc.descripcion) {
+                          <div style="font-size: 12px; color: var(--color-text-muted);">{{ doc.descripcion }}</div>
+                        }
+                      </div>
+                      <button
+                        type="button"
+                        class="btn-accion-icono"
+                        style="color: #dc2626;"
+                        (click)="eliminarDocumentoRespaldo($index)"
+                      >✕</button>
                     </div>
-                    <button
-                      type="button"
-                      class="btn-accion-icono"
-                      style="color: #dc2626;"
-                      (click)="eliminarDocumentoRespaldo($index)"
-                    >✕</button>
-                  </div>
-                }
-              </div>
-            }
-          </div>
+                  }
+                </div>
+              }
+            </div>
+          }
 
           <div class="drawer-actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 10px;">
             <button type="button" class="btn-tabla-accion" (click)="cerrarFormulario()">Cancelar</button>
@@ -1156,7 +1178,9 @@
           {{ form.value.vinculaTodasCarreras ? 'Todas las carreras institucionales' : (carrerasSeleccionadas().length > 0 ? carrerasSeleccionadas().length + ' carreras declaradas' : 'Sin vinculación específica') }}
         </div>
         <div><strong>Espacios Físicos a registrar:</strong> {{ espaciosAgregados().length }} espacios declarados</div>
-        <div><strong>Documentos de respaldo adjuntos:</strong> {{ documentosAgregados().length }} documentos</div>
+        @if (documentosAgregados().length > 0) {
+          <div><strong>Documentos de respaldo adjuntos:</strong> {{ documentosAgregados().length }} documentos</div>
+        }
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: 10px;">
