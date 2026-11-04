@@ -80,12 +80,36 @@ export class InfraestructuraComponent implements OnInit {
   // Espacios para el formulario de inmueble
   readonly espaciosAgregados = signal<EspacioFisico[]>([]);
   readonly mostrarFormEspacio = signal<boolean>(false);
+  readonly espacioEditandoIndex = signal<number | null>(null);
   readonly nuevoEspacioNombre = signal<string>('');
   readonly nuevoEspacioDescInfra = signal<string>('');
   readonly nuevoEspacioTipoId = signal<string>('');
   readonly nuevoEspacioCantidad = signal<number>(1);
   readonly nuevoEspacioCapacidad = signal<number>(30);
-  readonly nuevoDocNombre = signal<string>('');
+
+  // Modal para Crear Tipo de Espacio Físico (Caso 2 del Diagrama de Secuencia)
+  readonly mostrarModalNuevoTipo = signal<boolean>(false);
+  readonly nuevoTipoDenominacion = signal<string>('');
+  readonly nuevoTipoCodigo = signal<string>('');
+  readonly guardandoTipoEspacio = signal<boolean>(false);
+
+  // Carreras Vinculadas (Diagrama de Secuencia: Agregar carreras con las que se vincula)
+  readonly carrerasSeleccionadas = signal<CarreraResponse[]>([]);
+  readonly carreraParaVincularId = signal<string>('');
+
+  // Documentación de Respaldo con Tipología (Diagrama de Secuencia: CU-ACR-03.02)
+  readonly documentosAgregados = signal<{
+    nombreArchivo: string;
+    urlMinio: string;
+    tipoAnexo: string;
+    descripcion?: string;
+  }[]>([]);
+  readonly inputDocNombre = signal<string>('');
+  readonly inputDocTipoAnexo = signal<string>('CONVENIO_COMODATO');
+  readonly inputDocDescripcion = signal<string>('');
+
+  // Doble Confirmación al Guardar (Diagrama de Secuencia: Solicita segunda confirmación)
+  readonly mostrarConfirmacionGuardado = signal<boolean>(false);
 
   // ---------------------------------------------------------------------------
   // GT-003: Higiene y Seguridad
@@ -385,8 +409,14 @@ export class InfraestructuraComponent implements OnInit {
       this.cargarDepartamentos(lr.id);
     }
 
+    this.carrerasSeleccionadas.set([]);
+    this.carreraParaVincularId.set('');
     this.espaciosAgregados.set([]);
-    this.nuevoDocNombre.set('');
+    this.documentosAgregados.set([]);
+    this.espacioEditandoIndex.set(null);
+    this.mostrarFormEspacio.set(false);
+    this.mostrarConfirmacionGuardado.set(false);
+    this.mostrarModalNuevoTipo.set(false);
     this.formAbierto.set(true);
   }
 
@@ -422,24 +452,87 @@ export class InfraestructuraComponent implements OnInit {
       this.cargarLocalidades(inm.departamentoId);
     }
 
+    this.carrerasSeleccionadas.set(
+      inm.carreras
+        ? inm.carreras.map((c) => ({ id: c.id, nombre: c.nombre, sigla: c.sigla || '' } as CarreraResponse))
+        : []
+    );
+    this.carreraParaVincularId.set('');
     this.espaciosAgregados.set(inm.espacios ? [...inm.espacios] : []);
-    this.nuevoDocNombre.set(inm.documentos && inm.documentos.length > 0 ? inm.documentos[0].nombreArchivo : '');
+    this.documentosAgregados.set(
+      inm.documentos
+        ? inm.documentos.map((d) => ({
+            nombreArchivo: d.nombreArchivo,
+            urlMinio: d.urlMinio,
+            tipoAnexo: d.tipoAnexo,
+            descripcion: d.descripcion,
+          }))
+        : []
+    );
+    this.espacioEditandoIndex.set(null);
+    this.mostrarFormEspacio.set(false);
+    this.mostrarConfirmacionGuardado.set(false);
+    this.mostrarModalNuevoTipo.set(false);
     this.formAbierto.set(true);
   }
 
   cerrarFormulario(): void {
     this.formAbierto.set(false);
     this.mostrarFormEspacio.set(false);
+    this.mostrarConfirmacionGuardado.set(false);
+    this.mostrarModalNuevoTipo.set(false);
   }
 
-  agregarEspacioFisico(): void {
+  // --- Carreras Vinculadas ---
+  vincularCarrera(): void {
+    const cid = this.carreraParaVincularId();
+    if (!cid) return;
+    const car = this.carreras().find((c) => c.id === cid);
+    if (car && !this.carrerasSeleccionadas().some((c) => c.id === cid)) {
+      this.carrerasSeleccionadas.update((list) => [...list, car]);
+      this.carreraParaVincularId.set('');
+    }
+  }
+
+  desvincularCarrera(carreraId: string): void {
+    this.carrerasSeleccionadas.update((list) => list.filter((c) => c.id !== carreraId));
+  }
+
+  // --- Espacios Físicos (Registrar, Modificar, Dar de baja) ---
+  abrirNuevoEspacio(): void {
+    this.espacioEditandoIndex.set(null);
+    this.nuevoEspacioNombre.set('');
+    this.nuevoEspacioDescInfra.set('');
+    this.nuevoEspacioTipoId.set('');
+    this.nuevoEspacioCantidad.set(1);
+    this.nuevoEspacioCapacidad.set(30);
+    this.mostrarFormEspacio.set(true);
+  }
+
+  editarEspacioFisico(index: number): void {
+    const esp = this.espaciosAgregados()[index];
+    if (!esp) return;
+    this.espacioEditandoIndex.set(index);
+    this.nuevoEspacioNombre.set(esp.denominacion);
+    this.nuevoEspacioDescInfra.set(esp.descripcionInfraestructura || esp.denominacion);
+    this.nuevoEspacioTipoId.set(esp.tipoEspacioId || '');
+    this.nuevoEspacioCantidad.set(esp.cantidad || 1);
+    this.nuevoEspacioCapacidad.set(esp.capacidadPersonasSentadas || esp.capacidadEstudiantes || 0);
+    this.mostrarFormEspacio.set(true);
+  }
+
+  guardarEspacioFisico(): void {
     const nombre = this.nuevoEspacioNombre().trim();
     if (!nombre) return;
 
     const tipoId = this.nuevoEspacioTipoId();
     const tipoObj = this.tiposEspacio().find((t) => t.id === tipoId);
 
-    const nuevo: EspacioFisico = {
+    const index = this.espacioEditandoIndex();
+    const prev = index !== null ? this.espaciosAgregados()[index] : null;
+
+    const espacioData: EspacioFisico = {
+      id: prev?.id,
       denominacion: nombre,
       descripcionInfraestructura: this.nuevoEspacioDescInfra().trim() || nombre,
       tipoEspacioId: tipoId || undefined,
@@ -447,10 +540,23 @@ export class InfraestructuraComponent implements OnInit {
       cantidad: this.nuevoEspacioCantidad() || 1,
       capacidadPersonasSentadas: this.nuevoEspacioCapacidad() || 0,
       capacidadEstudiantes: this.nuevoEspacioCapacidad() || 0,
-      estadoConeau: 'CARGADO',
+      superficieM2: prev?.superficieM2,
+      equipamientoDisponible: prev?.equipamientoDisponible,
+      estadoConeau: prev?.estadoConeau || 'CARGADO',
+      activo: true,
     };
 
-    this.espaciosAgregados.update((list) => [...list, nuevo]);
+    if (index !== null) {
+      this.espaciosAgregados.update((list) => {
+        const copy = [...list];
+        copy[index] = espacioData;
+        return copy;
+      });
+    } else {
+      this.espaciosAgregados.update((list) => [...list, espacioData]);
+    }
+
+    this.espacioEditandoIndex.set(null);
     this.nuevoEspacioNombre.set('');
     this.nuevoEspacioDescInfra.set('');
     this.mostrarFormEspacio.set(false);
@@ -458,6 +564,87 @@ export class InfraestructuraComponent implements OnInit {
 
   eliminarEspacioFisico(esp: EspacioFisico): void {
     this.espaciosAgregados.update((list) => list.filter((e) => e !== esp));
+    if (this.espacioEditandoIndex() !== null) {
+      this.espacioEditandoIndex.set(null);
+      this.mostrarFormEspacio.set(false);
+    }
+  }
+
+  // --- Tipo de Espacio (Caso 2 del Diagrama de Secuencia) ---
+  abrirModalNuevoTipo(): void {
+    this.nuevoTipoDenominacion.set('');
+    this.nuevoTipoCodigo.set('');
+    this.mostrarModalNuevoTipo.set(true);
+  }
+
+  cerrarModalNuevoTipo(): void {
+    this.mostrarModalNuevoTipo.set(false);
+  }
+
+  guardarNuevoTipoEspacio(): void {
+    const denom = this.nuevoTipoDenominacion().trim();
+    if (!denom) return;
+    this.guardandoTipoEspacio.set(true);
+
+    this.autoevalService.crearTipoEspacio({
+      denominacion: denom,
+      codigo: this.nuevoTipoCodigo().trim() || undefined,
+    })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.guardandoTipoEspacio.set(false))
+      )
+      .subscribe({
+        next: (tipoCreado) => {
+          this.tiposEspacio.update((list) => [...list, tipoCreado]);
+          this.nuevoEspacioTipoId.set(tipoCreado.id);
+          this.cerrarModalNuevoTipo();
+          this.successMessage.set(`Nuevo tipo de espacio "${tipoCreado.denominacion}" registrado.`);
+        },
+        error: () => this.errorMessage.set('Error al registrar el nuevo tipo de espacio.'),
+      });
+  }
+
+  // --- Documentación de Respaldo con Tipología ---
+  agregarDocumentoRespaldo(): void {
+    const nombre = this.inputDocNombre().trim();
+    if (!nombre) return;
+
+    this.documentosAgregados.update((list) => [
+      ...list,
+      {
+        nombreArchivo: nombre,
+        urlMinio: `/minio/acreditacion/03_01/${nombre}`,
+        tipoAnexo: this.inputDocTipoAnexo(),
+        descripcion: this.inputDocDescripcion().trim() || 'Documentación respaldatoria (Normativa MinIO)',
+      },
+    ]);
+
+    this.inputDocNombre.set('');
+    this.inputDocDescripcion.set('');
+    this.inputDocTipoAnexo.set('CONVENIO_COMODATO');
+  }
+
+  eliminarDocumentoRespaldo(index: number): void {
+    this.documentosAgregados.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  // --- Doble Confirmación de Carga (Diagrama de Secuencia) ---
+  solicitarConfirmacion(): void {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+    this.mostrarConfirmacionGuardado.set(true);
+  }
+
+  cancelarConfirmacion(): void {
+    this.mostrarConfirmacionGuardado.set(false);
+  }
+
+  confirmarYEjectuarGuardado(): void {
+    this.mostrarConfirmacionGuardado.set(false);
+    this.onSubmit();
   }
 
   onSubmit(): void {
@@ -490,8 +677,9 @@ export class InfraestructuraComponent implements OnInit {
       superficieTotalM2: val.superficieTotalM2,
       observaciones: val.observaciones,
       estadoConeau: val.estadoConeau || 'CARGADO',
-      carrerasIds: val.carrerasIds || [],
+      carrerasIds: val.vinculaTodasCarreras ? [] : this.carrerasSeleccionadas().map((c) => c.id),
       espacios: this.espaciosAgregados().map((e) => ({
+        id: e.id,
         tipoEspacioId: e.tipoEspacioId,
         denominacion: e.denominacion,
         descripcionInfraestructura: e.descripcionInfraestructura || e.denominacion,
@@ -502,16 +690,12 @@ export class InfraestructuraComponent implements OnInit {
         equipamientoDisponible: e.equipamientoDisponible,
         estadoConeau: e.estadoConeau || 'CARGADO',
       })),
-      documentos: this.nuevoDocNombre().trim()
-        ? [
-            {
-              nombreArchivo: this.nuevoDocNombre().trim(),
-              urlMinio: `/minio/acreditacion/03_01/${this.nuevoDocNombre().trim()}`,
-              tipoAnexo: val.situacion?.toUpperCase() || 'CONVENIO_COMODATO',
-              descripcion: 'Documentación remitida a AEA (Subcarpeta Normativa)',
-            },
-          ]
-        : [],
+      documentos: this.documentosAgregados().map((d) => ({
+        nombreArchivo: d.nombreArchivo,
+        urlMinio: d.urlMinio,
+        tipoAnexo: d.tipoAnexo,
+        descripcion: d.descripcion,
+      })),
     };
 
     const action$ = this.modoEdicion() && this.inmuebleEditandoId()

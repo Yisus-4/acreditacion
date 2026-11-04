@@ -97,6 +97,7 @@ export interface RegistrarInmuebleRequest {
   estadoConeau?: string;
   carrerasIds: string[];
   espacios: {
+    id?: string;
     tipoEspacioId?: string;
     denominacion: string;
     descripcionInfraestructura?: string;

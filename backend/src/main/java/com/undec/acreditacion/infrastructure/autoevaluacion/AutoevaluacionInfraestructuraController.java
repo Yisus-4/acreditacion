@@ -241,8 +241,85 @@ public class AutoevaluacionInfraestructuraController {
             entity.setCarreras(carreras);
         }
 
-        inmuebleRepository.save(entity);
-        return ResponseEntity.ok(mapToInmuebleResponse(entity));
+        // Espacios físicos - Actualizar, Crear y Dar de baja según CU y Diagrama de Secuencia
+        if (request.espacios() != null) {
+            List<EspacioFisicoJpaEntity> actuales = espacioFisicoRepository.findByInmuebleIdAndActivoTrue(entity.getId());
+            Set<UUID> idsEnviados = request.espacios().stream()
+                    .map(EspacioFisicoRequest::id)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+
+            // Dar de baja los espacios que ya no están en la lista (Dar de baja espacio físico)
+            for (EspacioFisicoJpaEntity act : actuales) {
+                if (!idsEnviados.contains(act.getId())) {
+                    act.setActivo(false);
+                    espacioFisicoRepository.save(act);
+                }
+            }
+
+            // Actualizar o crear
+            for (EspacioFisicoRequest espReq : request.espacios()) {
+                EspacioFisicoJpaEntity esp;
+                if (espReq.id() != null) {
+                    esp = espacioFisicoRepository.findById(espReq.id()).orElse(new EspacioFisicoJpaEntity());
+                    if (esp.getId() == null) {
+                        esp.setId(espReq.id());
+                        esp.setCreadoEn(Instant.now());
+                    }
+                } else {
+                    esp = new EspacioFisicoJpaEntity();
+                    esp.setId(UUID.randomUUID());
+                    esp.setCreadoEn(Instant.now());
+                }
+                esp.setInmueble(entity);
+                esp.setDenominacion(espReq.denominacion());
+                esp.setDescripcionInfraestructura(espReq.descripcionInfraestructura() != null ? espReq.descripcionInfraestructura() : espReq.denominacion());
+                esp.setCantidad(espReq.cantidad() != null ? espReq.cantidad() : 1);
+                int cap = espReq.capacidadPersonasSentadas() != null ? espReq.capacidadPersonasSentadas() :
+                        (espReq.capacidadEstudiantes() != null ? espReq.capacidadEstudiantes() : 0);
+                esp.setCapacidadPersonasSentadas(cap);
+                esp.setCapacidadEstudiantes(cap);
+                esp.setSuperficieM2(espReq.superficieM2());
+                esp.setEquipamientoDisponible(espReq.equipamientoDisponible());
+                esp.setEstadoConeau(espReq.estadoConeau() != null ? espReq.estadoConeau() : "CARGADO");
+                esp.setActivo(true);
+                if (espReq.tipoEspacioId() != null) {
+                    tipoEspacioRepository.findById(espReq.tipoEspacioId()).ifPresent(esp::setTipoEspacio);
+                } else {
+                    esp.setTipoEspacio(null);
+                }
+                espacioFisicoRepository.save(esp);
+            }
+        }
+
+        // Documentación de respaldo (Adjuntar Documentos en Actualizar Inmueble)
+        if (request.documentos() != null && !request.documentos().isEmpty()) {
+            List<InmuebleDocumentacionRespaldoJpaEntity> docsExistentes = documentacionRepository.findByInmuebleIdOrderByFechaSubidaDesc(entity.getId());
+            Set<String> nombresExistentes = docsExistentes.stream()
+                    .map(InmuebleDocumentacionRespaldoJpaEntity::getNombreArchivo)
+                    .collect(Collectors.toSet());
+
+            for (RegistrarInmuebleRequest.DocumentoRespaldoRequest docReq : request.documentos()) {
+                if (docReq.nombreArchivo() != null && !docReq.nombreArchivo().isBlank() && !nombresExistentes.contains(docReq.nombreArchivo())) {
+                    InmuebleDocumentacionRespaldoJpaEntity doc = new InmuebleDocumentacionRespaldoJpaEntity();
+                    doc.setId(UUID.randomUUID());
+                    doc.setInmueble(entity);
+                    doc.setNombreArchivo(docReq.nombreArchivo());
+                    doc.setUrlMinio(docReq.urlMinio() != null ? docReq.urlMinio() : ("/minio/acreditacion/03_01/" + docReq.nombreArchivo()));
+                    doc.setTipoAnexo(docReq.tipoAnexo() != null ? docReq.tipoAnexo() : "CONVENIO_COMODATO");
+                    doc.setDescripcion(docReq.descripcion());
+                    doc.setRutaRepositorio("03-Autoevaluación/03_01-Infraestructura equipamiento y biblioteca/Normativa");
+                    doc.setFechaSubida(Instant.now());
+                    documentacionRepository.save(doc);
+                }
+            }
+        }
+
+        InmuebleJpaEntity guardado = inmuebleRepository.save(entity);
+        return inmuebleRepository.findByIdCompleto(guardado.getId())
+                .map(this::mapToInmuebleResponse)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.ok(mapToInmuebleResponse(guardado)));
     }
 
     @PostMapping("/inmuebles/{id}/verificar")
