@@ -157,7 +157,7 @@
             (click)="abrirModalExtensionPlazo()"
             title="Extiende la fecha límite de esta actividad y la sincroniza en la hoja INFO del Plan de Trabajo PT-001"
           >
-            ⏱ Extender Plazo (PT-001)
+            Extender Plazo (PT-001)
           </button>
 
           <button
@@ -166,7 +166,7 @@
             (click)="remitirADeaPorProceso()"
             title="Valida los inmuebles y actualiza la Actividad 4.1 a COMPLETADA en el Plan de Trabajo"
           >
-            ✓ Validar inmuebles (Completar Tarea 4.1)
+            Validar inmuebles (Completar Tarea 4.1)
           </button>
         </div>
       }
@@ -214,7 +214,7 @@
           (click)="abrirModalConsultaM2()"
           title="Consultar cantidad de espacios por superficie en m²"
         >
-          📐 Consultar por m²
+          Consultar por m²
         </button>
         @if (puedeGestionarInfraestructura()) {
           <button class="btn-nuevo-figma" type="button" (click)="abrirFormularioNuevo()">
@@ -262,7 +262,7 @@
                   </div>
                   @if (inm.sedeNombre) {
                     <div style="font-size: 12px; color: #4b5563; font-weight: 500; margin-top: 2px;">
-                      📍 Sede: {{ inm.sedeNombre }}
+                      Sede: {{ inm.sedeNombre }}
                     </div>
                   }
                 </td>
@@ -352,15 +352,14 @@
                       Espacios físicos declarados en RG-005 para: {{ inm.nombre }}
                     </div>
                     <div class="subtabla-container">
-                      <table style="width: 100%; min-width: 950px; border-collapse: collapse; font-size: 13px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px;">
+                      <table style="width: 100%; min-width: 850px; border-collapse: collapse; font-size: 13px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px;">
                         <thead>
                           <tr style="background: #f3f4f6; text-align: left; border-bottom: 1px solid #e5e7eb;">
                             <th style="padding: 10px 14px;">Descripción área Infraestructura</th>
                             <th style="padding: 10px 14px;">Tipo de espacio físico</th>
-                            <th style="padding: 10px 14px; text-align: center; width: 100px;">Cantidad disp.</th>
-                            <th style="padding: 10px 14px; text-align: center; width: 140px;">Capacidad (pers.)</th>
-                            <th style="padding: 10px 14px; text-align: center; width: 120px;">Dimensión (m²)</th>
-                            <th style="padding: 10px 14px; text-align: center; width: 120px;">Estado CONEAU</th>
+                            <th style="padding: 10px 14px; text-align: center; width: 150px;">Capacidad (pers.)</th>
+                            <th style="padding: 10px 14px; text-align: center; width: 140px;">Dimensión (m²)</th>
+                            <th style="padding: 10px 14px; text-align: center; width: 130px;">Estado CONEAU</th>
                             <th style="padding: 10px 14px; text-align: center; width: 130px;">Higiene y Seg.</th>
                           </tr>
                         </thead>
@@ -377,9 +376,6 @@
                               </td>
                               <td style="padding: 10px 14px; color: var(--color-text-muted);">
                                 {{ esp.tipoEspacioDenominacion || esp.denominacion }}
-                              </td>
-                              <td style="padding: 10px 14px; text-align: center; font-weight: 600;">
-                                {{ esp.cantidad || 1 }}
                               </td>
                               <td style="padding: 10px 14px; text-align: center; font-weight: 600; color: #1e3a8a;">
                                 {{ esp.capacidadPersonasSentadas || esp.capacidadEstudiantes || 0 }} pers.
@@ -400,7 +396,7 @@
                                   (click)="abrirModalHyS(esp, inm.nombre)"
                                   title="Ver y gestionar Higiene y Seguridad asignado para este espacio"
                                 >
-                                  🛡️ Ver HyS
+                                  Ver HyS
                                 </button>
                               </td>
                             </tr>
@@ -414,9 +410,6 @@
                                   </td>
                                   <td style="padding: 8px 14px; font-size: 12px; color: #64748b;">
                                     {{ sub.tipoEspacioDenominacion || 'Subespacio' }}
-                                  </td>
-                                  <td style="padding: 8px 14px; text-align: center; font-size: 12px; font-weight: 500;">
-                                    {{ sub.cantidad || 1 }}
                                   </td>
                                   <td style="padding: 8px 14px; text-align: center; font-weight: 600; color: #1e3a8a; font-size: 12px;">
                                     {{ sub.capacidadPersonasSentadas || 0 }} pers.
@@ -437,7 +430,7 @@
                                       (click)="abrirModalHyS(sub, inm.nombre)"
                                       title="Ver y gestionar Higiene y Seguridad para este subespacio"
                                     >
-                                      🛡️ Ver HyS
+                                      Ver HyS
                                     </button>
                                   </td>
                                 </tr>
@@ -465,7 +458,7 @@
             GT-003: Guía de Higiene y Seguridad de la UA
           </h3>
           <span class="badge-estado-figma" [style.background]="guiaHigiene()?.verificado ? '#dcfce7' : '#fef3c7'" [style.color]="guiaHigiene()?.verificado ? '#166534' : '#92400e'">
-            {{ guiaHigiene()?.verificado ? '✓ Verificado AEA' : 'En Verificación (Plazo 10 días)' }}
+            {{ guiaHigiene()?.verificado ? 'Verificado AEA' : 'En Verificación (Plazo 10 días)' }}
           </span>
         </div>
         <div style="font-size: 12px; color: var(--color-text-muted); margin-top: 4px;">
@@ -480,7 +473,7 @@
           (click)="abrirModalExtensionPlazo()"
           title="Extiende la fecha de la Actividad 4.2 en el Plan de Trabajo (PT-001)"
         >
-          ⏱ Extender Plazo (PT-001)
+          Extender Plazo (PT-001)
         </button>
 
         <button
@@ -498,7 +491,7 @@
           (click)="remitirHigieneADea()"
           title="Informa la tarea completa a la AEA y actualiza la Actividad 4.2 a COMPLETADA en el Plan de Trabajo"
         >
-          ✓ Remitir a AEA (Completar Tarea 4.2)
+          Remitir a AEA (Completar Tarea 4.2)
         </button>
       </div>
     </div>
@@ -586,7 +579,7 @@
                       <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 700;"
                         [style.background]="doc.cargado ? '#dcfce7' : '#fee2e2'"
                         [style.color]="doc.cargado ? '#166534' : '#991b1b'">
-                        {{ doc.cargado ? '✓ Cargado' : 'Pendiente' }}
+                        {{ doc.cargado ? 'Cargado' : 'Pendiente' }}
                       </span>
                     </div>
                     <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 6px;">
@@ -596,7 +589,7 @@
 
                   @if (doc.nombreArchivo) {
                     <div style="font-size: 12px; font-weight: 600; color: var(--color-primary-dark); border-top: 1px dashed #d1d5db; padding-top: 6px;">
-                      📄 {{ doc.nombreArchivo }}
+                      Archivo: {{ doc.nombreArchivo }}
                     </div>
                   }
                 </div>
@@ -639,7 +632,7 @@
                     <td style="font-weight: 600;">{{ doc.numeroNormativa || '-' }}</td>
                     <td>
                       <span style="color: #166534; font-weight: 500;">
-                        📄 {{ doc.nombreArchivo || 'Archivo no cargado' }}
+                        {{ doc.nombreArchivo || 'Archivo no cargado' }}
                       </span>
                     </td>
                   </tr>
@@ -976,8 +969,8 @@
                 </div>
 
                 <!-- Fila 1: Descripción área Infraestructura / Nombre y Denominación resumida -->
-                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 12px;">
-                  <div class="form-group-figma">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                  <div class="form-grid-cell">
                     <label style="font-size: 13px; font-weight: 600; color: #374151;">Descripción área Infraestructura / Nombre *</label>
                     <input
                       type="text"
@@ -987,7 +980,7 @@
                       (input)="nuevoEspacioDescInfra.set($any($event.target).value)"
                     />
                   </div>
-                  <div class="form-group-figma">
+                  <div class="form-grid-cell">
                     <label style="font-size: 13px; font-weight: 600; color: #374151;">Denominación resumida *</label>
                     <input
                       type="text"
@@ -999,10 +992,10 @@
                   </div>
                 </div>
 
-                <!-- Fila 2: Tipo de espacio físico, Cantidad disponible, Capacidad sentados y Metros cuadrados (m²) -->
-                <div style="display: grid; grid-template-columns: 1.8fr 1fr 1.2fr 1.2fr; gap: 12px; margin-bottom: 14px; align-items: flex-end;">
-                  <div class="form-group-figma">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                <!-- Fila 2: Tipo de espacio físico, Capacidad sentados y Metros cuadrados (m²) -->
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 14px; align-items: flex-end;">
+                  <div class="form-grid-cell">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                       <label style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 0;">Tipo de espacio físico *</label>
                       <button
                         type="button"
@@ -1026,19 +1019,8 @@
                     </select>
                   </div>
 
-                  <div class="form-group-figma">
-                    <label style="font-size: 13px; font-weight: 600; color: #374151;">Cantidad disponible *</label>
-                    <input
-                      type="number"
-                      min="1"
-                      class="form-input-figma"
-                      [value]="nuevoEspacioCantidad()"
-                      (input)="nuevoEspacioCantidad.set(+$any($event.target).value)"
-                    />
-                  </div>
-
-                  <div class="form-group-figma">
-                    <label style="font-size: 13px; font-weight: 600; color: #374151;">Capacidad personas sentadas *</label>
+                  <div class="form-grid-cell">
+                    <label style="font-size: 13px; font-weight: 600; color: #374151;">Capacidad (pers.) *</label>
                     <div style="position: relative; display: flex; align-items: center;">
                       <input
                         type="number"
@@ -1054,8 +1036,8 @@
                     </div>
                   </div>
 
-                  <div class="form-group-figma">
-                    <label style="font-size: 13px; font-weight: 600; color: #374151;">Dimensión metros cuadrados (m²)</label>
+                  <div class="form-grid-cell">
+                    <label style="font-size: 13px; font-weight: 600; color: #374151;">Dimensión (m²)</label>
                     <div style="position: relative; display: flex; align-items: center;">
                       <input
                         type="number"
@@ -1074,12 +1056,12 @@
                   </div>
                 </div>
 
-                <!-- Fila 3: Text box para Higiene y seguridad -->
+                <!-- Fila 3: Detalle Higiene y seguridad -->
                 <div class="form-group-figma" style="margin-bottom: 14px;">
-                  <label style="font-size: 13px; font-weight: 600; color: #374151;">Text box para Higiene y seguridad</label>
+                  <label style="font-size: 13px; font-weight: 600; color: #374151;">Detalle Higiene y seguridad</label>
                   <textarea
                     rows="2"
-                    placeholder="Observaciones de higiene, seguridad, ventilación o vías de escape asignadas a este espacio..."
+                    placeholder="Detalle u observaciones de higiene, seguridad, ventilación o vías de escape asignadas a este espacio..."
                     class="form-input-figma"
                     [value]="nuevoEspacioObservacionHyS()"
                     (input)="nuevoEspacioObservacionHyS.set($any($event.target).value)"
@@ -1101,44 +1083,43 @@
 
                 <!-- Panel de Subespacios si el checkbox está activo -->
                 @if (nuevoEspacioTieneSubespacios()) {
-                  <div style="background: #ffffff; border: 1px dashed #d1d5db; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
-                    <h5 style="margin: 0 0 10px 0; font-size: 13px; font-weight: 700; color: #1e293b;">
+                  <div class="panel-subespacios-box">
+                    <h5 style="margin: 0 0 12px 0; font-size: 13.5px; font-weight: 700; color: #1e293b;">
                       Subespacios pertenecientes a este espacio
                     </h5>
 
                     <!-- Formulario para agregar un subespacio -->
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
-                      <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 10px; margin-bottom: 10px;">
-                        <div>
+                    <div class="card-subespacio-form">
+                      <!-- Fila 1 Subespacio: Descripción y Denominación -->
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                        <div class="form-grid-cell">
                           <label style="font-size: 12px; font-weight: 600; color: #475569;">Descripción del subespacio *</label>
                           <input
                             type="text"
                             placeholder="Ej: Box 1 o Zona de reactivos"
                             class="form-input-figma"
-                            style="font-size: 12.5px; padding: 6px 10px;"
                             [value]="subDescInfra()"
                             (input)="subDescInfra.set($any($event.target).value)"
                           />
                         </div>
-                        <div>
+                        <div class="form-grid-cell">
                           <label style="font-size: 12px; font-weight: 600; color: #475569;">Denominación resumida</label>
                           <input
                             type="text"
                             placeholder="Ej: Box 1"
                             class="form-input-figma"
-                            style="font-size: 12.5px; padding: 6px 10px;"
                             [value]="subDenominacion()"
                             (input)="subDenominacion.set($any($event.target).value)"
                           />
                         </div>
                       </div>
 
-                      <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                        <div>
+                      <!-- Fila 2 Subespacio: Tipo, Capacidad y Superficie -->
+                      <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                        <div class="form-grid-cell">
                           <label style="font-size: 12px; font-weight: 600; color: #475569;">Tipo de espacio</label>
                           <select
                             class="form-input-figma"
-                            style="font-size: 12.5px; padding: 6px 10px;"
                             [value]="subTipoEspacioId()"
                             (change)="subTipoEspacioId.set($any($event.target).value)"
                           >
@@ -1148,50 +1129,37 @@
                             }
                           </select>
                         </div>
-                        <div>
-                          <label style="font-size: 12px; font-weight: 600; color: #475569;">Cantidad</label>
-                          <input
-                            type="number"
-                            min="1"
-                            class="form-input-figma"
-                            style="font-size: 12.5px; padding: 6px 10px;"
-                            [value]="subCantidad()"
-                            (input)="subCantidad.set(+$any($event.target).value)"
-                          />
-                        </div>
-                        <div>
+                        <div class="form-grid-cell">
                           <label style="font-size: 12px; font-weight: 600; color: #475569;">Capacidad (pers.)</label>
                           <input
                             type="number"
                             min="0"
                             class="form-input-figma"
-                            style="font-size: 12.5px; padding: 6px 10px;"
                             [value]="subCapacidad()"
                             (input)="subCapacidad.set(+$any($event.target).value)"
                           />
                         </div>
-                        <div>
-                          <label style="font-size: 12px; font-weight: 600; color: #475569;">Superficie (m²)</label>
+                        <div class="form-grid-cell">
+                          <label style="font-size: 12px; font-weight: 600; color: #475569;">Dimensión (m²)</label>
                           <input
                             type="number"
                             min="0"
                             step="0.01"
-                            placeholder="m²"
+                            placeholder="Ej: 15.5"
                             class="form-input-figma"
-                            style="font-size: 12.5px; padding: 6px 10px;"
                             [value]="subSuperficieM2() ?? ''"
                             (input)="subSuperficieM2.set($any($event.target).value ? +$any($event.target).value : null)"
                           />
                         </div>
                       </div>
 
-                      <div style="margin-bottom: 10px;">
-                        <label style="font-size: 12px; font-weight: 600; color: #475569;">Text box para Higiene y seguridad del subespacio</label>
+                      <!-- Fila 3 Subespacio: Detalle Higiene y seguridad -->
+                      <div class="form-grid-cell" style="margin-bottom: 12px;">
+                        <label style="font-size: 12px; font-weight: 600; color: #475569;">Detalle Higiene y seguridad</label>
                         <input
                           type="text"
-                          placeholder="Observaciones HyS para este subespacio..."
+                          placeholder="Observaciones y detalle HyS para este subespacio..."
                           class="form-input-figma"
-                          style="font-size: 12.5px; padding: 6px 10px;"
                           [value]="subObservacionHyS()"
                           (input)="subObservacionHyS.set($any($event.target).value)"
                         />
@@ -1201,7 +1169,7 @@
                         <button
                           type="button"
                           class="btn-tabla-accion"
-                          style="font-size: 12px; padding: 4px 12px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;"
+                          style="font-size: 12.5px; font-weight: 600; padding: 6px 16px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 6px;"
                           (click)="agregarSubespacio()"
                         >
                           + Agregar subespacio
@@ -1221,7 +1189,7 @@
                               </span>
                               @if (sub.observacionHigieneSeguridad) {
                                 <div style="font-size: 11.5px; color: #15803d; margin-top: 2px;">
-                                  🛡️ HyS: {{ sub.observacionHigieneSeguridad }}
+                                  HyS: {{ sub.observacionHigieneSeguridad }}
                                 </div>
                               }
                             </div>
@@ -1258,7 +1226,7 @@
                 @for (esp of espaciosAgregados(); track $index) {
                   <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #f3f4f6; font-size: 13px;">
                     <div>
-                      <strong>{{ esp.cantidad || 1 }}x</strong> {{ esp.descripcionInfraestructura || esp.denominacion }}
+                      <strong>{{ esp.descripcionInfraestructura || esp.denominacion }}</strong>
                       <span style="color: var(--color-text-muted);">
                         ({{ esp.tipoEspacioDenominacion || 'Aula' }} · {{ esp.capacidadPersonasSentadas || esp.capacidadEstudiantes }} pers. sentadas · {{ esp.superficieM2 ? esp.superficieM2 + ' m²' : 's/d m²' }})
                       </span>
@@ -1350,7 +1318,7 @@
                   @for (doc of documentosAgregados(); track $index) {
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 13px;">
                       <div>
-                        <strong>📄 {{ doc.nombreArchivo }}</strong>
+                        <strong>{{ doc.nombreArchivo }}</strong>
                         <span style="color: var(--color-primary-dark); font-weight: 500; font-size: 12px; margin-left: 6px;">
                           [{{ doc.tipoAnexo }}]
                         </span>
@@ -1478,7 +1446,7 @@
           [disabled]="submitting()"
           (click)="confirmarYEjectuarGuardado()"
         >
-          {{ submitting() ? 'Procesando...' : '✓ Confirmar Carga Definitiva' }}
+          {{ submitting() ? 'Procesando...' : 'Confirmar Carga Definitiva' }}
         </button>
       </div>
     </div>
@@ -1495,7 +1463,7 @@
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 12px;">
         <div>
           <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: var(--color-primary-dark);">
-            🛡️ Observaciones de Higiene y Seguridad
+            Detalle de Higiene y Seguridad
           </h3>
           <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--color-text-muted);">
             {{ inmuebleNombreHyS() }} · {{ espacioSeleccionadoHyS()?.descripcionInfraestructura || espacioSeleccionadoHyS()?.denominacion }}
@@ -1508,14 +1476,13 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
           <div><strong>Tipo de espacio:</strong> {{ espacioSeleccionadoHyS()?.tipoEspacioDenominacion || '-' }}</div>
           <div><strong>Capacidad sentados:</strong> {{ espacioSeleccionadoHyS()?.capacidadPersonasSentadas || 0 }} pers.</div>
-          <div><strong>Superficie declarada:</strong> {{ espacioSeleccionadoHyS()?.superficieM2 ? espacioSeleccionadoHyS()?.superficieM2 + ' m²' : 'No declarada' }}</div>
-          <div><strong>Cantidad de unidades:</strong> {{ espacioSeleccionadoHyS()?.cantidad || 1 }}</div>
+          <div style="grid-column: span 2;"><strong>Superficie declarada:</strong> {{ espacioSeleccionadoHyS()?.superficieM2 ? espacioSeleccionadoHyS()?.superficieM2 + ' m²' : 'No declarada' }}</div>
         </div>
       </div>
 
       <div class="form-group-figma" style="margin-bottom: 20px;">
         <label style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; display: block;">
-          Text box para Higiene y seguridad
+          Detalle Higiene y seguridad
           @if (!puedeModificarHigieneSeguridad()) {
             <span style="font-size: 12px; font-weight: 400; color: #dc2626; margin-left: 6px;">(Modo sólo lectura para su rol)</span>
           }
@@ -1559,7 +1526,7 @@
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 12px;">
         <div>
           <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--color-primary-dark);">
-            📐 Consulta de Espacios Físicos por Superficie (m²)
+            Consulta de Espacios Físicos por Superficie (m²)
           </h3>
           <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--color-text-muted);">
             Permite consultas de cantidad de aulas y espacios por dimensión exacta, mínima o rango de metros cuadrados.
