@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { SubnavAutoevaluacionComponent } from '../subnav-autoevaluacion/subnav-autoevaluacion.component';
 import { PlanEstudioService } from '../../../core/planes-estudio/plan-estudio.service';
@@ -16,11 +17,20 @@ import { ProgramaAnaliticoAsignatura } from '../../../core/programas-analiticos/
 import { EstructuraService } from '../../../core/estructura/estructura.service';
 import { CarreraResponse } from '../../../core/estructura/estructura.types';
 
+export type ActividadCurricularTipo =
+  | 'GT_007A'
+  | 'GT_001'
+  | 'PLAN_FT001'
+  | 'PROGRAMAS_84'
+  | 'FT_003'
+  | 'GT_006';
+
 @Component({
   selector: 'app-estructura-curricular',
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     FormsModule,
     ReactiveFormsModule,
     SubnavAutoevaluacionComponent,
@@ -33,6 +43,7 @@ export class EstructuraCurricularComponent implements OnInit {
   private readonly planService = inject(PlanEstudioService);
   private readonly programaService = inject(ProgramaAnaliticoService);
   private readonly estructuraService = inject(EstructuraService);
+  private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
 
   readonly carreras = signal<CarreraResponse[]>([]);
@@ -42,12 +53,16 @@ export class EstructuraCurricularComponent implements OnInit {
   readonly asignaturas = signal<ActividadCurricularPlan[]>([]);
   readonly programas = signal<ProgramaAnaliticoAsignatura[]>([]);
 
-  readonly tabPrincipal = signal<'PLAN_FT001' | 'PROGRAMAS_84'>('PLAN_FT001');
   readonly loading = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
 
-  // Filtros
+  // Navegación de Actividades
+  readonly actividadSeleccionada = signal<ActividadCurricularTipo | null>(null);
+  readonly procesoId = signal<string | null>(null);
+  readonly filtroActividadesTexto = signal<string>('');
+
+  // Filtros de asignaturas
   readonly filtroAnio = signal<string>('TODOS');
   readonly filtroCiclo = signal<string>('TODOS');
   readonly searchQuery = signal<string>('');
@@ -57,6 +72,22 @@ export class EstructuraCurricularComponent implements OnInit {
   readonly asignaturaSeleccionada = signal<ActividadCurricularPlan | null>(null);
   readonly archivoSeleccionado = signal<File | null>(null);
   readonly subiendo = signal<boolean>(false);
+
+  // Formulario de edición rápida de FT-001
+  readonly mostrarEditorPlan = signal<boolean>(false);
+  readonly guardandoPlan = signal<boolean>(false);
+
+  readonly formPlan = this.fb.group({
+    codigoResolucion: ['', [Validators.required]],
+    anioAprobacion: [2024],
+    duracionAnios: [5],
+    horasTotales: [3650],
+    horasPresenciales: [3650],
+    horasNoPresenciales: [0],
+    estructuraSintetica: [''],
+    instanciaFinalGraduacion: [''],
+    otraInformacion: [''],
+  });
 
   readonly formSubida = this.fb.group({
     resolucionAprobacion: ['', [Validators.required]],
@@ -98,6 +129,79 @@ export class EstructuraCurricularComponent implements OnInit {
     return Math.round((this.programasCargadosCount() / total) * 100);
   });
 
+  // Lista oficial de 6 actividades de la dimensión
+  readonly listaActividadesDimension = computed(() => {
+    const q = this.filtroActividadesTexto().toLowerCase().trim();
+    const tienePlan = !!this.planActivo();
+    const programasOk = this.programasCargadosCount() > 0 && this.programasCargadosCount() === this.asignaturas().length;
+
+    const actividades = [
+      {
+        id: 'GT_007A' as const,
+        nombre: 'Gestionar información sobre mecanismos o instancias de gestión y seguimiento relacionadas a la carrera',
+        responsable: 'Director de Carrera / Comisión Curricular',
+        instrumento: 'Actas de Seguimiento (GT-007A)',
+        ola: 'OLA 1 (Independiente)',
+        completada: false,
+        estado: 'Pendiente',
+      },
+      {
+        id: 'GT_001' as const,
+        nombre: 'Gestionar información sobre organización y gestión de la carrera',
+        responsable: 'Dirección de Carrera',
+        instrumento: 'Manual de Procedimientos (GT-001)',
+        ola: 'OLA 1 (Independiente)',
+        completada: false,
+        estado: 'Pendiente',
+      },
+      {
+        id: 'PLAN_FT001' as const,
+        nombre: 'Gestionar información de planes de estudio',
+        responsable: 'Secretaría Académica / Dirección de Carrera',
+        instrumento: 'Resolución Ministerial / Ficha (FT-001)',
+        ola: 'OLA 1 (Independiente)',
+        completada: tienePlan,
+        estado: tienePlan ? 'Completada' : 'Pendiente',
+      },
+      {
+        id: 'PROGRAMAS_84' as const,
+        nombre: 'Gestionar programas analíticos de las asignaturas',
+        responsable: 'Docentes Titulares / Carrera / Comisión Curricular',
+        instrumento: 'Programas Vigentes en PDF',
+        ola: 'OLA 1 (Crítico - Insumo para Biblioteca)',
+        completada: programasOk,
+        estado: programasOk ? 'Completada' : `${this.programasCargadosCount()}/${this.asignaturas().length} cargados`,
+      },
+      {
+        id: 'FT_003' as const,
+        nombre: 'Gestionar información de las asignaturas',
+        responsable: 'Secretaría Académica / Docentes',
+        instrumento: 'Fichas FT-003',
+        ola: 'OLA 3 (Cuello de Botella)',
+        dependencia: 'Requiere Biblioteca RG-014 y Cuadros SGA',
+        completada: false,
+        estado: 'Pendiente',
+      },
+      {
+        id: 'GT_006' as const,
+        nombre: 'Gestionar información sobre comisiones de planificación y seguimiento de la carrera',
+        responsable: 'Comisión de Seguimiento Curricular',
+        instrumento: 'Resolución de Designación (GT-006)',
+        ola: 'OLA 1 (Independiente)',
+        completada: false,
+        estado: 'Pendiente',
+      },
+    ];
+
+    if (!q) return actividades;
+    return actividades.filter(
+      (a) =>
+        a.nombre.toLowerCase().includes(q) ||
+        a.responsable.toLowerCase().includes(q) ||
+        a.instrumento.toLowerCase().includes(q)
+    );
+  });
+
   // Lista filtrada de asignaturas
   readonly asignaturasFiltradas = computed(() => {
     let lista = this.asignaturas();
@@ -121,6 +225,24 @@ export class EstructuraCurricularComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.route.queryParamMap.subscribe((params) => {
+      const pId = params.get('procesoId') || params.get('convocatoriaId');
+      if (pId) {
+        this.procesoId.set(pId);
+      }
+      const act = params.get('actividad');
+      if (
+        act === 'PLAN_FT001' ||
+        act === 'PROGRAMAS_84' ||
+        act === 'GT_007A' ||
+        act === 'GT_001' ||
+        act === 'FT_003' ||
+        act === 'GT_006'
+      ) {
+        this.actividadSeleccionada.set(act as ActividadCurricularTipo);
+      }
+    });
+
     this.cargarCarreras();
   }
 
@@ -159,6 +281,17 @@ export class EstructuraCurricularComponent implements OnInit {
         if (planes.length > 0) {
           const p = planes[0];
           this.planActivo.set(p);
+          this.formPlan.patchValue({
+            codigoResolucion: p.codigoResolucion,
+            anioAprobacion: p.anioAprobacion || 2024,
+            duracionAnios: p.duracionAnios || 5,
+            horasTotales: p.horasTotales || 3650,
+            horasPresenciales: p.horasPresenciales || 3650,
+            horasNoPresenciales: p.horasNoPresenciales || 0,
+            estructuraSintetica: p.estructuraSintetica || '',
+            instanciaFinalGraduacion: p.instanciaFinalGraduacion || '',
+            otraInformacion: p.otraInformacion || '',
+          });
           if (p.id) {
             this.cargarAsignaturasYProgramas(p.id);
           } else {
@@ -194,9 +327,57 @@ export class EstructuraCurricularComponent implements OnInit {
     });
   }
 
+  seleccionarActividad(tipo: ActividadCurricularTipo): void {
+    this.actividadSeleccionada.set(tipo);
+    this.searchQuery.set('');
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+  }
+
+  volverAlListado(): void {
+    this.actividadSeleccionada.set(null);
+    this.searchQuery.set('');
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+  }
+
   obtenerPrograma(asignaturaId?: string): ProgramaAnaliticoAsignatura | undefined {
     if (!asignaturaId) return undefined;
     return this.programas().find((p) => p.asignaturaPlanId === asignaturaId);
+  }
+
+  guardarDatosPlan(): void {
+    const plan = this.planActivo();
+    if (!plan?.id) return;
+
+    this.guardandoPlan.set(true);
+    const val = this.formPlan.value;
+    const dto: PlanEstudioFt001 = {
+      ...plan,
+      codigoResolucion: val.codigoResolucion || plan.codigoResolucion,
+      anioAprobacion: val.anioAprobacion || plan.anioAprobacion,
+      duracionAnios: val.duracionAnios || plan.duracionAnios,
+      horasTotales: val.horasTotales || plan.horasTotales,
+      horasPresenciales: val.horasPresenciales || plan.horasPresenciales,
+      horasNoPresenciales: val.horasNoPresenciales || plan.horasNoPresenciales,
+      estructuraSintetica: val.estructuraSintetica || plan.estructuraSintetica,
+      instanciaFinalGraduacion: val.instanciaFinalGraduacion || plan.instanciaFinalGraduacion,
+      otraInformacion: val.otraInformacion || plan.otraInformacion,
+    };
+
+    this.planService.actualizarPlan(plan.id, dto).subscribe({
+      next: (actualizado) => {
+        this.planActivo.set(actualizado);
+        this.guardandoPlan.set(false);
+        this.mostrarEditorPlan.set(false);
+        this.successMessage.set('Ficha de Plan de Estudios (FT-001) actualizada correctamente.');
+        setTimeout(() => this.successMessage.set(null), 3000);
+      },
+      error: (err) => {
+        this.errorMessage.set('Error al actualizar plan: ' + (err.error?.message || err.message));
+        this.guardandoPlan.set(false);
+      },
+    });
   }
 
   // --- Modal Subida de Programa PDF ---

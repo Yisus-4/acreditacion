@@ -3346,6 +3346,52 @@
                           <span>Gestionar en Autoevaluación (RG-005 / GT-003) &rarr;</span>
                         </a>
                       </div>
+                    } @else if (actDrawer.codigoActividad === '6.1' || actDrawer.codigoActividad === '6.2' || actDrawer.codigoActividad === '6.3' || actDrawer.codigoActividad === '6.4' || actDrawer.codigoActividad === '6.5' || actDrawer.nombre.toLowerCase().includes('ámbito') || actDrawer.nombre.toLowerCase().includes('ambito')) {
+                      <div class="drawer-acciones-box mt-md">
+                        <a
+                          class="btn-primario-accion w-full"
+                          style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: #6b4c5b;"
+                          [routerLink]="['/autoevaluacion/ambitos-formacion']"
+                          [queryParams]="{
+                            procesoId: convocatoria()?.id,
+                            actividad: actDrawer.codigoActividad === '6.1' ? 'MAESTRO_RG006' :
+                                       actDrawer.codigoActividad === '6.2' ? 'INTERNOS_FT008' :
+                                       actDrawer.codigoActividad === '6.3' ? 'EXTERNOS_FT009' :
+                                       actDrawer.codigoActividad === '6.4' ? 'DEMOSTRATIVAS_FT010' :
+                                       actDrawer.codigoActividad === '6.5' ? 'CAM_FT011' : 'MAESTRO_RG006'
+                          }"
+                          (click)="cerrarDrawer()"
+                        >
+                          <span>Gestionar en Ámbitos de Práctica (RG-006 / FT-008..011) &rarr;</span>
+                        </a>
+                      </div>
+                    } @else if (actDrawer.codigoActividad === '8.3' || actDrawer.codigoActividad === '8.4' || actDrawer.codigoActividad === '8.5' || actDrawer.nombre.toLowerCase().includes('plan de estudio') || actDrawer.nombre.toLowerCase().includes('programa analítico') || actDrawer.nombre.toLowerCase().includes('programas analíticos') || actDrawer.nombre.toLowerCase().includes('estructura curricular')) {
+                      <div class="drawer-acciones-box mt-md">
+                        <a
+                          class="btn-primario-accion w-full"
+                          style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: #6b4c5b;"
+                          [routerLink]="['/autoevaluacion/estructura-curricular']"
+                          [queryParams]="{
+                            procesoId: convocatoria()?.id,
+                            actividad: actDrawer.codigoActividad === '8.3' ? 'PLAN_FT001' :
+                                       actDrawer.codigoActividad === '8.4' ? 'PROGRAMAS_84' : 'ESTRUCTURA_FT003'
+                          }"
+                          (click)="cerrarDrawer()"
+                        >
+                          <span>Gestionar en Estructura Curricular (FT-001 / FT-003) &rarr;</span>
+                        </a>
+                      </div>
+                    } @else if (actDrawer.codigoActividad === '5.1' || actDrawer.codigoActividad === '5.2' || actDrawer.codigoActividad === '5.3' || actDrawer.nombre.toLowerCase().includes('convenio')) {
+                      <div class="drawer-acciones-box mt-md">
+                        <a
+                          class="btn-primario-accion w-full"
+                          style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: #6b4c5b;"
+                          [routerLink]="['/admin/convenios']"
+                          (click)="cerrarDrawer()"
+                        >
+                          <span>Gestionar en Maestro de Convenios (RG-007) &rarr;</span>
+                        </a>
+                      </div>
                     }
 
                     @if (canManage() && actDrawer.estado !== 'COMPLETADA') {

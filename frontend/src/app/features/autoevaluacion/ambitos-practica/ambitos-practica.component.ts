@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { SubnavAutoevaluacionComponent } from '../subnav-autoevaluacion/subnav-autoevaluacion.component';
 import { AmbitoPracticaService } from '../../../core/ambitos-practica/ambito-practica.service';
@@ -22,11 +23,19 @@ import { CarreraResponse } from '../../../core/estructura/estructura.types';
 import { AutoevaluacionService } from '../../../core/autoevaluacion/autoevaluacion.service';
 import { Inmueble } from '../../../core/autoevaluacion/autoevaluacion.models';
 
+export type ActividadAmbitoTipo =
+  | 'MAESTRO_RG006'
+  | 'INTERNOS_FT008'
+  | 'EXTERNOS_FT009'
+  | 'DEMOSTRATIVAS_FT010'
+  | 'CAM_FT011';
+
 @Component({
   selector: 'app-ambitos-practica',
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     FormsModule,
     ReactiveFormsModule,
     SubnavAutoevaluacionComponent,
@@ -40,6 +49,7 @@ export class AmbitosPracticaComponent implements OnInit {
   private readonly convenioService = inject(ConvenioService);
   private readonly estructuraService = inject(EstructuraService);
   private readonly autoevaluacionService = inject(AutoevaluacionService);
+  private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
 
   readonly ambitos = signal<AmbitoPractica[]>([]);
@@ -52,12 +62,16 @@ export class AmbitosPracticaComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
 
-  // Tabs de categoría
-  readonly tabActivo = signal<TipoCategoriaAmbito>('INTERNO');
+  // Navegación de Actividades
+  readonly actividadSeleccionada = signal<ActividadAmbitoTipo | null>(null);
+  readonly procesoId = signal<string | null>(null);
+  readonly filtroActividadesTexto = signal<string>('');
+
+  // Tabs de categoría en el modo Maestro RG-006
+  readonly tabCategoriaMaestro = signal<TipoCategoriaAmbito>('INTERNO');
   readonly searchQuery = signal<string>('');
 
-  // Modo: Maestro Institucional vs Snapshot de Carrera
-  readonly modoSnapshot = signal<boolean>(false);
+  // Selector de carrera para las fichas específicas (OLA 2)
   readonly carreraSeleccionadaId = signal<string>('');
 
   // Modal Alta / Modificación Maestro
@@ -81,6 +95,8 @@ export class AmbitosPracticaComponent implements OnInit {
     capacidadAlumnos: [null as number | null],
     disponibilidadHoraria: [''],
     actividadesDemostrativas: [''],
+    especiesAnimalesCultivos: [''],
+    numeroAnimales: [null as number | null],
     actividadAlumnoCam: [''],
     activo: [true],
   });
@@ -93,8 +109,76 @@ export class AmbitosPracticaComponent implements OnInit {
     observaciones: [''],
   });
 
-  readonly ambitosFiltrados = computed(() => {
-    let lista = this.ambitos().filter((a) => a.tipoCategoria === this.tabActivo());
+  // Lista oficial de 5 actividades de la dimensión
+  readonly listaActividadesDimension = computed(() => {
+    const q = this.filtroActividadesTexto().toLowerCase().trim();
+    const tieneAmbitos = this.ambitos().length > 0;
+    const tieneEvaluaciones = this.autoevaluaciones().length > 0;
+
+    const actividades = [
+      {
+        id: 'MAESTRO_RG006' as const,
+        nombre: 'Gestionar información sobre ámbitos de formación práctica y unidades demostrativas',
+        responsable: 'Comisión de Carrera / AEA / SGA',
+        instrumento: 'Formulario CONEAU (RG-006)',
+        ola: 'OLA 1 (Independiente)',
+        completada: tieneAmbitos,
+        estado: tieneAmbitos ? 'Completada' : 'Pendiente',
+      },
+      {
+        id: 'INTERNOS_FT008' as const,
+        nombre: 'Gestionar información de ámbitos de práctica internos de la carrera',
+        responsable: 'Director de Carrera / Comisión Curricular',
+        instrumento: 'Ficha FT-008: Registro de Laboratorios y Talleres',
+        ola: 'OLA 2 (Dependiente)',
+        dependencia: 'Requiere Ámbitos maestro (RG-006)',
+        completada: tieneEvaluaciones && this.tieneVinculacionTipo('INTERNO'),
+        estado: tieneEvaluaciones && this.tieneVinculacionTipo('INTERNO') ? 'Completada' : 'Pendiente',
+      },
+      {
+        id: 'EXTERNOS_FT009' as const,
+        nombre: 'Gestionar información de ámbitos de práctica externos de la carrera',
+        responsable: 'Secretaría de Extensión / Carrera',
+        instrumento: 'Ficha FT-009 y Convenios de Práctica (RG-007)',
+        ola: 'OLA 2 (Dependiente)',
+        dependencia: 'Requiere Ámbitos maestro (RG-006) y Convenios vigentes',
+        completada: tieneEvaluaciones && this.tieneVinculacionTipo('EXTERNO'),
+        estado: tieneEvaluaciones && this.tieneVinculacionTipo('EXTERNO') ? 'Completada' : 'Pendiente',
+      },
+      {
+        id: 'DEMOSTRATIVAS_FT010' as const,
+        nombre: 'Gestionar información de unidades demostrativas de la carrera',
+        responsable: 'Área Académica / Dirección de Escuela',
+        instrumento: 'Ficha FT-010: Campos Experimentales (Tilimuqui)',
+        ola: 'OLA 2 (Dependiente)',
+        dependencia: 'Requiere Ámbitos maestro (RG-006)',
+        completada: tieneEvaluaciones && this.tieneVinculacionTipo('UNIDAD_DEMOSTRATIVA'),
+        estado: tieneEvaluaciones && this.tieneVinculacionTipo('UNIDAD_DEMOSTRATIVA') ? 'Completada' : 'Pendiente',
+      },
+      {
+        id: 'CAM_FT011' as const,
+        nombre: 'Gestionar información de centros de atención médica (CAM) de la carrera',
+        responsable: 'Dirección CAM / Escuela de Salud / Director Carrera',
+        instrumento: 'Ficha FT-011: Habilitación Sanitaria y Convenios Médicos',
+        ola: 'OLA 2 (Dependiente)',
+        dependencia: 'Requiere Ámbitos maestro (RG-006) y Convenios hospitalarios',
+        completada: tieneEvaluaciones && this.tieneVinculacionTipo('CAM'),
+        estado: tieneEvaluaciones && this.tieneVinculacionTipo('CAM') ? 'Completada' : 'Pendiente',
+      },
+    ];
+
+    if (!q) return actividades;
+    return actividades.filter(
+      (a) =>
+        a.nombre.toLowerCase().includes(q) ||
+        a.responsable.toLowerCase().includes(q) ||
+        a.instrumento.toLowerCase().includes(q)
+    );
+  });
+
+  // Lista filtrada en el maestro RG-006
+  readonly ambitosMaestroFiltrados = computed(() => {
+    let lista = this.ambitos().filter((a) => a.tipoCategoria === this.tabCategoriaMaestro());
     const query = this.searchQuery().toLowerCase().trim();
     if (query) {
       lista = lista.filter(
@@ -108,7 +192,45 @@ export class AmbitosPracticaComponent implements OnInit {
     return lista;
   });
 
+  // Lista filtrada para la ficha de la carrera seleccionada
+  readonly ambitosCarreraFiltrados = computed(() => {
+    const act = this.actividadSeleccionada();
+    let tipo: TipoCategoriaAmbito = 'INTERNO';
+    if (act === 'EXTERNOS_FT009') tipo = 'EXTERNO';
+    if (act === 'DEMOSTRATIVAS_FT010') tipo = 'UNIDAD_DEMOSTRATIVA';
+    if (act === 'CAM_FT011') tipo = 'CAM';
+
+    let lista = this.ambitos().filter((a) => a.tipoCategoria === tipo);
+    const query = this.searchQuery().toLowerCase().trim();
+    if (query) {
+      lista = lista.filter(
+        (a) =>
+          a.denominacion?.toLowerCase().includes(query) ||
+          a.direccion?.toLowerCase().includes(query) ||
+          a.convenioNombre?.toLowerCase().includes(query)
+      );
+    }
+    return lista;
+  });
+
   ngOnInit(): void {
+    this.route.queryParamMap.subscribe((params) => {
+      const pId = params.get('procesoId') || params.get('convocatoriaId');
+      if (pId) {
+        this.procesoId.set(pId);
+      }
+      const act = params.get('actividad');
+      if (
+        act === 'MAESTRO_RG006' ||
+        act === 'INTERNOS_FT008' ||
+        act === 'EXTERNOS_FT009' ||
+        act === 'DEMOSTRATIVAS_FT010' ||
+        act === 'CAM_FT011'
+      ) {
+        this.actividadSeleccionada.set(act);
+      }
+    });
+
     this.cargarDatosIniciales();
   }
 
@@ -163,14 +285,38 @@ export class AmbitosPracticaComponent implements OnInit {
     });
   }
 
+  tieneVinculacionTipo(tipo: TipoCategoriaAmbito): boolean {
+    const idsDeTipo = this.ambitos()
+      .filter((a) => a.tipoCategoria === tipo)
+      .map((a) => a.id);
+    return this.autoevaluaciones().some(
+      (ae) => ae.utilizadoPorCarrera && idsDeTipo.includes(ae.ambitoPracticaId)
+    );
+  }
+
+  seleccionarActividad(tipo: ActividadAmbitoTipo): void {
+    this.actividadSeleccionada.set(tipo);
+    this.searchQuery.set('');
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+  }
+
+  volverAlListado(): void {
+    this.actividadSeleccionada.set(null);
+    this.searchQuery.set('');
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+  }
+
   onCarreraChange(event: Event): void {
     const select = event.target as HTMLSelectElement;
     this.carreraSeleccionadaId.set(select.value);
     this.cargarAutoevaluaciones();
   }
 
-  seleccionarTab(tipo: TipoCategoriaAmbito): void {
-    this.tabActivo.set(tipo);
+  seleccionarTabMaestro(tipo: TipoCategoriaAmbito): void {
+    this.tabCategoriaMaestro.set(tipo);
+    this.searchQuery.set('');
   }
 
   obtenerEvaluacion(ambitoId?: string): AutoevaluacionCarreraAmbito | undefined {
@@ -182,7 +328,7 @@ export class AmbitosPracticaComponent implements OnInit {
     this.ambitoSeleccionadoId.set(null);
     this.form.reset({
       denominacion: '',
-      tipoCategoria: this.tabActivo(),
+      tipoCategoria: this.tabCategoriaMaestro(),
       tipoAmbito: 'Laboratorio',
       descripcion: '',
       direccion: '',
@@ -192,6 +338,8 @@ export class AmbitosPracticaComponent implements OnInit {
       capacidadAlumnos: null,
       disponibilidadHoraria: '',
       actividadesDemostrativas: '',
+      especiesAnimalesCultivos: '',
+      numeroAnimales: null,
       actividadAlumnoCam: '',
       activo: true,
     });
@@ -212,6 +360,8 @@ export class AmbitosPracticaComponent implements OnInit {
       capacidadAlumnos: ambito.capacidadAlumnos || null,
       disponibilidadHoraria: ambito.disponibilidadHoraria || '',
       actividadesDemostrativas: ambito.actividadesDemostrativas || '',
+      especiesAnimalesCultivos: ambito.especiesAnimalesCultivos || '',
+      numeroAnimales: ambito.numeroAnimales || null,
       actividadAlumnoCam: ambito.actividadAlumnoCam || '',
       activo: ambito.activo ?? true,
     });
@@ -243,6 +393,8 @@ export class AmbitosPracticaComponent implements OnInit {
       capacidadAlumnos: formVal.capacidadAlumnos ? Number(formVal.capacidadAlumnos) : undefined,
       disponibilidadHoraria: formVal.disponibilidadHoraria || undefined,
       actividadesDemostrativas: formVal.actividadesDemostrativas || undefined,
+      especiesAnimalesCultivos: formVal.especiesAnimalesCultivos || undefined,
+      numeroAnimales: formVal.numeroAnimales ? Number(formVal.numeroAnimales) : undefined,
       actividadAlumnoCam: formVal.actividadAlumnoCam || undefined,
       activo: formVal.activo ?? true,
     };
@@ -265,7 +417,7 @@ export class AmbitosPracticaComponent implements OnInit {
     } else {
       this.ambitoService.crearAmbito(dto).subscribe({
         next: () => {
-          this.successMessage.set('Ámbito de práctica registrado en el padrón.');
+          this.successMessage.set('Ámbito de práctica registrado en el padrón maestro.');
           this.guardando.set(false);
           this.cerrarModal();
           this.cargarAmbitos();
@@ -333,6 +485,7 @@ export class AmbitosPracticaComponent implements OnInit {
     const val = this.formVinculacion.value;
     const dto: AutoevaluacionCarreraAmbito = {
       carreraId: carreraId,
+      procesoId: this.procesoId() || undefined,
       ambitoPracticaId: ambito.id,
       utilizadoPorCarrera: val.utilizadoPorCarrera ?? true,
       asignaturasVinculadas: val.asignaturasVinculadas || undefined,

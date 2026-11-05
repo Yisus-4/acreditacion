@@ -153,11 +153,20 @@ public class AutoevaluacionInfraestructuraController {
         if (request.provinciaId() != null) {
             provinciaRepository.findById(request.provinciaId()).ifPresent(entity::setProvincia);
         }
+        if (entity.getProvincia() == null) {
+            provinciaRepository.findAll().stream().findFirst().ifPresent(entity::setProvincia);
+        }
         if (request.departamentoId() != null) {
             departamentoRepository.findById(request.departamentoId()).ifPresent(entity::setDepartamentoGeografico);
         }
+        if (entity.getDepartamentoGeografico() == null) {
+            departamentoRepository.findAll().stream().findFirst().ifPresent(entity::setDepartamentoGeografico);
+        }
         if (request.localidadId() != null) {
             localidadRepository.findById(request.localidadId()).ifPresent(entity::setLocalidad);
+        }
+        if (entity.getLocalidad() == null) {
+            localidadRepository.findAll().stream().findFirst().ifPresent(entity::setLocalidad);
         }
 
         if (request.carrerasIds() != null && !request.carrerasIds().isEmpty()) {
@@ -173,8 +182,10 @@ public class AutoevaluacionInfraestructuraController {
                 EspacioFisicoJpaEntity esp = new EspacioFisicoJpaEntity();
                 esp.setId(UUID.randomUUID());
                 esp.setInmueble(guardado);
-                esp.setDenominacion(espReq.denominacion());
-                esp.setDescripcionInfraestructura(espReq.descripcionInfraestructura() != null ? espReq.descripcionInfraestructura() : espReq.denominacion());
+                String espDenom = (espReq.denominacion() != null && !espReq.denominacion().isBlank()) ? espReq.denominacion() :
+                        (espReq.descripcionInfraestructura() != null && !espReq.descripcionInfraestructura().isBlank() ? espReq.descripcionInfraestructura() : "Espacio Físico");
+                esp.setDenominacion(espDenom);
+                esp.setDescripcionInfraestructura(espReq.descripcionInfraestructura() != null ? espReq.descripcionInfraestructura() : espDenom);
                 esp.setCantidad(espReq.cantidad() != null ? espReq.cantidad() : 1);
                 int cap = espReq.capacidadPersonasSentadas() != null ? espReq.capacidadPersonasSentadas() :
                         (espReq.capacidadEstudiantes() != null ? espReq.capacidadEstudiantes() : 0);
@@ -205,8 +216,10 @@ public class AutoevaluacionInfraestructuraController {
                         sub.setInmueble(guardado);
                         sub.setEspacioPadre(esp);
                         sub.setTieneSubespacios(false); // Regla: subespacio no puede tener subespacios
-                        sub.setDenominacion(subReq.denominacion());
-                        sub.setDescripcionInfraestructura(subReq.descripcionInfraestructura() != null ? subReq.descripcionInfraestructura() : subReq.denominacion());
+                        String subDenom = (subReq.denominacion() != null && !subReq.denominacion().isBlank()) ? subReq.denominacion() :
+                                (subReq.descripcionInfraestructura() != null && !subReq.descripcionInfraestructura().isBlank() ? subReq.descripcionInfraestructura() : "Subespacio");
+                        sub.setDenominacion(subDenom);
+                        sub.setDescripcionInfraestructura(subReq.descripcionInfraestructura() != null ? subReq.descripcionInfraestructura() : subDenom);
                         sub.setCantidad(subReq.cantidad() != null ? subReq.cantidad() : 1);
                         int subCap = subReq.capacidadPersonasSentadas() != null ? subReq.capacidadPersonasSentadas() :
                                 (subReq.capacidadEstudiantes() != null ? subReq.capacidadEstudiantes() : 0);
@@ -339,8 +352,10 @@ public class AutoevaluacionInfraestructuraController {
                 }
                 esp.setInmueble(entity);
                 esp.setEspacioPadre(null);
-                esp.setDenominacion(espReq.denominacion());
-                esp.setDescripcionInfraestructura(espReq.descripcionInfraestructura() != null ? espReq.descripcionInfraestructura() : espReq.denominacion());
+                String espDenom = (espReq.denominacion() != null && !espReq.denominacion().isBlank()) ? espReq.denominacion() :
+                        (espReq.descripcionInfraestructura() != null && !espReq.descripcionInfraestructura().isBlank() ? espReq.descripcionInfraestructura() : "Espacio Físico");
+                esp.setDenominacion(espDenom);
+                esp.setDescripcionInfraestructura(espReq.descripcionInfraestructura() != null ? espReq.descripcionInfraestructura() : espDenom);
                 esp.setCantidad(espReq.cantidad() != null ? espReq.cantidad() : 1);
                 int cap = espReq.capacidadPersonasSentadas() != null ? espReq.capacidadPersonasSentadas() :
                         (espReq.capacidadEstudiantes() != null ? espReq.capacidadEstudiantes() : 0);
@@ -379,8 +394,10 @@ public class AutoevaluacionInfraestructuraController {
                         sub.setInmueble(entity);
                         sub.setEspacioPadre(esp);
                         sub.setTieneSubespacios(false);
-                        sub.setDenominacion(subReq.denominacion());
-                        sub.setDescripcionInfraestructura(subReq.descripcionInfraestructura() != null ? subReq.descripcionInfraestructura() : subReq.denominacion());
+                        String subDenom = (subReq.denominacion() != null && !subReq.denominacion().isBlank()) ? subReq.denominacion() :
+                                (subReq.descripcionInfraestructura() != null && !subReq.descripcionInfraestructura().isBlank() ? subReq.descripcionInfraestructura() : "Subespacio");
+                        sub.setDenominacion(subDenom);
+                        sub.setDescripcionInfraestructura(subReq.descripcionInfraestructura() != null ? subReq.descripcionInfraestructura() : subDenom);
                         sub.setCantidad(subReq.cantidad() != null ? subReq.cantidad() : 1);
                         int subCap = subReq.capacidadPersonasSentadas() != null ? subReq.capacidadPersonasSentadas() :
                                 (subReq.capacidadEstudiantes() != null ? subReq.capacidadEstudiantes() : 0);

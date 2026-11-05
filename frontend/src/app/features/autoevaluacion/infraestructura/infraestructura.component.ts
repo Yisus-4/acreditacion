@@ -903,9 +903,9 @@ export class InfraestructuraComponent implements OnInit {
         estadoConeau: e.estadoConeau || 'CARGADO',
         subespacios: e.subespacios ? e.subespacios.map((sub) => ({
           id: sub.id,
-          tipoEspacioId: sub.tipoEspacioId,
-          denominacion: sub.denominacion,
-          descripcionInfraestructura: sub.descripcionInfraestructura || sub.denominacion,
+          tipoEspacioId: sub.tipoEspacioId || e.tipoEspacioId,
+          denominacion: sub.denominacion || sub.descripcionInfraestructura || 'Subespacio',
+          descripcionInfraestructura: sub.descripcionInfraestructura || sub.denominacion || 'Subespacio',
           cantidad: sub.cantidad || 1,
           capacidadPersonasSentadas: sub.capacidadPersonasSentadas || sub.capacidadEstudiantes || 0,
           capacidadEstudiantes: sub.capacidadEstudiantes || 0,

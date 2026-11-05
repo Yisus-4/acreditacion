@@ -1,5 +1,45 @@
 <div class="vista-gestion-layout">
-  <app-subnav-autoevaluacion></app-subnav-autoevaluacion>
+  <!-- Barra de Navegación y Retorno (Atrás) - En la cabecera superior -->
+  <div class="nav-volver-bar" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      @if (actividadSeleccionada()) {
+        <button
+          type="button"
+          class="btn-volver-atras"
+          (click)="volverAlListado()"
+          style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px; font-weight: 500; color: #6b4c5b; background: #ffffff; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; transition: all 0.15s ease;"
+        >
+          <svg style="width: 16px; height: 16px;" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+          </svg>
+          <span>Volver al listado de actividades</span>
+        </button>
+      } @else {
+        <a
+          routerLink="/dashboard"
+          style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px; font-weight: 500; color: #4b5563; background: #ffffff; border: 1px solid #d1d5db; border-radius: 6px; text-decoration: none;"
+        >
+          <svg style="width: 16px; height: 16px;" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+          </svg>
+          <span>Volver al Inicio / Tablero</span>
+        </a>
+      }
+    </div>
+
+    @if (procesoId()) {
+      <div>
+        <a
+          [routerLink]="['/acreditacion/convocatorias', procesoId()]"
+          style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px; font-weight: 500; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; text-decoration: none;"
+        >
+          <span>Ir al Plan de Trabajo de la Carrera (PT-001) &rarr;</span>
+        </a>
+      </div>
+    }
+  </div>
+
+  <app-subnav-autoevaluacion seccionActual="Ámbitos de formación"></app-subnav-autoevaluacion>
 
   <!-- Mensajes de alerta -->
   @if (errorMessage()) {
@@ -16,228 +56,385 @@
     </div>
   }
 
-  <!-- Barra de Modo de Datos: Maestro vs Snapshot Carrera -->
-  <div class="modo-datos-bar">
-    <div class="modo-datos-left">
-      <span class="label-modo">Modo de datos:</span>
-      <div class="btn-group-modo">
-        <button
-          type="button"
-          class="btn-modo"
-          [class.active]="!modoSnapshot()"
-          (click)="modoSnapshot.set(false)"
-        >
-          Padrón Maestro Institucional (RG-006)
-        </button>
-        <button
-          type="button"
-          class="btn-modo"
-          [class.active]="modoSnapshot()"
-          (click)="modoSnapshot.set(true)"
-        >
-          Copia Autoevaluación Carrera (Snapshot)
-        </button>
-      </div>
-
-      @if (modoSnapshot()) {
-        <div class="carrera-selector-group">
-          <label for="carreraSelect">Carrera en Evaluación:</label>
-          <select
-            id="carreraSelect"
-            class="select-carrera"
-            [value]="carreraSeleccionadaId()"
-            (change)="onCarreraChange($event)"
-          >
-            @for (c of carreras(); track c.id) {
-              <option [value]="c.id">{{ c.nombre }}</option>
-            }
-          </select>
-        </div>
-      }
-    </div>
-
-    @if (modoSnapshot()) {
-      <div class="modo-datos-right">
-        <span class="badge-acreditacion">Actividad 4.2 / 4.3</span>
-      </div>
-    }
-  </div>
-
-  <!-- Tabs de Categoría CONEAU RG-006 -->
-  <div class="categoria-tabs-bar">
-    <button
-      type="button"
-      class="tab-btn"
-      [class.active]="tabActivo() === 'INTERNO'"
-      (click)="seleccionarTab('INTERNO')"
-    >
-      1. Internos (FT-008)
-    </button>
-    <button
-      type="button"
-      class="tab-btn"
-      [class.active]="tabActivo() === 'EXTERNO'"
-      (click)="seleccionarTab('EXTERNO')"
-    >
-      2. Externos con Convenio (FT-009)
-    </button>
-    <button
-      type="button"
-      class="tab-btn"
-      [class.active]="tabActivo() === 'UNIDAD_DEMOSTRATIVA'"
-      (click)="seleccionarTab('UNIDAD_DEMOSTRATIVA')"
-    >
-      3. Unidades Demostrativas (FT-010)
-    </button>
-    <button
-      type="button"
-      class="tab-btn"
-      [class.active]="tabActivo() === 'CAM'"
-      (click)="seleccionarTab('CAM')"
-    >
-      4. Centros de Atención Médica CAM (FT-011)
-    </button>
-  </div>
-
-  <!-- Toolbar de búsqueda y acción -->
-  <div class="vista-toolbar">
-    <div class="toolbar-left-group">
-      <div class="search-box-figma">
+  <!-- NIVEL 1: Listado Oficial de Actividades de la Dimensión -->
+  @if (!actividadSeleccionada()) {
+    <!-- Toolbar de Búsqueda de Actividades -->
+    <div class="vista-toolbar">
+      <div class="search-box-figma" style="flex: 1 1 360px;">
         <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
           <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
         </svg>
         <input
           type="text"
-          placeholder="Buscar ámbito de formación por nombre, ubicación o convenio..."
+          placeholder="Buscar actividad o procedimiento..."
+          [value]="filtroActividadesTexto()"
+          (input)="filtroActividadesTexto.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="toolbar-actions-right">
+        <span class="stats-count-figma">
+          {{ listaActividadesDimension().length }} actividades operativas
+        </span>
+      </div>
+    </div>
+
+    <!-- Tabla Oficial de Actividades de la Dimensión -->
+    <div class="tabla-figma-wrapper">
+      <table class="tabla-figma">
+        <thead>
+          <tr>
+            <th style="min-width: 340px;">Actividad Operativa</th>
+            <th style="min-width: 220px;">Responsable Sugerido</th>
+            <th style="min-width: 200px;">Normativa / Instrumento</th>
+            <th style="width: 130px;">Estado</th>
+            <th class="col-acciones" style="width: 140px;">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (act of listaActividadesDimension(); track act.id) {
+            <tr>
+              <td class="col-nombre">
+                <div style="display: flex; flex-direction: column; gap: 3px;">
+                  <strong>{{ act.nombre }}</strong>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <span class="badge-ola" [class.ola1]="act.id === 'MAESTRO_RG006'" [class.ola2]="act.id !== 'MAESTRO_RG006'">
+                      {{ act.ola }}
+                    </span>
+                    @if (act.dependencia) {
+                      <span style="font-size: 11.5px; color: #b45309; font-weight: 500;">
+                        {{ act.dependencia }}
+                      </span>
+                    }
+                  </div>
+                </div>
+              </td>
+              <td>{{ act.responsable }}</td>
+              <td>{{ act.instrumento }}</td>
+              <td>
+                <span
+                  [style.color]="act.completada ? '#166534' : '#5a4a53'"
+                  style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13.5px;"
+                >
+                  <span
+                    style="width: 7px; height: 7px; border-radius: 50%; display: inline-block;"
+                    [style.background-color]="act.completada ? '#166534' : '#5a4a53'"
+                  ></span>
+                  {{ act.completada ? 'Completada' : 'Pendiente' }}
+                </span>
+              </td>
+              <td class="col-acciones">
+                <button
+                  type="button"
+                  class="btn-nuevo-figma"
+                  style="padding: 6px 14px; font-size: 13px; background: #6b4c5b;"
+                  (click)="seleccionarActividad(act.id)"
+                >
+                  Gestionar
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- NIVEL 2A: Padrón Maestro Institucional de Ámbitos (RG-006 - OLA 1) -->
+  @if (actividadSeleccionada() === 'MAESTRO_RG006') {
+    <div class="banner-actividad-header">
+      <div>
+        <h2 style="font-size: 18px; font-weight: 700; color: #1f1a1d; margin: 0 0 4px 0;">
+          Padrón Maestro Institucional de Ámbitos de Formación Práctica (RG-006)
+        </h2>
+        <p style="margin: 0; font-size: 13.5px; color: #5a4a53;">
+          Relevamiento transversal administrado por SGA y DEA. Contiene todos los talleres, laboratorios, centros de simulación, predios demostrativos y convenios asistenciales de la UNdeC.
+        </p>
+      </div>
+    </div>
+
+    <!-- Tabs de Categoría CONEAU RG-006 -->
+    <div class="categoria-tabs-bar">
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="tabCategoriaMaestro() === 'INTERNO'"
+        (click)="seleccionarTabMaestro('INTERNO')"
+      >
+        1. Internos (FT-008)
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="tabCategoriaMaestro() === 'EXTERNO'"
+        (click)="seleccionarTabMaestro('EXTERNO')"
+      >
+        2. Externos con Convenio (FT-009)
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="tabCategoriaMaestro() === 'UNIDAD_DEMOSTRATIVA'"
+        (click)="seleccionarTabMaestro('UNIDAD_DEMOSTRATIVA')"
+      >
+        3. Unidades Demostrativas (FT-010)
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="tabCategoriaMaestro() === 'CAM'"
+        (click)="seleccionarTabMaestro('CAM')"
+      >
+        4. Centros de Atención Médica CAM (FT-011)
+      </button>
+    </div>
+
+    <!-- Toolbar de Búsqueda y Acción Nuevo Ámbito -->
+    <div class="vista-toolbar">
+      <div class="search-box-figma" style="flex: 1 1 360px;">
+        <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+        </svg>
+        <input
+          type="text"
+          placeholder="Buscar en el padrón maestro por denominación, dirección o convenio..."
           [value]="searchQuery()"
           (input)="searchQuery.set($any($event.target).value)"
         />
       </div>
-    </div>
 
-    <div class="toolbar-actions-right">
-      <span class="stats-count-figma">
-        {{ ambitosFiltrados().length }} registros
-      </span>
-      @if (!modoSnapshot()) {
+      <div class="toolbar-actions-right">
+        <span class="stats-count-figma">
+          {{ ambitosMaestroFiltrados().length }} ámbitos registrados
+        </span>
         <button class="btn-nuevo-figma" type="button" (click)="abrirModalNuevo()">
           + Nuevo Ámbito
         </button>
-      }
-    </div>
-  </div>
-
-  <!-- Tabla de Ámbitos -->
-  <div class="tabla-panel-figma">
-    <div class="tabla-header-coneau">
-      <div class="col-denominacion">Denominación del Ámbito</div>
-      <div class="col-referencia">
-        @if (tabActivo() === 'INTERNO') { Inmueble Institucional }
-        @else if (tabActivo() === 'EXTERNO' || tabActivo() === 'CAM') { Convenio Respaldo (RG-007) }
-        @else { Ubicación / Predio }
       </div>
-      <div class="col-equipamiento">Tipo / Detalle</div>
-      <div class="col-superficie">Superficie</div>
-      <div class="col-capacidad">Capacidad</div>
-      @if (modoSnapshot()) {
-        <div class="col-vinculacion">Uso en Carrera</div>
-      }
-      <div class="col-acciones">Acciones</div>
     </div>
 
-    @if (loading()) {
-      <div class="empty-state-figma">
-        <p>Cargando ámbitos de formación práctica...</p>
-      </div>
-    } @else if (ambitosFiltrados().length === 0) {
-      <div class="empty-state-figma">
-        <p>No se encontraron ámbitos registrados para esta categoría.</p>
+    <!-- Tabla Oficial del Padrón Maestro usando tabla-figma -->
+    @if (ambitosMaestroFiltrados().length === 0) {
+      <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
+        No se encontraron ámbitos registrados en esta categoría del padrón maestro.
       </div>
     } @else {
-      @for (a of ambitosFiltrados(); track a.id) {
-        @let evalCarrera = obtenerEvaluacion(a.id);
-        <div class="tabla-row-figma">
-          <div class="col-denominacion">
-            <span class="font-bold">{{ a.denominacion }}</span>
-            @if (a.descripcion) {
-              <span class="subtext-muted">{{ a.descripcion }}</span>
+      <div class="tabla-figma-wrapper">
+        <table class="tabla-figma">
+          <thead>
+            <tr>
+              <th style="min-width: 240px;">Denominación del Ámbito</th>
+              <th style="min-width: 220px;">
+                @if (tabCategoriaMaestro() === 'INTERNO') { Inmueble Institucional (RG-005) }
+                @else if (tabCategoriaMaestro() === 'EXTERNO' || tabCategoriaMaestro() === 'CAM') { Convenio de Respaldo (RG-007) }
+                @else { Ubicación / Predio }
+              </th>
+              <th style="min-width: 180px;">Tipo / Especialidad</th>
+              <th style="width: 100px;">Superficie</th>
+              <th style="width: 110px;">Capacidad</th>
+              <th style="width: 90px;">Estado</th>
+              <th class="col-acciones" style="width: 160px;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of ambitosMaestroFiltrados(); track a.id) {
+              <tr>
+                <td class="col-nombre">
+                  <strong>{{ a.denominacion }}</strong>
+                  @if (a.descripcion) {
+                    <span style="font-size: 11.5px; color: #6b7280; display: block;">{{ a.descripcion }}</span>
+                  }
+                </td>
+                <td>
+                  @if (tabCategoriaMaestro() === 'INTERNO') {
+                    <span>{{ a.inmuebleNombre || a.direccion || 'Sede Central' }}</span>
+                  } @else if (tabCategoriaMaestro() === 'EXTERNO' || tabCategoriaMaestro() === 'CAM') {
+                    @if (a.convenioNombre) {
+                      <strong>{{ a.convenioNombre }}</strong>
+                    } @else {
+                      <span style="color: #b45309; font-weight: 500;">Sin convenio asociado</span>
+                    }
+                  } @else {
+                    <span>{{ a.direccion || 'Campo Experimental Tilimuqui' }}</span>
+                  }
+                </td>
+                <td class="col-desc">
+                  {{ a.tipoAmbito || a.actividadesDemostrativas || a.actividadAlumnoCam || 'Estándar' }}
+                </td>
+                <td>
+                  {{ a.superficieM2 ? (a.superficieM2 + ' m²') : '-' }}
+                </td>
+                <td>
+                  {{ a.capacidadAlumnos ? (a.capacidadAlumnos + ' alumnos') : '-' }}
+                </td>
+                <td>
+                  <span class="badge-estado-figma" [class.activa]="a.activo" [class.inactiva]="!a.activo">
+                    {{ a.activo ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td class="col-acciones">
+                  <button
+                    type="button"
+                    class="btn-accion-icono"
+                    (click)="abrirModalEditar(a)"
+                    title="Modificar ámbito"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-accion-icono btn-peligro"
+                    (click)="eliminar(a)"
+                    title="Eliminar ámbito"
+                  >
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
             }
-          </div>
-
-          <div class="col-referencia">
-            @if (tabActivo() === 'INTERNO') {
-              <span>{{ a.inmuebleNombre || a.direccion || 'Sede Central' }}</span>
-            } @else if (tabActivo() === 'EXTERNO' || tabActivo() === 'CAM') {
-              @if (a.convenioNombre) {
-                <div class="convenio-ref">
-                  <span class="font-medium">{{ a.convenioNombre }}</span>
-                </div>
-              } @else {
-                <span class="text-warning font-medium">Sin convenio asociado</span>
-              }
-            } @else {
-              <span>{{ a.direccion || 'Campo Experimental Tilimuqui' }}</span>
-            }
-          </div>
-
-          <div class="col-equipamiento text-muted" [title]="a.tipoAmbito || a.actividadesDemostrativas || a.actividadAlumnoCam">
-            {{ a.tipoAmbito || a.actividadesDemostrativas || a.actividadAlumnoCam || 'Estándar' }}
-          </div>
-
-          <div class="col-superficie">
-            {{ a.superficieM2 ? (a.superficieM2 + ' m²') : '-' }}
-          </div>
-
-          <div class="col-capacidad">
-            {{ a.capacidadAlumnos ? (a.capacidadAlumnos + ' alumnos') : '-' }}
-          </div>
-
-          @if (modoSnapshot()) {
-            <div class="col-vinculacion">
-              @if (evalCarrera?.utilizadoPorCarrera) {
-                <span class="status-chip active">Utilizado</span>
-                @if (evalCarrera?.asignaturasVinculadas) {
-                  <span class="subtext-muted">{{ evalCarrera?.asignaturasVinculadas }}</span>
-                }
-              } @else {
-                <span class="status-chip inactive">No utilizado</span>
-              }
-            </div>
-          }
-
-          <div class="col-acciones">
-            @if (modoSnapshot()) {
-              <button
-                type="button"
-                class="btn-accion-icono"
-                title="Configurar uso en carrera"
-                (click)="abrirModalVinculacion(a)"
-              >
-                Vincular Carrera
-              </button>
-            } @else {
-              <button
-                type="button"
-                class="btn-accion-icono"
-                title="Modificar ámbito"
-                (click)="abrirModalEditar(a)"
-              >
-                Modificar
-              </button>
-              <button
-                type="button"
-                class="btn-accion-icono btn-eliminar-text"
-                title="Eliminar ámbito"
-                (click)="eliminar(a)"
-              >
-                Eliminar
-              </button>
-            }
-          </div>
-        </div>
-      }
+          </tbody>
+        </table>
+      </div>
     }
-  </div>
+  }
+
+  <!-- NIVEL 2B: Fichas de Carrera (OLA 2: FT-008, FT-009, FT-010, FT-011) -->
+  @if (actividadSeleccionada() && actividadSeleccionada() !== 'MAESTRO_RG006') {
+    <div class="banner-actividad-header">
+      <div style="flex: 1 1 500px;">
+        <h2 style="font-size: 18px; font-weight: 700; color: #1f1a1d; margin: 0 0 4px 0;">
+          @if (actividadSeleccionada() === 'INTERNOS_FT008') { Ficha FT-008: Ámbitos de Práctica Internos de la Carrera }
+          @else if (actividadSeleccionada() === 'EXTERNOS_FT009') { Ficha FT-009: Ámbitos de Práctica Externos de la Carrera }
+          @else if (actividadSeleccionada() === 'DEMOSTRATIVAS_FT010') { Ficha FT-010: Unidades Demostrativas de la Carrera }
+          @else if (actividadSeleccionada() === 'CAM_FT011') { Ficha FT-011: Centros de Atención Médica (CAM) de la Carrera }
+        </h2>
+        <p style="margin: 0; font-size: 13.5px; color: #5a4a53;">
+          Seleccione los ámbitos del padrón maestro institucional que utiliza la carrera, vincule las asignaturas curriculares y designe el docente responsable para la evaluación CONEAU.
+        </p>
+      </div>
+
+      <!-- Selector de Carrera -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label for="carreraSelect" style="font-size: 13px; font-weight: 600; color: #374151;">Carrera en Evaluación:</label>
+        <select
+          id="carreraSelect"
+          [value]="carreraSeleccionadaId()"
+          (change)="onCarreraChange($event)"
+          style="padding: 8px 12px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13.5px; background: #ffffff; color: #1f2937; font-weight: 500;"
+        >
+          @for (c of carreras(); track c.id) {
+            <option [value]="c.id">{{ c.nombre }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <!-- Advertencia de control crítico de convenios para Externos y CAM -->
+    @if (actividadSeleccionada() === 'EXTERNOS_FT009' || actividadSeleccionada() === 'CAM_FT011') {
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; border-radius: 8px; padding: 12px 18px; margin-bottom: 16px;">
+        <div style="font-weight: 700; color: #166534; font-size: 13.5px; margin-bottom: 2px;">
+          Control Crítico de Convenios (PRG-002 / RG-007)
+        </div>
+        <p style="margin: 0; font-size: 13px; color: #15803d; line-height: 1.4;">
+          Todo ámbito externo o centro médico asistencial debe contar con un convenio institucional vigente en el Registro de Convenios (RG-007) para ser computado en la acreditación de la carrera.
+        </p>
+      </div>
+    }
+
+    <!-- Toolbar de Búsqueda -->
+    <div class="vista-toolbar">
+      <div class="search-box-figma" style="flex: 1 1 360px;">
+        <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+        </svg>
+        <input
+          type="text"
+          placeholder="Buscar ámbito de la carrera..."
+          [value]="searchQuery()"
+          (input)="searchQuery.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="toolbar-actions-right">
+        <span class="stats-count-figma">
+          {{ ambitosCarreraFiltrados().length }} ámbitos disponibles en el padrón
+        </span>
+      </div>
+    </div>
+
+    <!-- Tabla Oficial de la Carrera usando tabla-figma -->
+    @if (ambitosCarreraFiltrados().length === 0) {
+      <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
+        No se encontraron ámbitos en esta categoría para vincular.
+      </div>
+    } @else {
+      <div class="tabla-figma-wrapper">
+        <table class="tabla-figma">
+          <thead>
+            <tr>
+              <th style="min-width: 240px;">Denominación del Ámbito</th>
+              <th style="min-width: 200px;">
+                @if (actividadSeleccionada() === 'INTERNOS_FT008') { Inmueble }
+                @else if (actividadSeleccionada() === 'EXTERNOS_FT009' || actividadSeleccionada() === 'CAM_FT011') { Convenio Respaldo (RG-007) }
+                @else { Ubicación }
+              </th>
+              <th style="width: 140px;">Uso en la Carrera</th>
+              <th>Asignaturas Vinculadas</th>
+              <th style="min-width: 180px;">Docente Responsable</th>
+              <th class="col-acciones" style="width: 150px;">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of ambitosCarreraFiltrados(); track a.id) {
+              @let evalCarrera = obtenerEvaluacion(a.id);
+              <tr>
+                <td class="col-nombre">
+                  <strong>{{ a.denominacion }}</strong>
+                  <span style="font-size: 11.5px; color: #6b7280; display: block;">
+                    {{ a.tipoAmbito || a.actividadesDemostrativas || a.actividadAlumnoCam || '' }}
+                  </span>
+                </td>
+                <td>
+                  @if (actividadSeleccionada() === 'INTERNOS_FT008') {
+                    <span>{{ a.inmuebleNombre || a.direccion || 'Sede Central' }}</span>
+                  } @else if (actividadSeleccionada() === 'EXTERNOS_FT009' || actividadSeleccionada() === 'CAM_FT011') {
+                    @if (a.convenioNombre) {
+                      <strong>{{ a.convenioNombre }}</strong>
+                    } @else {
+                      <span style="color: #b45309; font-weight: 500;">Sin convenio vigente</span>
+                    }
+                  } @else {
+                    <span>{{ a.direccion || 'Campo Tilimuqui' }}</span>
+                  }
+                </td>
+                <td>
+                  <span class="badge-estado-figma" [class.activa]="evalCarrera?.utilizadoPorCarrera" [class.inactiva]="!evalCarrera?.utilizadoPorCarrera">
+                    {{ evalCarrera?.utilizadoPorCarrera ? 'Utilizado' : 'No utilizado' }}
+                  </span>
+                </td>
+                <td class="col-desc">
+                  {{ evalCarrera?.asignaturasVinculadas || 'Sin asignaturas asociadas' }}
+                </td>
+                <td>
+                  {{ evalCarrera?.responsablePractica || 'No designado' }}
+                </td>
+                <td class="col-acciones">
+                  <button
+                    type="button"
+                    class="btn-nuevo-figma"
+                    style="padding: 6px 14px; font-size: 13px; background: #6b4c5b;"
+                    (click)="abrirModalVinculacion(a)"
+                  >
+                    {{ evalCarrera ? 'Editar Vinculación' : 'Vincular' }}
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
 </div>
 
 <!-- Modal de Alta / Modificación de Ámbito Maestro -->
@@ -324,6 +521,20 @@
           <textarea rows="3" formControlName="descripcion" placeholder="Estaciones totales, receptores GNSS, computadoras, instrumental..."></textarea>
         </div>
 
+        @if (form.get('tipoCategoria')?.value === 'UNIDAD_DEMOSTRATIVA') {
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Especies Animales / Cultivos</label>
+              <input type="text" formControlName="especiesAnimalesCultivos" placeholder="Ej: Bovinos, Caprinos, Olivo, Vid" />
+            </div>
+
+            <div class="form-group">
+              <label>Cantidad de Animales</label>
+              <input type="number" formControlName="numeroAnimales" placeholder="Ej: 50" />
+            </div>
+          </div>
+        }
+
         <div class="modal-footer">
           <button type="button" class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
           <button type="submit" class="btn-guardar" [disabled]="guardando()">
@@ -345,9 +556,9 @@
       </div>
 
       <form [formGroup]="formVinculacion" (ngSubmit)="guardarVinculacion()" class="modal-body">
-        <p class="ambito-desc-tag">
+        <div style="background: #f3f4f6; padding: 10px 14px; border-radius: 6px; font-size: 13.5px; color: #1f2937;">
           <strong>Ámbito:</strong> {{ ambitoParaVincular()?.denominacion }} ({{ ambitoParaVincular()?.tipoCategoria }})
-        </p>
+        </div>
 
         <div class="form-group checkbox-row">
           <label class="checkbox-container">

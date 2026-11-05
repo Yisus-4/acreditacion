@@ -1,5 +1,55 @@
 <div class="vista-gestion-layout">
-  <app-subnav-autoevaluacion></app-subnav-autoevaluacion>
+  <!-- Barra de Navegación y Retorno (Atrás) - En la cabecera superior -->
+  <div class="nav-volver-bar" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      @if (actividadSeleccionada()) {
+        <button
+          type="button"
+          class="btn-volver-atras"
+          (click)="volverAlListado()"
+          style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px; font-weight: 500; color: #6b4c5b; background: #ffffff; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; transition: all 0.15s ease;"
+        >
+          <svg style="width: 16px; height: 16px;" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+          </svg>
+          <span>Volver al listado de actividades</span>
+        </button>
+      } @else {
+        <a
+          routerLink="/dashboard"
+          style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px; font-weight: 500; color: #4b5563; background: #ffffff; border: 1px solid #d1d5db; border-radius: 6px; text-decoration: none;"
+        >
+          <svg style="width: 16px; height: 16px;" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+          </svg>
+          <span>Volver al Inicio / Tablero</span>
+        </a>
+      }
+    </div>
+
+    @if (procesoId()) {
+      <div>
+        <a
+          [routerLink]="['/acreditacion/convocatorias', procesoId()]"
+          style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px; font-weight: 500; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; text-decoration: none;"
+        >
+          <span>Ir al Plan de Trabajo de la Carrera (PT-001) &rarr;</span>
+        </a>
+      </div>
+    }
+  </div>
+
+  <app-subnav-autoevaluacion seccionActual="Estructura curricular"></app-subnav-autoevaluacion>
+
+  <!-- Banner de Requisitos de Secuenciamiento PRG-002 -->
+  <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px;">
+    <div style="font-weight: 700; color: #92400e; font-size: 14px; margin-bottom: 4px;">
+      Requisitos de Secuenciamiento PRG-002
+    </div>
+    <p style="margin: 0; font-size: 13.5px; color: #78350f; line-height: 1.4;">
+      La gestión de información de las asignaturas (FT-003) requiere como insumos previos la verificación bibliográfica de biblioteca (RG-014 / Actividad 4.4) y los cuadros de estudiantes y graduados (Actividad 9.1). A su vez, los programas analíticos digitalizados (Actividad 8.4) son el insumo bloqueador indispensable para Biblioteca.
+    </p>
+  </div>
 
   <!-- Mensajes de feedback -->
   @if (errorMessage()) {
@@ -16,69 +66,199 @@
     </div>
   }
 
-  <!-- Selector de Carrera y Plan -->
-  <div class="plan-header-card">
-    <div class="plan-header-left">
-      <div class="selector-field">
-        <label for="carreraSelect">Carrera de Grado:</label>
-        <select
-          id="carreraSelect"
-          class="select-carrera-top"
-          [value]="carreraSeleccionadaId()"
-          (change)="onCarreraChange($event)"
-        >
-          @for (c of carreras(); track c.id) {
-            <option [value]="c.id">{{ c.nombre }}</option>
+  <!-- NIVEL 1: Listado Oficial de Actividades de la Dimensión -->
+  @if (!actividadSeleccionada()) {
+    <!-- Toolbar de Búsqueda de Actividades -->
+    <div class="vista-toolbar">
+      <div class="search-box-figma" style="flex: 1 1 360px;">
+        <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+        </svg>
+        <input
+          type="text"
+          placeholder="Buscar actividad curricular..."
+          [value]="filtroActividadesTexto()"
+          (input)="filtroActividadesTexto.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="toolbar-actions-right">
+        <span class="stats-count-figma">
+          {{ listaActividadesDimension().length }} actividades operativas
+        </span>
+      </div>
+    </div>
+
+    <!-- Tabla Oficial de Actividades de la Dimensión -->
+    <div class="tabla-figma-wrapper">
+      <table class="tabla-figma">
+        <thead>
+          <tr>
+            <th style="min-width: 340px;">Actividad Operativa</th>
+            <th style="min-width: 220px;">Responsable Sugerido</th>
+            <th style="min-width: 200px;">Normativa / Instrumento</th>
+            <th style="width: 140px;">Estado</th>
+            <th class="col-acciones" style="width: 140px;">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (act of listaActividadesDimension(); track act.id) {
+            <tr>
+              <td class="col-nombre">
+                <div style="display: flex; flex-direction: column; gap: 3px;">
+                  <strong>{{ act.nombre }}</strong>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <span class="badge-ola" [class.ola1]="act.id === 'PLAN_FT001' || act.id === 'PROGRAMAS_84' || act.id === 'GT_007A' || act.id === 'GT_001' || act.id === 'GT_006'" [class.ola3]="act.id === 'FT_003'">
+                      {{ act.ola }}
+                    </span>
+                    @if (act.dependencia) {
+                      <span style="font-size: 11.5px; color: #b45309; font-weight: 500;">
+                        {{ act.dependencia }}
+                      </span>
+                    }
+                  </div>
+                </div>
+              </td>
+              <td>{{ act.responsable }}</td>
+              <td>{{ act.instrumento }}</td>
+              <td>
+                <span
+                  [style.color]="act.completada ? '#166534' : '#5a4a53'"
+                  style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13.5px;"
+                >
+                  <span
+                    style="width: 7px; height: 7px; border-radius: 50%; display: inline-block;"
+                    [style.background-color]="act.completada ? '#166534' : '#5a4a53'"
+                  ></span>
+                  {{ act.estado }}
+                </span>
+              </td>
+              <td class="col-acciones">
+                <button
+                  type="button"
+                  class="btn-nuevo-figma"
+                  style="padding: 6px 14px; font-size: 13px; background: #6b4c5b;"
+                  (click)="seleccionarActividad(act.id)"
+                >
+                  Gestionar
+                </button>
+              </td>
+            </tr>
           }
-        </select>
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- NIVEL 2A: Ficha de Plan de Estudio (FT-001 - OLA 1) -->
+  @if (actividadSeleccionada() === 'PLAN_FT001') {
+    <!-- Selector de Carrera y Cabecera del Plan -->
+    <div class="plan-header-card">
+      <div class="plan-header-left">
+        <div class="selector-field">
+          <label for="carreraSelect">Carrera de Grado:</label>
+          <select
+            id="carreraSelect"
+            class="select-carrera-top"
+            [value]="carreraSeleccionadaId()"
+            (change)="onCarreraChange($event)"
+          >
+            @for (c of carreras(); track c.id) {
+              <option [value]="c.id">{{ c.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        @if (planActivo(); as plan) {
+          <div class="plan-info-badges">
+            <span class="badge-plan-title">Plan de Estudios Oficial (FT-001)</span>
+            <span class="badge-plan-res">{{ plan.codigoResolucion }}</span>
+            <span class="badge-plan-meta">{{ plan.duracionAnios }} años / {{ plan.horasTotales }} horas reloj totales</span>
+          </div>
+        }
       </div>
 
       @if (planActivo(); as plan) {
-        <div class="plan-info-badges">
-          <span class="badge-plan-title">Plan de Estudios Oficial (FT-001)</span>
-          <span class="badge-plan-res">{{ plan.codigoResolucion }}</span>
-          <span class="badge-plan-meta">{{ plan.duracionAnios }} años / {{ plan.horasTotales }} horas totales</span>
+        <div class="plan-header-right">
+          <div class="stat-bubble">
+            <span class="stat-value">200 hs</span>
+            <span class="stat-label">PPS (Práctica Prof.)</span>
+          </div>
+          <div class="stat-bubble">
+            <span class="stat-value">180 hs</span>
+            <span class="stat-label">Trabajo Final</span>
+          </div>
+          <button
+            type="button"
+            class="btn-modo-activo"
+            style="padding: 8px 14px; border-radius: 6px; font-size: 13px; cursor: pointer;"
+            (click)="mostrarEditorPlan.set(!mostrarEditorPlan())"
+          >
+            {{ mostrarEditorPlan() ? 'Ocultar Ficha Técnica' : 'Editar Ficha FT-001' }}
+          </button>
         </div>
       }
     </div>
 
-    @if (planActivo(); as plan) {
-      <div class="plan-header-right">
-        <div class="stat-bubble">
-          <span class="stat-value">200 hs</span>
-          <span class="stat-label">PPS (Práctica Prof.)</span>
-        </div>
-        <div class="stat-bubble">
-          <span class="stat-value">180 hs</span>
-          <span class="stat-label">Trabajo Final</span>
-        </div>
+    <!-- Panel Editor de Ficha FT-001 (Datos del Word) -->
+    @if (mostrarEditorPlan() && planActivo()) {
+      <div class="editor-ft001-box">
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1f1a1d; font-weight: 700;">
+          Datos Oficiales de la Ficha del Plan de Estudios (FT-001)
+        </h3>
+        <form [formGroup]="formPlan" (ngSubmit)="guardarDatosPlan()">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Código y Norma de Aprobación *</label>
+              <input type="text" formControlName="codigoResolucion" placeholder="Ej: Ordenanza HCS 015/24" />
+            </div>
+
+            <div class="form-group">
+              <label>Año de Aprobación / Implementación</label>
+              <input type="number" formControlName="anioAprobacion" />
+            </div>
+          </div>
+
+          <div class="form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 12px;">
+            <div class="form-group">
+              <label>Duración (años)</label>
+              <input type="number" formControlName="duracionAnios" />
+            </div>
+            <div class="form-group">
+              <label>Horas Presenciales</label>
+              <input type="number" formControlName="horasPresenciales" />
+            </div>
+            <div class="form-group">
+              <label>Horas Totales</label>
+              <input type="number" formControlName="horasTotales" />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 12px;">
+            <label>Estructura Sintética del Plan de Estudios (Texto Ordenado)</label>
+            <textarea rows="3" formControlName="estructuraSintetica" placeholder="Descripción resumida de la trayectoria formativa, ciclos y perfil de egreso..."></textarea>
+          </div>
+
+          <div class="form-group" style="margin-top: 12px;">
+            <label>Instancia Final de Graduación y Práctica Profesional Supervisada (PPS)</label>
+            <textarea rows="2" formControlName="instanciaFinalGraduacion" placeholder="Detalle de PPS (200 hs) y Trabajo Final de Graduación (180 hs)..."></textarea>
+          </div>
+
+          <div class="form-group" style="margin-top: 12px;">
+            <label>Requisitos Extracurriculares / Otra Información (ej. Idioma Inglés)</label>
+            <input type="text" formControlName="otraInformacion" placeholder="Ej: Acreditación de suficiencia de idioma inglés nivel B1 previo a cursar 4to año" />
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px;">
+            <button type="button" class="btn-cancelar" (click)="mostrarEditorPlan.set(false)">Cancelar</button>
+            <button type="submit" class="btn-guardar" [disabled]="guardandoPlan()">
+              {{ guardandoPlan() ? 'Guardando...' : 'Guardar Cambios FT-001' }}
+            </button>
+          </div>
+        </form>
       </div>
     }
-  </div>
 
-  <!-- Tabs Principales: FT-001 vs Programas 8.4 -->
-  <div class="categoria-tabs-bar">
-    <button
-      type="button"
-      class="tab-btn"
-      [class.active]="tabPrincipal() === 'PLAN_FT001'"
-      (click)="tabPrincipal.set('PLAN_FT001')"
-    >
-      1. Plan de Estudio y Estructura Curricular (FT-001)
-    </button>
-    <button
-      type="button"
-      class="tab-btn"
-      [class.active]="tabPrincipal() === 'PROGRAMAS_84'"
-      (click)="tabPrincipal.set('PROGRAMAS_84')"
-    >
-      2. Programas Analíticos en PDF (Actividad 8.4)
-      <span class="counter-pill">{{ programasCargadosCount() }}/{{ asignaturas().length }}</span>
-    </button>
-  </div>
-
-  <!-- VISTA 1: Plan de Estudio FT-001 -->
-  @if (tabPrincipal() === 'PLAN_FT001') {
     <!-- Tarjetas de Horas por Ciclo de Formación -->
     <div class="ciclos-summary-grid">
       <div class="ciclo-card cbi">
@@ -106,7 +286,7 @@
     <!-- Toolbar de filtros de Asignaturas -->
     <div class="vista-toolbar">
       <div class="toolbar-left-group">
-        <div class="search-box-figma">
+        <div class="search-box-figma" style="flex: 1 1 320px;">
           <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
           </svg>
@@ -119,9 +299,9 @@
         </div>
 
         <select
-          class="select-institucion-figma"
           [value]="filtroAnio()"
           (change)="filtroAnio.set($any($event.target).value)"
+          style="padding: 10px 14px; border: 1px solid var(--border-color, #e5e7eb); border-radius: var(--radius-md, 8px); background: #ffffff; font-size: 14px; color: var(--color-text, #1f1a1d);"
         >
           <option value="TODOS">Todos los años (1º a 5º)</option>
           <option value="1º">1º Año</option>
@@ -132,9 +312,9 @@
         </select>
 
         <select
-          class="select-institucion-figma"
           [value]="filtroCiclo()"
           (change)="filtroCiclo.set($any($event.target).value)"
+          style="padding: 10px 14px; border: 1px solid var(--border-color, #e5e7eb); border-radius: var(--radius-md, 8px); background: #ffffff; font-size: 14px; color: var(--color-text, #1f1a1d);"
         >
           <option value="TODOS">Todos los ciclos</option>
           <option value="C.B.I.">C.B.I. (Básicas)</option>
@@ -151,54 +331,55 @@
       </div>
     </div>
 
-    <!-- Tabla Curricular FT-001 -->
-    <div class="tabla-panel-figma">
-      <div class="tabla-header-coneau">
-        <div class="col-cod">Cód.</div>
-        <div class="col-materia">Asignatura / Actividad Curricular</div>
-        <div class="col-anio">Año</div>
-        <div class="col-ciclo">Ciclo</div>
-        <div class="col-hs">Hs Tot.</div>
-        <div class="col-correlativas">Régimen y Correlatividades</div>
+    <!-- Tabla Oficial de Asignaturas FT-001 usando tabla-figma -->
+    @if (asignaturasFiltradas().length === 0) {
+      <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
+        No se encontraron asignaturas con los filtros actuales.
       </div>
-
-      @if (loading()) {
-        <div class="empty-state-figma">
-          <p>Cargando estructura curricular...</p>
-        </div>
-      } @else if (asignaturasFiltradas().length === 0) {
-        <div class="empty-state-figma">
-          <p>No se encontraron asignaturas con los filtros actuales.</p>
-        </div>
-      } @else {
-        @for (a of asignaturasFiltradas(); track a.id) {
-          <div class="tabla-row-figma">
-            <div class="col-cod font-bold">
-              {{ a.codigo || ('#' + a.numeroOrden) }}
-            </div>
-            <div class="col-materia font-medium">
-              {{ a.nombre }}
-            </div>
-            <div class="col-anio">
-              {{ a.subgrupo }}
-            </div>
-            <div class="col-ciclo">
-              <span class="ciclo-badge-sm" [attr.data-ciclo]="a.grupo">{{ a.grupo }}</span>
-            </div>
-            <div class="col-hs font-bold">
-              {{ a.horasReloj }} hs
-            </div>
-            <div class="col-correlativas text-muted" [title]="a.correlativas || 'Sin correlatividades'">
-              {{ a.correlativas || 'Sin correlatividades previas' }}
-            </div>
-          </div>
-        }
-      }
-    </div>
+    } @else {
+      <div class="tabla-figma-wrapper">
+        <table class="tabla-figma">
+          <thead>
+            <tr>
+              <th style="width: 80px;">Cód.</th>
+              <th style="min-width: 260px;">Asignatura / Actividad Curricular</th>
+              <th style="width: 80px; text-align: center;">Año</th>
+              <th style="width: 100px;">Ciclo</th>
+              <th style="width: 100px;">Hs Reloj</th>
+              <th>Régimen y Correlatividades</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of asignaturasFiltradas(); track a.id) {
+              <tr>
+                <td class="col-nombre font-bold">
+                  {{ a.codigo || ('#' + a.numeroOrden) }}
+                </td>
+                <td>
+                  <strong>{{ a.nombre }}</strong>
+                </td>
+                <td style="text-align: center;">
+                  {{ a.subgrupo }}
+                </td>
+                <td>
+                  <span class="ciclo-badge-sm" [attr.data-ciclo]="a.grupo">{{ a.grupo }}</span>
+                </td>
+                <td class="font-bold">
+                  {{ a.horasReloj }} hs
+                </td>
+                <td class="col-desc">
+                  {{ a.correlativas || 'Sin correlatividades previas' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
   }
 
-  <!-- VISTA 2: Programas Analíticos (Actividad 8.4) -->
-  @if (tabPrincipal() === 'PROGRAMAS_84') {
+  <!-- NIVEL 2B: Programas Analíticos en PDF (Actividad 8.4 - OLA 1) -->
+  @if (actividadSeleccionada() === 'PROGRAMAS_84') {
     <!-- Banner de Requisitos PRG-002 y Progreso -->
     <div class="requisito-prg002-box">
       <div class="box-text">
@@ -230,7 +411,7 @@
     <!-- Toolbar de Programas Analíticos -->
     <div class="vista-toolbar">
       <div class="toolbar-left-group">
-        <div class="search-box-figma">
+        <div class="search-box-figma" style="flex: 1 1 320px;">
           <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
           </svg>
@@ -243,9 +424,9 @@
         </div>
 
         <select
-          class="select-institucion-figma"
           [value]="filtroAnio()"
           (change)="filtroAnio.set($any($event.target).value)"
+          style="padding: 10px 14px; border: 1px solid var(--border-color, #e5e7eb); border-radius: var(--radius-md, 8px); background: #ffffff; font-size: 14px; color: var(--color-text, #1f1a1d);"
         >
           <option value="TODOS">Todos los años</option>
           <option value="1º">1º Año</option>
@@ -263,71 +444,112 @@
       </div>
     </div>
 
-    <!-- Tabla de Programas Analíticos -->
-    <div class="tabla-panel-figma">
-      <div class="tabla-header-coneau">
-        <div class="col-cod">Cód.</div>
-        <div class="col-materia">Asignatura</div>
-        <div class="col-anio">Año</div>
-        <div class="col-estado-prog">Estado Programa</div>
-        <div class="col-resolucion">Resolución Aprobatoria</div>
-        <div class="col-archivo">Archivo Digital PDF</div>
-        <div class="col-acciones-prog">Acciones</div>
-      </div>
-
-      @for (a of asignaturasFiltradas(); track a.id) {
-        @let prog = obtenerPrograma(a.id);
-        <div class="tabla-row-figma">
-          <div class="col-cod font-bold">
-            {{ a.codigo || ('#' + a.numeroOrden) }}
-          </div>
-          <div class="col-materia font-medium">
-            {{ a.nombre }}
-          </div>
-          <div class="col-anio">
-            {{ a.subgrupo }}
-          </div>
-          <div class="col-estado-prog">
-            @if (prog?.estadoCarga === 'CARGADO') {
-              <span class="status-chip active">Cargado</span>
-            } @else {
-              <span class="status-chip inactive">Pendiente</span>
-            }
-          </div>
-          <div class="col-resolucion">
-            {{ prog?.resolucionAprobacion || 'Sin resolución' }}
-          </div>
-          <div class="col-archivo">
-            @if (prog?.archivoNombre) {
-              <span class="archivo-link" (click)="descargarPdf(prog!)" title="Descargar PDF">
-                {{ prog?.archivoNombre }}
-              </span>
-            } @else {
-              <span class="text-muted">No cargado</span>
-            }
-          </div>
-          <div class="col-acciones-prog">
-            <button
-              type="button"
-              class="btn-accion-icono"
-              (click)="abrirModalSubir(a)"
-            >
-              {{ prog ? 'Actualizar PDF' : 'Subir Programa' }}
-            </button>
-            @if (prog?.archivoNombre) {
-              <button
-                type="button"
-                class="btn-accion-icono btn-descarga"
-                (click)="descargarPdf(prog!)"
-                title="Descargar archivo PDF"
-              >
-                Descargar
-              </button>
-            }
-          </div>
-        </div>
-      }
+    <!-- Tabla Oficial de Programas Analíticos usando tabla-figma -->
+    <div class="tabla-figma-wrapper">
+      <table class="tabla-figma">
+        <thead>
+          <tr>
+            <th style="width: 80px;">Cód.</th>
+            <th style="min-width: 260px;">Asignatura</th>
+            <th style="width: 80px; text-align: center;">Año</th>
+            <th style="width: 120px;">Estado</th>
+            <th style="min-width: 180px;">Resolución Aprobatoria</th>
+            <th>Archivo Digital PDF</th>
+            <th class="col-acciones" style="width: 200px;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of asignaturasFiltradas(); track a.id) {
+            @let prog = obtenerPrograma(a.id);
+            <tr>
+              <td class="col-nombre font-bold">
+                {{ a.codigo || ('#' + a.numeroOrden) }}
+              </td>
+              <td>
+                <strong>{{ a.nombre }}</strong>
+              </td>
+              <td style="text-align: center;">
+                {{ a.subgrupo }}
+              </td>
+              <td>
+                <span class="badge-estado-figma" [class.activa]="prog?.estadoCarga === 'CARGADO'" [class.inactiva]="prog?.estadoCarga !== 'CARGADO'">
+                  {{ prog?.estadoCarga === 'CARGADO' ? 'Cargado' : 'Pendiente' }}
+                </span>
+              </td>
+              <td>
+                {{ prog?.resolucionAprobacion || 'Sin resolución' }}
+              </td>
+              <td class="col-desc">
+                @if (prog?.archivoNombre) {
+                  <span class="archivo-link" (click)="descargarPdf(prog!)" title="Descargar PDF">
+                    {{ prog?.archivoNombre }}
+                  </span>
+                } @else {
+                  <span style="color: #6b7280;">No cargado</span>
+                }
+              </td>
+              <td class="col-acciones">
+                <button
+                  type="button"
+                  class="btn-nuevo-figma"
+                  style="padding: 6px 12px; font-size: 12.5px; background: #6b4c5b;"
+                  (click)="abrirModalSubir(a)"
+                >
+                  {{ prog ? 'Actualizar PDF' : 'Subir Programa' }}
+                </button>
+                @if (prog?.archivoNombre) {
+                  <button
+                    type="button"
+                    class="btn-accion-icono"
+                    style="color: #2563eb;"
+                    (click)="descargarPdf(prog!)"
+                    title="Descargar archivo PDF"
+                  >
+                    Descargar
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
     </div>
+  }
+
+  <!-- NIVEL 2C: Otras Actividades Curriculares Informativas -->
+  @if (
+    actividadSeleccionada() &&
+    actividadSeleccionada() !== 'PLAN_FT001' &&
+    actividadSeleccionada() !== 'PROGRAMAS_84'
+  ) {
+    <div class="banner-actividad-header">
+      <div>
+        <h2 style="font-size: 18px; font-weight: 700; color: #1f1a1d; margin: 0 0 6px 0;">
+          @if (actividadSeleccionada() === 'GT_007A') { Mecanismos e Instancias de Gestión y Seguimiento de la Carrera (GT-007A) }
+          @else if (actividadSeleccionada() === 'GT_001') { Organización y Gestión de la Carrera (GT-001) }
+          @else if (actividadSeleccionada() === 'FT_003') { Autoevaluación e Información de las Asignaturas (FT-003) }
+          @else if (actividadSeleccionada() === 'GT_006') { Comisiones de Planificación y Seguimiento Curricular (GT-006) }
+        </h2>
+        <p style="margin: 0; font-size: 13.5px; color: #5a4a53; line-height: 1.5;">
+          Esta actividad corresponde a la recolección de instrumentos metodológicos y actas reglamentarias según el procedimiento PRG-002.
+        </p>
+      </div>
+    </div>
+
+    @if (actividadSeleccionada() === 'FT_003') {
+      <div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #dc2626; border-radius: 8px; padding: 16px 20px;">
+        <h4 style="margin: 0 0 6px 0; font-size: 14.5px; color: #991b1b; font-weight: 700;">
+          Actividad Bloqueada por Precedencias Lógicas (OLA 3)
+        </h4>
+        <p style="margin: 0; font-size: 13px; color: #7f1d1d; line-height: 1.5;">
+          Para completar las fichas de autoevaluación de asignaturas (FT-003) por parte del equipo docente, se requiere primero finalizar la verificación bibliográfica de Biblioteca (Actividad 4.4 / RG-014) y la consolidación de cohortes de alumnos y graduados por parte de la Secretaría Académica (Actividad 9.1).
+        </p>
+      </div>
+    } @else {
+      <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
+        Espacio de carga documental habilitado para resoluciones rectorales, manuales de procedimiento y actas reglamentarias de la carrera.
+      </div>
+    }
   }
 </div>
 
@@ -341,9 +563,9 @@
       </div>
 
       <form [formGroup]="formSubida" (ngSubmit)="guardarPrograma()" class="modal-body">
-        <p class="ambito-desc-tag">
-          <strong>Asignatura:</strong> {{ asignaturaSeleccionada()?.codigo }} — {{ asignaturaSeleccionada()?.nombre }} ({{ asignaturaSeleccionada()?.subgrupo }})
-        </p>
+        <div style="background: #f3f4f6; padding: 10px 14px; border-radius: 6px; font-size: 13.5px; color: #1f2937;">
+          <strong>Asignatura:</strong> {{ asignaturaSeleccionada()?.codigo || ('#' + asignaturaSeleccionada()?.numeroOrden) }} — {{ asignaturaSeleccionada()?.nombre }} ({{ asignaturaSeleccionada()?.subgrupo }})
+        </div>
 
         <div class="form-group">
           <label>Archivo del Programa Analítico (PDF) *</label>
@@ -358,7 +580,7 @@
               @if (archivoSeleccionado()) {
                 <strong>Archivo seleccionado:</strong> {{ archivoSeleccionado()?.name }}
               } @else {
-                Seleccionar o arrastrar archivo PDF del programa vigente
+                Seleccionar o arrastrar archivo PDF del programa analítico vigente
               }
             </span>
           </div>
