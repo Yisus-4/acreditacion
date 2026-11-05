@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -119,10 +120,10 @@ public class InmuebleJpaEntity {
     private Set<CarreraJpaEntity> carreras = new HashSet<>();
 
     @OneToMany(mappedBy = "inmueble", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<EspacioFisicoJpaEntity> espacios = new ArrayList<>();
+    private Set<EspacioFisicoJpaEntity> espacios = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "inmueble", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<InmuebleDocumentacionRespaldoJpaEntity> documentos = new ArrayList<>();
+    private Set<InmuebleDocumentacionRespaldoJpaEntity> documentos = new LinkedHashSet<>();
 
     public InmuebleJpaEntity() {
     }
@@ -359,19 +360,19 @@ public class InmuebleJpaEntity {
         this.carreras = carreras;
     }
 
-    public List<EspacioFisicoJpaEntity> getEspacios() {
+    public Set<EspacioFisicoJpaEntity> getEspacios() {
         return espacios;
     }
 
-    public void setEspacios(List<EspacioFisicoJpaEntity> espacios) {
+    public void setEspacios(Set<EspacioFisicoJpaEntity> espacios) {
         this.espacios = espacios;
     }
 
-    public List<InmuebleDocumentacionRespaldoJpaEntity> getDocumentos() {
+    public Set<InmuebleDocumentacionRespaldoJpaEntity> getDocumentos() {
         return documentos;
     }
 
-    public void setDocumentos(List<InmuebleDocumentacionRespaldoJpaEntity> documentos) {
+    public void setDocumentos(Set<InmuebleDocumentacionRespaldoJpaEntity> documentos) {
         this.documentos = documentos;
     }
 }

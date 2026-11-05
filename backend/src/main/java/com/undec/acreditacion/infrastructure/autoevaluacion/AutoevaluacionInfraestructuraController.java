@@ -191,6 +191,9 @@ public class AutoevaluacionInfraestructuraController {
                 if (espReq.tipoEspacioId() != null) {
                     tipoEspacioRepository.findById(espReq.tipoEspacioId()).ifPresent(esp::setTipoEspacio);
                 }
+                if (esp.getTipoEspacio() == null) {
+                    tipoEspacioRepository.findAll().stream().findFirst().ifPresent(esp::setTipoEspacio);
+                }
                 espacioFisicoRepository.save(esp);
                 guardado.getEspacios().add(esp);
 
@@ -217,6 +220,12 @@ public class AutoevaluacionInfraestructuraController {
                         sub.setCreadoEn(Instant.now());
                         if (subReq.tipoEspacioId() != null) {
                             tipoEspacioRepository.findById(subReq.tipoEspacioId()).ifPresent(sub::setTipoEspacio);
+                        }
+                        if (sub.getTipoEspacio() == null) {
+                            sub.setTipoEspacio(esp.getTipoEspacio());
+                        }
+                        if (sub.getTipoEspacio() == null) {
+                            tipoEspacioRepository.findAll().stream().findFirst().ifPresent(sub::setTipoEspacio);
                         }
                         espacioFisicoRepository.save(sub);
                         guardado.getEspacios().add(sub);
@@ -346,8 +355,9 @@ public class AutoevaluacionInfraestructuraController {
                 esp.setActivo(true);
                 if (espReq.tipoEspacioId() != null) {
                     tipoEspacioRepository.findById(espReq.tipoEspacioId()).ifPresent(esp::setTipoEspacio);
-                } else {
-                    esp.setTipoEspacio(null);
+                }
+                if (esp.getTipoEspacio() == null) {
+                    tipoEspacioRepository.findAll().stream().findFirst().ifPresent(esp::setTipoEspacio);
                 }
                 espacioFisicoRepository.save(esp);
 
@@ -383,8 +393,12 @@ public class AutoevaluacionInfraestructuraController {
                         sub.setActivo(true);
                         if (subReq.tipoEspacioId() != null) {
                             tipoEspacioRepository.findById(subReq.tipoEspacioId()).ifPresent(sub::setTipoEspacio);
-                        } else {
-                            sub.setTipoEspacio(null);
+                        }
+                        if (sub.getTipoEspacio() == null) {
+                            sub.setTipoEspacio(esp.getTipoEspacio());
+                        }
+                        if (sub.getTipoEspacio() == null) {
+                            tipoEspacioRepository.findAll().stream().findFirst().ifPresent(sub::setTipoEspacio);
                         }
                         espacioFisicoRepository.save(sub);
                     }

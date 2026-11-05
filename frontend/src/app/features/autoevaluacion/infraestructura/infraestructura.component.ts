@@ -604,7 +604,7 @@ export class InfraestructuraComponent implements OnInit {
     const nombre = this.nuevoEspacioNombre().trim() || this.nuevoEspacioDescInfra().trim();
     if (!nombre) return;
 
-    const tipoId = this.nuevoEspacioTipoId();
+    const tipoId = this.nuevoEspacioTipoId() || (this.tiposEspacio()[0]?.id ?? '');
     const tipoObj = this.tiposEspacio().find((t) => t.id === tipoId);
 
     const index = this.espacioEditandoIndex();
@@ -656,7 +656,7 @@ export class InfraestructuraComponent implements OnInit {
   agregarSubespacio(): void {
     const desc = this.subDescInfra().trim() || this.subDenominacion().trim();
     if (!desc) return;
-    const tipoId = this.subTipoEspacioId();
+    const tipoId = this.subTipoEspacioId() || this.nuevoEspacioTipoId() || (this.tiposEspacio()[0]?.id ?? '');
     const tipoObj = this.tiposEspacio().find((t) => t.id === tipoId);
 
     const sub: EspacioFisico = {

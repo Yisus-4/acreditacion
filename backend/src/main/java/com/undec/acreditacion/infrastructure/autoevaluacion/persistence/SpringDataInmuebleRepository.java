@@ -37,7 +37,7 @@ public interface SpringDataInmuebleRepository extends JpaRepository<InmuebleJpaE
             "ORDER BY i.numeroOrden ASC NULLS LAST, i.nombre ASC")
     List<InmuebleJpaEntity> findByProcesoIdActivos(@Param("procesoId") UUID procesoId);
 
-    @Query("SELECT i FROM InmuebleJpaEntity i " +
+    @Query("SELECT DISTINCT i FROM InmuebleJpaEntity i " +
             "LEFT JOIN FETCH i.provincia " +
             "LEFT JOIN FETCH i.departamentoGeografico " +
             "LEFT JOIN FETCH i.localidad " +
