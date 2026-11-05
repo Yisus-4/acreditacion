@@ -52,9 +52,10 @@
       <table class="tabla-figma">
         <thead>
           <tr>
-            <th style="width: 250px;">Nombre</th>
+            <th style="width: 220px;">Nombre</th>
+            <th style="width: 200px;">Unidad Académica</th>
             <th>Domicilio</th>
-            <th style="width: 180px;">Localidad / Prov.</th>
+            <th style="width: 170px;">Localidad / Prov.</th>
             <th style="width: 100px;">Tipo</th>
             <th style="width: 100px;">Estado</th>
             <th class="col-acciones" style="width: 180px;">Acciones</th>
@@ -64,6 +65,11 @@
           @for (s of filteredSedes(); track s.id) {
             <tr>
               <td class="col-nombre">{{ s.nombre }}</td>
+              <td>
+                <span style="font-size: 13px; font-weight: 500; color: #1e293b;">
+                  {{ s.unidadAcademicaDenominacion || 'Universidad Nacional de Chilecito (Undec)' }}
+                </span>
+              </td>
               <td class="col-desc">{{ formatearDomicilio(s) }}</td>
               <td>{{ formatearUbicacion(s) }}</td>
               <td>
@@ -125,6 +131,15 @@
           <select id="institucionId" formControlName="institucionId">
             @for (inst of instituciones(); track inst.id) {
               <option [value]="inst.id">{{ inst.nombre }} ({{ inst.sigla }})</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group-figma">
+          <label for="unidadAcademicaId">Unidad Académica CONEAU *</label>
+          <select id="unidadAcademicaId" formControlName="unidadAcademicaId">
+            @for (ua of unidadesAcademicas(); track ua.id) {
+              <option [value]="ua.id">{{ ua.denominacion }}</option>
             }
           </select>
         </div>

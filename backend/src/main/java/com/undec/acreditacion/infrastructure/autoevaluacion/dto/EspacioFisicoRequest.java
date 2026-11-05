@@ -1,6 +1,7 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 public record EspacioFisicoRequest(
@@ -13,6 +14,9 @@ public record EspacioFisicoRequest(
         Integer capacidadEstudiantes,
         BigDecimal superficieM2,
         String equipamientoDisponible,
-        String estadoConeau
+        String estadoConeau,
+        Boolean tieneSubespacios,
+        String observacionHigieneSeguridad,
+        List<EspacioFisicoRequest> subespacios
 ) {
 }

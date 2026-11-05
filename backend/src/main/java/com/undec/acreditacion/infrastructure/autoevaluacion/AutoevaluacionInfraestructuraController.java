@@ -10,11 +10,14 @@ import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.*;
 import com.undec.acreditacion.infrastructure.persistence.postgres.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,6 +35,7 @@ public class AutoevaluacionInfraestructuraController {
     private final SpringDataDepartamentoRepository departamentoRepository;
     private final SpringDataLocalidadRepository localidadRepository;
     private final SpringDataCarreraRepository carreraRepository;
+    private final SpringDataSedeLocalizacionRepository sedeRepository;
     private final UserRepository userRepository;
     private final PlanTrabajoRepositoryPort planTrabajoRepository;
 
@@ -45,6 +49,7 @@ public class AutoevaluacionInfraestructuraController {
             SpringDataDepartamentoRepository departamentoRepository,
             SpringDataLocalidadRepository localidadRepository,
             SpringDataCarreraRepository carreraRepository,
+            SpringDataSedeLocalizacionRepository sedeRepository,
             UserRepository userRepository,
             PlanTrabajoRepositoryPort planTrabajoRepository
     ) {
@@ -57,6 +62,7 @@ public class AutoevaluacionInfraestructuraController {
         this.departamentoRepository = departamentoRepository;
         this.localidadRepository = localidadRepository;
         this.carreraRepository = carreraRepository;
+        this.sedeRepository = sedeRepository;
         this.userRepository = userRepository;
         this.planTrabajoRepository = planTrabajoRepository;
     }
@@ -66,6 +72,7 @@ public class AutoevaluacionInfraestructuraController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/inmuebles")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD')")
     @Transactional(readOnly = true)
     public ResponseEntity<List<InmuebleResponse>> listarInmuebles(
             @RequestParam(name = "esMaestro", required = false) Boolean esMaestro
@@ -83,6 +90,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @GetMapping("/inmuebles/maestro")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD')")
     @Transactional(readOnly = true)
     public ResponseEntity<List<InmuebleResponse>> listarInmueblesMaestros() {
         List<InmuebleJpaEntity> entidades = inmuebleRepository.findMaestrosActivos();
@@ -93,6 +101,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @GetMapping("/inmuebles/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD')")
     @Transactional(readOnly = true)
     public ResponseEntity<InmuebleResponse> obtenerInmueble(@PathVariable UUID id) {
         return inmuebleRepository.findByIdCompleto(id)
@@ -102,6 +111,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PostMapping("/inmuebles")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
     @Transactional
     public ResponseEntity<InmuebleResponse> registrarInmueble(@RequestBody RegistrarInmuebleRequest request) {
         InstitucionJpaEntity institucion = institucionRepository.findAll().stream().findFirst()
@@ -134,6 +144,12 @@ public class AutoevaluacionInfraestructuraController {
         entity.setCreadoEn(Instant.now());
         entity.setActualizadoEn(Instant.now());
 
+        if (request.sedeId() != null) {
+            sedeRepository.findById(request.sedeId()).ifPresent(entity::setSede);
+        } else {
+            sedeRepository.findAll().stream().findFirst().ifPresent(entity::setSede);
+        }
+
         if (request.provinciaId() != null) {
             provinciaRepository.findById(request.provinciaId()).ifPresent(entity::setProvincia);
         }
@@ -151,14 +167,14 @@ public class AutoevaluacionInfraestructuraController {
 
         InmuebleJpaEntity guardado = inmuebleRepository.save(entity);
 
-        // Espacios físicos
+        // Espacios físicos y subespacios (1 nivel)
         if (request.espacios() != null && !request.espacios().isEmpty()) {
             for (EspacioFisicoRequest espReq : request.espacios()) {
                 EspacioFisicoJpaEntity esp = new EspacioFisicoJpaEntity();
                 esp.setId(UUID.randomUUID());
                 esp.setInmueble(guardado);
                 esp.setDenominacion(espReq.denominacion());
-                esp.setDescripcionInfraestructura(espReq.descripcionInfraestructura());
+                esp.setDescripcionInfraestructura(espReq.descripcionInfraestructura() != null ? espReq.descripcionInfraestructura() : espReq.denominacion());
                 esp.setCantidad(espReq.cantidad() != null ? espReq.cantidad() : 1);
                 int cap = espReq.capacidadPersonasSentadas() != null ? espReq.capacidadPersonasSentadas() :
                         (espReq.capacidadEstudiantes() != null ? espReq.capacidadEstudiantes() : 0);
@@ -166,6 +182,9 @@ public class AutoevaluacionInfraestructuraController {
                 esp.setCapacidadEstudiantes(cap);
                 esp.setSuperficieM2(espReq.superficieM2());
                 esp.setEquipamientoDisponible(espReq.equipamientoDisponible());
+                esp.setObservacionHigieneSeguridad(espReq.observacionHigieneSeguridad());
+                boolean tieneSubs = espReq.tieneSubespacios() != null && espReq.tieneSubespacios();
+                esp.setTieneSubespacios(tieneSubs);
                 esp.setEstadoConeau(espReq.estadoConeau() != null ? espReq.estadoConeau() : "CARGADO");
                 esp.setActivo(true);
                 esp.setCreadoEn(Instant.now());
@@ -174,6 +193,35 @@ public class AutoevaluacionInfraestructuraController {
                 }
                 espacioFisicoRepository.save(esp);
                 guardado.getEspacios().add(esp);
+
+                // Subespacios de 1 nivel
+                if (tieneSubs && espReq.subespacios() != null && !espReq.subespacios().isEmpty()) {
+                    for (EspacioFisicoRequest subReq : espReq.subespacios()) {
+                        EspacioFisicoJpaEntity sub = new EspacioFisicoJpaEntity();
+                        sub.setId(UUID.randomUUID());
+                        sub.setInmueble(guardado);
+                        sub.setEspacioPadre(esp);
+                        sub.setTieneSubespacios(false); // Regla: subespacio no puede tener subespacios
+                        sub.setDenominacion(subReq.denominacion());
+                        sub.setDescripcionInfraestructura(subReq.descripcionInfraestructura() != null ? subReq.descripcionInfraestructura() : subReq.denominacion());
+                        sub.setCantidad(subReq.cantidad() != null ? subReq.cantidad() : 1);
+                        int subCap = subReq.capacidadPersonasSentadas() != null ? subReq.capacidadPersonasSentadas() :
+                                (subReq.capacidadEstudiantes() != null ? subReq.capacidadEstudiantes() : 0);
+                        sub.setCapacidadPersonasSentadas(subCap);
+                        sub.setCapacidadEstudiantes(subCap);
+                        sub.setSuperficieM2(subReq.superficieM2());
+                        sub.setEquipamientoDisponible(subReq.equipamientoDisponible());
+                        sub.setObservacionHigieneSeguridad(subReq.observacionHigieneSeguridad());
+                        sub.setEstadoConeau(subReq.estadoConeau() != null ? subReq.estadoConeau() : "CARGADO");
+                        sub.setActivo(true);
+                        sub.setCreadoEn(Instant.now());
+                        if (subReq.tipoEspacioId() != null) {
+                            tipoEspacioRepository.findById(subReq.tipoEspacioId()).ifPresent(sub::setTipoEspacio);
+                        }
+                        espacioFisicoRepository.save(sub);
+                        guardado.getEspacios().add(sub);
+                    }
+                }
             }
         }
 
@@ -198,6 +246,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PutMapping("/inmuebles/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
     @Transactional
     public ResponseEntity<InmuebleResponse> actualizarInmueble(
             @PathVariable UUID id,
@@ -214,6 +263,9 @@ public class AutoevaluacionInfraestructuraController {
         entity.setDomicilio(request.domicilio() != null ? request.domicilio() : (request.calle() + " " + request.numero()));
         if (request.calle() != null) entity.setCalle(request.calle());
         if (request.numero() != null) entity.setNumero(request.numero());
+        if (request.sedeId() != null) {
+            sedeRepository.findById(request.sedeId()).ifPresent(entity::setSede);
+        }
         if (request.anioConstruccion() != null) entity.setAnioConstruccion(request.anioConstruccion());
         if (request.anioInicioInstitucion() != null) entity.setAnioInicioInstitucion(request.anioInicioInstitucion());
         entity.setPropiedadInstitucion(request.propiedadInstitucion() != null ? request.propiedadInstitucion() : true);
@@ -241,15 +293,20 @@ public class AutoevaluacionInfraestructuraController {
             entity.setCarreras(carreras);
         }
 
-        // Espacios físicos - Actualizar, Crear y Dar de baja según CU y Diagrama de Secuencia
+        // Espacios físicos y subespacios - Sincronizar
         if (request.espacios() != null) {
             List<EspacioFisicoJpaEntity> actuales = espacioFisicoRepository.findByInmuebleIdAndActivoTrue(entity.getId());
-            Set<UUID> idsEnviados = request.espacios().stream()
-                    .map(EspacioFisicoRequest::id)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
+            Set<UUID> idsEnviados = new HashSet<>();
+            for (EspacioFisicoRequest espReq : request.espacios()) {
+                if (espReq.id() != null) idsEnviados.add(espReq.id());
+                if (espReq.subespacios() != null) {
+                    for (EspacioFisicoRequest subReq : espReq.subespacios()) {
+                        if (subReq.id() != null) idsEnviados.add(subReq.id());
+                    }
+                }
+            }
 
-            // Dar de baja los espacios que ya no están en la lista (Dar de baja espacio físico)
+            // Desactivar los que ya no existen
             for (EspacioFisicoJpaEntity act : actuales) {
                 if (!idsEnviados.contains(act.getId())) {
                     act.setActivo(false);
@@ -257,7 +314,7 @@ public class AutoevaluacionInfraestructuraController {
                 }
             }
 
-            // Actualizar o crear
+            // Actualizar o crear padres y subespacios
             for (EspacioFisicoRequest espReq : request.espacios()) {
                 EspacioFisicoJpaEntity esp;
                 if (espReq.id() != null) {
@@ -272,6 +329,7 @@ public class AutoevaluacionInfraestructuraController {
                     esp.setCreadoEn(Instant.now());
                 }
                 esp.setInmueble(entity);
+                esp.setEspacioPadre(null);
                 esp.setDenominacion(espReq.denominacion());
                 esp.setDescripcionInfraestructura(espReq.descripcionInfraestructura() != null ? espReq.descripcionInfraestructura() : espReq.denominacion());
                 esp.setCantidad(espReq.cantidad() != null ? espReq.cantidad() : 1);
@@ -281,6 +339,9 @@ public class AutoevaluacionInfraestructuraController {
                 esp.setCapacidadEstudiantes(cap);
                 esp.setSuperficieM2(espReq.superficieM2());
                 esp.setEquipamientoDisponible(espReq.equipamientoDisponible());
+                esp.setObservacionHigieneSeguridad(espReq.observacionHigieneSeguridad());
+                boolean tieneSubs = espReq.tieneSubespacios() != null && espReq.tieneSubespacios();
+                esp.setTieneSubespacios(tieneSubs);
                 esp.setEstadoConeau(espReq.estadoConeau() != null ? espReq.estadoConeau() : "CARGADO");
                 esp.setActivo(true);
                 if (espReq.tipoEspacioId() != null) {
@@ -289,10 +350,49 @@ public class AutoevaluacionInfraestructuraController {
                     esp.setTipoEspacio(null);
                 }
                 espacioFisicoRepository.save(esp);
+
+                // Subespacios hijos
+                if (tieneSubs && espReq.subespacios() != null) {
+                    for (EspacioFisicoRequest subReq : espReq.subespacios()) {
+                        EspacioFisicoJpaEntity sub;
+                        if (subReq.id() != null) {
+                            sub = espacioFisicoRepository.findById(subReq.id()).orElse(new EspacioFisicoJpaEntity());
+                            if (sub.getId() == null) {
+                                sub.setId(subReq.id());
+                                sub.setCreadoEn(Instant.now());
+                            }
+                        } else {
+                            sub = new EspacioFisicoJpaEntity();
+                            sub.setId(UUID.randomUUID());
+                            sub.setCreadoEn(Instant.now());
+                        }
+                        sub.setInmueble(entity);
+                        sub.setEspacioPadre(esp);
+                        sub.setTieneSubespacios(false);
+                        sub.setDenominacion(subReq.denominacion());
+                        sub.setDescripcionInfraestructura(subReq.descripcionInfraestructura() != null ? subReq.descripcionInfraestructura() : subReq.denominacion());
+                        sub.setCantidad(subReq.cantidad() != null ? subReq.cantidad() : 1);
+                        int subCap = subReq.capacidadPersonasSentadas() != null ? subReq.capacidadPersonasSentadas() :
+                                (subReq.capacidadEstudiantes() != null ? subReq.capacidadEstudiantes() : 0);
+                        sub.setCapacidadPersonasSentadas(subCap);
+                        sub.setCapacidadEstudiantes(subCap);
+                        sub.setSuperficieM2(subReq.superficieM2());
+                        sub.setEquipamientoDisponible(subReq.equipamientoDisponible());
+                        sub.setObservacionHigieneSeguridad(subReq.observacionHigieneSeguridad());
+                        sub.setEstadoConeau(subReq.estadoConeau() != null ? subReq.estadoConeau() : "CARGADO");
+                        sub.setActivo(true);
+                        if (subReq.tipoEspacioId() != null) {
+                            tipoEspacioRepository.findById(subReq.tipoEspacioId()).ifPresent(sub::setTipoEspacio);
+                        } else {
+                            sub.setTipoEspacio(null);
+                        }
+                        espacioFisicoRepository.save(sub);
+                    }
+                }
             }
         }
 
-        // Documentación de respaldo (Adjuntar Documentos en Actualizar Inmueble)
+        // Documentos de respaldo (Adjuntar Documentos en Actualizar Inmueble)
         if (request.documentos() != null && !request.documentos().isEmpty()) {
             List<InmuebleDocumentacionRespaldoJpaEntity> docsExistentes = documentacionRepository.findByInmuebleIdOrderByFechaSubidaDesc(entity.getId());
             Set<String> nombresExistentes = docsExistentes.stream()
@@ -300,13 +400,13 @@ public class AutoevaluacionInfraestructuraController {
                     .collect(Collectors.toSet());
 
             for (RegistrarInmuebleRequest.DocumentoRespaldoRequest docReq : request.documentos()) {
-                if (docReq.nombreArchivo() != null && !docReq.nombreArchivo().isBlank() && !nombresExistentes.contains(docReq.nombreArchivo())) {
+                if (!nombresExistentes.contains(docReq.nombreArchivo())) {
                     InmuebleDocumentacionRespaldoJpaEntity doc = new InmuebleDocumentacionRespaldoJpaEntity();
                     doc.setId(UUID.randomUUID());
                     doc.setInmueble(entity);
                     doc.setNombreArchivo(docReq.nombreArchivo());
-                    doc.setUrlMinio(docReq.urlMinio() != null ? docReq.urlMinio() : ("/minio/acreditacion/03_01/" + docReq.nombreArchivo()));
-                    doc.setTipoAnexo(docReq.tipoAnexo() != null ? docReq.tipoAnexo() : "CONVENIO_COMODATO");
+                    doc.setUrlMinio(docReq.urlMinio());
+                    doc.setTipoAnexo(docReq.tipoAnexo());
                     doc.setDescripcion(docReq.descripcion());
                     doc.setRutaRepositorio("03-Autoevaluación/03_01-Infraestructura equipamiento y biblioteca/Normativa");
                     doc.setFechaSubida(Instant.now());
@@ -323,6 +423,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PostMapping("/inmuebles/{id}/verificar")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
     @Transactional
     public ResponseEntity<InmuebleResponse> verificarYRemitirADea(@PathVariable UUID id) {
         Optional<InmuebleJpaEntity> opt = inmuebleRepository.findById(id);
@@ -340,6 +441,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @DeleteMapping("/inmuebles/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
     @Transactional
     public ResponseEntity<Void> eliminarInmueble(@PathVariable UUID id) {
         Optional<InmuebleJpaEntity> opt = inmuebleRepository.findById(id);
@@ -353,10 +455,81 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     // -------------------------------------------------------------------------
+    // Higiene y Seguridad en Espacios (Exclusivo Rol HIGIENE_SEGURIDAD)
+    // -------------------------------------------------------------------------
+
+    @PatchMapping("/espacios/{id}/higiene-seguridad")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD')")
+    @Transactional
+    public ResponseEntity<EspacioFisicoResponse> actualizarHigieneSeguridad(
+            @PathVariable UUID id,
+            @RequestBody ActualizarHigieneSeguridadRequest request
+    ) {
+        EspacioFisicoJpaEntity esp = espacioFisicoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Espacio físico no encontrado"));
+        esp.setObservacionHigieneSeguridad(request.observacionHigieneSeguridad());
+        EspacioFisicoJpaEntity guardado = espacioFisicoRepository.save(esp);
+        return ResponseEntity.ok(mapSingleEspacioResponse(guardado, Collections.emptyList()));
+    }
+
+    // -------------------------------------------------------------------------
+    // Consulta Dinámica de Espacios por Metros Cuadrados (m²)
+    // -------------------------------------------------------------------------
+
+    @GetMapping("/espacios/consulta")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD')")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ConsultaEspaciosResponse> consultarEspacios(
+            @RequestParam(required = false) UUID tipoEspacioId,
+            @RequestParam(required = false) BigDecimal m2Min,
+            @RequestParam(required = false) BigDecimal m2Max,
+            @RequestParam(required = false) UUID sedeId
+    ) {
+        List<EspacioFisicoJpaEntity> lista = espacioFisicoRepository.consultarPorFiltros(tipoEspacioId, m2Min, m2Max, sedeId);
+        int totalAulas = 0;
+        int capacidadTotal = 0;
+        BigDecimal totalM2 = BigDecimal.ZERO;
+        List<ConsultaEspaciosResponse.EspacioFisicoConsultaItem> items = new ArrayList<>();
+
+        for (EspacioFisicoJpaEntity e : lista) {
+            int cant = e.getCantidad() != null ? e.getCantidad() : 1;
+            int cap = e.getCapacidadPersonasSentadas() != null ? e.getCapacidadPersonasSentadas() :
+                    (e.getCapacidadEstudiantes() != null ? e.getCapacidadEstudiantes() : 0);
+            totalAulas += cant;
+            capacidadTotal += (cap * cant);
+            if (e.getSuperficieM2() != null) {
+                totalM2 = totalM2.add(e.getSuperficieM2().multiply(BigDecimal.valueOf(cant)));
+            }
+
+            items.add(new ConsultaEspaciosResponse.EspacioFisicoConsultaItem(
+                    e.getId(),
+                    e.getInmueble() != null ? e.getInmueble().getId() : null,
+                    e.getInmueble() != null ? e.getInmueble().getNombre() : "-",
+                    e.getInmueble() != null && e.getInmueble().getSede() != null ? e.getInmueble().getSede().getId() : null,
+                    e.getInmueble() != null && e.getInmueble().getSede() != null ? e.getInmueble().getSede().getNombre() : "-",
+                    e.getTipoEspacio() != null ? e.getTipoEspacio().getId() : null,
+                    e.getTipoEspacio() != null ? e.getTipoEspacio().getDenominacion() : "-",
+                    e.getDenominacion(),
+                    e.getDescripcionInfraestructura(),
+                    cant,
+                    cap,
+                    e.getSuperficieM2(),
+                    e.getObservacionHigieneSeguridad(),
+                    e.getEspacioPadre() != null,
+                    e.getEspacioPadre() != null ? e.getEspacioPadre().getId() : null,
+                    e.getEspacioPadre() != null ? e.getEspacioPadre().getDenominacion() : null
+            ));
+        }
+
+        return ResponseEntity.ok(new ConsultaEspaciosResponse(totalAulas, capacidadTotal, totalM2, items));
+    }
+
+    // -------------------------------------------------------------------------
     // Gestión por Proceso de Acreditación (Snapshot + Plan de Trabajo)
     // -------------------------------------------------------------------------
 
     @GetMapping("/procesos/{procesoId}/inmuebles")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD')")
     @Transactional
     public ResponseEntity<?> obtenerInmueblesProceso(@PathVariable UUID procesoId) {
         try {
@@ -371,34 +544,32 @@ public class AutoevaluacionInfraestructuraController {
                     .map(this::mapToInmuebleResponse)
                     .collect(Collectors.toList());
             return ResponseEntity.ok(response);
-        } catch (Exception ex) {
-            return ResponseEntity.status(500).body(Map.of(
-                    "error", ex.getClass().getName() + ": " + ex.getMessage(),
-                    "cause", String.valueOf(ex.getCause())
-            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al procesar snapshot de inmuebles para el proceso " + procesoId, "mensaje", e.getMessage()));
         }
     }
 
     @PostMapping("/procesos/{procesoId}/inmuebles/copiar-maestro")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
     @Transactional
-    public ResponseEntity<List<InmuebleResponse>> regenerarSnapshotDesdeMaestro(@PathVariable UUID procesoId) {
-        // Desactivar snapshots anteriores si los hubiera
-        List<InmuebleJpaEntity> viejos = inmuebleRepository.findByProcesoIdActivos(procesoId);
-        for (InmuebleJpaEntity v : viejos) {
-            v.setActivo(false);
-            inmuebleRepository.save(v);
+    public ResponseEntity<?> forzarCopiaMaestro(@PathVariable UUID procesoId) {
+        try {
+            List<InmuebleJpaEntity> nuevos = clonarInmueblesMaestrosParaProceso(procesoId);
+            List<InmuebleResponse> response = nuevos.stream()
+                    .map(this::mapToInmuebleResponse)
+                    .collect(Collectors.toList());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al sincronizar padrón maestro para el proceso " + procesoId, "mensaje", e.getMessage()));
         }
-
-        List<InmuebleJpaEntity> nuevos = clonarInmueblesMaestrosParaProceso(procesoId);
-        List<InmuebleResponse> response = nuevos.stream()
-                .map(this::mapToInmuebleResponse)
-                .collect(Collectors.toList());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/procesos/{procesoId}/infraestructura/extender-plazo")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
     @Transactional
-    public ResponseEntity<Map<String, Object>> extenderPlazoActividad(
+    public ResponseEntity<?> extenderPlazoInfraestructura(
             @PathVariable UUID procesoId,
             @RequestBody ExtenderPlazoInfraestructuraRequest request
     ) {
@@ -417,7 +588,7 @@ public class AutoevaluacionInfraestructuraController {
                 .findFirst();
 
         if (actOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "No se encontró la actividad 4.1 de Infraestructura en el Plan de Trabajo"));
+            return ResponseEntity.badRequest().body(Map.of("error", "No se encontró la Actividad 4.1 de Infraestructura en el Plan de Trabajo"));
         }
 
         ActividadPlanTrabajo act = actOpt.get();
@@ -436,23 +607,27 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PostMapping("/procesos/{procesoId}/infraestructura/verificar-y-remitir")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
     @Transactional
-    public ResponseEntity<VerificarInfraestructuraResponse> verificarYRemitirADeaPorProceso(
+    public ResponseEntity<VerificarInfraestructuraResponse> verificarYRemitirInfraestructura(
             @PathVariable UUID procesoId
     ) {
         UUID usuarioId = resolverUsuarioAutenticadoId();
-
-        // 1. Marcar los inmuebles del proceso como verificados
-        List<InmuebleJpaEntity> inmuebles = inmuebleRepository.findByProcesoIdActivos(procesoId);
         Instant now = Instant.now();
+
+        List<InmuebleJpaEntity> inmuebles = inmuebleRepository.findByProcesoIdActivos(procesoId);
+        if (inmuebles.isEmpty()) {
+            inmuebles = inmuebleRepository.findMaestrosActivos();
+        }
+
         for (InmuebleJpaEntity inm : inmuebles) {
             inm.setVerificado(true);
             inm.setFechaVerificacion(now);
+            inm.setEstadoConeau("VERIFICADO");
             inm.setActualizadoEn(now);
             inmuebleRepository.save(inm);
         }
 
-        // 2. Actualizar automáticamente la actividad 4.1 en el Plan de Trabajo (PT-001)
         String estadoActividad = "SIN_PLAN";
         Optional<PlanTrabajo> planOpt = planTrabajoRepository.findByProcesoId(procesoId);
         if (planOpt.isPresent()) {
@@ -479,93 +654,40 @@ public class AutoevaluacionInfraestructuraController {
         ));
     }
 
-    private List<InmuebleJpaEntity> clonarInmueblesMaestrosParaProceso(UUID procesoId) {
-        List<InmuebleJpaEntity> maestros = inmuebleRepository.findMaestrosActivos();
-        List<InmuebleJpaEntity> clones = new ArrayList<>();
-
-        for (InmuebleJpaEntity m : maestros) {
-            InmuebleJpaEntity c = new InmuebleJpaEntity();
-            c.setId(UUID.randomUUID());
-            c.setInstitucion(m.getInstitucion());
-            c.setNumeroOrden(m.getNumeroOrden());
-            c.setNombre(m.getNombre());
-            c.setDomicilio(m.getDomicilio());
-            c.setCalle(m.getCalle());
-            c.setNumero(m.getNumero());
-            c.setProvincia(m.getProvincia());
-            c.setDepartamentoGeografico(m.getDepartamentoGeografico());
-            c.setLocalidad(m.getLocalidad());
-            c.setAnioConstruccion(m.getAnioConstruccion());
-            c.setAnioInicioInstitucion(m.getAnioInicioInstitucion());
-            c.setPropiedadInstitucion(m.getPropiedadInstitucion());
-            c.setCondicionTenencia(m.getCondicionTenencia());
-            c.setSituacion(m.getSituacion());
-            c.setVinculaTodasCarreras(m.getVinculaTodasCarreras());
-            c.setEsMaestro(false);
-            c.setProcesoId(procesoId);
-            c.setSuperficieCubiertaM2(m.getSuperficieCubiertaM2());
-            c.setSuperficieTotalM2(m.getSuperficieTotalM2());
-            c.setObservaciones(m.getObservaciones());
-            c.setVerificado(false);
-            c.setEstadoConeau(m.getEstadoConeau());
-            c.setActivo(true);
-            c.setCreadoEn(Instant.now());
-            c.setActualizadoEn(Instant.now());
-            if (m.getCarreras() != null) {
-                c.setCarreras(new HashSet<>(m.getCarreras()));
-            }
-
-            InmuebleJpaEntity guardado = inmuebleRepository.save(c);
-
-            // Clonar espacios consultando directamente por inmuebleId
-            List<EspacioFisicoJpaEntity> espaciosMaestro = espacioFisicoRepository.findByInmuebleIdAndActivoTrue(m.getId());
-            for (EspacioFisicoJpaEntity espM : espaciosMaestro) {
-                EspacioFisicoJpaEntity espC = new EspacioFisicoJpaEntity();
-                espC.setId(UUID.randomUUID());
-                espC.setInmueble(guardado);
-                espC.setTipoEspacio(espM.getTipoEspacio());
-                espC.setDenominacion(espM.getDenominacion());
-                espC.setDescripcionInfraestructura(espM.getDescripcionInfraestructura());
-                espC.setCantidad(espM.getCantidad());
-                espC.setCapacidadPersonasSentadas(espM.getCapacidadPersonasSentadas());
-                espC.setCapacidadEstudiantes(espM.getCapacidadEstudiantes());
-                espC.setSuperficieM2(espM.getSuperficieM2());
-                espC.setEquipamientoDisponible(espM.getEquipamientoDisponible());
-                espC.setEstadoConeau(espM.getEstadoConeau());
-                espC.setActivo(true);
-                espC.setCreadoEn(Instant.now());
-                espacioFisicoRepository.save(espC);
-            }
-
-            clones.add(guardado);
-        }
-        return clones;
-    }
-
     // -------------------------------------------------------------------------
-    // Catálogo Tipo de Espacio Físico
+    // Tipos de Espacio Físico
     // -------------------------------------------------------------------------
 
     @GetMapping("/tipos-espacio")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD')")
     @Transactional(readOnly = true)
     public ResponseEntity<List<TipoEspacioResponse>> listarTiposEspacio() {
-        List<TipoEspacioFisicoJpaEntity> tipos = tipoEspacioRepository.findByActivoTrueOrderByDenominacionAsc();
-        List<TipoEspacioResponse> response = tipos.stream()
+        List<TipoEspacioResponse> response = tipoEspacioRepository.findByActivoTrueOrderByDenominacionAsc().stream()
                 .map(t -> new TipoEspacioResponse(t.getId(), t.getCodigo(), t.getDenominacion(), t.getActivo()))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/tipos-espacio")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
     @Transactional
     public ResponseEntity<TipoEspacioResponse> crearTipoEspacio(@RequestBody CrearTipoEspacioRequest request) {
+        if (request.denominacion() == null || request.denominacion().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La denominación del tipo de espacio es requerida");
+        }
+
         String codigo = (request.codigo() != null && !request.codigo().isBlank())
                 ? request.codigo().toUpperCase().replace(" ", "_")
                 : request.denominacion().toUpperCase().replace(" ", "_");
 
-        TipoEspacioFisicoJpaEntity entity = new TipoEspacioFisicoJpaEntity(UUID.randomUUID(), codigo, request.denominacion());
-        TipoEspacioFisicoJpaEntity guardado = tipoEspacioRepository.save(entity);
+        TipoEspacioFisicoJpaEntity tipo = new TipoEspacioFisicoJpaEntity();
+        tipo.setId(UUID.randomUUID());
+        tipo.setCodigo(codigo);
+        tipo.setDenominacion(request.denominacion());
+        tipo.setActivo(true);
+        tipo.setCreadoEn(Instant.now());
 
+        TipoEspacioFisicoJpaEntity guardado = tipoEspacioRepository.save(tipo);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new TipoEspacioResponse(guardado.getId(), guardado.getCodigo(), guardado.getDenominacion(), guardado.getActivo()));
     }
@@ -580,25 +702,24 @@ public class AutoevaluacionInfraestructuraController {
                         .map(c -> new InmuebleResponse.CarreraVinculadaResponse(c.getId(), c.getNombre(), c.getSigla()))
                         .collect(Collectors.toList());
 
-        List<EspacioFisicoResponse> espacios = (entity.getEspacios() == null) ? Collections.emptyList() :
-                entity.getEspacios().stream()
-                        .filter(EspacioFisicoJpaEntity::getActivo)
-                        .map(e -> new EspacioFisicoResponse(
-                                e.getId(),
-                                e.getTipoEspacio() != null ? e.getTipoEspacio().getId() : null,
-                                e.getTipoEspacio() != null ? e.getTipoEspacio().getCodigo() : null,
-                                e.getTipoEspacio() != null ? e.getTipoEspacio().getDenominacion() : null,
-                                e.getDenominacion(),
-                                e.getDescripcionInfraestructura(),
-                                e.getCantidad() != null ? e.getCantidad() : 1,
-                                e.getCapacidadPersonasSentadas() != null ? e.getCapacidadPersonasSentadas() : e.getCapacidadEstudiantes(),
-                                e.getCapacidadEstudiantes(),
-                                e.getSuperficieM2(),
-                                e.getEquipamientoDisponible(),
-                                e.getEstadoConeau(),
-                                e.getActivo()
-                        ))
-                        .collect(Collectors.toList());
+        List<EspacioFisicoResponse> espacios = Collections.emptyList();
+        if (entity.getEspacios() != null) {
+            List<EspacioFisicoJpaEntity> todosActivos = entity.getEspacios().stream()
+                    .filter(EspacioFisicoJpaEntity::getActivo)
+                    .toList();
+
+            // Mapear solo espacios padre en primer nivel, con sus subespacios anidados
+            espacios = todosActivos.stream()
+                    .filter(e -> e.getEspacioPadre() == null)
+                    .map(padre -> {
+                        List<EspacioFisicoResponse> subespacios = todosActivos.stream()
+                                .filter(c -> c.getEspacioPadre() != null && padre.getId().equals(c.getEspacioPadre().getId()))
+                                .map(hijo -> mapSingleEspacioResponse(hijo, Collections.emptyList()))
+                                .toList();
+                        return mapSingleEspacioResponse(padre, subespacios);
+                    })
+                    .collect(Collectors.toList());
+        }
 
         List<DocumentacionRespaldoResponse> documentos = (entity.getDocumentos() == null) ? Collections.emptyList() :
                 entity.getDocumentos().stream()
@@ -614,6 +735,11 @@ public class AutoevaluacionInfraestructuraController {
                         ))
                         .collect(Collectors.toList());
 
+        UUID sedeId = entity.getSede() != null ? entity.getSede().getId() : null;
+        String sedeNombre = entity.getSede() != null ? entity.getSede().getNombre() : null;
+        String uaDenominacion = entity.getSede() != null && entity.getSede().getUnidadAcademica() != null ?
+                entity.getSede().getUnidadAcademica().getDenominacion() : null;
+
         return new InmuebleResponse(
                 entity.getId(),
                 entity.getInstitucion() != null ? entity.getInstitucion().getId() : null,
@@ -622,6 +748,9 @@ public class AutoevaluacionInfraestructuraController {
                 entity.getDomicilio(),
                 entity.getCalle(),
                 entity.getNumero(),
+                sedeId,
+                sedeNombre,
+                uaDenominacion,
                 entity.getProvincia() != null ? entity.getProvincia().getId() : null,
                 entity.getProvincia() != null ? entity.getProvincia().getNombre() : null,
                 entity.getDepartamentoGeografico() != null ? entity.getDepartamentoGeografico().getId() : null,
@@ -649,6 +778,129 @@ public class AutoevaluacionInfraestructuraController {
                 espacios.size(),
                 !documentos.isEmpty()
         );
+    }
+
+    private EspacioFisicoResponse mapSingleEspacioResponse(EspacioFisicoJpaEntity e, List<EspacioFisicoResponse> subespacios) {
+        return new EspacioFisicoResponse(
+                e.getId(),
+                e.getTipoEspacio() != null ? e.getTipoEspacio().getId() : null,
+                e.getTipoEspacio() != null ? e.getTipoEspacio().getCodigo() : null,
+                e.getTipoEspacio() != null ? e.getTipoEspacio().getDenominacion() : null,
+                e.getDenominacion(),
+                e.getDescripcionInfraestructura(),
+                e.getCantidad() != null ? e.getCantidad() : 1,
+                e.getCapacidadPersonasSentadas() != null ? e.getCapacidadPersonasSentadas() : e.getCapacidadEstudiantes(),
+                e.getCapacidadEstudiantes(),
+                e.getSuperficieM2(),
+                e.getEquipamientoDisponible(),
+                e.getEstadoConeau(),
+                e.getActivo(),
+                e.getEspacioPadre() != null ? e.getEspacioPadre().getId() : null,
+                e.getTieneSubespacios() != null ? e.getTieneSubespacios() : false,
+                e.getObservacionHigieneSeguridad(),
+                subespacios
+        );
+    }
+
+    private List<InmuebleJpaEntity> clonarInmueblesMaestrosParaProceso(UUID procesoId) {
+        List<InmuebleJpaEntity> maestros = inmuebleRepository.findMaestrosActivos();
+        List<InmuebleJpaEntity> clonados = new ArrayList<>();
+
+        for (InmuebleJpaEntity m : maestros) {
+            InmuebleJpaEntity c = new InmuebleJpaEntity();
+            c.setId(UUID.randomUUID());
+            c.setInstitucion(m.getInstitucion());
+            c.setNumeroOrden(m.getNumeroOrden());
+            c.setNombre(m.getNombre());
+            c.setDomicilio(m.getDomicilio());
+            c.setCalle(m.getCalle());
+            c.setNumero(m.getNumero());
+            c.setSede(m.getSede());
+            c.setProvincia(m.getProvincia());
+            c.setDepartamentoGeografico(m.getDepartamentoGeografico());
+            c.setLocalidad(m.getLocalidad());
+            c.setAnioConstruccion(m.getAnioConstruccion());
+            c.setAnioInicioInstitucion(m.getAnioInicioInstitucion());
+            c.setPropiedadInstitucion(m.getPropiedadInstitucion());
+            c.setCondicionTenencia(m.getCondicionTenencia());
+            c.setSituacion(m.getSituacion());
+            c.setVinculaTodasCarreras(m.getVinculaTodasCarreras());
+            c.setEsMaestro(false);
+            c.setProcesoId(procesoId);
+            c.setSuperficieCubiertaM2(m.getSuperficieCubiertaM2());
+            c.setSuperficieTotalM2(m.getSuperficieTotalM2());
+            c.setObservaciones(m.getObservaciones());
+            c.setVerificado(false);
+            c.setFechaVerificacion(null);
+            c.setEstadoConeau("CARGADO");
+            c.setActivo(true);
+            c.setCreadoEn(Instant.now());
+            c.setActualizadoEn(Instant.now());
+
+            if (m.getCarreras() != null && !m.getCarreras().isEmpty()) {
+                c.setCarreras(new HashSet<>(m.getCarreras()));
+            }
+
+            InmuebleJpaEntity inmGuardado = inmuebleRepository.save(c);
+
+            // Clonar espacios físicos maestros preservando jerarquía de subespacios
+            if (m.getEspacios() != null) {
+                Map<UUID, EspacioFisicoJpaEntity> mapaPadres = new HashMap<>();
+                for (EspacioFisicoJpaEntity espM : m.getEspacios()) {
+                    if (espM.getActivo() && espM.getEspacioPadre() == null) {
+                        EspacioFisicoJpaEntity espC = new EspacioFisicoJpaEntity();
+                        espC.setId(UUID.randomUUID());
+                        espC.setInmueble(inmGuardado);
+                        espC.setTipoEspacio(espM.getTipoEspacio());
+                        espC.setDenominacion(espM.getDenominacion());
+                        espC.setDescripcionInfraestructura(espM.getDescripcionInfraestructura());
+                        espC.setCantidad(espM.getCantidad());
+                        espC.setCapacidadPersonasSentadas(espM.getCapacidadPersonasSentadas());
+                        espC.setCapacidadEstudiantes(espM.getCapacidadEstudiantes());
+                        espC.setSuperficieM2(espM.getSuperficieM2());
+                        espC.setEquipamientoDisponible(espM.getEquipamientoDisponible());
+                        espC.setObservacionHigieneSeguridad(espM.getObservacionHigieneSeguridad());
+                        espC.setTieneSubespacios(espM.getTieneSubespacios());
+                        espC.setEstadoConeau("CARGADO");
+                        espC.setActivo(true);
+                        espC.setCreadoEn(Instant.now());
+                        espacioFisicoRepository.save(espC);
+                        inmGuardado.getEspacios().add(espC);
+                        mapaPadres.put(espM.getId(), espC);
+                    }
+                }
+
+                // Clonar hijos vinculados
+                for (EspacioFisicoJpaEntity espM : m.getEspacios()) {
+                    if (espM.getActivo() && espM.getEspacioPadre() != null) {
+                        EspacioFisicoJpaEntity padreClonado = mapaPadres.get(espM.getEspacioPadre().getId());
+                        EspacioFisicoJpaEntity espC = new EspacioFisicoJpaEntity();
+                        espC.setId(UUID.randomUUID());
+                        espC.setInmueble(inmGuardado);
+                        espC.setEspacioPadre(padreClonado);
+                        espC.setTipoEspacio(espM.getTipoEspacio());
+                        espC.setDenominacion(espM.getDenominacion());
+                        espC.setDescripcionInfraestructura(espM.getDescripcionInfraestructura());
+                        espC.setCantidad(espM.getCantidad());
+                        espC.setCapacidadPersonasSentadas(espM.getCapacidadPersonasSentadas());
+                        espC.setCapacidadEstudiantes(espM.getCapacidadEstudiantes());
+                        espC.setSuperficieM2(espM.getSuperficieM2());
+                        espC.setEquipamientoDisponible(espM.getEquipamientoDisponible());
+                        espC.setObservacionHigieneSeguridad(espM.getObservacionHigieneSeguridad());
+                        espC.setTieneSubespacios(false);
+                        espC.setEstadoConeau("CARGADO");
+                        espC.setActivo(true);
+                        espC.setCreadoEn(Instant.now());
+                        espacioFisicoRepository.save(espC);
+                        inmGuardado.getEspacios().add(espC);
+                    }
+                }
+            }
+
+            clonados.add(inmGuardado);
+        }
+
+        return clonados;
     }
 
     private UUID resolverUsuarioAutenticadoId() {

@@ -9,6 +9,23 @@ export interface UnidadAcademicaResponse {
   actualizadoEn: string;
 }
 
+export interface UnidadAcademicaConeauResponse {
+  id: string;
+  institucionId: string;
+  institucionNombre?: string;
+  denominacion: string;
+  activa: boolean;
+  cantidadSedes: number;
+  creadoEn: string;
+  actualizadoEn: string;
+}
+
+export interface GuardarUnidadAcademicaConeauData {
+  institucionId?: string;
+  denominacion: string;
+  activa?: boolean;
+}
+
 export interface RegistrarUnidadAcademicaData {
   institucionId: string;
   nombre: string;
@@ -25,6 +42,8 @@ export interface ActualizarUnidadAcademicaData {
 export interface SedeLocalizacionResponse {
   id: string;
   institucionId: string;
+  unidadAcademicaId?: string;
+  unidadAcademicaDenominacion?: string;
   nombre: string;
   calle: string;
   numero: string;
@@ -42,6 +61,7 @@ export interface SedeLocalizacionResponse {
 
 export interface RegistrarSedeLocalizacionData {
   institucionId: string;
+  unidadAcademicaId?: string;
   nombre: string;
   calle: string;
   numero: string;
@@ -55,6 +75,7 @@ export interface RegistrarSedeLocalizacionData {
 
 export interface ActualizarSedeLocalizacionData {
   nombre: string;
+  unidadAcademicaId?: string;
   calle: string;
   numero: string;
   piso?: string;

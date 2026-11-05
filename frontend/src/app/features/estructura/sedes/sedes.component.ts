@@ -16,7 +16,11 @@ import {
 import { RouterLink } from '@angular/router';
 import { finalize, of, switchMap, tap } from 'rxjs';
 
-import { EstructuraService, SedeLocalizacionResponse } from '../../../core/estructura/estructura.service';
+import {
+  EstructuraService,
+  SedeLocalizacionResponse,
+  UnidadAcademicaConeauResponse,
+} from '../../../core/estructura/estructura.service';
 import {
   Departamento,
   GeografiaService,
@@ -43,6 +47,7 @@ export class SedesComponent implements OnInit {
 
   readonly sedes = signal<SedeLocalizacionResponse[]>([]);
   readonly instituciones = signal<InstitucionResponse[]>([]);
+  readonly unidadesAcademicas = signal<UnidadAcademicaConeauResponse[]>([]);
   readonly provincias = signal<Provincia[]>([]);
   readonly departamentos = signal<Departamento[]>([]);
   readonly localidades = signal<Localidad[]>([]);
@@ -57,6 +62,7 @@ export class SedesComponent implements OnInit {
 
   readonly form = this.fb.group({
     institucionId: ['', [Validators.required]],
+    unidadAcademicaId: ['', [Validators.required]],
     nombre: ['', [Validators.required, Validators.maxLength(255)]],
     calle: ['', [Validators.required, Validators.maxLength(255)]],
     numero: ['', [Validators.required, Validators.maxLength(50)]],
@@ -88,6 +94,19 @@ export class SedesComponent implements OnInit {
           }
         },
         error: (err) => console.error('Error al listar instituciones:', err),
+      });
+
+    this.estructuraService
+      .listarUnidadesAcademicasConeau()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (uas) => {
+          this.unidadesAcademicas.set(uas);
+          if (uas.length > 0 && !this.form.value.unidadAcademicaId) {
+            this.form.patchValue({ unidadAcademicaId: uas[0].id });
+          }
+        },
+        error: (err) => console.error('Error al cargar unidades académicas CONEAU:', err),
       });
 
     this.geografiaService
@@ -175,6 +194,7 @@ export class SedesComponent implements OnInit {
       this.editingId.set(null);
       this.form.reset({
         institucionId: this.instituciones()[0]?.id || '',
+        unidadAcademicaId: this.unidadesAcademicas()[0]?.id || '',
         nombre: '',
         calle: '',
         numero: '',
@@ -214,6 +234,7 @@ export class SedesComponent implements OnInit {
           this.form.get('localidadId')?.enable();
           this.form.patchValue({
             institucionId: sede.institucionId,
+            unidadAcademicaId: sede.unidadAcademicaId || this.unidadesAcademicas()[0]?.id || '',
             nombre: sede.nombre,
             calle: sede.calle,
             numero: sede.numero,
@@ -234,6 +255,7 @@ export class SedesComponent implements OnInit {
     this.showForm.set(false);
     this.form.reset({
       institucionId: this.instituciones()[0]?.id || '',
+      unidadAcademicaId: this.unidadesAcademicas()[0]?.id || '',
       nombre: '',
       calle: '',
       numero: '',
@@ -265,6 +287,7 @@ export class SedesComponent implements OnInit {
     if (editId) {
       this.estructuraService
         .actualizarSede(editId, {
+          unidadAcademicaId: val.unidadAcademicaId || undefined,
           nombre: val.nombre!.trim(),
           calle: val.calle!.trim(),
           numero: val.numero!.trim(),
@@ -297,6 +320,7 @@ export class SedesComponent implements OnInit {
       this.estructuraService
         .crearSede({
           institucionId: val.institucionId!,
+          unidadAcademicaId: val.unidadAcademicaId || undefined,
           nombre: val.nombre!.trim(),
           calle: val.calle!.trim(),
           numero: val.numero!.trim(),

@@ -1,6 +1,7 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 public record EspacioFisicoResponse(
@@ -16,6 +17,10 @@ public record EspacioFisicoResponse(
         BigDecimal superficieM2,
         String equipamientoDisponible,
         String estadoConeau,
-        Boolean activo
+        Boolean activo,
+        UUID espacioPadreId,
+        Boolean tieneSubespacios,
+        String observacionHigieneSeguridad,
+        List<EspacioFisicoResponse> subespacios
 ) {
 }

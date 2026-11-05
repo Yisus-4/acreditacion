@@ -10,6 +10,8 @@ public final class SedeLocalizacion {
 
     private final UUID id;
     private final UUID institucionId;
+    private UUID unidadAcademicaId;
+    private String unidadAcademicaDenominacion;
     private String nombre;
     private String calle;
     private String numero;
@@ -33,8 +35,22 @@ public final class SedeLocalizacion {
                                              Long departamentoId,
                                              Long localidadId,
                                              boolean esPropia) {
+        return registrar(institucionId, null, nombre, calle, numero, piso, codigoPostal, provinciaId, departamentoId, localidadId, esPropia);
+    }
+
+    public static SedeLocalizacion registrar(UUID institucionId,
+                                             UUID unidadAcademicaId,
+                                             String nombre,
+                                             String calle,
+                                             String numero,
+                                             String piso,
+                                             String codigoPostal,
+                                             Long provinciaId,
+                                             Long departamentoId,
+                                             Long localidadId,
+                                             boolean esPropia) {
         Instant now = Instant.now();
-        return new SedeLocalizacion(
+        SedeLocalizacion sede = new SedeLocalizacion(
                 UUID.randomUUID(),
                 institucionId,
                 nombre,
@@ -50,6 +66,8 @@ public final class SedeLocalizacion {
                 now,
                 now
         );
+        sede.unidadAcademicaId = unidadAcademicaId;
+        return sede;
     }
 
     public static SedeLocalizacion rehydrate(UUID id,
@@ -66,7 +84,26 @@ public final class SedeLocalizacion {
                                              boolean activo,
                                              Instant creadoEn,
                                              Instant actualizadoEn) {
-        return new SedeLocalizacion(
+        return rehydrate(id, institucionId, null, null, nombre, calle, numero, piso, codigoPostal, provinciaId, departamentoId, localidadId, esPropia, activo, creadoEn, actualizadoEn);
+    }
+
+    public static SedeLocalizacion rehydrate(UUID id,
+                                             UUID institucionId,
+                                             UUID unidadAcademicaId,
+                                             String unidadAcademicaDenominacion,
+                                             String nombre,
+                                             String calle,
+                                             String numero,
+                                             String piso,
+                                             String codigoPostal,
+                                             Long provinciaId,
+                                             Long departamentoId,
+                                             Long localidadId,
+                                             boolean esPropia,
+                                             boolean activo,
+                                             Instant creadoEn,
+                                             Instant actualizadoEn) {
+        SedeLocalizacion sede = new SedeLocalizacion(
                 id,
                 institucionId,
                 nombre,
@@ -82,6 +119,9 @@ public final class SedeLocalizacion {
                 creadoEn,
                 actualizadoEn
         );
+        sede.unidadAcademicaId = unidadAcademicaId;
+        sede.unidadAcademicaDenominacion = unidadAcademicaDenominacion;
+        return sede;
     }
 
     public SedeLocalizacion(UUID id,
@@ -123,6 +163,20 @@ public final class SedeLocalizacion {
                            Long nuevoDepartamentoId,
                            Long nuevaLocalidadId,
                            boolean nuevaEsPropia) {
+        actualizar(this.unidadAcademicaId, nuevoNombre, nuevaCalle, nuevoNumero, nuevoPiso, nuevoCodigoPostal, nuevaProvinciaId, nuevoDepartamentoId, nuevaLocalidadId, nuevaEsPropia);
+    }
+
+    public void actualizar(UUID nuevaUnidadAcademicaId,
+                           String nuevoNombre,
+                           String nuevaCalle,
+                           String nuevoNumero,
+                           String nuevoPiso,
+                           String nuevoCodigoPostal,
+                           Long nuevaProvinciaId,
+                           Long nuevoDepartamentoId,
+                           Long nuevaLocalidadId,
+                           boolean nuevaEsPropia) {
+        this.unidadAcademicaId = nuevaUnidadAcademicaId;
         this.nombre = requireNonBlank(nuevoNombre, "El nombre de la sede es obligatorio");
         this.calle = requireNonBlank(nuevaCalle, "La calle de la sede es obligatoria");
         this.numero = requireNonBlank(nuevoNumero, "El número de la sede es obligatorio");
@@ -156,6 +210,22 @@ public final class SedeLocalizacion {
 
     public UUID getInstitucionId() {
         return institucionId;
+    }
+
+    public UUID getUnidadAcademicaId() {
+        return unidadAcademicaId;
+    }
+
+    public void setUnidadAcademicaId(UUID unidadAcademicaId) {
+        this.unidadAcademicaId = unidadAcademicaId;
+    }
+
+    public String getUnidadAcademicaDenominacion() {
+        return unidadAcademicaDenominacion;
+    }
+
+    public void setUnidadAcademicaDenominacion(String unidadAcademicaDenominacion) {
+        this.unidadAcademicaDenominacion = unidadAcademicaDenominacion;
     }
 
     public String getNombre() {

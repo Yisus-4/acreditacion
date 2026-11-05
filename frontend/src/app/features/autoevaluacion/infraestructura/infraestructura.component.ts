@@ -12,9 +12,11 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 
+import { Auth } from '../../../core/auth/auth';
 import {
   ActualizarGuiaHigieneRequest,
   AutoevaluacionService,
+  ConsultaEspaciosResponse,
   DocumentoHigieneItemRequest,
   EspacioFisico,
   GuiaHigieneSeguridad,
@@ -22,7 +24,11 @@ import {
   RegistrarInmuebleRequest,
   TipoEspacioFisico,
 } from '../../../core/autoevaluacion/autoevaluacion.service';
-import { CarreraResponse, EstructuraService } from '../../../core/estructura/estructura.service';
+import {
+  CarreraResponse,
+  EstructuraService,
+  SedeLocalizacionResponse,
+} from '../../../core/estructura/estructura.service';
 import {
   Departamento,
   GeografiaService,
@@ -40,6 +46,7 @@ import { SubnavAutoevaluacionComponent } from '../subnav-autoevaluacion/subnav-a
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InfraestructuraComponent implements OnInit {
+  private readonly auth = inject(Auth);
   private readonly autoevalService = inject(AutoevaluacionService);
   private readonly estructuraService = inject(EstructuraService);
   private readonly geografiaService = inject(GeografiaService);
@@ -48,6 +55,7 @@ export class InfraestructuraComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly inmuebles = signal<Inmueble[]>([]);
+  readonly sedes = signal<SedeLocalizacionResponse[]>([]);
   readonly tiposEspacio = signal<TipoEspacioFisico[]>([]);
   readonly carreras = signal<CarreraResponse[]>([]);
   readonly provincias = signal<Provincia[]>([]);
@@ -72,6 +80,21 @@ export class InfraestructuraComponent implements OnInit {
 
   readonly espacioExpandidoId = signal<string | null>(null);
 
+  // Permisos y Roles
+  readonly puedeGestionarInfraestructura = computed(() => {
+    if (!this.auth.isAuthenticated) return true;
+    return this.auth.hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA');
+  });
+
+  readonly esRolHigiene = computed(() => {
+    return this.auth.hasRole('HIGIENE_SEGURIDAD');
+  });
+
+  readonly puedeModificarHigieneSeguridad = computed(() => {
+    if (!this.auth.isAuthenticated) return true;
+    return this.auth.hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD');
+  });
+
   // Modal Extensión de Plazo (PT-001)
   readonly mostrarModalExtension = signal<boolean>(false);
   readonly nuevaFechaLimite = signal<string>('');
@@ -86,6 +109,36 @@ export class InfraestructuraComponent implements OnInit {
   readonly nuevoEspacioTipoId = signal<string>('');
   readonly nuevoEspacioCantidad = signal<number>(1);
   readonly nuevoEspacioCapacidad = signal<number>(30);
+  readonly nuevoEspacioSuperficieM2 = signal<number | null>(null);
+  readonly nuevoEspacioObservacionHyS = signal<string>('');
+  readonly nuevoEspacioTieneSubespacios = signal<boolean>(false);
+  readonly subespaciosDelNuevoEspacio = signal<EspacioFisico[]>([]);
+
+  // Campos para agregar un subespacio (máximo 1 nivel de anidación)
+  readonly subTipoEspacioId = signal<string>('');
+  readonly subDenominacion = signal<string>('');
+  readonly subDescInfra = signal<string>('');
+  readonly subCantidad = signal<number>(1);
+  readonly subCapacidad = signal<number>(20);
+  readonly subSuperficieM2 = signal<number | null>(null);
+  readonly subObservacionHyS = signal<string>('');
+
+  // Modal Ver/Editar Higiene y Seguridad de Espacio
+  readonly mostrarModalHyS = signal<boolean>(false);
+  readonly espacioSeleccionadoHyS = signal<EspacioFisico | null>(null);
+  readonly inmuebleNombreHyS = signal<string>('');
+  readonly textoObservacionHyS = signal<string>('');
+  readonly guardandoHyS = signal<boolean>(false);
+
+  // Modal Consulta de Espacios por m²
+  readonly mostrarModalConsultaM2 = signal<boolean>(false);
+  readonly consultaTipoEspacioId = signal<string>('');
+  readonly consultaSedeId = signal<string>('');
+  readonly consultaModo = signal<'MINIMO' | 'RANGO'>('MINIMO');
+  readonly consultaMinM2 = signal<number | null>(null);
+  readonly consultaMaxM2 = signal<number | null>(null);
+  readonly cargandoConsultaM2 = signal<boolean>(false);
+  readonly resultadoConsultaM2 = signal<ConsultaEspaciosResponse | null>(null);
 
   // Modal para Crear Tipo de Espacio Físico (Caso 2 del Diagrama de Secuencia)
   readonly mostrarModalNuevoTipo = signal<boolean>(false);
@@ -93,11 +146,11 @@ export class InfraestructuraComponent implements OnInit {
   readonly nuevoTipoCodigo = signal<string>('');
   readonly guardandoTipoEspacio = signal<boolean>(false);
 
-  // Carreras Vinculadas (Diagrama de Secuencia: Agregar carreras con las que se vincula)
+  // Carreras Vinculadas
   readonly carrerasSeleccionadas = signal<CarreraResponse[]>([]);
   readonly carreraParaVincularId = signal<string>('');
 
-  // Documentación de Respaldo con Tipología (Diagrama de Secuencia: CU-ACR-03.02)
+  // Documentación de Respaldo con Tipología
   readonly documentosAgregados = signal<{
     nombreArchivo: string;
     urlMinio: string;
@@ -108,7 +161,7 @@ export class InfraestructuraComponent implements OnInit {
   readonly inputDocTipoAnexo = signal<string>('CONVENIO_COMODATO');
   readonly inputDocDescripcion = signal<string>('');
 
-  // Doble Confirmación al Guardar (Diagrama de Secuencia: Solicita segunda confirmación)
+  // Doble Confirmación al Guardar
   readonly mostrarConfirmacionGuardado = signal<boolean>(false);
 
   // ---------------------------------------------------------------------------
@@ -133,6 +186,7 @@ export class InfraestructuraComponent implements OnInit {
   });
 
   readonly form: FormGroup = this.fb.group({
+    sedeId: ['', [Validators.required]],
     numeroOrden: [null],
     nombre: ['', [Validators.required, Validators.maxLength(255)]],
     domicilio: ['', [Validators.required, Validators.maxLength(255)]],
@@ -163,6 +217,7 @@ export class InfraestructuraComponent implements OnInit {
         (i) =>
           i.nombre.toLowerCase().includes(query) ||
           i.domicilio.toLowerCase().includes(query) ||
+          (i.sedeNombre && i.sedeNombre.toLowerCase().includes(query)) ||
           (i.localidadNombre && i.localidadNombre.toLowerCase().includes(query)) ||
           (i.situacion && i.situacion.toLowerCase().includes(query))
       );
@@ -261,6 +316,18 @@ export class InfraestructuraComponent implements OnInit {
       this.cargarInmuebles();
     }
 
+    this.estructuraService.listarSedes()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (sedes) => {
+          this.sedes.set(sedes);
+          if (sedes.length > 0 && !this.form.value.sedeId) {
+            this.form.patchValue({ sedeId: sedes[0].id });
+          }
+        },
+        error: (err) => console.error('Error al listar sedes:', err),
+      });
+
     this.autoevalService.listarTiposEspacio()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -308,35 +375,33 @@ export class InfraestructuraComponent implements OnInit {
   cambiarModoVista(modo: 'MAESTRO' | 'PROCESO'): void {
     this.modoVista.set(modo);
     this.errorMessage.set(null);
-    if (this.actividadSeleccionada() === 'HIGIENE_SEGURIDAD') {
-      this.cargarGuiaHigiene();
-    } else {
-      this.cargarInmuebles();
-    }
+    this.successMessage.set(null);
+    this.cargarInmuebles();
   }
 
-  cargarDepartamentos(provinciaId: string | number): void {
+  cargarDepartamentos(provinciaId: number): void {
     this.geografiaService.obtenerDepartamentos(provinciaId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (deptos) => {
           this.departamentos.set(deptos);
-          const chilecito = deptos.find((d) => d.nombre.toLowerCase().includes('chilecito'));
-          if (chilecito) {
-            this.form.patchValue({ departamentoId: chilecito.id });
-            this.cargarLocalidades(chilecito.id);
+          if (deptos.length > 0 && !this.form.value.departamentoId) {
+            const chilecito = deptos.find((d) => d.nombre.toLowerCase().includes('chilecito'));
+            const deptoSelec = chilecito ? chilecito.id : deptos[0].id;
+            this.form.patchValue({ departamentoId: deptoSelec });
+            this.cargarLocalidades(deptoSelec);
           }
         },
       });
   }
 
-  cargarLocalidades(departamentoId: string | number): void {
+  cargarLocalidades(departamentoId: number): void {
     this.geografiaService.obtenerLocalidades(departamentoId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (locs) => {
           this.localidades.set(locs);
-          if (locs.length > 0 && !this.form.get('localidadId')?.value) {
+          if (locs.length > 0 && !this.form.value.localidadId) {
             this.form.patchValue({ localidadId: locs[0].id });
           }
         },
@@ -395,6 +460,7 @@ export class InfraestructuraComponent implements OnInit {
     this.modoEdicion.set(false);
     this.inmuebleEditandoId.set(null);
     this.form.reset({
+      sedeId: this.sedes()[0]?.id || '',
       numeroOrden: (this.inmuebles().length + 1),
       condicionTenencia: 'PROPIO',
       situacion: 'Propiedad',
@@ -417,6 +483,10 @@ export class InfraestructuraComponent implements OnInit {
     this.mostrarFormEspacio.set(false);
     this.mostrarConfirmacionGuardado.set(false);
     this.mostrarModalNuevoTipo.set(false);
+    this.nuevoEspacioSuperficieM2.set(null);
+    this.nuevoEspacioObservacionHyS.set('');
+    this.nuevoEspacioTieneSubespacios.set(false);
+    this.subespaciosDelNuevoEspacio.set([]);
     this.formAbierto.set(true);
   }
 
@@ -425,6 +495,7 @@ export class InfraestructuraComponent implements OnInit {
     this.inmuebleEditandoId.set(inm.id);
 
     this.form.patchValue({
+      sedeId: inm.sedeId || (this.sedes()[0]?.id ?? ''),
       numeroOrden: inm.numeroOrden,
       nombre: inm.nombre,
       domicilio: inm.domicilio,
@@ -506,6 +577,10 @@ export class InfraestructuraComponent implements OnInit {
     this.nuevoEspacioTipoId.set('');
     this.nuevoEspacioCantidad.set(1);
     this.nuevoEspacioCapacidad.set(30);
+    this.nuevoEspacioSuperficieM2.set(null);
+    this.nuevoEspacioObservacionHyS.set('');
+    this.nuevoEspacioTieneSubespacios.set(false);
+    this.subespaciosDelNuevoEspacio.set([]);
     this.mostrarFormEspacio.set(true);
   }
 
@@ -518,11 +593,15 @@ export class InfraestructuraComponent implements OnInit {
     this.nuevoEspacioTipoId.set(esp.tipoEspacioId || '');
     this.nuevoEspacioCantidad.set(esp.cantidad || 1);
     this.nuevoEspacioCapacidad.set(esp.capacidadPersonasSentadas || esp.capacidadEstudiantes || 0);
+    this.nuevoEspacioSuperficieM2.set(esp.superficieM2 ?? null);
+    this.nuevoEspacioObservacionHyS.set(esp.observacionHigieneSeguridad || '');
+    this.nuevoEspacioTieneSubespacios.set(!!esp.tieneSubespacios);
+    this.subespaciosDelNuevoEspacio.set(esp.subespacios ? [...esp.subespacios] : []);
     this.mostrarFormEspacio.set(true);
   }
 
   guardarEspacioFisico(): void {
-    const nombre = this.nuevoEspacioNombre().trim();
+    const nombre = this.nuevoEspacioNombre().trim() || this.nuevoEspacioDescInfra().trim();
     if (!nombre) return;
 
     const tipoId = this.nuevoEspacioTipoId();
@@ -540,7 +619,10 @@ export class InfraestructuraComponent implements OnInit {
       cantidad: this.nuevoEspacioCantidad() || 1,
       capacidadPersonasSentadas: this.nuevoEspacioCapacidad() || 0,
       capacidadEstudiantes: this.nuevoEspacioCapacidad() || 0,
-      superficieM2: prev?.superficieM2,
+      superficieM2: this.nuevoEspacioSuperficieM2() ?? undefined,
+      observacionHigieneSeguridad: this.nuevoEspacioObservacionHyS().trim() || undefined,
+      tieneSubespacios: this.nuevoEspacioTieneSubespacios(),
+      subespacios: this.nuevoEspacioTieneSubespacios() ? [...this.subespaciosDelNuevoEspacio()] : [],
       equipamientoDisponible: prev?.equipamientoDisponible,
       estadoConeau: prev?.estadoConeau || 'CARGADO',
       activo: true,
@@ -568,6 +650,133 @@ export class InfraestructuraComponent implements OnInit {
       this.espacioEditandoIndex.set(null);
       this.mostrarFormEspacio.set(false);
     }
+  }
+
+  // --- Subespacios de un Espacio Físico (1 Nivel Máximo) ---
+  agregarSubespacio(): void {
+    const desc = this.subDescInfra().trim() || this.subDenominacion().trim();
+    if (!desc) return;
+    const tipoId = this.subTipoEspacioId();
+    const tipoObj = this.tiposEspacio().find((t) => t.id === tipoId);
+
+    const sub: EspacioFisico = {
+      denominacion: this.subDenominacion().trim() || desc,
+      descripcionInfraestructura: desc,
+      tipoEspacioId: tipoId || undefined,
+      tipoEspacioDenominacion: tipoObj ? tipoObj.denominacion : 'Subespacio',
+      cantidad: this.subCantidad() || 1,
+      capacidadPersonasSentadas: this.subCapacidad() || 0,
+      capacidadEstudiantes: this.subCapacidad() || 0,
+      superficieM2: this.subSuperficieM2() ?? undefined,
+      observacionHigieneSeguridad: this.subObservacionHyS().trim() || undefined,
+      tieneSubespacios: false,
+      activo: true,
+    };
+
+    this.subespaciosDelNuevoEspacio.update((list) => [...list, sub]);
+
+    this.subDenominacion.set('');
+    this.subDescInfra.set('');
+    this.subTipoEspacioId.set('');
+    this.subCantidad.set(1);
+    this.subCapacidad.set(20);
+    this.subSuperficieM2.set(null);
+    this.subObservacionHyS.set('');
+  }
+
+  eliminarSubespacio(index: number): void {
+    this.subespaciosDelNuevoEspacio.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  // --- Modal Ver/Editar Higiene y Seguridad de Espacio ---
+  abrirModalHyS(esp: EspacioFisico, inmuebleNombre: string): void {
+    this.espacioSeleccionadoHyS.set(esp);
+    this.inmuebleNombreHyS.set(inmuebleNombre);
+    this.textoObservacionHyS.set(esp.observacionHigieneSeguridad || '');
+    this.mostrarModalHyS.set(true);
+  }
+
+  cerrarModalHyS(): void {
+    this.mostrarModalHyS.set(false);
+    this.espacioSeleccionadoHyS.set(null);
+    this.textoObservacionHyS.set('');
+  }
+
+  guardarObservacionHyS(): void {
+    const esp = this.espacioSeleccionadoHyS();
+    if (!esp || !esp.id) {
+      this.cerrarModalHyS();
+      return;
+    }
+
+    this.guardandoHyS.set(true);
+    const nuevaObs = this.textoObservacionHyS().trim();
+
+    this.autoevalService.actualizarHigieneSeguridadEspacio(esp.id, {
+      observacionHigieneSeguridad: nuevaObs,
+    })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.guardandoHyS.set(false))
+      )
+      .subscribe({
+        next: () => {
+          this.inmuebles.update((inms) =>
+            inms.map((inm) => {
+              if (!inm.espacios) return inm;
+              const espaciosActualizados = inm.espacios.map((e) => {
+                if (e.id === esp.id) {
+                  return { ...e, observacionHigieneSeguridad: nuevaObs };
+                }
+                if (e.subespacios && e.subespacios.length > 0) {
+                  const subsActualizados = e.subespacios.map((s) =>
+                    s.id === esp.id ? { ...s, observacionHigieneSeguridad: nuevaObs } : s
+                  );
+                  return { ...e, subespacios: subsActualizados };
+                }
+                return e;
+              });
+              return { ...inm, espacios: espaciosActualizados };
+            })
+          );
+          this.successMessage.set('Observación de Higiene y Seguridad actualizada exitosamente.');
+          this.cerrarModalHyS();
+        },
+        error: () => {
+          this.errorMessage.set('Error al actualizar la observación de Higiene y Seguridad.');
+        },
+      });
+  }
+
+  // --- Modal Consulta de Espacios por m² ---
+  abrirModalConsultaM2(): void {
+    this.resultadoConsultaM2.set(null);
+    this.mostrarModalConsultaM2.set(true);
+  }
+
+  cerrarModalConsultaM2(): void {
+    this.mostrarModalConsultaM2.set(false);
+  }
+
+  ejecutarConsultaM2(): void {
+    this.cargandoConsultaM2.set(true);
+    const min = this.consultaMinM2();
+    const max = this.consultaModo() === 'RANGO' ? this.consultaMaxM2() : null;
+
+    this.autoevalService.consultarEspaciosPorM2({
+      minM2: min !== null ? min : undefined,
+      maxM2: max !== null ? max : undefined,
+      tipoEspacioId: this.consultaTipoEspacioId() || undefined,
+      sedeId: this.consultaSedeId() || undefined,
+    })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.cargandoConsultaM2.set(false))
+      )
+      .subscribe({
+        next: (res) => this.resultadoConsultaM2.set(res),
+        error: () => this.errorMessage.set('Error al ejecutar la consulta de espacios.'),
+      });
   }
 
   // --- Tipo de Espacio (Caso 2 del Diagrama de Secuencia) ---
@@ -657,6 +866,7 @@ export class InfraestructuraComponent implements OnInit {
     const val = this.form.value;
 
     const req: RegistrarInmuebleRequest = {
+      sedeId: val.sedeId,
       numeroOrden: val.numeroOrden,
       nombre: val.nombre,
       domicilio: val.domicilio,
@@ -687,8 +897,23 @@ export class InfraestructuraComponent implements OnInit {
         capacidadPersonasSentadas: e.capacidadPersonasSentadas || e.capacidadEstudiantes || 0,
         capacidadEstudiantes: e.capacidadEstudiantes || 0,
         superficieM2: e.superficieM2,
+        observacionHigieneSeguridad: e.observacionHigieneSeguridad,
+        tieneSubespacios: e.tieneSubespacios,
         equipamientoDisponible: e.equipamientoDisponible,
         estadoConeau: e.estadoConeau || 'CARGADO',
+        subespacios: e.subespacios ? e.subespacios.map((sub) => ({
+          id: sub.id,
+          tipoEspacioId: sub.tipoEspacioId,
+          denominacion: sub.denominacion,
+          descripcionInfraestructura: sub.descripcionInfraestructura || sub.denominacion,
+          cantidad: sub.cantidad || 1,
+          capacidadPersonasSentadas: sub.capacidadPersonasSentadas || sub.capacidadEstudiantes || 0,
+          capacidadEstudiantes: sub.capacidadEstudiantes || 0,
+          superficieM2: sub.superficieM2,
+          observacionHigieneSeguridad: sub.observacionHigieneSeguridad,
+          tieneSubespacios: false,
+          estadoConeau: sub.estadoConeau || 'CARGADO',
+        })) : [],
       })),
       documentos: this.documentosAgregados().map((d) => ({
         nombreArchivo: d.nombreArchivo,
@@ -748,34 +973,19 @@ export class InfraestructuraComponent implements OnInit {
     const nuevaFecha = this.nuevaFechaLimite();
     if (!nuevaFecha) return;
 
-    if (this.actividadSeleccionada() === 'HIGIENE_SEGURIDAD') {
-      this.autoevalService.extenderPlazoHigiene(pId, {
-        nuevaFechaLimite: nuevaFecha,
-        motivo: this.motivoExtension(),
-      })
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: () => {
-            this.successMessage.set(`Plazo de Higiene y Seguridad extendido hasta el ${nuevaFecha}. Sincronizado en el Plan de Trabajo (Actividad 4.2).`);
-            this.cerrarModalExtension();
-            this.cargarGuiaHigiene();
-          },
-          error: () => this.errorMessage.set('No se pudo extender el plazo de Higiene y Seguridad.'),
-        });
-    } else {
-      this.autoevalService.extenderPlazoInfraestructura(pId, {
-        nuevaFechaLimite: nuevaFecha,
-        motivo: this.motivoExtension(),
-      })
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: () => {
-            this.successMessage.set(`Plazo extendido hasta el ${nuevaFecha}. Sincronizado automáticamente con el Plan de Trabajo (hoja INFO - Actividad 4.1).`);
-            this.cerrarModalExtension();
-          },
-          error: () => this.errorMessage.set('No se pudo extender el plazo.'),
-        });
-    }
+    this.autoevalService.extenderPlazo(pId, {
+      actividadCodigo: this.actividadSeleccionada() === 'HIGIENE_SEGURIDAD' ? '4.2' : '4.1',
+      nuevaFechaLimite: nuevaFecha,
+      motivo: this.motivoExtension().trim() || 'Prórroga solicitada por la Unidad Académica',
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.successMessage.set(res.mensaje);
+          this.cerrarModalExtension();
+        },
+        error: () => this.errorMessage.set('Error al registrar la extensión de plazo.'),
+      });
   }
 
   // ---------------------------------------------------------------------------
@@ -813,42 +1023,39 @@ export class InfraestructuraComponent implements OnInit {
 
   cargarGuiaHigiene(): void {
     this.loadingHigiene.set(true);
+    const pId = this.procesoId() || 'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
 
-    const call$ = (this.modoVista() === 'PROCESO' && this.procesoId())
-      ? this.autoevalService.obtenerGuiaHigienePorProceso(this.procesoId()!)
-      : this.autoevalService.obtenerGuiaHigieneMaestra();
-
-    call$
+    this.autoevalService.obtenerGuiaHigienePorProceso(pId)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loadingHigiene.set(false))
       )
       .subscribe({
-        next: (g) => {
-          this.guiaHigiene.set(g);
-          this.formHigiene.patchValue({
-            instanciaResponsableUa: g.instanciaResponsableUa || '',
-            politicaUnidadesApoyo: g.politicaUnidadesApoyo || '',
-            aplicaUnidadesApoyo: g.aplicaUnidadesApoyo || false,
-            observaciones: g.observaciones || '',
-          });
+        next: (guia) => {
+          this.guiaHigiene.set(guia);
+          if (guia) {
+            this.formHigiene.patchValue({
+              instanciaResponsableUa: guia.instanciaResponsableUa || '',
+              politicaUnidadesApoyo: guia.politicaUnidadesApoyo || '',
+              aplicaUnidadesApoyo: guia.aplicaUnidadesApoyo || false,
+              observaciones: guia.observaciones || '',
+            });
+          }
         },
         error: () => {
-          if (this.actividadSeleccionada() === 'HIGIENE_SEGURIDAD') {
-            this.errorMessage.set('Error al cargar la Guía de Higiene y Seguridad (GT-003)');
-          }
+          this.errorMessage.set('Error al cargar la Guía de Higiene y Seguridad (GT-003)');
         },
       });
   }
 
   guardarGuiaHigiene(): void {
-    const guia = this.guiaHigiene();
-    if (!guia) return;
-
     if (this.formHigiene.invalid) {
       this.formHigiene.markAllAsTouched();
       return;
     }
+
+    const guia = this.guiaHigiene();
+    if (!guia) return;
 
     this.guardandoHigiene.set(true);
     const val = this.formHigiene.value;
@@ -866,11 +1073,13 @@ export class InfraestructuraComponent implements OnInit {
         finalize(() => this.guardandoHigiene.set(false))
       )
       .subscribe({
-        next: (g) => {
-          this.guiaHigiene.set(g);
-          this.successMessage.set('Guía de Higiene y Seguridad (GT-003) actualizada exitosamente.');
+        next: (res: GuiaHigieneSeguridad) => {
+          this.guiaHigiene.set(res);
+          this.successMessage.set('Guía de Higiene y Seguridad guardada exitosamente.');
         },
-        error: () => this.errorMessage.set('Error al guardar la guía de Higiene y Seguridad.'),
+        error: () => {
+          this.errorMessage.set('Error al guardar la Guía de Higiene y Seguridad.');
+        },
       });
   }
 
@@ -887,35 +1096,48 @@ export class InfraestructuraComponent implements OnInit {
     this.mostrarModalNormativaHigiene.set(false);
   }
 
-  guardarNormativaHigiene(): void {
+  agregarNormativaHigiene(): void {
+    const num = this.nuevaNormativaNumero().trim();
+    if (!num) return;
+
     const guia = this.guiaHigiene();
     if (!guia) return;
 
-    const nombreArchivo = this.nuevaNormativaArchivo().trim();
-    if (!nombreArchivo) {
-      this.errorMessage.set('Debe indicar el nombre del archivo de respaldo a subir en Normativa.');
-      return;
-    }
-
-    const req: DocumentoHigieneItemRequest = {
-      tipoDocumentoClave: 'NORMATIVA_RESPALDO',
+    const nuevoDoc: DocumentoHigieneItemRequest = {
+      tipoDocumentoClave: 'NORMATIVA_RECTORAL',
       tipoDocumentoNombre: this.nuevaNormativaTipo(),
       organismoEmisor: this.nuevaNormativaEmisor(),
-      numeroNormativa: this.nuevaNormativaNumero(),
-      descripcion: this.nuevaNormativaDesc(),
-      nombreArchivo: nombreArchivo,
+      numeroNormativa: num,
+      descripcion: this.nuevaNormativaDesc().trim() || 'Resolución reglamentaria de bioseguridad',
+      nombreArchivo: this.nuevaNormativaArchivo().trim() || `Resolucion_${num}.pdf`,
+      urlMinio: `/minio/acreditacion/03_01/Normativa/Resolucion_${num}.pdf`,
       obligatorio: false,
     };
 
-    this.autoevalService.agregarDocumentoGuiaHigiene(guia.id, req)
+    this.cerrarModalNormativaHigiene();
+
+    this.autoevalService.agregarDocumentoGuiaHigiene(guia.id, nuevoDoc)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.successMessage.set(`Documento normativo "${nombreArchivo}" archivado en subcarpeta Normativa.`);
-          this.cerrarModalNormativaHigiene();
           this.cargarGuiaHigiene();
+          this.successMessage.set('Normativa vinculada a GT-003 correctamente.');
         },
-        error: () => this.errorMessage.set('Error al guardar el documento normativo.'),
+        error: () => this.errorMessage.set('Error al vincular normativa.'),
+      });
+  }
+
+  eliminarNormativaHigiene(docId: string): void {
+    const guia = this.guiaHigiene();
+    if (!guia) return;
+
+    this.autoevalService.eliminarDocumentoGuiaHigiene(guia.id, docId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.cargarGuiaHigiene();
+          this.successMessage.set('Normativa eliminada.');
+        },
       });
   }
 
@@ -928,7 +1150,7 @@ export class InfraestructuraComponent implements OnInit {
           this.successMessage.set(res.mensaje);
           this.cargarGuiaHigiene();
         },
-        error: () => this.errorMessage.set('Error al remitir la Guía GT-003 a la AEA.'),
+        error: () => this.errorMessage.set('Error al verificar la Guía de Higiene y Seguridad.'),
       });
   }
 }

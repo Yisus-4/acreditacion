@@ -61,6 +61,15 @@ export const routes: Routes = [
       ).then((m) => m.PanelAdministracionComponent),
   },
   {
+    path: 'admin/unidades-academicas-coneau',
+    title: 'Unidades Académicas — CONEAU Global UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/estructura/unidades-academicas-coneau/unidades-academicas-coneau.component'
+      ).then((m) => m.UnidadesAcademicasConeauComponent),
+  },
+  {
     path: 'admin/unidades-academicas',
     title: 'Escuelas — Sistema de Acreditación UNdeC',
     canActivate: [authGuard],

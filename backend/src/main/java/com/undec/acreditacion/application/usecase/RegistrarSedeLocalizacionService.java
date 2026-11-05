@@ -34,6 +34,7 @@ public class RegistrarSedeLocalizacionService implements RegistrarSedeLocalizaci
 
         SedeLocalizacion sede = SedeLocalizacion.registrar(
                 command.institucionId(),
+                command.unidadAcademicaId(),
                 command.nombre(),
                 command.calle(),
                 command.numero(),

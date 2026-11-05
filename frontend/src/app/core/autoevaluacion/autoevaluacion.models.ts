@@ -25,6 +25,10 @@ export interface EspacioFisico {
   equipamientoDisponible?: string;
   estadoConeau?: string;
   activo?: boolean;
+  espacioPadreId?: string;
+  tieneSubespacios?: boolean;
+  observacionHigieneSeguridad?: string;
+  subespacios?: EspacioFisico[];
 }
 
 export interface DocumentacionRespaldo {
@@ -46,6 +50,9 @@ export interface Inmueble {
   domicilio: string;
   calle?: string;
   numero?: string;
+  sedeId?: string;
+  sedeNombre?: string;
+  unidadAcademicaDenominacion?: string;
   provinciaId?: number;
   provinciaNombre?: string;
   departamentoId?: number;
@@ -80,6 +87,7 @@ export interface RegistrarInmuebleRequest {
   domicilio: string;
   calle?: string;
   numero?: string;
+  sedeId?: string;
   provinciaId?: number;
   departamentoId?: number;
   localidadId?: number;
@@ -106,6 +114,9 @@ export interface RegistrarInmuebleRequest {
     capacidadEstudiantes?: number;
     superficieM2?: number;
     equipamientoDisponible?: string;
+    observacionHigieneSeguridad?: string;
+    tieneSubespacios?: boolean;
+    subespacios?: any[];
     estadoConeau?: string;
   }[];
   documentos?: {
@@ -114,6 +125,33 @@ export interface RegistrarInmuebleRequest {
     tipoAnexo: string;
     descripcion?: string;
   }[];
+}
+
+export interface ConsultaEspaciosResponse {
+  totalAulas: number;
+  totalEspacios?: number;
+  capacidadTotalPersonas: number;
+  superficieTotalM2: number;
+  espacios: EspacioFisicoConsultaItem[];
+}
+
+export interface EspacioFisicoConsultaItem {
+  id: string;
+  inmuebleId: string;
+  inmuebleNombre: string;
+  sedeId?: string;
+  sedeNombre?: string;
+  tipoEspacioId?: string;
+  tipoEspacioDenominacion?: string;
+  denominacion: string;
+  descripcionInfraestructura?: string;
+  cantidad: number;
+  capacidadPersonasSentadas: number;
+  superficieM2?: number;
+  observacionHigieneSeguridad?: string;
+  esSubespacio: boolean;
+  espacioPadreId?: string;
+  espacioPadreDenominacion?: string;
 }
 
 export interface CrearTipoEspacioRequest {

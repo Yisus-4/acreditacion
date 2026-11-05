@@ -73,6 +73,7 @@ public class SedeLocalizacionController {
     ) {
         RegistrarSedeLocalizacionCommand command = new RegistrarSedeLocalizacionCommand(
                 request.institucionId(),
+                request.unidadAcademicaId(),
                 request.nombre(),
                 request.calle(),
                 request.numero(),
@@ -95,6 +96,7 @@ public class SedeLocalizacionController {
     ) {
         ActualizarSedeLocalizacionCommand command = new ActualizarSedeLocalizacionCommand(
                 id,
+                request.unidadAcademicaId(),
                 request.nombre(),
                 request.calle(),
                 request.numero(),

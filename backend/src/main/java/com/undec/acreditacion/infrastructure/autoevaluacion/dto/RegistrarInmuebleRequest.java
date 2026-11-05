@@ -10,6 +10,7 @@ public record RegistrarInmuebleRequest(
         String domicilio,
         String calle,
         String numero,
+        UUID sedeId,
         Long provinciaId,
         Long departamentoId,
         Long localidadId,

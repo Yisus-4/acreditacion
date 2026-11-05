@@ -16,6 +16,7 @@ public class PostgresSedeLocalizacionRepositoryAdapter implements SedeLocalizaci
     private final SpringDataProvinciaRepository springDataProvinciaRepository;
     private final SpringDataDepartamentoRepository springDataDepartamentoRepository;
     private final SpringDataLocalidadRepository springDataLocalidadRepository;
+    private final SpringDataUnidadAcademicaConeauRepository springDataUnidadAcademicaConeauRepository;
     private final EstructuraAcademicaPersistenceMapper mapper;
 
     public PostgresSedeLocalizacionRepositoryAdapter(SpringDataSedeLocalizacionRepository springDataRepository,
@@ -23,12 +24,14 @@ public class PostgresSedeLocalizacionRepositoryAdapter implements SedeLocalizaci
                                                      SpringDataProvinciaRepository springDataProvinciaRepository,
                                                      SpringDataDepartamentoRepository springDataDepartamentoRepository,
                                                      SpringDataLocalidadRepository springDataLocalidadRepository,
+                                                     SpringDataUnidadAcademicaConeauRepository springDataUnidadAcademicaConeauRepository,
                                                      EstructuraAcademicaPersistenceMapper mapper) {
         this.springDataRepository = springDataRepository;
         this.springDataInstitucionRepository = springDataInstitucionRepository;
         this.springDataProvinciaRepository = springDataProvinciaRepository;
         this.springDataDepartamentoRepository = springDataDepartamentoRepository;
         this.springDataLocalidadRepository = springDataLocalidadRepository;
+        this.springDataUnidadAcademicaConeauRepository = springDataUnidadAcademicaConeauRepository;
         this.mapper = mapper;
     }
 
@@ -38,8 +41,11 @@ public class PostgresSedeLocalizacionRepositoryAdapter implements SedeLocalizaci
         ProvinciaJpaEntity provincia = springDataProvinciaRepository.getReferenceById(sede.getProvinciaId());
         DepartamentoJpaEntity departamento = springDataDepartamentoRepository.getReferenceById(sede.getDepartamentoId());
         LocalidadJpaEntity localidad = springDataLocalidadRepository.getReferenceById(sede.getLocalidadId());
+        UnidadAcademicaConeauJpaEntity unidadAcademica = sede.getUnidadAcademicaId() != null
+                ? springDataUnidadAcademicaConeauRepository.findById(sede.getUnidadAcademicaId()).orElse(null)
+                : null;
 
-        SedeLocalizacionJpaEntity entity = mapper.toJpa(sede, institucion, provincia, departamento, localidad);
+        SedeLocalizacionJpaEntity entity = mapper.toJpa(sede, institucion, provincia, departamento, localidad, unidadAcademica);
         SedeLocalizacionJpaEntity saved = springDataRepository.save(entity);
         return mapper.toDomain(saved);
     }

@@ -11,6 +11,7 @@ import com.undec.acreditacion.infrastructure.persistence.postgres.InstitucionJpa
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataInstitucionRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +51,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/maestro")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA')")
     @Transactional(readOnly = true)
     public ResponseEntity<GuiaHigieneSeguridadResponse> obtenerGuiaMaestra() {
         return guiaRepository.findGuiaMaestraCompleta()
@@ -63,6 +65,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/procesos/{procesoId}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA')")
     @Transactional
     public ResponseEntity<GuiaHigieneSeguridadResponse> obtenerGuiaPorProceso(@PathVariable UUID procesoId) {
         Optional<GuiaHigieneSeguridadJpaEntity> opt = guiaRepository.findByProcesoIdCompleta(procesoId);
@@ -78,6 +81,7 @@ public class AutoevaluacionHigieneSeguridadController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD')")
     @Transactional
     public ResponseEntity<GuiaHigieneSeguridadResponse> actualizarGuia(
             @PathVariable UUID id,
@@ -112,6 +116,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @PostMapping("/{id}/documentos")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD')")
     @Transactional
     public ResponseEntity<GuiaHigieneDocumentoResponse> agregarOActualizarDocumento(
             @PathVariable UUID id,
@@ -159,6 +164,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @PostMapping("/procesos/{procesoId}/extender-plazo")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD')")
     @Transactional
     public ResponseEntity<Map<String, Object>> extenderPlazoActividad(
             @PathVariable UUID procesoId,
@@ -209,6 +215,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @PostMapping("/procesos/{procesoId}/verificar-y-remitir")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD')")
     @Transactional
     public ResponseEntity<VerificarInfraestructuraResponse> verificarYRemitirADea(
             @PathVariable UUID procesoId

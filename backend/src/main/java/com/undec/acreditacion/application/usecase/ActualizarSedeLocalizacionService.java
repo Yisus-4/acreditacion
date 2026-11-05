@@ -25,6 +25,7 @@ public final class ActualizarSedeLocalizacionService implements ActualizarSedeLo
                 .orElseThrow(() -> new DomainValidationException("No se encontró la sede con ID: " + command.id()));
 
         sede.actualizar(
+                command.unidadAcademicaId(),
                 command.nombre(),
                 command.calle(),
                 command.numero(),

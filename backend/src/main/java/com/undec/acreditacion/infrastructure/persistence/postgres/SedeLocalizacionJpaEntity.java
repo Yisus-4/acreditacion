@@ -51,6 +51,10 @@ public class SedeLocalizacionJpaEntity {
     @JoinColumn(name = "localidad_id", nullable = false)
     private LocalidadJpaEntity localidad;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unidad_academica_id")
+    private UnidadAcademicaConeauJpaEntity unidadAcademica;
+
     @Column(name = "es_propia", nullable = false)
     private boolean esPropia;
 
@@ -144,6 +148,14 @@ public class SedeLocalizacionJpaEntity {
 
     public void setLocalidad(LocalidadJpaEntity localidad) {
         this.localidad = localidad;
+    }
+
+    public UnidadAcademicaConeauJpaEntity getUnidadAcademica() {
+        return unidadAcademica;
+    }
+
+    public void setUnidadAcademica(UnidadAcademicaConeauJpaEntity unidadAcademica) {
+        this.unidadAcademica = unidadAcademica;
     }
 
     public boolean isEsPropia() {

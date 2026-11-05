@@ -1,0 +1,164 @@
+<div class="vista-gestion-layout">
+  <app-subnav-gestion-institucional seccionActual="Unidades académicas"></app-subnav-gestion-institucional>
+
+  <!-- Mensajes de Alerta -->
+  @if (errorMessage()) {
+    <div class="alert-banner-figma error">
+      <span>{{ errorMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="errorMessage.set(null)">✕</button>
+    </div>
+  }
+  @if (successMessage()) {
+    <div class="alert-banner-figma success">
+      <span>{{ successMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="successMessage.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Selector Superior de Institución (Fiel a CONEAU Global) -->
+  <div class="coneau-institucion-bar">
+    <label for="selInstitucion">Institución:</label>
+    <select id="selInstitucion" [value]="selectedInstitucionId()" (change)="onInstitucionChange($event)">
+      @for (inst of instituciones(); track inst.id) {
+        <option [value]="inst.id">{{ inst.nombre }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- Contenedor Principal Estilo CONEAU Global -->
+  <div class="coneau-panel-box">
+    <!-- Barra de Título Naranja / Terracota -->
+    <div class="coneau-header-banner">
+      <h3>Unidades académicas</h3>
+    </div>
+
+    <!-- Leyenda Informativa Oficial CONEAU -->
+    <div class="coneau-info-text">
+      <strong>La información de los siguientes puntos es compartida con todos los sistemas de CONEAU Global.</strong><br />
+      Si un ítem ya no es válido (por ejemplo por una unidad académica que ya no está en funcionamiento), deberá desactivarla sin eliminarla.<br />
+      Sólamente podrá eliminar información que aún no ha sido vinculada a otros sistemas. Si no puede eliminar un ítem, desactívelo.
+    </div>
+
+    <!-- Grilla de Unidades Académicas y Botones Laterales -->
+    <div class="coneau-content-layout">
+      <div class="coneau-table-wrapper">
+        <table class="coneau-table">
+          <thead>
+            <tr>
+              <th>
+                <div class="table-header-content">
+                  <span>Unidad Académica</span>
+                  <span class="sort-indicators">▲ •••</span>
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (loading()) {
+              <tr>
+                <td style="padding: 24px; text-align: center; color: #6b7280;">Cargando unidades académicas...</td>
+              </tr>
+            } @else if (unidadesFiltradas().length === 0) {
+              <tr>
+                <td style="padding: 24px; text-align: center; color: #6b7280;">No se encontraron unidades académicas para los filtros seleccionados.</td>
+              </tr>
+            } @else {
+              @for (ua of unidadesFiltradas(); track ua.id) {
+                <tr
+                  [class.fila-seleccionada]="selectedUnidadId() === ua.id"
+                  [class.fila-inactiva]="!ua.activa"
+                  (click)="seleccionarUnidad(ua.id)"
+                >
+                  <td>
+                    <span>{{ ua.denominacion }}</span>
+                    @if (!ua.activa) {
+                      <span class="badge-inactiva">(Inactiva)</span>
+                    }
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Botones de Acción a la Derecha (Fiel a CONEAU Global) -->
+      <div class="coneau-actions-right">
+        <button type="button" class="btn-coneau btn-agregar" (click)="abrirModalAgregar()">
+          Agregar
+        </button>
+        <button
+          type="button"
+          class="btn-coneau btn-modificar"
+          [disabled]="!selectedUnidadId()"
+          (click)="abrirModalModificar()"
+        >
+          Modificar
+        </button>
+        <button
+          type="button"
+          class="btn-coneau btn-eliminar"
+          [disabled]="!selectedUnidadId()"
+          (click)="eliminar()"
+        >
+          Eliminar
+        </button>
+      </div>
+    </div>
+
+    <!-- Checkbox Inferior Izquierdo -->
+    <div class="coneau-bottom-bar">
+      <label class="checkbox-inactivos">
+        <input
+          type="checkbox"
+          [checked]="mostrarInactivos()"
+          (change)="mostrarInactivos.set($any($event.target).checked)"
+        />
+        <span>Mostrar ítems inactivos</span>
+      </label>
+      <span class="nota-inactivos">(Nota: Los ítems inactivos no serán visibles en otros sistemas)</span>
+    </div>
+  </div>
+
+  <!-- Modal "Información de la Unidad Académica" (CONEAU Global) -->
+  @if (modalAbierto()) {
+    <div class="modal-backdrop" (click)="cerrarModal()"></div>
+    <div class="coneau-modal-box">
+      <div class="coneau-modal-header">
+        <h4>Información de la Unidad Académica</h4>
+        <button type="button" class="btn-cerrar-modal" (click)="cerrarModal()">✕</button>
+      </div>
+
+      <div class="coneau-modal-body">
+        <div class="form-row">
+          <label class="form-label">* Denominación:</label>
+          <input
+            type="text"
+            class="form-control"
+            [value]="formDenominacion()"
+            (input)="formDenominacion.set($any($event.target).value)"
+            placeholder="Ej: Universidad Nacional de Chilecito (Undec)"
+          />
+        </div>
+
+        <div class="form-row checkbox-row">
+          <label class="form-label">Activa:</label>
+          <input
+            type="checkbox"
+            [checked]="formActiva()"
+            (change)="formActiva.set($any($event.target).checked)"
+          />
+        </div>
+      </div>
+
+      <div class="coneau-modal-footer">
+        <button type="button" class="btn-coneau btn-guardar" [disabled]="guardando()" (click)="guardar()">
+          {{ guardando() ? 'Guardando...' : 'Guardar' }}
+        </button>
+        <button type="button" class="btn-coneau btn-cancelar" (click)="cerrarModal()">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  }
+</div>

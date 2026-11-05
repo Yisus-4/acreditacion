@@ -5,6 +5,7 @@ import com.undec.acreditacion.infrastructure.persistence.postgres.DepartamentoJp
 import com.undec.acreditacion.infrastructure.persistence.postgres.InstitucionJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.LocalidadJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.ProvinciaJpaEntity;
+import com.undec.acreditacion.infrastructure.persistence.postgres.SedeLocalizacionJpaEntity;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -53,6 +54,10 @@ public class InmuebleJpaEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "localidad_id", nullable = false)
     private LocalidadJpaEntity localidad;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sede_id")
+    private SedeLocalizacionJpaEntity sede;
 
     @Column(name = "anio_construccion")
     private Integer anioConstruccion;
@@ -216,6 +221,14 @@ public class InmuebleJpaEntity {
 
     public void setAnioInicioInstitucion(Integer anioInicioInstitucion) {
         this.anioInicioInstitucion = anioInicioInstitucion;
+    }
+
+    public SedeLocalizacionJpaEntity getSede() {
+        return sede;
+    }
+
+    public void setSede(SedeLocalizacionJpaEntity sede) {
+        this.sede = sede;
     }
 
     public Boolean getPropiedadInstitucion() {

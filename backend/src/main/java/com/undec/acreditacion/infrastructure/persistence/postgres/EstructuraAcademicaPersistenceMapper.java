@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -51,9 +52,13 @@ public class EstructuraAcademicaPersistenceMapper {
         if (entity == null) {
             return null;
         }
+        UUID uaId = entity.getUnidadAcademica() != null ? entity.getUnidadAcademica().getId() : null;
+        String uaDenom = entity.getUnidadAcademica() != null ? entity.getUnidadAcademica().getDenominacion() : null;
         return SedeLocalizacion.rehydrate(
                 entity.getId(),
                 entity.getInstitucion() != null ? entity.getInstitucion().getId() : null,
+                uaId,
+                uaDenom,
                 entity.getNombre(),
                 entity.getCalle(),
                 entity.getNumero(),
@@ -74,12 +79,22 @@ public class EstructuraAcademicaPersistenceMapper {
                                           ProvinciaJpaEntity provincia,
                                           DepartamentoJpaEntity departamento,
                                           LocalidadJpaEntity localidad) {
+        return toJpa(domain, institucion, provincia, departamento, localidad, null);
+    }
+
+    public SedeLocalizacionJpaEntity toJpa(SedeLocalizacion domain,
+                                          InstitucionJpaEntity institucion,
+                                          ProvinciaJpaEntity provincia,
+                                          DepartamentoJpaEntity departamento,
+                                          LocalidadJpaEntity localidad,
+                                          UnidadAcademicaConeauJpaEntity unidadAcademica) {
         if (domain == null) {
             return null;
         }
         SedeLocalizacionJpaEntity entity = new SedeLocalizacionJpaEntity();
         entity.setId(domain.getId());
         entity.setInstitucion(institucion);
+        entity.setUnidadAcademica(unidadAcademica);
         entity.setNombre(domain.getNombre());
         entity.setCalle(domain.getCalle());
         entity.setNumero(domain.getNumero());

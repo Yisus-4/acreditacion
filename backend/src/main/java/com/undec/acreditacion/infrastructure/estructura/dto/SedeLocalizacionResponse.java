@@ -8,6 +8,8 @@ import java.util.UUID;
 public record SedeLocalizacionResponse(
         UUID id,
         UUID institucionId,
+        UUID unidadAcademicaId,
+        String unidadAcademicaDenominacion,
         String nombre,
         String calle,
         String numero,
@@ -27,6 +29,8 @@ public record SedeLocalizacionResponse(
         return new SedeLocalizacionResponse(
                 domain.getId(),
                 domain.getInstitucionId(),
+                domain.getUnidadAcademicaId(),
+                domain.getUnidadAcademicaDenominacion(),
                 domain.getNombre(),
                 domain.getCalle(),
                 domain.getNumero(),

@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -45,6 +47,19 @@ public class EspacioFisicoJpaEntity {
 
     @Column(name = "estado_coneau", nullable = false, length = 50)
     private String estadoConeau = "CARGADO";
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "espacio_padre_id")
+    private EspacioFisicoJpaEntity espacioPadre;
+
+    @OneToMany(mappedBy = "espacioPadre", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<EspacioFisicoJpaEntity> subespacios = new ArrayList<>();
+
+    @Column(name = "tiene_subespacios", nullable = false)
+    private Boolean tieneSubespacios = false;
+
+    @Column(name = "observacion_higiene_seguridad", columnDefinition = "TEXT")
+    private String observacionHigieneSeguridad;
 
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
@@ -161,5 +176,37 @@ public class EspacioFisicoJpaEntity {
 
     public void setCreadoEn(Instant creadoEn) {
         this.creadoEn = creadoEn;
+    }
+
+    public EspacioFisicoJpaEntity getEspacioPadre() {
+        return espacioPadre;
+    }
+
+    public void setEspacioPadre(EspacioFisicoJpaEntity espacioPadre) {
+        this.espacioPadre = espacioPadre;
+    }
+
+    public List<EspacioFisicoJpaEntity> getSubespacios() {
+        return subespacios;
+    }
+
+    public void setSubespacios(List<EspacioFisicoJpaEntity> subespacios) {
+        this.subespacios = subespacios;
+    }
+
+    public Boolean getTieneSubespacios() {
+        return tieneSubespacios;
+    }
+
+    public void setTieneSubespacios(Boolean tieneSubespacios) {
+        this.tieneSubespacios = tieneSubespacios;
+    }
+
+    public String getObservacionHigieneSeguridad() {
+        return observacionHigieneSeguridad;
+    }
+
+    public void setObservacionHigieneSeguridad(String observacionHigieneSeguridad) {
+        this.observacionHigieneSeguridad = observacionHigieneSeguridad;
     }
 }

@@ -7,10 +7,12 @@ import {
   ActualizarSedeLocalizacionData,
   ActualizarUnidadAcademicaData,
   CarreraResponse,
+  GuardarUnidadAcademicaConeauData,
   RegistrarCarreraData,
   RegistrarSedeLocalizacionData,
   RegistrarUnidadAcademicaData,
   SedeLocalizacionResponse,
+  UnidadAcademicaConeauResponse,
   UnidadAcademicaResponse,
 } from './estructura.types';
 
@@ -22,7 +24,28 @@ export * from './estructura.types';
 export class EstructuraService {
   private readonly http = inject(HttpClient);
 
-  // ──────────────────────────── Unidades Académicas ────────────────────────────
+  // ──────────────────────────── Unidades Académicas Oficiales CONEAU ────────────────────────────
+  listarUnidadesAcademicasConeau(institucionId?: string, incluirInactivas = true): Observable<UnidadAcademicaConeauResponse[]> {
+    let params = new HttpParams().set('incluirInactivas', incluirInactivas.toString());
+    if (institucionId) {
+      params = params.set('institucionId', institucionId);
+    }
+    return this.http.get<UnidadAcademicaConeauResponse[]>('/api/estructura/unidades-academicas-coneau', { params });
+  }
+
+  crearUnidadAcademicaConeau(data: GuardarUnidadAcademicaConeauData): Observable<UnidadAcademicaConeauResponse> {
+    return this.http.post<UnidadAcademicaConeauResponse>('/api/estructura/unidades-academicas-coneau', data);
+  }
+
+  actualizarUnidadAcademicaConeau(id: string, data: GuardarUnidadAcademicaConeauData): Observable<UnidadAcademicaConeauResponse> {
+    return this.http.put<UnidadAcademicaConeauResponse>(`/api/estructura/unidades-academicas-coneau/${id}`, data);
+  }
+
+  eliminarUnidadAcademicaConeau(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/estructura/unidades-academicas-coneau/${id}`);
+  }
+
+  // ──────────────────────────── Escuelas (Unidades Académicas Departamento) ────────────────────────────
   listarUnidadesAcademicas(institucionId?: string): Observable<UnidadAcademicaResponse[]> {
     let params = new HttpParams();
     if (institucionId) {

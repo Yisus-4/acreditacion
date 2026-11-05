@@ -32,6 +32,17 @@ export class Auth {
     return this.session$.value !== null;
   }
 
+  hasRole(roleCode: string): boolean {
+    const user = this.currentSession?.user;
+    return !!user?.roleCodes?.includes(roleCode);
+  }
+
+  hasAnyRole(...roleCodes: string[]): boolean {
+    const user = this.currentSession?.user;
+    if (!user || !user.roleCodes) return false;
+    return roleCodes.some((r) => user.roleCodes.includes(r));
+  }
+
   /**
    * Autentica credenciales contra el backend.
    * Devuelve un `Observable<Session>` que emite la sesión en éxito o un

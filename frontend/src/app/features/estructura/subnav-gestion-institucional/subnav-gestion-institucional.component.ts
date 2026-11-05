@@ -12,11 +12,14 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
         <a routerLink="/admin/instituciones" routerLinkActive="active" class="subnav-tab">
           Institución
         </a>
-        <a routerLink="/admin/unidades-academicas" routerLinkActive="active" class="subnav-tab">
-          Escuelas
+        <a routerLink="/admin/unidades-academicas-coneau" routerLinkActive="active" class="subnav-tab">
+          Unidades académicas
         </a>
         <a routerLink="/admin/sedes" routerLinkActive="active" class="subnav-tab">
           Sedes y localizaciones
+        </a>
+        <a routerLink="/admin/unidades-academicas" routerLinkActive="active" class="subnav-tab">
+          Escuelas
         </a>
         <a routerLink="/admin/carreras" routerLinkActive="active" class="subnav-tab">
           Carreras

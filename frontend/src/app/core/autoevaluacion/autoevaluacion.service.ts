@@ -5,6 +5,8 @@ import {
   Inmueble,
   RegistrarInmuebleRequest,
   TipoEspacioFisico,
+  EspacioFisico,
+  ConsultaEspaciosResponse,
   CrearTipoEspacioRequest,
   ExtenderPlazoRequest,
   VerificarInfraestructuraResponse,
@@ -86,6 +88,46 @@ export class AutoevaluacionService {
     return this.http.post<TipoEspacioFisico>(`${this.baseUrl}/tipos-espacio`, data);
   }
 
+  actualizarHigieneSeguridadEspacio(
+    espacioId: string,
+    data: string | { observacionHigieneSeguridad: string }
+  ): Observable<EspacioFisico> {
+    const observacionHigieneSeguridad = typeof data === 'string' ? data : data.observacionHigieneSeguridad;
+    return this.http.patch<EspacioFisico>(`${this.baseUrl}/espacios/${espacioId}/higiene-seguridad`, {
+      observacionHigieneSeguridad,
+    });
+  }
+
+  consultarEspaciosPorM2(
+    optionsOrTipoId?: string | { minM2?: number; m2Min?: number; maxM2?: number; m2Max?: number; tipoEspacioId?: string; sedeId?: string },
+    m2Min?: number,
+    m2Max?: number,
+    sedeId?: string
+  ): Observable<ConsultaEspaciosResponse> {
+    let params = new HttpParams();
+    if (typeof optionsOrTipoId === 'object' && optionsOrTipoId !== null) {
+      if (optionsOrTipoId.tipoEspacioId) params = params.set('tipoEspacioId', optionsOrTipoId.tipoEspacioId);
+      const min = optionsOrTipoId.m2Min ?? optionsOrTipoId.minM2;
+      if (min !== undefined && min !== null) params = params.set('m2Min', min.toString());
+      const max = optionsOrTipoId.m2Max ?? optionsOrTipoId.maxM2;
+      if (max !== undefined && max !== null) params = params.set('m2Max', max.toString());
+      if (optionsOrTipoId.sedeId) params = params.set('sedeId', optionsOrTipoId.sedeId);
+    } else {
+      if (optionsOrTipoId) params = params.set('tipoEspacioId', optionsOrTipoId);
+      if (m2Min !== undefined && m2Min !== null) params = params.set('m2Min', m2Min.toString());
+      if (m2Max !== undefined && m2Max !== null) params = params.set('m2Max', m2Max.toString());
+      if (sedeId) params = params.set('sedeId', sedeId);
+    }
+    return this.http.get<ConsultaEspaciosResponse>(`${this.baseUrl}/espacios/consulta`, { params });
+  }
+
+  extenderPlazo(procesoId: string, req: ExtenderPlazoRequest & { actividadCodigo?: string }): Observable<any> {
+    if (req.actividadCodigo === '4.2') {
+      return this.extenderPlazoHigiene(procesoId, req);
+    }
+    return this.extenderPlazoInfraestructura(procesoId, req);
+  }
+
   // ---------------------------------------------------------------------------
   // GT-003: Higiene y Seguridad
   // ---------------------------------------------------------------------------
@@ -104,6 +146,10 @@ export class AutoevaluacionService {
 
   agregarDocumentoGuiaHigiene(id: string, req: DocumentoHigieneItemRequest): Observable<GuiaHigieneDocumento> {
     return this.http.post<GuiaHigieneDocumento>(`${this.baseUrl}/higiene-seguridad/${id}/documentos`, req);
+  }
+
+  eliminarDocumentoGuiaHigiene(id: string, documentoId: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/higiene-seguridad/${id}/documentos/${documentoId}`);
   }
 
   extenderPlazoHigiene(procesoId: string, req: ExtenderPlazoRequest): Observable<any> {
