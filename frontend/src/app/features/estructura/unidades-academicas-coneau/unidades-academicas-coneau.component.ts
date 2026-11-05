@@ -32,24 +32,39 @@ export class UnidadesAcademicasConeauComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
 
-  readonly mostrarInactivos = signal<boolean>(false);
-  readonly selectedUnidadId = signal<string | null>(null);
+  // Filtros de búsqueda
+  readonly searchQuery = signal<string>('');
+  readonly mostrarInactivas = signal<boolean>(true);
 
-  // Modal
-  readonly modalAbierto = signal<boolean>(false);
-  readonly modoEdicion = signal<boolean>(false);
+  // Drawer de Alta/Edición
+  readonly drawerAbierto = signal<boolean>(false);
+  readonly editingId = signal<string | null>(null);
+  readonly formInstitucionId = signal<string>('');
   readonly formDenominacion = signal<string>('');
   readonly formActiva = signal<boolean>(true);
   readonly guardando = signal<boolean>(false);
 
-  readonly selectedUnidad = computed(() => {
-    const id = this.selectedUnidadId();
-    return id ? this.unidades().find((u) => u.id === id) || null : null;
+  readonly filteredUnidades = computed(() => {
+    const query = this.searchQuery().trim().toLowerCase();
+    const incluirInactivas = this.mostrarInactivas();
+
+    return this.unidades().filter((ua) => {
+      if (!incluirInactivas && !ua.activa) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      const matchDenom = ua.denominacion?.toLowerCase().includes(query);
+      const matchInst = ua.institucionNombre?.toLowerCase().includes(query);
+      return matchDenom || matchInst;
+    });
   });
 
-  readonly unidadesFiltradas = computed(() => {
-    const inactivos = this.mostrarInactivos();
-    return this.unidades().filter((u) => inactivos || u.activa);
+  readonly institucionActualNombre = computed(() => {
+    const id = this.selectedInstitucionId();
+    const inst = this.instituciones().find((i) => i.id === id);
+    return inst ? `${inst.nombre} (${inst.sigla})` : 'Universidad Nacional de Chilecito';
   });
 
   ngOnInit(): void {
@@ -62,18 +77,22 @@ export class UnidadesAcademicasConeauComponent implements OnInit {
         this.instituciones.set(insts);
         if (insts.length > 0 && !this.selectedInstitucionId()) {
           this.selectedInstitucionId.set(insts[0].id);
-          this.cargarUnidades();
         }
+        this.cargarUnidades();
       },
       error: () => this.cargarUnidades(),
     });
   }
 
-  onInstitucionChange(event: Event): void {
+  onInstitucionFilterChange(event: Event): void {
     const target = event.target as HTMLSelectElement;
     this.selectedInstitucionId.set(target.value);
-    this.selectedUnidadId.set(null);
     this.cargarUnidades();
+  }
+
+  onSearch(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.searchQuery.set(target.value);
   }
 
   cargarUnidades(): void {
@@ -85,10 +104,6 @@ export class UnidadesAcademicasConeauComponent implements OnInit {
         next: (data) => {
           this.unidades.set(data);
           this.loading.set(false);
-          // Si no hay seleccionada y hay datos, seleccionar la primera
-          if (!this.selectedUnidadId() && data.length > 0) {
-            this.selectedUnidadId.set(data[0].id);
-          }
         },
         error: (err) => {
           this.errorMessage.set('Error al cargar las unidades académicas: ' + (err.error?.message || err.message));
@@ -97,98 +112,113 @@ export class UnidadesAcademicasConeauComponent implements OnInit {
       });
   }
 
-  seleccionarUnidad(id: string): void {
-    this.selectedUnidadId.set(id);
-  }
-
-  abrirModalAgregar(): void {
-    this.modoEdicion.set(false);
+  abrirDrawerNuevo(): void {
+    this.editingId.set(null);
+    this.formInstitucionId.set(this.selectedInstitucionId() || (this.instituciones()[0]?.id ?? ''));
     this.formDenominacion.set('');
     this.formActiva.set(true);
-    this.modalAbierto.set(true);
+    this.drawerAbierto.set(true);
   }
 
-  abrirModalModificar(): void {
-    const sel = this.selectedUnidad();
-    if (!sel) return;
-    this.modoEdicion.set(true);
-    this.formDenominacion.set(sel.denominacion);
-    this.formActiva.set(sel.activa);
-    this.modalAbierto.set(true);
+  iniciarEdicion(ua: UnidadAcademicaConeauResponse): void {
+    this.editingId.set(ua.id);
+    this.formInstitucionId.set(ua.institucionId || this.selectedInstitucionId());
+    this.formDenominacion.set(ua.denominacion);
+    this.formActiva.set(ua.activa);
+    this.drawerAbierto.set(true);
   }
 
-  cerrarModal(): void {
-    this.modalAbierto.set(false);
+  cerrarDrawer(): void {
+    this.drawerAbierto.set(false);
   }
 
   guardar(): void {
-    const den = this.formDenominacion().trim();
-    if (!den) {
-      alert('La denominación es obligatoria');
+    const denom = this.formDenominacion().trim();
+    if (!denom) {
+      this.errorMessage.set('La denominación de la unidad académica es obligatoria.');
       return;
     }
 
     this.guardando.set(true);
-    if (this.modoEdicion()) {
-      const id = this.selectedUnidadId()!;
+    this.errorMessage.set(null);
+
+    const payload = {
+      institucionId: this.formInstitucionId() || this.selectedInstitucionId(),
+      denominacion: denom,
+      activa: this.formActiva(),
+    };
+
+    if (this.editingId()) {
       this.estructuraService
-        .actualizarUnidadAcademicaConeau(id, {
-          institucionId: this.selectedInstitucionId(),
-          denominacion: den,
-          activa: this.formActiva(),
-        })
+        .actualizarUnidadAcademicaConeau(this.editingId()!, payload)
         .subscribe({
           next: () => {
             this.guardando.set(false);
-            this.cerrarModal();
-            this.successMessage.set('Unidad académica modificada correctamente');
+            this.cerrarDrawer();
+            this.successMessage.set('Unidad académica actualizada exitosamente.');
             this.cargarUnidades();
           },
           error: (err) => {
             this.guardando.set(false);
-            alert('Error al actualizar: ' + (err.error?.message || err.message));
+            this.errorMessage.set('Error al actualizar unidad académica: ' + (err.error?.message || err.message));
           },
         });
     } else {
       this.estructuraService
-        .crearUnidadAcademicaConeau({
-          institucionId: this.selectedInstitucionId(),
-          denominacion: den,
-          activa: this.formActiva(),
-        })
+        .crearUnidadAcademicaConeau(payload)
         .subscribe({
-          next: (creada) => {
+          next: () => {
             this.guardando.set(false);
-            this.cerrarModal();
-            this.successMessage.set('Unidad académica registrada exitosamente');
-            this.selectedUnidadId.set(creada.id);
+            this.cerrarDrawer();
+            this.successMessage.set('Unidad académica registrada exitosamente.');
             this.cargarUnidades();
           },
           error: (err) => {
             this.guardando.set(false);
-            alert('Error al registrar: ' + (err.error?.message || err.message));
+            this.errorMessage.set('Error al registrar unidad académica: ' + (err.error?.message || err.message));
           },
         });
     }
   }
 
-  eliminar(): void {
-    const sel = this.selectedUnidad();
-    if (!sel) return;
+  toggleActiva(ua: UnidadAcademicaConeauResponse): void {
+    const nuevoEstado = !ua.activa;
+    const accion = nuevoEstado ? 'activar' : 'desactivar';
 
+    if (!confirm(`¿Está seguro de que desea ${accion} la unidad académica "${ua.denominacion}"?`)) {
+      return;
+    }
+
+    this.estructuraService
+      .actualizarUnidadAcademicaConeau(ua.id, {
+        institucionId: ua.institucionId,
+        denominacion: ua.denominacion,
+        activa: nuevoEstado,
+      })
+      .subscribe({
+        next: () => {
+          this.successMessage.set(`Unidad académica "${ua.denominacion}" ${nuevoEstado ? 'activada' : 'desactivada'} correctamente.`);
+          this.cargarUnidades();
+        },
+        error: (err) => {
+          this.errorMessage.set(`Error al cambiar el estado: ` + (err.error?.message || err.message));
+        },
+      });
+  }
+
+  eliminar(ua: UnidadAcademicaConeauResponse): void {
     const confirmar = confirm(
-      `¿Desea eliminar la unidad académica "${sel.denominacion}"?\n\nNota: Si ya se encuentra vinculada a sedes u otros sistemas, el sistema la desactivará automáticamente para preservar la integridad histórica.`
+      `¿Desea eliminar la unidad académica "${ua.denominacion}"?\n\nSi tiene sedes vinculadas o referencias activas, el sistema la desactivará para mantener la integridad histórica.`
     );
     if (!confirmar) return;
 
-    this.estructuraService.eliminarUnidadAcademicaConeau(sel.id).subscribe({
+    this.estructuraService.eliminarUnidadAcademicaConeau(ua.id).subscribe({
       next: () => {
-        this.successMessage.set('Unidad académica procesada');
-        this.selectedUnidadId.set(null);
+        this.successMessage.set(`Unidad académica "${ua.denominacion}" eliminada o desactivada.`);
         this.cargarUnidades();
       },
       error: (err) => {
-        alert('Error al eliminar: ' + (err.error?.message || err.message));
+        this.errorMessage.set('Error al eliminar: ' + (err.error?.message || err.message));
       },
     });
   }
