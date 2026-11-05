@@ -100,7 +100,8 @@ public class ElaborarPlanTrabajoService implements ElaborarPlanTrabajoUseCase {
                         item.fechaInicioEstimada(),
                         item.fechaFinEstimada(),
                         item.responsable(),
-                        item.prioridad()
+                        item.prioridad(),
+                        item.predecesoras()
                 );
                 actividadesCronograma.add(act);
             }

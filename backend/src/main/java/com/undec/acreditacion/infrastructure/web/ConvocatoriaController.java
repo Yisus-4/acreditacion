@@ -471,7 +471,8 @@ public class ConvocatoriaController {
                         item.fechaInicioEstimada(),
                         item.fechaFinEstimada(),
                         item.responsable() != null ? item.responsable().trim() : "Responsable",
-                        item.prioridad()
+                        item.prioridad(),
+                        item.predecesoras()
                 );
                 actividadesCronograma.add(act);
             }
@@ -542,6 +543,9 @@ public class ConvocatoriaController {
                         .orElse("Usuario AEA");
             }
 
+            List<String> pendientes = plan.getPredecesorasPendientes(act);
+            boolean bloqueada = !pendientes.isEmpty();
+
             actividadesResponse.add(new ActividadDetalleResponse(
                     act.getId(),
                     act.getPlanTrabajoId(),
@@ -565,7 +569,10 @@ public class ConvocatoriaController {
                     act.getAreasInformadas().stream().map(Enum::name).toList(),
                     act.getDocumentacionRemitida().stream().map(Enum::name).toList(),
                     act.getObservaciones(),
-                    act.getPlazosExtendidos()
+                    act.getPlazosExtendidos(),
+                    act.getPredecesoras(),
+                    bloqueada,
+                    pendientes
             ));
         }
 

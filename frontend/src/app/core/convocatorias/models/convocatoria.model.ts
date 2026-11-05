@@ -219,6 +219,9 @@ export interface ActividadPlanTrabajoDto {
   actualizadoEn: string;
   documentos: DocumentoAcreditacionDto[];
   plazosExtendidos?: string[];
+  predecesoras?: string[];
+  bloqueada?: boolean;
+  predecesorasPendientes?: string[];
 }
 
 export interface OpcionCatalogoProceso {

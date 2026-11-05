@@ -243,6 +243,9 @@ public final class PlanTrabajo {
                     nueva.restaurarPlazosExtendidos(
                             previaCoincidente.map(ActividadPlanTrabajo::getPlazosExtendidos).orElse(act.getPlazosExtendidos())
                     );
+                    nueva.restaurarPredecesoras(
+                            previaCoincidente.map(ActividadPlanTrabajo::getPredecesoras).filter(p -> !p.isEmpty()).orElse(act.getPredecesoras())
+                    );
                 }
                 this.actividades.add(nueva);
                 ordenActual = Math.max(ordenActual, orden) + 1;
@@ -287,6 +290,7 @@ public final class PlanTrabajo {
                     );
                     reordenada.restaurarRegistroComunicacion(a.getAreasInformadas(), a.getDocumentacionRemitida());
                     reordenada.restaurarPlazosExtendidos(a.getPlazosExtendidos());
+                    reordenada.restaurarPredecesoras(a.getPredecesoras());
                     normalizadas.add(reordenada);
                 }
                 seq++;
@@ -320,6 +324,7 @@ public final class PlanTrabajo {
         );
         nueva.restaurarRegistroComunicacion(prev.getAreasInformadas(), prev.getDocumentacionRemitida());
         nueva.restaurarPlazosExtendidos(prev.getPlazosExtendidos());
+        nueva.restaurarPredecesoras(!prev.getPredecesoras().isEmpty() ? prev.getPredecesoras() : act.getPredecesoras());
         return nueva;
     }
 
@@ -353,6 +358,7 @@ public final class PlanTrabajo {
         );
         preservada.restaurarRegistroComunicacion(prev.getAreasInformadas(), prev.getDocumentacionRemitida());
         preservada.restaurarPlazosExtendidos(prev.getPlazosExtendidos());
+        preservada.restaurarPredecesoras(prev.getPredecesoras());
         this.actividades.add(preservada);
         return Math.max(ordenActual, orden) + 1;
     }
@@ -552,6 +558,53 @@ public final class PlanTrabajo {
                 .filter(a -> a.getEstado() == EstadoActividad.COMPLETADA)
                 .count();
         return (double) completadas / actividades.size() * 100.0;
+    }
+
+    /**
+     * Devuelve la lista de códigos de actividades predecesoras que aún NO se encuentran en estado COMPLETADA
+     * dentro de este Plan de Trabajo. Si la actividad no tiene predecesoras o todas están completadas, retorna lista vacía.
+     */
+    public List<String> getPredecesorasPendientes(ActividadPlanTrabajo actividad) {
+        if (actividad == null) {
+            return Collections.emptyList();
+        }
+        List<String> codigosPredecesoras = actividad.getPredecesoras();
+        if (codigosPredecesoras == null || codigosPredecesoras.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<String> pendientes = new ArrayList<>();
+        for (String codPred : codigosPredecesoras) {
+            boolean completada = this.actividades.stream()
+                    .filter(a -> codPred.equalsIgnoreCase(a.getCodigoActividad()))
+                    .anyMatch(a -> a.getEstado() == EstadoActividad.COMPLETADA);
+            if (!completada) {
+                pendientes.add(codPred);
+            }
+        }
+        return Collections.unmodifiableList(pendientes);
+    }
+
+    /**
+     * Indica si la actividad se encuentra bloqueada por dependencias lógicas pendientes (PRG-002).
+     */
+    public boolean isActividadBloqueada(ActividadPlanTrabajo actividad) {
+        return !getPredecesorasPendientes(actividad).isEmpty();
+    }
+
+    /**
+     * Valida que todas las actividades predecesoras requeridas estén completadas antes de permitir
+     * finalizar o completar la actividad.
+     *
+     * @throws DomainValidationException si existen predecesoras no completadas.
+     */
+    public void validarPredecesorasCompletadas(ActividadPlanTrabajo actividad) {
+        List<String> pendientes = getPredecesorasPendientes(actividad);
+        if (!pendientes.isEmpty()) {
+            throw new DomainValidationException(
+                    "No se puede completar la actividad " + actividad.getCodigoActividad() +
+                    " porque sus actividades predecesoras (" + String.join(", ", pendientes) + ") aún no han sido completadas."
+            );
+        }
     }
 
     @Override

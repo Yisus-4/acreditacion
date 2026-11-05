@@ -41,6 +41,7 @@ public final class ActividadPlanTrabajo {
     private List<AreaInformadaProceso> areasInformadas = List.of();
     private List<DocumentacionRemitidaProceso> documentacionRemitida = List.of();
     private List<LocalDate> plazosExtendidos = List.of();
+    private List<String> predecesoras = List.of();
     private final Instant creadoEn;
     private Instant actualizadoEn;
 
@@ -214,6 +215,33 @@ public final class ActividadPlanTrabajo {
                 now,
                 now
         );
+    }
+
+    public static ActividadPlanTrabajo crearActividadCronograma(UUID planTrabajoId,
+                                                               int numeroOrden,
+                                                               String codigoActividad,
+                                                               String nombre,
+                                                               HojaPlanTrabajo hoja,
+                                                               LocalDate fechaInicioEstimada,
+                                                               LocalDate fechaFinEstimada,
+                                                               String responsable,
+                                                               PrioridadActividad prioridad,
+                                                               List<String> predecesoras) {
+        ActividadPlanTrabajo act = crearActividadCronograma(
+                planTrabajoId,
+                numeroOrden,
+                codigoActividad,
+                nombre,
+                hoja,
+                fechaInicioEstimada,
+                fechaFinEstimada,
+                responsable,
+                prioridad
+        );
+        if (predecesoras != null && !predecesoras.isEmpty()) {
+            act.restaurarPredecesoras(predecesoras);
+        }
+        return act;
     }
 
     public static ActividadPlanTrabajo rehydrate(UUID id,
@@ -395,6 +423,24 @@ public final class ActividadPlanTrabajo {
 
     public void restaurarPlazosExtendidos(List<LocalDate> plazos) {
         this.plazosExtendidos = plazos == null ? List.of() : List.copyOf(plazos.stream().filter(Objects::nonNull).toList());
+    }
+
+    public void restaurarPredecesoras(List<String> predecesoras) {
+        this.predecesoras = (predecesoras == null)
+                ? List.of()
+                : List.copyOf(predecesoras.stream().filter(Objects::nonNull).map(String::trim).filter(s -> !s.isEmpty()).toList());
+    }
+
+    public void setPredecesoras(List<String> predecesoras) {
+        restaurarPredecesoras(predecesoras);
+        this.actualizadoEn = Instant.now();
+    }
+
+    public List<String> getPredecesoras() {
+        if (predecesoras != null && !predecesoras.isEmpty()) {
+            return predecesoras;
+        }
+        return PrecedenciasPlanTrabajoCatalogo.resolver(this.codigoActividad);
     }
 
     public void agregarPlazoExtendido(LocalDate nuevaFechaPlazo) {

@@ -88,6 +88,7 @@ public class PlanTrabajoPersistenceMapper {
                 deserializar(entity.getDocumentacionRemitida(), DocumentacionRemitidaProceso.class)
         );
         actividad.restaurarPlazosExtendidos(deserializarFechas(entity.getPlazosExtendidos()));
+        actividad.restaurarPredecesoras(deserializarStrings(entity.getPredecesoras()));
         return actividad;
     }
 
@@ -165,8 +166,30 @@ public class PlanTrabajoPersistenceMapper {
         entity.setAreasInformadas(serializar(domain.getAreasInformadas()));
         entity.setDocumentacionRemitida(serializar(domain.getDocumentacionRemitida()));
         entity.setPlazosExtendidos(serializarFechas(domain.getPlazosExtendidos()));
+        entity.setPredecesoras(serializarStrings(domain.getPredecesoras()));
         entity.setCreadoEn(domain.getCreadoEn());
         entity.setActualizadoEn(domain.getActualizadoEn());
         return entity;
+    }
+
+    private static String serializarStrings(List<String> valores) {
+        if (valores == null || valores.isEmpty()) {
+            return null;
+        }
+        return valores.stream().map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.joining(SEPARADOR));
+    }
+
+    private static List<String> deserializarStrings(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return List.of();
+        }
+        List<String> resultado = new ArrayList<>();
+        for (String parte : valor.split("\\|")) {
+            String str = parte.trim();
+            if (!str.isEmpty()) {
+                resultado.add(str);
+            }
+        }
+        return Collections.unmodifiableList(resultado);
     }
 }

@@ -118,6 +118,16 @@ public class ActividadController {
             @RequestParam(value = "tipoDocumento", required = false) String tipoDocumentoStr,
             @RequestParam(value = "archivo", required = false) MultipartFile archivo
     ) throws IOException {
+        if (planTrabajoRepository != null) {
+            planTrabajoRepository.findActividadById(id)
+                    .ifPresent(act -> {
+                        if (act.getPlanTrabajoId() != null) {
+                            planTrabajoRepository.findById(act.getPlanTrabajoId())
+                                    .ifPresent(p -> p.validarPredecesorasCompletadas(act));
+                        }
+                    });
+        }
+
         List<AreaInformadaProceso> areasInformadas = parsearCodigos(areasInformadasStr, AreaInformadaProceso.class, "área informada");
         List<DocumentacionRemitidaProceso> documentacionRemitida =
                 parsearCodigos(documentacionRemitidaStr, DocumentacionRemitidaProceso.class, "documentación remitida");
@@ -195,31 +205,7 @@ public class ActividadController {
                 .map(User::getUsername)
                 .orElse("Usuario AEA");
 
-        ActividadDetalleResponse response = new ActividadDetalleResponse(
-                actividad.getId(),
-                actividad.getPlanTrabajoId(),
-                actividad.getNumeroOrden(),
-                actividad.getCodigoActividad(),
-                actividad.getNombre(),
-                actividad.getEstado().name(),
-                actividad.getFechaReunionCoordinacion(),
-                actividad.getSintesisAcuerdos(),
-                actividad.getCompletadaEn(),
-                actividad.getCompletadaPor(),
-                nombreUsuario,
-                actividad.getHoja() != null ? actividad.getHoja().name() : "INFO",
-                actividad.getFechaInicioEstimada(),
-                actividad.getFechaFinEstimada(),
-                actividad.getResponsable(),
-                actividad.getPrioridad() != null ? actividad.getPrioridad().name() : "MEDIA",
-                actividad.getCreadoEn(),
-                actividad.getActualizadoEn(),
-                docsDto,
-                actividad.getAreasInformadas().stream().map(Enum::name).toList(),
-                actividad.getDocumentacionRemitida().stream().map(Enum::name).toList(),
-                actividad.getObservaciones(),
-                actividad.getPlazosExtendidos()
-        );
+        ActividadDetalleResponse response = construirResponse(actividad, docsDto, nombreUsuario);
 
         return ResponseEntity.ok(response);
     }
@@ -305,31 +291,7 @@ public class ActividadController {
                 ? userRepository.findById(actividad.getCompletadaPor()).map(User::getUsername).orElse("Usuario AEA")
                 : null;
 
-        ActividadDetalleResponse response = new ActividadDetalleResponse(
-                actividad.getId(),
-                actividad.getPlanTrabajoId(),
-                actividad.getNumeroOrden(),
-                actividad.getCodigoActividad(),
-                actividad.getNombre(),
-                actividad.getEstado().name(),
-                actividad.getFechaReunionCoordinacion(),
-                actividad.getSintesisAcuerdos(),
-                actividad.getCompletadaEn(),
-                actividad.getCompletadaPor(),
-                nombreUsuario,
-                actividad.getHoja() != null ? actividad.getHoja().name() : "INFO",
-                actividad.getFechaInicioEstimada(),
-                actividad.getFechaFinEstimada(),
-                actividad.getResponsable(),
-                actividad.getPrioridad() != null ? actividad.getPrioridad().name() : "MEDIA",
-                actividad.getCreadoEn(),
-                actividad.getActualizadoEn(),
-                docsDto,
-                actividad.getAreasInformadas().stream().map(Enum::name).toList(),
-                actividad.getDocumentacionRemitida().stream().map(Enum::name).toList(),
-                actividad.getObservaciones(),
-                actividad.getPlazosExtendidos()
-        );
+        ActividadDetalleResponse response = construirResponse(actividad, docsDto, nombreUsuario);
 
         return ResponseEntity.ok(response);
     }
@@ -343,14 +305,18 @@ public class ActividadController {
         ActividadPlanTrabajo actividad = planTrabajoRepository.findActividadById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró la actividad: " + id));
 
+        final ActividadPlanTrabajo actACompletar = actividad;
+        if (actACompletar.getPlanTrabajoId() != null) {
+            planTrabajoRepository.findById(actACompletar.getPlanTrabajoId())
+                    .ifPresent(p -> p.validarPredecesorasCompletadas(actACompletar));
+        }
+
         UUID usuarioId = resolverUsuarioAutenticadoId();
         actividad.completar(usuarioId, "Participación registrada y completada por AEA");
         ActividadPlanTrabajo guardada = planTrabajoRepository.saveActividad(actividad);
-        if (guardada != null) {
-            actividad = guardada;
-        }
+        final ActividadPlanTrabajo actResultado = guardada != null ? guardada : actividad;
 
-        List<DocumentoAcreditacion> docs = documentoRepository.findByActividadId(actividad.getId());
+        List<DocumentoAcreditacion> docs = documentoRepository.findByActividadId(actResultado.getId());
         List<DocumentoAcreditacionResponse> docsDto = docs.stream().map(d ->
                 new DocumentoAcreditacionResponse(
                         d.getId(),
@@ -365,11 +331,28 @@ public class ActividadController {
                 )
         ).collect(Collectors.toList());
 
-        String nombreUsuario = actividad.getCompletadaPor() != null
-                ? userRepository.findById(actividad.getCompletadaPor()).map(User::getUsername).orElse("Usuario AEA")
+        String nombreUsuario = actResultado.getCompletadaPor() != null
+                ? userRepository.findById(actResultado.getCompletadaPor()).map(User::getUsername).orElse("Usuario AEA")
                 : null;
 
-        ActividadDetalleResponse response = new ActividadDetalleResponse(
+        ActividadDetalleResponse response = construirResponse(actResultado, docsDto, nombreUsuario);
+
+        return ResponseEntity.ok(response);
+    }
+
+    private ActividadDetalleResponse construirResponse(ActividadPlanTrabajo actividad,
+                                                       List<DocumentoAcreditacionResponse> docsDto,
+                                                       String nombreUsuario) {
+        List<String> pendientes = List.of();
+        boolean bloqueada = false;
+        if (planTrabajoRepository != null && actividad.getPlanTrabajoId() != null) {
+            Optional<PlanTrabajo> planOpt = planTrabajoRepository.findById(actividad.getPlanTrabajoId());
+            if (planOpt.isPresent()) {
+                pendientes = planOpt.get().getPredecesorasPendientes(actividad);
+                bloqueada = !pendientes.isEmpty();
+            }
+        }
+        return new ActividadDetalleResponse(
                 actividad.getId(),
                 actividad.getPlanTrabajoId(),
                 actividad.getNumeroOrden(),
@@ -392,10 +375,11 @@ public class ActividadController {
                 actividad.getAreasInformadas().stream().map(Enum::name).toList(),
                 actividad.getDocumentacionRemitida().stream().map(Enum::name).toList(),
                 actividad.getObservaciones(),
-                actividad.getPlazosExtendidos()
+                actividad.getPlazosExtendidos(),
+                actividad.getPredecesoras(),
+                bloqueada,
+                pendientes
         );
-
-        return ResponseEntity.ok(response);
     }
 
     private static <E extends Enum<E>> List<E> parsearCodigos(List<String> valores, Class<E> tipo, String descripcion) {

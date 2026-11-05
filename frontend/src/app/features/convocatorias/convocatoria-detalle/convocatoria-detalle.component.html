@@ -2847,6 +2847,11 @@
                             @if (act.hoja === 'CONEAU') {
                               <span class="badge-hoja-coneau-inline">CONEAU</span>
                             }
+                            @if (act.bloqueada && act.estado !== 'COMPLETADA') {
+                              <span class="badge-bloqueada-inline" [title]="'Bloqueada por dependencias: Requiere completar ' + (act.predecesorasPendientes?.join(', ') || act.predecesoras?.join(', '))">
+                                Bloqueada (Requiere {{ act.predecesorasPendientes?.join(', ') || act.predecesoras?.join(', ') }})
+                              </span>
+                            }
                           </div>
                         </td>
                         <td class="td-resp">
@@ -2930,10 +2935,11 @@
                           <span
                             class="estado-texto-figma"
                             [class.estado-completada]="act.estado === 'COMPLETADA'"
-                            [class.estado-pendiente]="act.estado === 'PENDIENTE'"
+                            [class.estado-pendiente]="act.estado === 'PENDIENTE' && !act.bloqueada"
+                            [class.estado-bloqueada]="act.estado !== 'COMPLETADA' && act.bloqueada"
                             [class.estado-progreso]="act.estado === 'EN_PROGRESO'"
                           >
-                            {{ act.estado === 'COMPLETADA' ? 'Completada' : (act.estado === 'EN_PROGRESO' ? 'En Progreso' : 'Pendiente') }}
+                            {{ act.estado === 'COMPLETADA' ? 'Completada' : (act.bloqueada ? 'Bloqueada' : (act.estado === 'EN_PROGRESO' ? 'En Progreso' : 'Pendiente')) }}
                           </span>
                         </td>
                         <td class="td-doc">
@@ -3111,6 +3117,18 @@
                   </div>
                 }
               </div>
+
+              @if (actDrawer.bloqueada && actDrawer.estado !== 'COMPLETADA') {
+                <div class="banner-bloqueada-drawer">
+                  <div class="banner-bloqueada-header">
+                    <span class="banner-bloqueada-tag">Bloqueada por Dependencia (PRG-002)</span>
+                  </div>
+                  <p class="banner-bloqueada-desc">
+                    Esta actividad no puede completarse hasta que las siguientes actividades predecesoras hayan sido finalizadas:
+                    <strong>{{ actDrawer.predecesorasPendientes?.join(', ') || actDrawer.predecesoras?.join(', ') }}</strong>.
+                  </p>
+                </div>
+              }
 
               <!-- CASO 1: Actividad 2 (Normativa) -->
               @if (actDrawer.codigoActividad === '1.3' || actDrawer.nombre.toLowerCase().includes('normativa')) {
@@ -3335,10 +3353,14 @@
                         <button
                           type="button"
                           class="btn-primario-accion w-full"
+                          [disabled]="actDrawer.bloqueada"
                           (click)="marcarComoCompleta(actDrawer)"
-                          style="background: #166534; border-color: #166534;"
+                          [style.background]="actDrawer.bloqueada ? '#9ca3af' : '#166534'"
+                          [style.borderColor]="actDrawer.bloqueada ? '#9ca3af' : '#166534'"
+                          [style.cursor]="actDrawer.bloqueada ? 'not-allowed' : 'pointer'"
+                          [title]="actDrawer.bloqueada ? 'Actividad bloqueada: requiere completar actividades predecesoras primero' : 'Marcar como completa'"
                         >
-                          ✓ Marcar como completa
+                          {{ actDrawer.bloqueada ? 'Bloqueada (Requiere ' + (actDrawer.predecesorasPendientes?.join(', ') || actDrawer.predecesoras?.join(', ')) + ')' : '✓ Marcar como completa' }}
                         </button>
                       </div>
                     } @else if (actDrawer.estado === 'COMPLETADA') {

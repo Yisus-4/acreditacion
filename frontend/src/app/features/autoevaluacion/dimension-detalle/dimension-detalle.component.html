@@ -14,6 +14,18 @@
 
   <app-subnav-autoevaluacion [seccionActual]="datosDimension().titulo"></app-subnav-autoevaluacion>
 
+  <!-- Banner de Advertencia de Dependencias si aplica (PRG-002) -->
+  @if (datosDimension().alertaRequisito; as alerta) {
+    <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px;">
+      <div style="font-weight: 700; color: #92400e; font-size: 14px; margin-bottom: 4px;">
+        {{ alerta.titulo }}
+      </div>
+      <p style="margin: 0; font-size: 13.5px; color: #78350f; line-height: 1.4;">
+        {{ alerta.mensaje }}
+      </p>
+    </div>
+  }
+
   <!-- Toolbar de Búsqueda -->
   <div class="vista-toolbar">
     <div class="search-box-figma" style="flex: 1 1 360px;">
@@ -51,7 +63,14 @@
         @for (act of actividadesFiltradas(); track act.nombre) {
           <tr>
             <td class="col-nombre">
-              {{ act.nombre }}
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <span>{{ act.nombre }}</span>
+                @if (act.dependencia) {
+                  <span style="font-size: 11.5px; color: #b45309; font-weight: 500;">
+                    Requisito: {{ act.dependencia }}
+                  </span>
+                }
+              </div>
             </td>
             <td>{{ act.responsable }}</td>
             <td>{{ act.instrumento }}</td>

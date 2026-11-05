@@ -69,6 +69,9 @@ public class ActividadPlanTrabajoJpaEntity {
     @Column(name = "plazos_extendidos", columnDefinition = "TEXT")
     private String plazosExtendidos;
 
+    @Column(name = "predecesoras", columnDefinition = "TEXT")
+    private String predecesoras;
+
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
 
@@ -100,6 +103,14 @@ public class ActividadPlanTrabajoJpaEntity {
 
     public void setPlazosExtendidos(String plazosExtendidos) {
         this.plazosExtendidos = plazosExtendidos;
+    }
+
+    public String getPredecesoras() {
+        return predecesoras;
+    }
+
+    public void setPredecesoras(String predecesoras) {
+        this.predecesoras = predecesoras;
     }
 
     public UUID getId() {

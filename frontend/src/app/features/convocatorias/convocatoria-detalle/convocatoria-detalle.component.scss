@@ -6136,3 +6136,64 @@ select.input-figma {
     gap: 12px;
   }
 }
+
+/* =========================================================================
+   Estilos Dependencias y Precedencias (PRG-002)
+   ========================================================================= */
+
+.badge-bloqueada-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.estado-texto-figma.estado-bloqueada {
+  color: #c2410c;
+  font-weight: 600;
+}
+
+.banner-bloqueada-drawer {
+  background: #fffaf5;
+  border: 1px solid #fed7aa;
+  border-left: 4px solid #f97316;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+
+  .banner-bloqueada-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+
+    .banner-bloqueada-tag {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #9a3412;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+  }
+
+  .banner-bloqueada-desc {
+    margin: 0;
+    font-size: 0.82rem;
+    color: #431407;
+    line-height: 1.35;
+
+    strong {
+      color: #7c2d12;
+      font-weight: 700;
+    }
+  }
+}
