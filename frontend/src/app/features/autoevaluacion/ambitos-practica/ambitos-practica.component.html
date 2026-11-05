@@ -1,0 +1,386 @@
+<div class="vista-gestion-layout">
+  <app-subnav-autoevaluacion></app-subnav-autoevaluacion>
+
+  <!-- Mensajes de alerta -->
+  @if (errorMessage()) {
+    <div class="alert-banner-figma error">
+      <span>{{ errorMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="errorMessage.set(null)">✕</button>
+    </div>
+  }
+
+  @if (successMessage()) {
+    <div class="alert-banner-figma success">
+      <span>{{ successMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="successMessage.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Barra de Modo de Datos: Maestro vs Snapshot Carrera -->
+  <div class="modo-datos-bar">
+    <div class="modo-datos-left">
+      <span class="label-modo">Modo de datos:</span>
+      <div class="btn-group-modo">
+        <button
+          type="button"
+          class="btn-modo"
+          [class.active]="!modoSnapshot()"
+          (click)="modoSnapshot.set(false)"
+        >
+          Padrón Maestro Institucional (RG-006)
+        </button>
+        <button
+          type="button"
+          class="btn-modo"
+          [class.active]="modoSnapshot()"
+          (click)="modoSnapshot.set(true)"
+        >
+          Copia Autoevaluación Carrera (Snapshot)
+        </button>
+      </div>
+
+      @if (modoSnapshot()) {
+        <div class="carrera-selector-group">
+          <label for="carreraSelect">Carrera en Evaluación:</label>
+          <select
+            id="carreraSelect"
+            class="select-carrera"
+            [value]="carreraSeleccionadaId()"
+            (change)="onCarreraChange($event)"
+          >
+            @for (c of carreras(); track c.id) {
+              <option [value]="c.id">{{ c.nombre }}</option>
+            }
+          </select>
+        </div>
+      }
+    </div>
+
+    @if (modoSnapshot()) {
+      <div class="modo-datos-right">
+        <span class="badge-acreditacion">Actividad 4.2 / 4.3</span>
+      </div>
+    }
+  </div>
+
+  <!-- Tabs de Categoría CONEAU RG-006 -->
+  <div class="categoria-tabs-bar">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="tabActivo() === 'INTERNO'"
+      (click)="seleccionarTab('INTERNO')"
+    >
+      1. Internos (FT-008)
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="tabActivo() === 'EXTERNO'"
+      (click)="seleccionarTab('EXTERNO')"
+    >
+      2. Externos con Convenio (FT-009)
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="tabActivo() === 'UNIDAD_DEMOSTRATIVA'"
+      (click)="seleccionarTab('UNIDAD_DEMOSTRATIVA')"
+    >
+      3. Unidades Demostrativas (FT-010)
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="tabActivo() === 'CAM'"
+      (click)="seleccionarTab('CAM')"
+    >
+      4. Centros de Atención Médica CAM (FT-011)
+    </button>
+  </div>
+
+  <!-- Toolbar de búsqueda y acción -->
+  <div class="vista-toolbar">
+    <div class="toolbar-left-group">
+      <div class="search-box-figma">
+        <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+        </svg>
+        <input
+          type="text"
+          placeholder="Buscar ámbito de formación por nombre, ubicación o convenio..."
+          [value]="searchQuery()"
+          (input)="searchQuery.set($any($event.target).value)"
+        />
+      </div>
+    </div>
+
+    <div class="toolbar-actions-right">
+      <span class="stats-count-figma">
+        {{ ambitosFiltrados().length }} registros
+      </span>
+      @if (!modoSnapshot()) {
+        <button class="btn-nuevo-figma" type="button" (click)="abrirModalNuevo()">
+          + Nuevo Ámbito
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Tabla de Ámbitos -->
+  <div class="tabla-panel-figma">
+    <div class="tabla-header-coneau">
+      <div class="col-denominacion">Denominación del Ámbito</div>
+      <div class="col-referencia">
+        @if (tabActivo() === 'INTERNO') { Inmueble Institucional }
+        @else if (tabActivo() === 'EXTERNO' || tabActivo() === 'CAM') { Convenio Respaldo (RG-007) }
+        @else { Ubicación / Predio }
+      </div>
+      <div class="col-equipamiento">Tipo / Detalle</div>
+      <div class="col-superficie">Superficie</div>
+      <div class="col-capacidad">Capacidad</div>
+      @if (modoSnapshot()) {
+        <div class="col-vinculacion">Uso en Carrera</div>
+      }
+      <div class="col-acciones">Acciones</div>
+    </div>
+
+    @if (loading()) {
+      <div class="empty-state-figma">
+        <p>Cargando ámbitos de formación práctica...</p>
+      </div>
+    } @else if (ambitosFiltrados().length === 0) {
+      <div class="empty-state-figma">
+        <p>No se encontraron ámbitos registrados para esta categoría.</p>
+      </div>
+    } @else {
+      @for (a of ambitosFiltrados(); track a.id) {
+        @let evalCarrera = obtenerEvaluacion(a.id);
+        <div class="tabla-row-figma">
+          <div class="col-denominacion">
+            <span class="font-bold">{{ a.denominacion }}</span>
+            @if (a.descripcion) {
+              <span class="subtext-muted">{{ a.descripcion }}</span>
+            }
+          </div>
+
+          <div class="col-referencia">
+            @if (tabActivo() === 'INTERNO') {
+              <span>{{ a.inmuebleNombre || a.direccion || 'Sede Central' }}</span>
+            } @else if (tabActivo() === 'EXTERNO' || tabActivo() === 'CAM') {
+              @if (a.convenioNombre) {
+                <div class="convenio-ref">
+                  <span class="font-medium">{{ a.convenioNombre }}</span>
+                </div>
+              } @else {
+                <span class="text-warning font-medium">Sin convenio asociado</span>
+              }
+            } @else {
+              <span>{{ a.direccion || 'Campo Experimental Tilimuqui' }}</span>
+            }
+          </div>
+
+          <div class="col-equipamiento text-muted" [title]="a.tipoAmbito || a.actividadesDemostrativas || a.actividadAlumnoCam">
+            {{ a.tipoAmbito || a.actividadesDemostrativas || a.actividadAlumnoCam || 'Estándar' }}
+          </div>
+
+          <div class="col-superficie">
+            {{ a.superficieM2 ? (a.superficieM2 + ' m²') : '-' }}
+          </div>
+
+          <div class="col-capacidad">
+            {{ a.capacidadAlumnos ? (a.capacidadAlumnos + ' alumnos') : '-' }}
+          </div>
+
+          @if (modoSnapshot()) {
+            <div class="col-vinculacion">
+              @if (evalCarrera?.utilizadoPorCarrera) {
+                <span class="status-chip active">Utilizado</span>
+                @if (evalCarrera?.asignaturasVinculadas) {
+                  <span class="subtext-muted">{{ evalCarrera?.asignaturasVinculadas }}</span>
+                }
+              } @else {
+                <span class="status-chip inactive">No utilizado</span>
+              }
+            </div>
+          }
+
+          <div class="col-acciones">
+            @if (modoSnapshot()) {
+              <button
+                type="button"
+                class="btn-accion-icono"
+                title="Configurar uso en carrera"
+                (click)="abrirModalVinculacion(a)"
+              >
+                Vincular Carrera
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="btn-accion-icono"
+                title="Modificar ámbito"
+                (click)="abrirModalEditar(a)"
+              >
+                Modificar
+              </button>
+              <button
+                type="button"
+                class="btn-accion-icono btn-eliminar-text"
+                title="Eliminar ámbito"
+                (click)="eliminar(a)"
+              >
+                Eliminar
+              </button>
+            }
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>
+
+<!-- Modal de Alta / Modificación de Ámbito Maestro -->
+@if (modalAbierto()) {
+  <div class="modal-backdrop-figma">
+    <div class="modal-card-figma">
+      <div class="modal-header">
+        <h3>{{ ambitoSeleccionadoId() ? 'Modificar Ámbito de Formación Práctica' : 'Nuevo Ámbito de Formación Práctica (RG-006)' }}</h3>
+        <button type="button" class="btn-accion-icono" (click)="cerrarModal()">✕</button>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="guardar()" class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Categoría CONEAU *</label>
+            <select formControlName="tipoCategoria">
+              <option value="INTERNO">1. Interno (Laboratorio / Gabinete propio)</option>
+              <option value="EXTERNO">2. Externo con Convenio (Empresa / Organismo)</option>
+              <option value="UNIDAD_DEMOSTRATIVA">3. Unidad Demostrativa (Campo experimental)</option>
+              <option value="CAM">4. Centro de Atención Médica (CAM)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Denominación del Ámbito *</label>
+            <input type="text" formControlName="denominacion" placeholder="Ej: Laboratorio de Topografía y Geodesia" />
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Tipo de Ámbito / Especialidad</label>
+            <input type="text" formControlName="tipoAmbito" placeholder="Ej: Laboratorio, Hospital, Campo experimental" />
+          </div>
+
+          <div class="form-group">
+            <label>Ubicación / Dirección</label>
+            <input type="text" formControlName="direccion" placeholder="Ej: Av. Los Sarmientos s/n, Chilecito" />
+          </div>
+        </div>
+
+        <!-- Relación con Inmueble (INTERNO) -->
+        @if (form.get('tipoCategoria')?.value === 'INTERNO') {
+          <div class="form-group">
+            <label>Inmueble Institucional Asociado (RG-005)</label>
+            <select formControlName="inmuebleId">
+              <option value="">Seleccione inmueble...</option>
+              @for (inm of inmuebles(); track inm.id) {
+                <option [value]="inm.id">{{ inm.nombre }} ({{ inm.domicilio }})</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- Relación con Convenio (EXTERNO / CAM) -->
+        @if (form.get('tipoCategoria')?.value === 'EXTERNO' || form.get('tipoCategoria')?.value === 'CAM') {
+          <div class="form-group">
+            <label>Convenio Institucional de Respaldo (RG-007) *</label>
+            <select formControlName="convenioId">
+              <option value="">Seleccione convenio institucional...</option>
+              @for (conv of convenios(); track conv.id) {
+                <option [value]="conv.id">
+                  {{ conv.expediente }} — {{ conv.contraparte }} ({{ conv.tipoConvenio }})
+                </option>
+              }
+            </select>
+          </div>
+        }
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Superficie (m²)</label>
+            <input type="number" formControlName="superficieM2" placeholder="Ej: 120" />
+          </div>
+
+          <div class="form-group">
+            <label>Capacidad Simultánea de Alumnos</label>
+            <input type="number" formControlName="capacidadAlumnos" placeholder="Ej: 25" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Descripción / Equipamiento Principal</label>
+          <textarea rows="3" formControlName="descripcion" placeholder="Estaciones totales, receptores GNSS, computadoras, instrumental..."></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+          <button type="submit" class="btn-guardar" [disabled]="guardando()">
+            {{ guardando() ? 'Guardando...' : (ambitoSeleccionadoId() ? 'Actualizar Ámbito' : 'Guardar en Padrón') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Modal de Vinculación Carrera (Snapshot) -->
+@if (modalVinculacionAbierto()) {
+  <div class="modal-backdrop-figma">
+    <div class="modal-card-figma">
+      <div class="modal-header">
+        <h3>Vincular Ámbito a la Carrera para CONEAU</h3>
+        <button type="button" class="btn-accion-icono" (click)="cerrarModalVinculacion()">✕</button>
+      </div>
+
+      <form [formGroup]="formVinculacion" (ngSubmit)="guardarVinculacion()" class="modal-body">
+        <p class="ambito-desc-tag">
+          <strong>Ámbito:</strong> {{ ambitoParaVincular()?.denominacion }} ({{ ambitoParaVincular()?.tipoCategoria }})
+        </p>
+
+        <div class="form-group checkbox-row">
+          <label class="checkbox-container">
+            <input type="checkbox" formControlName="utilizadoPorCarrera" />
+            <span>¿Este ámbito es utilizado por los estudiantes de la carrera?</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>Asignaturas Curriculares Vinculadas *</label>
+          <textarea rows="2" formControlName="asignaturasVinculadas" placeholder="Ej: Topografía I, Cartografía, Geodesia Geométrica, Práctica Profesional"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Actividades Previstas en este Ámbito</label>
+          <textarea rows="2" formControlName="actividadesPrevistas" placeholder="Trabajos de campo, mediciones catastrales, simulaciones clínicas..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Docente Responsable / Coordinador de la Práctica</label>
+          <input type="text" formControlName="responsablePractica" placeholder="Nombre y apellido del profesor a cargo" />
+        </div>
+
+        <div class="form-group">
+          <label>Observaciones de uso para Autoevaluación</label>
+          <input type="text" formControlName="observaciones" placeholder="Frecuencia semanal, protocolos específicos, etc." />
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancelar" (click)="cerrarModalVinculacion()">Cancelar</button>
+          <button type="submit" class="btn-guardar">Guardar Vinculación</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

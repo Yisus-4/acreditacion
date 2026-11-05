@@ -24,6 +24,9 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
         <a routerLink="/admin/carreras" routerLinkActive="active" class="subnav-tab">
           Carreras
         </a>
+        <a routerLink="/admin/convenios" routerLinkActive="active" class="subnav-tab">
+          Convenios (RG-007)
+        </a>
       </nav>
     </header>
   `,

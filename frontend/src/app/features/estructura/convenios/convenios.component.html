@@ -1,0 +1,225 @@
+<div class="vista-gestion-layout">
+  <app-subnav-gestion-institucional seccionActual="Convenios (RG-007)"></app-subnav-gestion-institucional>
+
+  <!-- Mensajes de alerta -->
+  @if (errorMessage()) {
+    <div class="alert-banner-figma error">
+      <span>{{ errorMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="errorMessage.set(null)">✕</button>
+    </div>
+  }
+
+  @if (successMessage()) {
+    <div class="alert-banner-figma success">
+      <span>{{ successMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="successMessage.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Toolbar de búsqueda y filtros -->
+  <div class="vista-toolbar">
+    <div class="toolbar-left-group">
+      <div class="search-box-figma">
+        <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+        </svg>
+        <input
+          type="text"
+          placeholder="Buscar por expediente, contraparte u objeto..."
+          [value]="searchQuery()"
+          (input)="onSearch($event)"
+        />
+      </div>
+
+      <select
+        class="select-institucion-figma"
+        [value]="filtroEstado()"
+        (change)="filtroEstado.set($any($event.target).value)"
+      >
+        <option value="TODOS">Todos los estados</option>
+        <option value="VIGENTES">Solo vigentes</option>
+        <option value="NO_VIGENTES">No vigentes</option>
+      </select>
+
+      <select
+        class="select-institucion-figma"
+        [value]="filtroTipo()"
+        (change)="filtroTipo.set($any($event.target).value)"
+      >
+        <option value="TODOS">Todos los tipos</option>
+        <option value="MARCO">Marco</option>
+        <option value="ESPECIFICO">Específico</option>
+        <option value="ASISTENCIAL">Asistencial</option>
+        <option value="PASANTIAS">Pasantías</option>
+      </select>
+    </div>
+
+    <div class="toolbar-actions-right">
+      <span class="stats-count-figma">
+        {{ conveniosFiltrados().length }} {{ conveniosFiltrados().length === 1 ? 'convenio registrado' : 'convenios registrados' }}
+      </span>
+      <button class="btn-nuevo-figma" type="button" (click)="abrirModalNuevo()">
+        + Nuevo Convenio
+      </button>
+    </div>
+  </div>
+
+  <!-- Contenedor de Tabla -->
+  <div class="tabla-panel-figma">
+    <div class="tabla-header-coneau">
+      <div class="col-reg">Expediente / Resol.</div>
+      <div class="col-contraparte">Institución Contraparte</div>
+      <div class="col-tipo">Tipo</div>
+      <div class="col-objeto">Objeto / Finalidad</div>
+      <div class="col-fecha">Fecha Firma</div>
+      <div class="col-vencimiento">Duración / Cese</div>
+      <div class="col-estado">Estado</div>
+      <div class="col-acciones">Acciones</div>
+    </div>
+
+    @if (loading()) {
+      <div class="empty-state-figma">
+        <p>Cargando convenios institucionales...</p>
+      </div>
+    } @else if (conveniosFiltrados().length === 0) {
+      <div class="empty-state-figma">
+        <p>No se encontraron convenios con los criterios seleccionados.</p>
+      </div>
+    } @else {
+      @for (c of conveniosFiltrados(); track c.id) {
+        <div class="tabla-row-figma">
+          <div class="col-reg font-medium">
+            <span>{{ c.expediente }}</span>
+            @if (c.resolucionRectoral) {
+              <span class="subtext-muted">{{ c.resolucionRectoral }}</span>
+            }
+          </div>
+          <div class="col-contraparte font-bold">
+            {{ c.contraparte }}
+          </div>
+          <div class="col-tipo">
+            <span class="badge-tipo">{{ c.tipoConvenio }}</span>
+          </div>
+          <div class="col-objeto text-muted" [title]="c.objeto">
+            {{ c.objeto }}
+          </div>
+          <div class="col-fecha">
+            {{ c.fechaCelebracion | date:'dd/MM/yyyy' }}
+          </div>
+          <div class="col-vencimiento">
+            {{ c.fechaCese ? (c.fechaCese | date:'dd/MM/yyyy') : (c.duracion || 'Indefinido') }}
+          </div>
+          <div class="col-estado">
+            <span class="status-chip" [class.active]="c.vigente" [class.inactive]="!c.vigente">
+              {{ c.vigente ? 'Vigente' : 'No vigente' }}
+            </span>
+          </div>
+          <div class="col-acciones">
+            <button
+              type="button"
+              class="btn-accion-icono"
+              title="Modificar convenio"
+              (click)="abrirModalEditar(c)"
+            >
+              Modificar
+            </button>
+            <button
+              type="button"
+              class="btn-accion-icono btn-eliminar-text"
+              title="Eliminar convenio"
+              (click)="eliminar(c)"
+            >
+              Eliminar
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>
+
+<!-- Modal de Alta / Modificación de Convenio -->
+@if (modalAbierto()) {
+  <div class="modal-backdrop-figma">
+    <div class="modal-card-figma">
+      <div class="modal-header">
+        <h3>{{ convenioSeleccionadoId() ? 'Modificar Convenio Institucional' : 'Nuevo Convenio Institucional (RG-007)' }}</h3>
+        <button type="button" class="btn-accion-icono" (click)="cerrarModal()">✕</button>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="guardar()" class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Nro. de Expediente *</label>
+            <input type="text" formControlName="expediente" placeholder="Ej: 659/2025" />
+          </div>
+
+          <div class="form-group">
+            <label>Resolución Rectoral / HCS</label>
+            <input type="text" formControlName="resolucionRectoral" placeholder="Ej: Resol. 457/25" />
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Institución Contraparte *</label>
+            <input type="text" formControlName="contraparte" placeholder="Ej: Colegio de Agrimensores de La Rioja / INTA" />
+          </div>
+
+          <div class="form-group">
+            <label>Tipo de Convenio *</label>
+            <select formControlName="tipoConvenio">
+              <option value="MARCO">Marco</option>
+              <option value="ESPECIFICO">Específico</option>
+              <option value="ASISTENCIAL">Asistencial</option>
+              <option value="PASANTIAS">Pasantías</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Objeto / Finalidad del Convenio *</label>
+          <textarea rows="3" formControlName="objeto" placeholder="Detalle de actividades de formación práctica, pasantías o asistencia..."></textarea>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Fecha de Celebración / Firma *</label>
+            <input type="date" formControlName="fechaCelebracion" />
+          </div>
+
+          <div class="form-group">
+            <label>Duración</label>
+            <input type="text" formControlName="duracion" placeholder="Ej: 1 año con renovación automática" />
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Fecha de Cese / Vencimiento (opcional)</label>
+            <input type="date" formControlName="fechaCese" />
+          </div>
+
+          <div class="form-group">
+            <label>Responsable por la UNdeC</label>
+            <input type="text" formControlName="responsableUndec" placeholder="Ej: Ing. Juan Pérez - Decanato" />
+          </div>
+        </div>
+
+        <div class="form-group checkbox-row">
+          <label class="checkbox-container">
+            <input type="checkbox" formControlName="vigente" />
+            <span>Convenio Vigente para Formación Práctica y Acreditación</span>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+          <button type="submit" class="btn-guardar" [disabled]="guardando()">
+            {{ guardando() ? 'Guardando...' : (convenioSeleccionadoId() ? 'Actualizar Convenio' : 'Guardar Convenio') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

@@ -97,6 +97,15 @@ export const routes: Routes = [
       ).then((m) => m.CarrerasComponent),
   },
   {
+    path: 'admin/convenios',
+    title: 'Convenios Institucionales (RG-007) — Sistema de Acreditación UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/estructura/convenios/convenios.component'
+      ).then((m) => m.ConveniosComponent),
+  },
+  {
     path: 'acreditacion/convocatorias',
     title: 'Convocatorias de Acreditación — Sistema de Acreditación UNdeC',
     canActivate: [authGuard],
@@ -145,6 +154,24 @@ export const routes: Routes = [
       import(
         './features/autoevaluacion/infraestructura/infraestructura.component'
       ).then((m) => m.InfraestructuraComponent),
+  },
+  {
+    path: 'autoevaluacion/ambitos-formacion',
+    title: 'Ámbitos de Formación Práctica (RG-006) — Autoevaluación UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/autoevaluacion/ambitos-practica/ambitos-practica.component'
+      ).then((m) => m.AmbitosPracticaComponent),
+  },
+  {
+    path: 'autoevaluacion/estructura-curricular',
+    title: 'Estructura Curricular y Programas Analíticos (FT-001) — UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/autoevaluacion/estructura-curricular/estructura-curricular.component'
+      ).then((m) => m.EstructuraCurricularComponent),
   },
   {
     path: 'autoevaluacion/:dimension',

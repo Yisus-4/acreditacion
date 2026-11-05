@@ -1,0 +1,393 @@
+<div class="vista-gestion-layout">
+  <app-subnav-autoevaluacion></app-subnav-autoevaluacion>
+
+  <!-- Mensajes de feedback -->
+  @if (errorMessage()) {
+    <div class="alert-banner-figma error">
+      <span>{{ errorMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="errorMessage.set(null)">✕</button>
+    </div>
+  }
+
+  @if (successMessage()) {
+    <div class="alert-banner-figma success">
+      <span>{{ successMessage() }}</span>
+      <button type="button" class="btn-accion-icono" (click)="successMessage.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Selector de Carrera y Plan -->
+  <div class="plan-header-card">
+    <div class="plan-header-left">
+      <div class="selector-field">
+        <label for="carreraSelect">Carrera de Grado:</label>
+        <select
+          id="carreraSelect"
+          class="select-carrera-top"
+          [value]="carreraSeleccionadaId()"
+          (change)="onCarreraChange($event)"
+        >
+          @for (c of carreras(); track c.id) {
+            <option [value]="c.id">{{ c.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      @if (planActivo(); as plan) {
+        <div class="plan-info-badges">
+          <span class="badge-plan-title">Plan de Estudios Oficial (FT-001)</span>
+          <span class="badge-plan-res">{{ plan.codigoResolucion }}</span>
+          <span class="badge-plan-meta">{{ plan.duracionAnios }} años / {{ plan.horasTotales }} horas totales</span>
+        </div>
+      }
+    </div>
+
+    @if (planActivo(); as plan) {
+      <div class="plan-header-right">
+        <div class="stat-bubble">
+          <span class="stat-value">200 hs</span>
+          <span class="stat-label">PPS (Práctica Prof.)</span>
+        </div>
+        <div class="stat-bubble">
+          <span class="stat-value">180 hs</span>
+          <span class="stat-label">Trabajo Final</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Tabs Principales: FT-001 vs Programas 8.4 -->
+  <div class="categoria-tabs-bar">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="tabPrincipal() === 'PLAN_FT001'"
+      (click)="tabPrincipal.set('PLAN_FT001')"
+    >
+      1. Plan de Estudio y Estructura Curricular (FT-001)
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="tabPrincipal() === 'PROGRAMAS_84'"
+      (click)="tabPrincipal.set('PROGRAMAS_84')"
+    >
+      2. Programas Analíticos en PDF (Actividad 8.4)
+      <span class="counter-pill">{{ programasCargadosCount() }}/{{ asignaturas().length }}</span>
+    </button>
+  </div>
+
+  <!-- VISTA 1: Plan de Estudio FT-001 -->
+  @if (tabPrincipal() === 'PLAN_FT001') {
+    <!-- Tarjetas de Horas por Ciclo de Formación -->
+    <div class="ciclos-summary-grid">
+      <div class="ciclo-card cbi">
+        <span class="ciclo-codigo">C.B.I.</span>
+        <span class="ciclo-nombre">Ciclo Básico de Ingeniería</span>
+        <span class="ciclo-horas">{{ horasCbi() }} hs</span>
+      </div>
+      <div class="ciclo-card tb">
+        <span class="ciclo-codigo">T.B.</span>
+        <span class="ciclo-nombre">Tecnologías Básicas</span>
+        <span class="ciclo-horas">{{ horasTb() }} hs</span>
+      </div>
+      <div class="ciclo-card ta">
+        <span class="ciclo-codigo">T.A.</span>
+        <span class="ciclo-nombre">Tecnologías Aplicadas</span>
+        <span class="ciclo-horas">{{ horasTa() }} hs</span>
+      </div>
+      <div class="ciclo-card ctc">
+        <span class="ciclo-codigo">C.T.C.</span>
+        <span class="ciclo-nombre">Complementarias</span>
+        <span class="ciclo-horas">{{ horasCtc() }} hs</span>
+      </div>
+    </div>
+
+    <!-- Toolbar de filtros de Asignaturas -->
+    <div class="vista-toolbar">
+      <div class="toolbar-left-group">
+        <div class="search-box-figma">
+          <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar por código o nombre de materia..."
+            [value]="searchQuery()"
+            (input)="searchQuery.set($any($event.target).value)"
+          />
+        </div>
+
+        <select
+          class="select-institucion-figma"
+          [value]="filtroAnio()"
+          (change)="filtroAnio.set($any($event.target).value)"
+        >
+          <option value="TODOS">Todos los años (1º a 5º)</option>
+          <option value="1º">1º Año</option>
+          <option value="2º">2º Año</option>
+          <option value="3º">3º Año</option>
+          <option value="4º">4º Año</option>
+          <option value="5º">5º Año</option>
+        </select>
+
+        <select
+          class="select-institucion-figma"
+          [value]="filtroCiclo()"
+          (change)="filtroCiclo.set($any($event.target).value)"
+        >
+          <option value="TODOS">Todos los ciclos</option>
+          <option value="C.B.I.">C.B.I. (Básicas)</option>
+          <option value="T.B.">T.B. (Tecn. Básicas)</option>
+          <option value="T.A.">T.A. (Tecn. Aplicadas)</option>
+          <option value="C.T.C.">C.T.C. (Complementarias)</option>
+        </select>
+      </div>
+
+      <div class="toolbar-actions-right">
+        <span class="stats-count-figma">
+          {{ asignaturasFiltradas().length }} de {{ asignaturas().length }} asignaturas
+        </span>
+      </div>
+    </div>
+
+    <!-- Tabla Curricular FT-001 -->
+    <div class="tabla-panel-figma">
+      <div class="tabla-header-coneau">
+        <div class="col-cod">Cód.</div>
+        <div class="col-materia">Asignatura / Actividad Curricular</div>
+        <div class="col-anio">Año</div>
+        <div class="col-ciclo">Ciclo</div>
+        <div class="col-hs">Hs Tot.</div>
+        <div class="col-correlativas">Régimen y Correlatividades</div>
+      </div>
+
+      @if (loading()) {
+        <div class="empty-state-figma">
+          <p>Cargando estructura curricular...</p>
+        </div>
+      } @else if (asignaturasFiltradas().length === 0) {
+        <div class="empty-state-figma">
+          <p>No se encontraron asignaturas con los filtros actuales.</p>
+        </div>
+      } @else {
+        @for (a of asignaturasFiltradas(); track a.id) {
+          <div class="tabla-row-figma">
+            <div class="col-cod font-bold">
+              {{ a.codigo || ('#' + a.numeroOrden) }}
+            </div>
+            <div class="col-materia font-medium">
+              {{ a.nombre }}
+            </div>
+            <div class="col-anio">
+              {{ a.subgrupo }}
+            </div>
+            <div class="col-ciclo">
+              <span class="ciclo-badge-sm" [attr.data-ciclo]="a.grupo">{{ a.grupo }}</span>
+            </div>
+            <div class="col-hs font-bold">
+              {{ a.horasReloj }} hs
+            </div>
+            <div class="col-correlativas text-muted" [title]="a.correlativas || 'Sin correlatividades'">
+              {{ a.correlativas || 'Sin correlatividades previas' }}
+            </div>
+          </div>
+        }
+      }
+    </div>
+  }
+
+  <!-- VISTA 2: Programas Analíticos (Actividad 8.4) -->
+  @if (tabPrincipal() === 'PROGRAMAS_84') {
+    <!-- Banner de Requisitos PRG-002 y Progreso -->
+    <div class="requisito-prg002-box">
+      <div class="box-text">
+        <h4 class="box-title">Actividad 8.4: Gestionar Programas Analíticos de las Asignaturas</h4>
+        <p class="box-desc">
+          La carga de los programas analíticos vigentes en formato digital (PDF) aprobados por resolución de Consejo Directivo o Superior es un requisito habilitante obligatorio según el procedimiento <strong>PRG-002</strong>. Desbloquea la verificación de acervo bibliográfico (Actividad 4.4 / RG-014) y la autoevaluación de asignaturas (Actividad 8.5 / FT-003).
+        </p>
+      </div>
+
+      <div class="progreso-widget">
+        <div class="progreso-text">
+          <span class="progreso-label">Avance de Carga:</span>
+          <span class="progreso-num font-bold">{{ programasCargadosCount() }} / {{ asignaturas().length }} ({{ porcentajeProgramas() }}%)</span>
+        </div>
+        <div class="progreso-bar-bg">
+          <div class="progreso-bar-fill" [style.width.%]="porcentajeProgramas()"></div>
+        </div>
+
+        <button
+          type="button"
+          class="btn-validar-84"
+          (click)="validarYCompletar84()"
+        >
+          Validar y Completar Actividad 8.4
+        </button>
+      </div>
+    </div>
+
+    <!-- Toolbar de Programas Analíticos -->
+    <div class="vista-toolbar">
+      <div class="toolbar-left-group">
+        <div class="search-box-figma">
+          <svg class="icon-search" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar materia para programa analítico..."
+            [value]="searchQuery()"
+            (input)="searchQuery.set($any($event.target).value)"
+          />
+        </div>
+
+        <select
+          class="select-institucion-figma"
+          [value]="filtroAnio()"
+          (change)="filtroAnio.set($any($event.target).value)"
+        >
+          <option value="TODOS">Todos los años</option>
+          <option value="1º">1º Año</option>
+          <option value="2º">2º Año</option>
+          <option value="3º">3º Año</option>
+          <option value="4º">4º Año</option>
+          <option value="5º">5º Año</option>
+        </select>
+      </div>
+
+      <div class="toolbar-actions-right">
+        <span class="stats-count-figma">
+          {{ asignaturasFiltradas().length }} asignaturas listadas
+        </span>
+      </div>
+    </div>
+
+    <!-- Tabla de Programas Analíticos -->
+    <div class="tabla-panel-figma">
+      <div class="tabla-header-coneau">
+        <div class="col-cod">Cód.</div>
+        <div class="col-materia">Asignatura</div>
+        <div class="col-anio">Año</div>
+        <div class="col-estado-prog">Estado Programa</div>
+        <div class="col-resolucion">Resolución Aprobatoria</div>
+        <div class="col-archivo">Archivo Digital PDF</div>
+        <div class="col-acciones-prog">Acciones</div>
+      </div>
+
+      @for (a of asignaturasFiltradas(); track a.id) {
+        @let prog = obtenerPrograma(a.id);
+        <div class="tabla-row-figma">
+          <div class="col-cod font-bold">
+            {{ a.codigo || ('#' + a.numeroOrden) }}
+          </div>
+          <div class="col-materia font-medium">
+            {{ a.nombre }}
+          </div>
+          <div class="col-anio">
+            {{ a.subgrupo }}
+          </div>
+          <div class="col-estado-prog">
+            @if (prog?.estadoCarga === 'CARGADO') {
+              <span class="status-chip active">Cargado</span>
+            } @else {
+              <span class="status-chip inactive">Pendiente</span>
+            }
+          </div>
+          <div class="col-resolucion">
+            {{ prog?.resolucionAprobacion || 'Sin resolución' }}
+          </div>
+          <div class="col-archivo">
+            @if (prog?.archivoNombre) {
+              <span class="archivo-link" (click)="descargarPdf(prog!)" title="Descargar PDF">
+                {{ prog?.archivoNombre }}
+              </span>
+            } @else {
+              <span class="text-muted">No cargado</span>
+            }
+          </div>
+          <div class="col-acciones-prog">
+            <button
+              type="button"
+              class="btn-accion-icono"
+              (click)="abrirModalSubir(a)"
+            >
+              {{ prog ? 'Actualizar PDF' : 'Subir Programa' }}
+            </button>
+            @if (prog?.archivoNombre) {
+              <button
+                type="button"
+                class="btn-accion-icono btn-descarga"
+                (click)="descargarPdf(prog!)"
+                title="Descargar archivo PDF"
+              >
+                Descargar
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Modal Subida de Programa Analítico -->
+@if (modalSubirAbierto()) {
+  <div class="modal-backdrop-figma">
+    <div class="modal-card-figma">
+      <div class="modal-header">
+        <h3>Cargar Programa Analítico en PDF (Actividad 8.4)</h3>
+        <button type="button" class="btn-accion-icono" (click)="cerrarModalSubir()">✕</button>
+      </div>
+
+      <form [formGroup]="formSubida" (ngSubmit)="guardarPrograma()" class="modal-body">
+        <p class="ambito-desc-tag">
+          <strong>Asignatura:</strong> {{ asignaturaSeleccionada()?.codigo }} — {{ asignaturaSeleccionada()?.nombre }} ({{ asignaturaSeleccionada()?.subgrupo }})
+        </p>
+
+        <div class="form-group">
+          <label>Archivo del Programa Analítico (PDF) *</label>
+          <div class="file-dropzone">
+            <input
+              type="file"
+              id="fileInput"
+              accept=".pdf,application/pdf"
+              (change)="onFileSelected($event)"
+            />
+            <span class="dropzone-text">
+              @if (archivoSeleccionado()) {
+                <strong>Archivo seleccionado:</strong> {{ archivoSeleccionado()?.name }}
+              } @else {
+                Seleccionar o arrastrar archivo PDF del programa vigente
+              }
+            </span>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Resolución de Aprobación del Programa *</label>
+            <input type="text" formControlName="resolucionAprobacion" placeholder="Ej: Resol. HCD 045/24" />
+          </div>
+
+          <div class="form-group">
+            <label>Año de Vigencia Desde *</label>
+            <input type="number" formControlName="vigenciaDesde" placeholder="Ej: 2024" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Observaciones de Contenidos Mínimos</label>
+          <input type="text" formControlName="observaciones" placeholder="Alineado con contenidos curriculares básicos..." />
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancelar" (click)="cerrarModalSubir()">Cancelar</button>
+          <button type="submit" class="btn-guardar" [disabled]="subiendo() || !archivoSeleccionado()">
+            {{ subiendo() ? 'Subiendo PDF...' : 'Guardar y Vincular Programa' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
