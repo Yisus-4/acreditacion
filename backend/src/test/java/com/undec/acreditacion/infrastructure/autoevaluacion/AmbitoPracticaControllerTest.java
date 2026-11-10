@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
@@ -16,12 +17,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -101,6 +104,73 @@ class AmbitoPracticaControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/ambitos-practica/autoevaluacion?procesoId={p}&carreraId={c} filtra por carrera")
+    void deberiaListarAutoevaluacionFiltrandoPorCarreraId() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        UUID carreraId = UUID.randomUUID();
+        UUID ambitoId = UUID.randomUUID();
+
+        AmbitoPracticaJpaEntity ambito = new AmbitoPracticaJpaEntity();
+        ambito.setId(ambitoId);
+        ambito.setDenominacion("Gabinete de Topografía");
+        ambito.setTipoCategoria("INTERNO");
+
+        AutoevaluacionCarreraAmbitoJpaEntity vinculo = new AutoevaluacionCarreraAmbitoJpaEntity();
+        vinculo.setId(UUID.randomUUID());
+        vinculo.setProcesoId(procesoId);
+        vinculo.setCarreraId(carreraId);
+        vinculo.setAmbito(ambito);
+        vinculo.setUtilizadoPorCarrera(true);
+
+        when(autoevaluacionAmbitoRepository.findByProcesoIdAndCarreraIdOrderByAmbitoNumeroOrdenAsc(procesoId, carreraId))
+                .thenReturn(List.of(vinculo));
+
+        mockMvc.perform(get("/api/ambitos-practica/autoevaluacion")
+                        .param("procesoId", procesoId.toString())
+                        .param("carreraId", carreraId.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].carreraId", is(carreraId.toString())));
+
+        verify(autoevaluacionAmbitoRepository).findByProcesoIdAndCarreraIdOrderByAmbitoNumeroOrdenAsc(procesoId, carreraId);
+    }
+
+    @Test
+    @DisplayName("GET /api/ambitos-practica/autoevaluacion?procesoId={p}&carreraId={c} hace fallback a registros sin carrera si vacío")
+    void deberiaListarAutoevaluacionConFallbackASinCarreraSiNoHayRegistrosConCarreraId() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        UUID carreraId = UUID.randomUUID();
+        UUID ambitoId = UUID.randomUUID();
+
+        AmbitoPracticaJpaEntity ambito = new AmbitoPracticaJpaEntity();
+        ambito.setId(ambitoId);
+        ambito.setDenominacion("Gabinete de Topografía");
+        ambito.setTipoCategoria("INTERNO");
+
+        AutoevaluacionCarreraAmbitoJpaEntity vinculoLegacy = new AutoevaluacionCarreraAmbitoJpaEntity();
+        vinculoLegacy.setId(UUID.randomUUID());
+        vinculoLegacy.setProcesoId(procesoId);
+        vinculoLegacy.setAmbito(ambito);
+        vinculoLegacy.setUtilizadoPorCarrera(true);
+
+        when(autoevaluacionAmbitoRepository.findByProcesoIdAndCarreraIdOrderByAmbitoNumeroOrdenAsc(procesoId, carreraId))
+                .thenReturn(Collections.emptyList());
+        when(autoevaluacionAmbitoRepository.findByProcesoIdOrderByAmbitoNumeroOrdenAsc(procesoId))
+                .thenReturn(List.of(vinculoLegacy));
+
+        mockMvc.perform(get("/api/ambitos-practica/autoevaluacion")
+                        .param("procesoId", procesoId.toString())
+                        .param("carreraId", carreraId.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+
+        verify(autoevaluacionAmbitoRepository).findByProcesoIdAndCarreraIdOrderByAmbitoNumeroOrdenAsc(procesoId, carreraId);
+        verify(autoevaluacionAmbitoRepository).findByProcesoIdOrderByAmbitoNumeroOrdenAsc(procesoId);
+    }
+
+    @Test
     @DisplayName("POST /api/ambitos-practica/autoevaluacion guarda vinculación usando el alias")
     void deberiaGuardarVinculacionConAliasAutoevaluacion() throws Exception {
         UUID procesoId = UUID.randomUUID();
@@ -149,13 +219,65 @@ class AmbitoPracticaControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/ambitos-practica/autoevaluacion guarda vinculación asociando carreraId")
+    void deberiaGuardarVinculacionConCarreraId() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        UUID carreraId = UUID.randomUUID();
+        UUID ambitoId = UUID.randomUUID();
+
+        AmbitoPracticaJpaEntity ambito = new AmbitoPracticaJpaEntity();
+        ambito.setId(ambitoId);
+        ambito.setDenominacion("Campo Experimental Los Sarmientos");
+        ambito.setTipoCategoria("INTERNO");
+
+        AutoevaluacionCarreraAmbitoDto requestDto = new AutoevaluacionCarreraAmbitoDto(
+                null,
+                procesoId,
+                carreraId,
+                ambitoId,
+                null,
+                true,
+                "Topografía [AG-01]",
+                "Pérez, Juan",
+                "Lunes 8-12",
+                "Prácticas de campo",
+                "Sin observaciones",
+                null,
+                null
+        );
+
+        when(ambitoRepository.findById(ambitoId)).thenReturn(Optional.of(ambito));
+        when(autoevaluacionAmbitoRepository.findByProcesoIdAndCarreraIdAndAmbitoId(procesoId, carreraId, ambitoId))
+                .thenReturn(Optional.empty());
+
+        AutoevaluacionCarreraAmbitoJpaEntity guardado = new AutoevaluacionCarreraAmbitoJpaEntity();
+        guardado.setId(UUID.randomUUID());
+        guardado.setProcesoId(procesoId);
+        guardado.setCarreraId(carreraId);
+        guardado.setAmbito(ambito);
+        guardado.setUtilizadoPorCarrera(true);
+        guardado.setCreadoEn(Instant.now());
+
+        ArgumentCaptor<AutoevaluacionCarreraAmbitoJpaEntity> captor = ArgumentCaptor.forClass(AutoevaluacionCarreraAmbitoJpaEntity.class);
+        when(autoevaluacionAmbitoRepository.save(captor.capture())).thenReturn(guardado);
+
+        mockMvc.perform(post("/api/ambitos-practica/autoevaluacion")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.carreraId", is(carreraId.toString())));
+
+        assertEquals(carreraId, captor.getValue().getCarreraId());
+    }
+
+    @Test
     @DisplayName("POST /api/ambitos-practica/carrera/{procesoId}/completar rechaza con 422 cuando el plan tiene 0 asignaturas")
     void deberiaRechazarCompletarActividadCon422SiPlanTiene0Asignaturas() throws Exception {
         UUID procesoId = UUID.randomUUID();
 
         doThrow(new DomainValidationException(
                 "Precedencia requerida (CONEAU PRG-002): No es posible completar esta actividad hasta que se carguen las asignaturas en la Dimensión 8.3 (Plan de Estudio)."
-        )).when(validarPrecedenciaAmbitosService).validar(eq(procesoId), eq("INTERNOS_FT008"));
+        )).when(validarPrecedenciaAmbitosService).validar(eq(procesoId), isNull(), eq("INTERNOS_FT008"));
 
         mockMvc.perform(post("/api/ambitos-practica/carrera/{procesoId}/completar", procesoId)
                         .param("actividad", "INTERNOS_FT008")
@@ -170,7 +292,7 @@ class AmbitoPracticaControllerTest {
     void deberiaCompletarActividadCon200CuandoPlanTieneAsignaturas() throws Exception {
         UUID procesoId = UUID.randomUUID();
 
-        doNothing().when(validarPrecedenciaAmbitosService).validar(eq(procesoId), eq("INTERNOS_FT008"));
+        doNothing().when(validarPrecedenciaAmbitosService).validar(eq(procesoId), isNull(), eq("INTERNOS_FT008"));
 
         mockMvc.perform(post("/api/ambitos-practica/carrera/{procesoId}/completar", procesoId)
                         .param("actividad", "INTERNOS_FT008")
@@ -181,18 +303,22 @@ class AmbitoPracticaControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/ambitos-practica/autoevaluacion/completar completa con alias y queryParam procesoId")
-    void deberiaCompletarConAliasAutoevaluacion() throws Exception {
+    @DisplayName("POST /api/ambitos-practica/autoevaluacion/completar completa reenviando carreraId a servicio")
+    void deberiaCompletarConAliasAutoevaluacionYCarreraId() throws Exception {
         UUID procesoId = UUID.randomUUID();
+        UUID carreraId = UUID.randomUUID();
 
-        doNothing().when(validarPrecedenciaAmbitosService).validar(eq(procesoId), eq("EXTERNOS_FT009"));
+        doNothing().when(validarPrecedenciaAmbitosService).validar(eq(procesoId), eq(carreraId), eq("EXTERNOS_FT009"));
 
         mockMvc.perform(post("/api/ambitos-practica/autoevaluacion/completar")
                         .param("procesoId", procesoId.toString())
+                        .param("carreraId", carreraId.toString())
                         .param("actividad", "EXTERNOS_FT009")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.completado", is(true)))
                 .andExpect(jsonPath("$.actividad", is("EXTERNOS_FT009")));
+
+        verify(validarPrecedenciaAmbitosService).validar(eq(procesoId), eq(carreraId), eq("EXTERNOS_FT009"));
     }
 }

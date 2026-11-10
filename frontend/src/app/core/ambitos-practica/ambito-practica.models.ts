@@ -36,6 +36,7 @@ export interface AutoevaluacionCarreraAmbito {
   carreraId: string;
   procesoId?: string;
   ambitoPracticaId: string;
+  ambitoId?: string;
   utilizadoPorCarrera: boolean;
   asignaturasVinculadas?: string;
   actividadesPrevistas?: string;

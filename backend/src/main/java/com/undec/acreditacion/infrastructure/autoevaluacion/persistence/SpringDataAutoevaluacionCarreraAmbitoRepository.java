@@ -16,6 +16,12 @@ public interface SpringDataAutoevaluacionCarreraAmbitoRepository extends JpaRepo
 
     Optional<AutoevaluacionCarreraAmbitoJpaEntity> findByProcesoIdAndAmbitoId(UUID procesoId, UUID ambitoId);
 
+    List<AutoevaluacionCarreraAmbitoJpaEntity> findByProcesoIdAndCarreraIdOrderByAmbitoNumeroOrdenAsc(UUID procesoId, UUID carreraId);
+
+    Optional<AutoevaluacionCarreraAmbitoJpaEntity> findByProcesoIdAndCarreraIdAndAmbitoId(UUID procesoId, UUID carreraId, UUID ambitoId);
+
+    List<AutoevaluacionCarreraAmbitoJpaEntity> findByCarreraIdOrderByAmbitoNumeroOrdenAsc(UUID carreraId);
+
     @Query("SELECT a FROM AutoevaluacionCarreraAmbitoJpaEntity a WHERE a.procesoId = :procesoId AND a.utilizadoPorCarrera = true AND LOWER(a.asignaturasVinculadas) LIKE LOWER(CONCAT('%', :subjectName, '%'))")
     List<AutoevaluacionCarreraAmbitoJpaEntity> findActiveUsagesBySubject(@Param("procesoId") UUID procesoId, @Param("subjectName") String subjectName);
 

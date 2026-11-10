@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   OnInit,
   computed,
   inject,
@@ -27,6 +28,8 @@ import {
   ActividadCurricularPlan,
   DocenteResumen,
 } from '../../../core/planes-estudio/plan-estudio.models';
+import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoevaluacion-context.service';
+import { NotificationState } from '../../../core/autoevaluacion/notification-state.helper';
 
 export type ActividadAmbitoTipo =
   | 'MAESTRO_RG006'
@@ -55,8 +58,12 @@ export class AmbitosPracticaComponent implements OnInit {
   private readonly estructuraService = inject(EstructuraService);
   private readonly autoevaluacionService = inject(AutoevaluacionService);
   private readonly planService = inject(PlanEstudioService);
+  readonly contextService = inject(AutoevaluacionContextService);
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
+
+  private readonly notif = new NotificationState();
 
   readonly ambitos = signal<AmbitoPractica[]>([]);
   readonly convenios = signal<ConvenioInstitucional[]>([]);
@@ -258,12 +265,14 @@ export class AmbitosPracticaComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.notif.registrarTeardown(this.destroyRef);
+
     this.route.queryParamMap.subscribe((params) => {
-      const pId = params.get('procesoId') || params.get('convocatoriaId');
+      const pId = params.get('procesoId') || params.get('convocatoriaId') || this.contextService.procesoIdActivo();
       if (pId) {
         this.procesoId.set(pId);
       }
-      const cId = params.get('carreraId');
+      const cId = params.get('carreraId') || this.contextService.carreraSeleccionadaId();
       if (cId) {
         this.carreraSeleccionadaId.set(cId);
       }
@@ -277,6 +286,7 @@ export class AmbitosPracticaComponent implements OnInit {
       ) {
         this.actividadSeleccionada.set(act);
       }
+      this.cargarAutoevaluaciones();
       this.cargarAsignaturasDelPlan();
     });
 
@@ -290,7 +300,8 @@ export class AmbitosPracticaComponent implements OnInit {
       next: (data: CarreraResponse[]) => {
         this.carreras.set(data);
         if (data.length > 0 && !this.carreraSeleccionadaId()) {
-          this.carreraSeleccionadaId.set(data[0].id);
+          const fallbackId = this.contextService.carreraSeleccionadaId() || data[0].id;
+          this.carreraSeleccionadaId.set(fallbackId);
         }
         this.cargarAutoevaluaciones();
         this.cargarAsignaturasDelPlan();
@@ -320,8 +331,8 @@ export class AmbitosPracticaComponent implements OnInit {
   }
 
   cargarAsignaturasDelPlan(): void {
-    const carreraId = this.carreraSeleccionadaId();
-    const procesoId = this.procesoId();
+    const carreraId = this.carreraSeleccionadaId() || this.contextService.carreraSeleccionadaId();
+    const procesoId = this.procesoId() || this.contextService.procesoIdActivo();
     if (!carreraId && !procesoId) {
       this.asignaturasDelPlan.set([]);
       return;
@@ -349,17 +360,18 @@ export class AmbitosPracticaComponent implements OnInit {
         this.loading.set(false);
       },
       error: (err) => {
-        this.errorMessage.set('Error al cargar ámbitos de formación: ' + (err.error?.message || err.message));
+        this.notif.mostrar(this.errorMessage, 'Error al cargar ámbitos de formación: ' + (err.error?.message || err.message), 6000);
         this.loading.set(false);
       },
     });
   }
 
   cargarAutoevaluaciones(): void {
-    const carreraId = this.carreraSeleccionadaId();
+    const carreraId = this.carreraSeleccionadaId() || this.contextService.carreraSeleccionadaId();
     if (!carreraId) return;
+    const procesoId = this.procesoId() || this.contextService.procesoIdActivo();
 
-    this.ambitoService.listarAutoevaluaciones(carreraId, this.procesoId() || undefined).subscribe({
+    this.ambitoService.listarAutoevaluaciones(carreraId, procesoId || undefined).subscribe({
       next: (data) => this.autoevaluaciones.set(data),
       error: () => {},
     });
@@ -370,27 +382,30 @@ export class AmbitosPracticaComponent implements OnInit {
       .filter((a) => a.tipoCategoria === tipo)
       .map((a) => a.id);
     return this.autoevaluaciones().some(
-      (ae) => ae.utilizadoPorCarrera && idsDeTipo.includes(ae.ambitoPracticaId)
+      (ae) =>
+        ae.utilizadoPorCarrera &&
+        (idsDeTipo.includes(ae.ambitoPracticaId) || (ae.ambitoId && idsDeTipo.includes(ae.ambitoId)))
     );
   }
 
   seleccionarActividad(tipo: ActividadAmbitoTipo): void {
     this.actividadSeleccionada.set(tipo);
     this.searchQuery.set('');
-    this.errorMessage.set(null);
-    this.successMessage.set(null);
+    this.notif.limpiar(this.errorMessage);
+    this.notif.limpiar(this.successMessage);
   }
 
   volverAlListado(): void {
     this.actividadSeleccionada.set(null);
     this.searchQuery.set('');
-    this.errorMessage.set(null);
-    this.successMessage.set(null);
+    this.notif.limpiar(this.errorMessage);
+    this.notif.limpiar(this.successMessage);
   }
 
   onCarreraChange(event: Event): void {
     const select = event.target as HTMLSelectElement;
     this.carreraSeleccionadaId.set(select.value);
+    this.contextService.seleccionarCarrera(select.value);
     this.cargarAutoevaluaciones();
     this.cargarAsignaturasDelPlan();
   }
@@ -402,7 +417,9 @@ export class AmbitosPracticaComponent implements OnInit {
 
   obtenerEvaluacion(ambitoId?: string): AutoevaluacionCarreraAmbito | undefined {
     if (!ambitoId) return undefined;
-    return this.autoevaluaciones().find((ae) => ae.ambitoPracticaId === ambitoId);
+    return this.autoevaluaciones().find(
+      (ae) => ae.ambitoPracticaId === ambitoId || ae.ambitoId === ambitoId
+    );
   }
 
   abrirModalNuevo(): void {
@@ -484,28 +501,26 @@ export class AmbitosPracticaComponent implements OnInit {
     if (id) {
       this.ambitoService.actualizarAmbito(id, dto).subscribe({
         next: () => {
-          this.successMessage.set('Ámbito de práctica actualizado.');
+          this.notif.mostrar(this.successMessage, 'Ámbito de práctica actualizado.', 6000);
           this.guardando.set(false);
           this.cerrarModal();
           this.cargarAmbitos();
-          setTimeout(() => this.successMessage.set(null), 3000);
         },
         error: (err) => {
-          this.errorMessage.set('Error al actualizar: ' + (err.error?.message || err.message));
+          this.notif.mostrar(this.errorMessage, 'Error al actualizar: ' + (err.error?.message || err.message), 6000);
           this.guardando.set(false);
         },
       });
     } else {
       this.ambitoService.crearAmbito(dto).subscribe({
         next: () => {
-          this.successMessage.set('Ámbito de práctica registrado en el padrón maestro.');
+          this.notif.mostrar(this.successMessage, 'Ámbito de práctica registrado en el padrón maestro.', 6000);
           this.guardando.set(false);
           this.cerrarModal();
           this.cargarAmbitos();
-          setTimeout(() => this.successMessage.set(null), 3000);
         },
         error: (err) => {
-          this.errorMessage.set('Error al registrar: ' + (err.error?.message || err.message));
+          this.notif.mostrar(this.errorMessage, 'Error al registrar: ' + (err.error?.message || err.message), 6000);
           this.guardando.set(false);
         },
       });
@@ -518,12 +533,11 @@ export class AmbitosPracticaComponent implements OnInit {
 
     this.ambitoService.eliminarAmbito(ambito.id).subscribe({
       next: () => {
-        this.successMessage.set('Ámbito eliminado.');
+        this.notif.mostrar(this.successMessage, 'Ámbito eliminado.', 6000);
         this.cargarAmbitos();
-        setTimeout(() => this.successMessage.set(null), 3000);
       },
       error: (err) => {
-        this.errorMessage.set('No se pudo eliminar el ámbito: ' + (err.error?.message || err.message));
+        this.notif.mostrar(this.errorMessage, 'No se pudo eliminar el ámbito: ' + (err.error?.message || err.message), 6000);
       },
     });
   }
@@ -640,7 +654,7 @@ export class AmbitosPracticaComponent implements OnInit {
 
   guardarVinculacion(): void {
     const ambito = this.ambitoParaVincular();
-    const carreraId = this.carreraSeleccionadaId();
+    const carreraId = this.carreraSeleccionadaId() || this.contextService.carreraSeleccionadaId();
     if (!ambito?.id || !carreraId) return;
 
     const val = this.formVinculacion.value;
@@ -649,8 +663,9 @@ export class AmbitosPracticaComponent implements OnInit {
 
     const dto: AutoevaluacionCarreraAmbito = {
       carreraId: carreraId,
-      procesoId: this.procesoId() || undefined,
+      procesoId: this.procesoId() || this.contextService.procesoIdActivo() || undefined,
       ambitoPracticaId: ambito.id,
+      ambitoId: ambito.id,
       utilizadoPorCarrera: val.utilizadoPorCarrera ?? true,
       asignaturasVinculadas: asignaturasStr || undefined,
       actividadesPrevistas: val.actividadesPrevistas || undefined,
@@ -660,13 +675,12 @@ export class AmbitosPracticaComponent implements OnInit {
 
     this.ambitoService.guardarAutoevaluacion(dto).subscribe({
       next: () => {
-        this.successMessage.set('Vinculación de carrera guardada para CONEAU.');
+        this.notif.mostrar(this.successMessage, 'Vinculación de carrera guardada para CONEAU.', 6000);
         this.cerrarModalVinculacion();
         this.cargarAutoevaluaciones();
-        setTimeout(() => this.successMessage.set(null), 3000);
       },
       error: (err) => {
-        this.errorMessage.set('Error al guardar vinculación: ' + (err.error?.message || err.message));
+        this.notif.mostrar(this.errorMessage, 'Error al guardar vinculación: ' + (err.error?.message || err.message), 6000);
       },
     });
   }
@@ -676,11 +690,12 @@ export class AmbitosPracticaComponent implements OnInit {
   }
 
   completarActividad(actividadCodigo?: string): void {
-    const pId = this.procesoId();
+    const pId = this.procesoId() || this.contextService.procesoIdActivo();
     const act = actividadCodigo || this.actividadSeleccionada();
+    const carreraId = this.carreraSeleccionadaId() || this.contextService.carreraSeleccionadaId() || undefined;
 
     if (!pId) {
-      this.errorMessage.set('Debe seleccionar un proceso o convocatoria de autoevaluación activa para completar la actividad.');
+      this.notif.mostrar(this.errorMessage, 'Debe seleccionar un proceso o convocatoria de autoevaluación activa para completar la actividad.', 6000);
       return;
     }
 
@@ -689,8 +704,10 @@ export class AmbitosPracticaComponent implements OnInit {
     }
 
     if (!this.tieneAsignaturas()) {
-      this.errorMessage.set(
-        'Precedencia requerida (CONEAU PRG-002): Para vincular y completar los ámbitos de práctica es necesario cargar primero las asignaturas del Plan de Estudios (Actividad 8.3 / FT-001).'
+      this.notif.mostrar(
+        this.errorMessage,
+        'Precedencia requerida (CONEAU PRG-002): Para vincular y completar los ámbitos de práctica es necesario cargar primero las asignaturas del Plan de Estudios (Actividad 8.3 / FT-001).',
+        6000
       );
       return;
     }
@@ -698,20 +715,19 @@ export class AmbitosPracticaComponent implements OnInit {
     this.completandoActividad.set(true);
     this.errorMessage.set(null);
 
-    this.ambitoService.completarActividadAmbitos(pId, act).subscribe({
+    this.ambitoService.completarActividadAmbitos(pId, act, carreraId).subscribe({
       next: (res) => {
         this.completandoActividad.set(false);
-        this.successMessage.set(res?.mensaje || 'Actividad completada y validada exitosamente ante CONEAU.');
+        this.notif.mostrar(this.successMessage, res?.mensaje || 'Actividad completada y validada exitosamente ante CONEAU.', 6000);
         const comp = new Set(this.actividadesCompletadas());
         comp.add(act);
         this.actividadesCompletadas.set(comp);
         this.cargarAutoevaluaciones();
-        setTimeout(() => this.successMessage.set(null), 4000);
       },
       error: (err) => {
         this.completandoActividad.set(false);
         const msg = err.error?.message || err.message || 'Error al completar la actividad.';
-        this.errorMessage.set(msg);
+        this.notif.mostrar(this.errorMessage, msg, 6000);
       },
     });
   }

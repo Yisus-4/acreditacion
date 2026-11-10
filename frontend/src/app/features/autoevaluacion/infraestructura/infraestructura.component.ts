@@ -36,6 +36,8 @@ import {
   Provincia,
 } from '../../../core/geografia/geografia.service';
 import { SubnavAutoevaluacionComponent } from '../subnav-autoevaluacion/subnav-autoevaluacion.component';
+import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoevaluacion-context.service';
+import { NotificationState } from '../../../core/autoevaluacion/notification-state.helper';
 
 @Component({
   selector: 'app-infraestructura',
@@ -53,6 +55,8 @@ export class InfraestructuraComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  readonly contextService = inject(AutoevaluacionContextService);
+  private readonly notif = new NotificationState();
 
   readonly inmuebles = signal<Inmueble[]>([]);
   readonly sedes = signal<SedeLocalizacionResponse[]>([]);
@@ -277,15 +281,16 @@ export class InfraestructuraComponent implements OnInit {
 
   volverAlListado(): void {
     this.actividadSeleccionada.set(null);
-    this.errorMessage.set(null);
-    this.successMessage.set(null);
+    this.notif.limpiar(this.errorMessage);
+    this.notif.limpiar(this.successMessage);
   }
 
   ngOnInit(): void {
+    this.notif.registrarTeardown(this.destroyRef);
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
-        const pId = params.get('procesoId') || params.get('convocatoriaId');
+        const pId = params.get('procesoId') || params.get('convocatoriaId') || this.contextService.procesoIdActivo();
         if (pId) {
           this.procesoId.set(pId);
           this.modoVista.set('PROCESO');
@@ -368,7 +373,7 @@ export class InfraestructuraComponent implements OnInit {
       )
       .subscribe({
         next: (data) => this.inmuebles.set(data),
-        error: () => this.errorMessage.set('Error al cargar registro de inmuebles'),
+        error: () => this.notif.mostrar(this.errorMessage, 'Error al cargar registro de inmuebles', 6000),
       });
   }
 
@@ -739,11 +744,11 @@ export class InfraestructuraComponent implements OnInit {
               return { ...inm, espacios: espaciosActualizados };
             })
           );
-          this.successMessage.set('Observación de Higiene y Seguridad actualizada exitosamente.');
+          this.notif.mostrar(this.successMessage, 'Observación de Higiene y Seguridad actualizada exitosamente.', 6000);
           this.cerrarModalHyS();
         },
         error: () => {
-          this.errorMessage.set('Error al actualizar la observación de Higiene y Seguridad.');
+          this.notif.mostrar(this.errorMessage, 'Error al actualizar la observación de Higiene y Seguridad.', 6000);
         },
       });
   }
@@ -775,7 +780,7 @@ export class InfraestructuraComponent implements OnInit {
       )
       .subscribe({
         next: (res) => this.resultadoConsultaM2.set(res),
-        error: () => this.errorMessage.set('Error al ejecutar la consulta de espacios.'),
+        error: () => this.notif.mostrar(this.errorMessage, 'Error al ejecutar la consulta de espacios.', 6000),
       });
   }
 
@@ -808,9 +813,9 @@ export class InfraestructuraComponent implements OnInit {
           this.tiposEspacio.update((list) => [...list, tipoCreado]);
           this.nuevoEspacioTipoId.set(tipoCreado.id);
           this.cerrarModalNuevoTipo();
-          this.successMessage.set(`Nuevo tipo de espacio "${tipoCreado.denominacion}" registrado.`);
+          this.notif.mostrar(this.successMessage, `Nuevo tipo de espacio "${tipoCreado.denominacion}" registrado.`, 6000);
         },
-        error: () => this.errorMessage.set('Error al registrar el nuevo tipo de espacio.'),
+        error: () => this.notif.mostrar(this.errorMessage, 'Error al registrar el nuevo tipo de espacio.', 6000),
       });
   }
 
@@ -934,16 +939,18 @@ export class InfraestructuraComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          this.successMessage.set(
+          this.notif.mostrar(
+            this.successMessage,
             this.modoEdicion()
               ? 'Inmueble actualizado exitosamente.'
-              : 'Inmueble registrado exitosamente.'
+              : 'Inmueble registrado exitosamente.',
+            6000
           );
           this.cerrarFormulario();
           this.cargarDatosIniciales();
         },
         error: () => {
-          this.errorMessage.set('Error al guardar datos del inmueble.');
+          this.notif.mostrar(this.errorMessage, 'Error al guardar datos del inmueble.', 6000);
         },
       });
   }
@@ -969,7 +976,7 @@ export class InfraestructuraComponent implements OnInit {
   }
 
   confirmarExtensionPlazo(): void {
-    const pId = this.procesoId() || 'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
+    const pId = this.procesoId() || this.contextService.procesoIdActivo() || 'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
     const nuevaFecha = this.nuevaFechaLimite();
     if (!nuevaFecha) return;
 
@@ -981,10 +988,10 @@ export class InfraestructuraComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          this.successMessage.set(res.mensaje);
+          this.notif.mostrar(this.successMessage, res.mensaje, 6000);
           this.cerrarModalExtension();
         },
-        error: () => this.errorMessage.set('Error al registrar la extensión de plazo.'),
+        error: () => this.notif.mostrar(this.errorMessage, 'Error al registrar la extensión de plazo.', 6000),
       });
   }
 
@@ -993,15 +1000,15 @@ export class InfraestructuraComponent implements OnInit {
   // ---------------------------------------------------------------------------
 
   remitirADeaPorProceso(): void {
-    const pId = this.procesoId() || 'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
+    const pId = this.procesoId() || this.contextService.procesoIdActivo() || 'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
     this.autoevalService.verificarYRemitirPorProceso(pId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          this.successMessage.set(res.mensaje);
+          this.notif.mostrar(this.successMessage, res.mensaje, 6000);
           this.cargarDatosIniciales();
         },
-        error: () => this.errorMessage.set('Error al remitir verificación a la AEA.'),
+        error: () => this.notif.mostrar(this.errorMessage, 'Error al remitir verificación a la AEA.', 6000),
       });
   }
 
@@ -1010,10 +1017,10 @@ export class InfraestructuraComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.successMessage.set(`Inmueble "${inm.nombre}" verificado.`);
+          this.notif.mostrar(this.successMessage, `Inmueble "${inm.nombre}" verificado.`, 6000);
           this.cargarDatosIniciales();
         },
-        error: () => this.errorMessage.set('No se pudo verificar el inmueble.'),
+        error: () => this.notif.mostrar(this.errorMessage, 'No se pudo verificar el inmueble.', 6000),
       });
   }
 
@@ -1075,10 +1082,10 @@ export class InfraestructuraComponent implements OnInit {
       .subscribe({
         next: (res: GuiaHigieneSeguridad) => {
           this.guiaHigiene.set(res);
-          this.successMessage.set('Guía de Higiene y Seguridad guardada exitosamente.');
+          this.notif.mostrar(this.successMessage, 'Guía de Higiene y Seguridad guardada exitosamente.', 6000);
         },
         error: () => {
-          this.errorMessage.set('Error al guardar la Guía de Higiene y Seguridad.');
+          this.notif.mostrar(this.errorMessage, 'Error al guardar la Guía de Higiene y Seguridad.', 6000);
         },
       });
   }
@@ -1121,9 +1128,9 @@ export class InfraestructuraComponent implements OnInit {
       .subscribe({
         next: () => {
           this.cargarGuiaHigiene();
-          this.successMessage.set('Normativa vinculada a GT-003 correctamente.');
+          this.notif.mostrar(this.successMessage, 'Normativa vinculada a GT-003 correctamente.', 6000);
         },
-        error: () => this.errorMessage.set('Error al vincular normativa.'),
+        error: () => this.notif.mostrar(this.errorMessage, 'Error al vincular normativa.', 6000),
       });
   }
 
@@ -1136,21 +1143,21 @@ export class InfraestructuraComponent implements OnInit {
       .subscribe({
         next: () => {
           this.cargarGuiaHigiene();
-          this.successMessage.set('Normativa eliminada.');
+          this.notif.mostrar(this.successMessage, 'Normativa eliminada.', 6000);
         },
       });
   }
 
   remitirHigieneADea(): void {
-    const pId = this.procesoId() || 'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
+    const pId = this.procesoId() || this.contextService.procesoIdActivo() || 'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
     this.autoevalService.verificarYRemitirHigienePorProceso(pId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          this.successMessage.set(res.mensaje);
+          this.notif.mostrar(this.successMessage, res.mensaje, 6000);
           this.cargarGuiaHigiene();
         },
-        error: () => this.errorMessage.set('Error al verificar la Guía de Higiene y Seguridad.'),
+        error: () => this.notif.mostrar(this.errorMessage, 'Error al verificar la Guía de Higiene y Seguridad.', 6000),
       });
   }
 }
