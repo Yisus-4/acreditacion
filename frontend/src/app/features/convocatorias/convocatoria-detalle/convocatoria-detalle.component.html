@@ -3342,7 +3342,7 @@
                           class="btn-primario-accion w-full"
                           style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: #6b4c5b;"
                           [routerLink]="['/autoevaluacion/infraestructura']"
-                          [queryParams]="{ procesoId: convocatoria()?.id }"
+                          [queryParams]="{ procesoId: convocatoria()?.id, carreraId: convocatoria()?.carreraId }"
                           (click)="cerrarDrawer()"
                         >
                           <span>Gestionar en Autoevaluación (RG-005 / GT-003) &rarr;</span>
@@ -3356,6 +3356,7 @@
                           [routerLink]="['/autoevaluacion/ambitos-formacion']"
                           [queryParams]="{
                             procesoId: convocatoria()?.id,
+                            carreraId: convocatoria()?.carreraId,
                             actividad: actDrawer.codigoActividad === '6.1' ? 'MAESTRO_RG006' :
                                        actDrawer.codigoActividad === '6.2' ? 'INTERNOS_FT008' :
                                        actDrawer.codigoActividad === '6.3' ? 'EXTERNOS_FT009' :
@@ -3375,6 +3376,7 @@
                           [routerLink]="['/autoevaluacion/estructura-curricular']"
                           [queryParams]="{
                             procesoId: convocatoria()?.id,
+                            carreraId: convocatoria()?.carreraId,
                             actividad: actDrawer.codigoActividad === '8.3' ? 'PLAN_FT001' :
                                        actDrawer.codigoActividad === '8.4' ? 'PROGRAMAS_84' : 'ESTRUCTURA_FT003'
                           }"
