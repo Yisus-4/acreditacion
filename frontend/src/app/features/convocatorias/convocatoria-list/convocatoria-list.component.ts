@@ -35,6 +35,10 @@ export class ConvocatoriaListComponent implements OnInit {
     return session.user.roleCodes.includes('ADMINISTRATOR') || session.user.roleCodes.includes('AEA');
   });
 
+  readonly canDeleteDev = computed(() => {
+    return this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA', 'AC_COORDINATOR', 'DEV', 'DEVELOPER');
+  });
+
   ngOnInit(): void {
     this.cargarEscuelas();
     this.cargarConvocatorias();
@@ -86,6 +90,10 @@ export class ConvocatoriaListComponent implements OnInit {
 
   eliminarConvocatoriaDev(c: ConvocatoriaResumen, event: Event): void {
     event.stopPropagation();
+    if (!this.canDeleteDev()) {
+      alert('Acción restringida: solo usuarios de AEA o con rol de desarrollo pueden eliminar convocatorias.');
+      return;
+    }
     const ok = window.confirm(
       `¿Está seguro de que desea eliminar la convocatoria "${c.codigo}" (Modo Desarrollo)?\n\n` +
         `Esta acción eliminará la convocatoria y todos sus procesos de carrera vinculados en cascada.`

@@ -1,18 +1,20 @@
 <div class="vista-gestion-layout">
-  <!-- Barra de Navegación y Retorno (Atrás) -->
-  <div class="nav-volver-bar" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-    <a
-      routerLink="/admin/estructura"
-      style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px; font-weight: 500; color: #4b5563; background: #ffffff; border: 1px solid #d1d5db; border-radius: 6px; text-decoration: none;"
-    >
-      <svg style="width: 16px; height: 16px;" viewBox="0 0 20 20" fill="currentColor">
-        <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-      </svg>
-      <span>Volver a Gestión Institucional y Académica</span>
-    </a>
-  </div>
-
-  <app-subnav-gestion-institucional seccionActual="Convenios (RG-007)"></app-subnav-gestion-institucional>
+  <!-- Cabecera de Convenios -->
+  <header class="convenios-header" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+    <nav class="breadcrumb-nav" aria-label="Ruta de navegación" style="display: flex; align-items: center; gap: 8px; margin: 0 0 4px 0; font-size: 14px; color: var(--color-text-muted, #5a4a53);">
+      <a routerLink="/dashboard" style="color: var(--color-text-muted, #5a4a53); text-decoration: none; font-weight: 500;" title="Ir al Inicio">Inicio</a>
+      <span style="color: #9ca3af; font-size: 13px;">/</span>
+      <span style="color: var(--color-text, #1f1a1d); font-weight: 600;">Convenios Institucionales (RG-007)</span>
+    </nav>
+    <div>
+      <h1 style="font-size: 22px; font-weight: 700; color: var(--color-text, #1f1a1d); margin: 0 0 4px 0;">
+        Padrón Maestro de Convenios Institucionales (RG-007)
+      </h1>
+      <p style="margin: 0; font-size: 14px; color: var(--color-text-muted, #5a4a53);">
+        Registro institucional de convenios marco, específicos, asistenciales y de pasantías para el respaldo de ámbitos de práctica (RG-006).
+      </p>
+    </div>
+  </header>
 
   <!-- Mensajes de alerta -->
   @if (errorMessage()) {

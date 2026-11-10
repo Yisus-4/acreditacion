@@ -7,7 +7,23 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   imports: [RouterLink, RouterLinkActive],
   template: `
     <header class="gestion-inst-header">
-      <p class="breadcrumb-text">Gestión institucional / {{ seccionActual() }}</p>
+      <nav class="breadcrumb-nav" aria-label="Ruta de navegación">
+        <a
+          routerLink="/admin/estructura"
+          class="breadcrumb-link"
+          title="Ir al Panel de Gestión Institucional y Académica"
+        >
+          Gestión institucional
+        </a>
+        <span class="breadcrumb-separator">/</span>
+        <a
+          [routerLink]="getSeccionRoute()"
+          class="breadcrumb-link breadcrumb-current"
+          title="Sección actual"
+        >
+          {{ seccionActual() }}
+        </a>
+      </nav>
       <nav class="subnav-tabs-bar" aria-label="Navegación Gestión Institucional">
         <a routerLink="/admin/instituciones" routerLinkActive="active" class="subnav-tab">
           Institución
@@ -24,9 +40,6 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
         <a routerLink="/admin/carreras" routerLinkActive="active" class="subnav-tab">
           Carreras
         </a>
-        <a routerLink="/admin/convenios" routerLinkActive="active" class="subnav-tab">
-          Convenios (RG-007)
-        </a>
       </nav>
     </header>
   `,
@@ -37,11 +50,36 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
       gap: 16px;
       margin-bottom: 24px;
     }
-    .breadcrumb-text {
+    .breadcrumb-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       margin: 0;
       font-size: 14px;
       color: var(--color-text-muted, #5a4a53);
       font-weight: 400;
+    }
+    .breadcrumb-link {
+      color: var(--color-text-muted, #5a4a53);
+      text-decoration: none;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: var(--color-primary-dark, #6b4c5b);
+        text-decoration: underline;
+      }
+
+      &.breadcrumb-current {
+        color: var(--color-text, #1f1a1d);
+        font-weight: 600;
+      }
+    }
+    .breadcrumb-separator {
+      color: #9ca3af;
+      font-size: 13px;
+      user-select: none;
     }
     .subnav-tabs-bar {
       display: flex;
@@ -79,4 +117,21 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 })
 export class SubnavGestionInstitucionalComponent {
   readonly seccionActual = input.required<string>();
+
+  getSeccionRoute(): string {
+    switch (this.seccionActual()) {
+      case 'Institución':
+        return '/admin/instituciones';
+      case 'Unidades académicas':
+        return '/admin/unidades-academicas-coneau';
+      case 'Sedes y localizaciones':
+        return '/admin/sedes';
+      case 'Escuelas':
+        return '/admin/unidades-academicas';
+      case 'Carreras':
+        return '/admin/carreras';
+      default:
+        return '/admin/instituciones';
+    }
+  }
 }

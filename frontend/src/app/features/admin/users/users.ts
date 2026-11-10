@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -10,6 +17,21 @@ import {
   NotificationService,
   SolicitudNotificacion,
 } from '../../../core/notifications/notification.service';
+
+export type FiltroEstado = 'TODOS' | 'PENDIENTES' | 'ACTIVOS' | 'INACTIVOS';
+
+export type TableRowItem =
+  | {
+      kind: 'solicitud';
+      id: string;
+      notif: SolicitudNotificacion;
+      payload: DatosPayloadAltaMiembro | null;
+    }
+  | {
+      kind: 'user';
+      id: string;
+      user: UserItem;
+    };
 
 @Component({
   selector: 'app-users',
@@ -24,6 +46,7 @@ export class UserManagement implements OnInit {
   private readonly notificationService = inject(NotificationService);
   private readonly fb = inject(FormBuilder);
 
+  // Data signals
   readonly users = signal<UserItem[]>([]);
   readonly roles = signal<RoleItem[]>([]);
   readonly unidadesAcademicas = signal<UnidadAcademicaResponse[]>([]);
@@ -33,13 +56,26 @@ export class UserManagement implements OnInit {
   readonly submitting = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
-  readonly searchQuery = signal<string>('');
 
-  // Modals state
-  readonly showCreateModal = signal<boolean>(false);
+  // Filter signals
+  readonly searchQuery = signal<string>('');
+  readonly filtroEstado = signal<FiltroEstado>('TODOS');
+  readonly filtroEscuela = signal<string>('');
+
+  // Pagination signals
+  readonly currentPage = signal<number>(1);
+  readonly pageSize = signal<number>(10);
+
+  // Modal & Drawer signals
+  readonly showCreateDrawer = signal<boolean>(false);
+  readonly createStep = signal<number>(1);
   readonly showEditModal = signal<boolean>(false);
   readonly showConfirmModal = signal<boolean>(false);
+  readonly showConfirmAltaModal = signal<boolean>(false);
+  readonly showRejectConfirmModal = signal<boolean>(false);
+
   readonly selectedUser = signal<UserItem | null>(null);
+  readonly selectedSolicitud = signal<SolicitudNotificacion | null>(null);
   readonly selectedRoles = signal<Set<string>>(new Set());
 
   // Forms
@@ -56,6 +92,123 @@ export class UserManagement implements OnInit {
     newPassword: [''],
     unidadAcademicaId: [''],
   });
+
+  // Computed data
+  readonly allFilteredRows = computed<TableRowItem[]>(() => {
+    const q = this.searchQuery().toLowerCase().trim();
+    const estado = this.filtroEstado();
+    const escuelaId = this.filtroEscuela();
+    const rows: TableRowItem[] = [];
+
+    // 1. Solicitudes pendientes
+    if (estado === 'TODOS' || estado === 'PENDIENTES') {
+      const uaSeleccionada = escuelaId
+        ? this.unidadesAcademicas().find((u) => u.id === escuelaId)
+        : null;
+
+      for (const notif of this.solicitudesPendientes()) {
+        const payload = this.parsePayload(notif.datosPayload);
+
+        // Filtro por escuela
+        if (uaSeleccionada) {
+          const carrera = (notif.carreraNombre || '').toLowerCase();
+          const uaNom = uaSeleccionada.nombre.toLowerCase();
+          const uaSig = (uaSeleccionada.sigla || '').toLowerCase();
+          const coincideEscuela =
+            carrera.includes(uaNom) || (uaSig ? carrera.includes(uaSig) : false);
+          if (!coincideEscuela) {
+            continue;
+          }
+        }
+
+        // Filtro por búsqueda
+        if (q) {
+          const nombreComp = payload
+            ? `${payload.apellido} ${payload.nombreCompleto}`.toLowerCase()
+            : '';
+          const email = (payload?.correoElectronico || '').toLowerCase();
+          const dni = (payload?.documento || '').toLowerCase();
+          const cuit = (payload?.cuitPasaporte || '').toLowerCase();
+          const titulo = notif.titulo.toLowerCase();
+          const carrera = (notif.carreraNombre || '').toLowerCase();
+
+          const match =
+            nombreComp.includes(q) ||
+            email.includes(q) ||
+            dni.includes(q) ||
+            cuit.includes(q) ||
+            titulo.includes(q) ||
+            carrera.includes(q);
+
+          if (!match) {
+            continue;
+          }
+        }
+
+        rows.push({
+          kind: 'solicitud',
+          id: notif.id,
+          notif,
+          payload,
+        });
+      }
+    }
+
+    // 2. Usuarios
+    if (estado === 'TODOS' || estado === 'ACTIVOS' || estado === 'INACTIVOS') {
+      for (const user of this.users()) {
+        if (estado === 'ACTIVOS' && !user.active) continue;
+        if (estado === 'INACTIVOS' && user.active) continue;
+
+        if (escuelaId && user.unidadAcademicaId !== escuelaId) {
+          continue;
+        }
+
+        if (q) {
+          const username = user.username.toLowerCase();
+          const email = user.email.toLowerCase();
+          if (!username.includes(q) && !email.includes(q)) {
+            continue;
+          }
+        }
+
+        rows.push({
+          kind: 'user',
+          id: user.id,
+          user,
+        });
+      }
+    }
+
+    return rows;
+  });
+
+  readonly totalItems = computed(() => this.allFilteredRows().length);
+
+  readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.totalItems() / this.pageSize()))
+  );
+
+  readonly pagedRows = computed(() => {
+    const page = Math.min(this.currentPage(), this.totalPages());
+    const size = this.pageSize();
+    const start = (page - 1) * size;
+    return this.allFilteredRows().slice(start, start + size);
+  });
+
+  readonly paginationRange = computed(() => {
+    const total = this.totalItems();
+    if (total === 0) return { start: 0, end: 0, total: 0 };
+    const page = Math.min(this.currentPage(), this.totalPages());
+    const size = this.pageSize();
+    const start = (page - 1) * size + 1;
+    const end = Math.min(page * size, total);
+    return { start, end, total };
+  });
+
+  readonly solicitudesPendientesCount = computed(
+    () => this.solicitudesPendientes().length
+  );
 
   ngOnInit(): void {
     this.loadData();
@@ -104,58 +257,40 @@ export class UserManagement implements OnInit {
     }
   }
 
-  confirmarAltaMiembro(notif: SolicitudNotificacion): void {
-    if (this.procesandoSolicitudId()) return;
-    this.procesandoSolicitudId.set(notif.id);
-    this.errorMessage.set(null);
-
-    this.notificationService
-      .aceptar(notif.id)
-      .pipe(finalize(() => this.procesandoSolicitudId.set(null)))
-      .subscribe({
-        next: () => {
-          this.successMessage.set(
-            'Se confirmó el alta del usuario en el sistema y en el catálogo de Comisión de Autoevaluación.'
-          );
-          this.loadData();
-        },
-        error: (err) => {
-          const msg = err?.error?.error || 'No fue posible confirmar el alta del miembro.';
-          this.errorMessage.set(msg);
-        },
-      });
+  // --- Filtering and Pagination methods ---
+  setFiltroEstado(estado: FiltroEstado): void {
+    this.filtroEstado.set(estado);
+    this.currentPage.set(1);
   }
 
-  rechazarAltaMiembro(notif: SolicitudNotificacion): void {
-    if (this.procesandoSolicitudId()) return;
-    this.procesandoSolicitudId.set(notif.id);
-    this.errorMessage.set(null);
-
-    this.notificationService
-      .rechazar(notif.id)
-      .pipe(finalize(() => this.procesandoSolicitudId.set(null)))
-      .subscribe({
-        next: () => {
-          this.successMessage.set('Solicitud de alta rechazada.');
-          this.loadData();
-        },
-        error: (err) => {
-          const msg = err?.error?.error || 'No fue posible rechazar la solicitud.';
-          this.errorMessage.set(msg);
-        },
-      });
+  filtrarPorPendientes(): void {
+    this.setFiltroEstado('PENDIENTES');
   }
 
-  filteredUsers(): UserItem[] {
-    const q = this.searchQuery().toLowerCase().trim();
-    if (!q) {
-      return this.users();
+  onSearchInput(value: string): void {
+    this.searchQuery.set(value);
+    this.currentPage.set(1);
+  }
+
+  onEscuelaChange(value: string): void {
+    this.filtroEscuela.set(value);
+    this.currentPage.set(1);
+  }
+
+  limpiarFiltros(): void {
+    this.searchQuery.set('');
+    this.filtroEstado.set('TODOS');
+    this.filtroEscuela.set('');
+    this.currentPage.set(1);
+  }
+
+  setPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages()) {
+      this.currentPage.set(page);
     }
-    return this.users().filter(
-      (u) => u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-    );
   }
 
+  // --- Display helpers ---
   getNombreUnidadAcademica(id?: string | null): string {
     if (!id) return '—';
     const ua = this.unidadesAcademicas().find((u) => u.id === id);
@@ -166,6 +301,70 @@ export class UserManagement implements OnInit {
     if (!id) return '';
     const ua = this.unidadesAcademicas().find((u) => u.id === id);
     return ua ? `${ua.nombre} (${ua.sigla})` : id;
+  }
+
+  getNombreRol(code: string): string {
+    const found = this.roles().find((r) => r.code === code);
+    if (found?.name) {
+      if (code === 'ADMIN' || code === 'ADMINISTRATOR') return 'Administrador AEA';
+      return found.name;
+    }
+    const fallbackMap: Record<string, string> = {
+      ADMIN: 'Administrador AEA',
+      ADMINISTRATOR: 'Administrador AEA',
+      CAREER_DIRECTOR: 'Director de Carrera',
+      DIRECTOR_CARRERA: 'Director de Carrera',
+      DIRECTOR_ESCUELA: 'Director de Escuela',
+      SELF_EVALUATION_COMMITTEE_MEMBER: 'Miembro de Comisión CA',
+      AC_COORDINATOR: 'Coordinador de Acreditación',
+      INFORMATION_PROVIDER: 'Proveedor de Información',
+      INFRAESTRUCTURA: 'Responsable de Infraestructura',
+      BEDELIA: 'Responsable de Bedelía',
+      HIGIENE_SEGURIDAD: 'Higiene y Seguridad',
+    };
+    return fallbackMap[code] || code;
+  }
+
+  getDescripcionRol(code: string): string {
+    const found = this.roles().find((r) => r.code === code);
+    if (found?.description) return found.description;
+    const descMap: Record<string, string> = {
+      ADMIN: 'Acceso completo al sistema de acreditación · ADMIN',
+      ADMINISTRATOR: 'Acceso completo al sistema de acreditación · ADMINISTRATOR',
+      CAREER_DIRECTOR: 'Gestiona la autoevaluación de su carrera · DIRECTOR_CARRERA',
+      DIRECTOR_CARRERA: 'Gestiona la autoevaluación de su carrera · DIRECTOR_CARRERA',
+      DIRECTOR_ESCUELA: 'Supervisa las carreras de su escuela · DIRECTOR_ESCUELA',
+      SELF_EVALUATION_COMMITTEE_MEMBER: 'Participa en la autoevaluación · SELF_EVALUATION_COMMITTEE_MEMBER',
+      AC_COORDINATOR: 'Coordina los procesos globales de acreditación · AC_COORDINATOR',
+      INFORMATION_PROVIDER: 'Carga y provee información solicitada · INFORMATION_PROVIDER',
+      INFRAESTRUCTURA: 'Gestiona datos de sedes y espacios físicos · INFRAESTRUCTURA',
+      BEDELIA: 'Gestiona asignaciones de aulas y bedelía · BEDELIA',
+      HIGIENE_SEGURIDAD: 'Supervisa condiciones de higiene y seguridad · HIGIENE_SEGURIDAD',
+    };
+    return descMap[code] || code;
+  }
+
+  getInitials(first: string, second?: string | null): string {
+    if (second) {
+      const f = second.trim().charAt(0);
+      const s = first.trim().charAt(0);
+      return `${f}${s}`.toUpperCase();
+    }
+    const clean = first.trim().replace(/[^a-zA-Z0-9]/g, '');
+    if (clean.length >= 2) {
+      return clean.slice(0, 2).toUpperCase();
+    }
+    return clean.toUpperCase() || 'U';
+  }
+
+  getSelectedRoleNames(): string[] {
+    return Array.from(this.selectedRoles()).map((code) => this.getNombreRol(code));
+  }
+
+  getSelectedEscuelaName(): string {
+    const id = this.createForm.controls.unidadAcademicaId.value;
+    if (!id) return 'Sin Escuela / Ámbito Central';
+    return this.getDetalleUnidadAcademica(id);
   }
 
   // --- Role checkboxes helper ---
@@ -183,7 +382,99 @@ export class UserManagement implements OnInit {
     return this.selectedRoles().has(code);
   }
 
-  // --- Create Modal ---
+  // --- Solicitudes Pendientes (Confirmación / Rechazo) ---
+  abrirModalConfirmarAlta(notif: SolicitudNotificacion): void {
+    this.selectedSolicitud.set(notif);
+    this.errorMessage.set(null);
+    this.showConfirmAltaModal.set(true);
+  }
+
+  cerrarModalConfirmarAlta(): void {
+    this.showConfirmAltaModal.set(false);
+    this.selectedSolicitud.set(null);
+  }
+
+  confirmarAltaDesdeModal(): void {
+    const notif = this.selectedSolicitud();
+    if (!notif) return;
+    this.confirmarAltaMiembro(notif, () => {
+      this.cerrarModalConfirmarAlta();
+    });
+  }
+
+  abrirModalRechazarAlta(notif: SolicitudNotificacion): void {
+    this.selectedSolicitud.set(notif);
+    this.errorMessage.set(null);
+    this.showRejectConfirmModal.set(true);
+  }
+
+  cerrarModalRechazarAlta(): void {
+    this.showRejectConfirmModal.set(false);
+    this.selectedSolicitud.set(null);
+  }
+
+  rechazarAltaDesdeModal(): void {
+    const notif = this.selectedSolicitud();
+    if (!notif) return;
+    this.rechazarAltaMiembro(notif, () => {
+      this.cerrarModalRechazarAlta();
+      this.cerrarModalConfirmarAlta();
+    });
+  }
+
+  confirmarAltaMiembro(notif: SolicitudNotificacion, onComplete?: () => void): void {
+    if (this.procesandoSolicitudId()) return;
+    this.procesandoSolicitudId.set(notif.id);
+    this.errorMessage.set(null);
+
+    this.notificationService
+      .aceptar(notif.id)
+      .pipe(
+        finalize(() => {
+          this.procesandoSolicitudId.set(null);
+          onComplete?.();
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.successMessage.set(
+            'Se confirmó el alta del usuario en el sistema y en el catálogo permanente de la Comisión de Autoevaluación.'
+          );
+          this.loadData();
+        },
+        error: (err) => {
+          const msg = err?.error?.error || 'No fue posible confirmar el alta del miembro.';
+          this.errorMessage.set(msg);
+        },
+      });
+  }
+
+  rechazarAltaMiembro(notif: SolicitudNotificacion, onComplete?: () => void): void {
+    if (this.procesandoSolicitudId()) return;
+    this.procesandoSolicitudId.set(notif.id);
+    this.errorMessage.set(null);
+
+    this.notificationService
+      .rechazar(notif.id)
+      .pipe(
+        finalize(() => {
+          this.procesandoSolicitudId.set(null);
+          onComplete?.();
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.successMessage.set('Solicitud de alta rechazada.');
+          this.loadData();
+        },
+        error: (err) => {
+          const msg = err?.error?.error || 'No fue posible rechazar la solicitud.';
+          this.errorMessage.set(msg);
+        },
+      });
+  }
+
+  // --- Create Drawer (Pantalla 2 con Stepper) ---
   openCreateModal(): void {
     this.createForm.reset({
       username: '',
@@ -192,17 +483,81 @@ export class UserManagement implements OnInit {
       unidadAcademicaId: '',
     });
     this.selectedRoles.set(new Set());
+    this.createStep.set(1);
     this.errorMessage.set(null);
-    this.showCreateModal.set(true);
+    this.showCreateDrawer.set(true);
   }
 
-  closeCreateModal(): void {
-    this.showCreateModal.set(false);
+  closeCreateDrawer(): void {
+    this.showCreateDrawer.set(false);
+  }
+
+  goToCreateStep(step: number): void {
+    if (step === 2) {
+      if (this.isStep1Invalid()) {
+        this.markStep1Touched();
+        return;
+      }
+    } else if (step === 3) {
+      if (this.isStep1Invalid()) {
+        this.markStep1Touched();
+        this.createStep.set(1);
+        return;
+      }
+      if (this.selectedRoles().size === 0) {
+        this.errorMessage.set('Debe seleccionar al menos un rol.');
+        this.createStep.set(2);
+        return;
+      }
+    }
+    this.errorMessage.set(null);
+    this.createStep.set(step);
+  }
+
+  nextCreateStep(): void {
+    const cur = this.createStep();
+    if (cur === 1) {
+      if (this.isStep1Invalid()) {
+        this.markStep1Touched();
+        return;
+      }
+      this.errorMessage.set(null);
+      this.createStep.set(2);
+    } else if (cur === 2) {
+      if (this.selectedRoles().size === 0) {
+        this.errorMessage.set('Debe seleccionar al menos un rol para el nuevo usuario.');
+        return;
+      }
+      this.errorMessage.set(null);
+      this.createStep.set(3);
+    }
+  }
+
+  prevCreateStep(): void {
+    this.createStep.update((s) => Math.max(1, s - 1));
+  }
+
+  private isStep1Invalid(): boolean {
+    const { username, email, password } = this.createForm.controls;
+    return username.invalid || email.invalid || password.invalid;
+  }
+
+  private markStep1Touched(): void {
+    this.createForm.controls.username.markAsTouched();
+    this.createForm.controls.email.markAsTouched();
+    this.createForm.controls.password.markAsTouched();
   }
 
   submitCreate(): void {
-    if (this.createForm.invalid) {
-      this.createForm.markAllAsTouched();
+    if (this.isStep1Invalid()) {
+      this.markStep1Touched();
+      this.createStep.set(1);
+      return;
+    }
+
+    if (this.selectedRoles().size === 0) {
+      this.errorMessage.set('Debe seleccionar al menos un rol para el usuario.');
+      this.createStep.set(2);
       return;
     }
 
@@ -210,18 +565,19 @@ export class UserManagement implements OnInit {
     const { username, email, password, unidadAcademicaId } = this.createForm.getRawValue();
     const roleCodes = Array.from(this.selectedRoles());
 
-    this.usersService.createUser({
-      username,
-      email,
-      password,
-      roleCodes,
-      unidadAcademicaId: unidadAcademicaId ? unidadAcademicaId : null,
-    })
+    this.usersService
+      .createUser({
+        username,
+        email,
+        password,
+        roleCodes,
+        unidadAcademicaId: unidadAcademicaId ? unidadAcademicaId : null,
+      })
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
         next: (created) => {
           this.successMessage.set(`Usuario '${created.username}' creado con éxito.`);
-          this.closeCreateModal();
+          this.closeCreateDrawer();
           this.loadData();
         },
         error: (err) => {
@@ -259,17 +615,28 @@ export class UserManagement implements OnInit {
     const user = this.selectedUser();
     if (!user) return;
 
-    this.submitting.set(true);
+    if (this.selectedRoles().size === 0) {
+      this.errorMessage.set('Debe seleccionar al menos un rol.');
+      return;
+    }
+
     const { username, email, newPassword, unidadAcademicaId } = this.editForm.getRawValue();
+    if (newPassword && newPassword.trim().length > 0 && newPassword.trim().length < 6) {
+      this.errorMessage.set('La nueva contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
+    this.submitting.set(true);
     const roleCodes = Array.from(this.selectedRoles());
 
-    this.usersService.updateUser(user.id, {
-      username,
-      email,
-      roleCodes,
-      newPassword: newPassword ? newPassword : undefined,
-      unidadAcademicaId: unidadAcademicaId ? unidadAcademicaId : null,
-    })
+    this.usersService
+      .updateUser(user.id, {
+        username,
+        email,
+        roleCodes,
+        newPassword: newPassword ? newPassword : undefined,
+        unidadAcademicaId: unidadAcademicaId ? unidadAcademicaId : null,
+      })
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
         next: (updated) => {
@@ -284,7 +651,7 @@ export class UserManagement implements OnInit {
       });
   }
 
-  // --- Status Toggle Modal ---
+  // --- Status Toggle Modal (Pantalla 4) ---
   openStatusConfirm(user: UserItem): void {
     this.selectedUser.set(user);
     this.errorMessage.set(null);
@@ -303,7 +670,8 @@ export class UserManagement implements OnInit {
     const newStatus = !user.active;
     this.submitting.set(true);
 
-    this.usersService.toggleStatus(user.id, newStatus)
+    this.usersService
+      .toggleStatus(user.id, newStatus)
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
         next: () => {

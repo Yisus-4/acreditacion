@@ -14,7 +14,7 @@ public class ProgramaAnaliticoAsignaturaJpaEntity {
     @Column(name = "id", nullable = false)
     private UUID id;
 
-    @Column(name = "proceso_id", nullable = false)
+    @Column(name = "proceso_id")
     private UUID procesoId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -29,6 +29,12 @@ public class ProgramaAnaliticoAsignaturaJpaEntity {
 
     @Column(name = "resolucion_aprobacion", length = 150)
     private String resolucionAprobacion;
+
+    @Column(name = "vigencia_desde")
+    private Integer vigenciaDesde;
+
+    @Column(name = "vigencia_hasta")
+    private Integer vigenciaHasta;
 
     @Column(name = "archivo_id")
     private UUID archivoId;
@@ -106,6 +112,22 @@ public class ProgramaAnaliticoAsignaturaJpaEntity {
 
     public void setResolucionAprobacion(String resolucionAprobacion) {
         this.resolucionAprobacion = resolucionAprobacion;
+    }
+
+    public Integer getVigenciaDesde() {
+        return vigenciaDesde;
+    }
+
+    public void setVigenciaDesde(Integer vigenciaDesde) {
+        this.vigenciaDesde = vigenciaDesde;
+    }
+
+    public Integer getVigenciaHasta() {
+        return vigenciaHasta;
+    }
+
+    public void setVigenciaHasta(Integer vigenciaHasta) {
+        this.vigenciaHasta = vigenciaHasta;
     }
 
     public UUID getArchivoId() {

@@ -844,6 +844,10 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
 
   readonly esAdminOAEA = this.canManage;
 
+  readonly isAeaOrDev = computed(() => {
+    return this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA', 'AC_COORDINATOR', 'DEV', 'DEVELOPER');
+  });
+
   readonly canConfirmarDe = computed(() => {
     const session = this.auth.currentSession;
     if (!session?.user?.roleCodes) return false;
@@ -1115,6 +1119,10 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   }
 
   abrirModalReiniciarTest(): void {
+    if (!this.isAeaOrDev()) {
+      alert('Acción restringida: solo usuarios de AEA o con rol de desarrollo pueden reiniciar el proceso.');
+      return;
+    }
     this.bannerErrorTest.set(null);
     this.modalReiniciarTestAbierto.set(true);
   }
@@ -1126,6 +1134,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   }
 
   confirmarReinicioTest(): void {
+    if (!this.isAeaOrDev()) return;
     const c = this.convocatoria();
     if (!c) return;
 
@@ -1766,6 +1775,10 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   }
 
   confirmarReinicio(): void {
+    if (!this.isAeaOrDev()) {
+      alert('Acción restringida: solo usuarios de AEA o con rol de desarrollo pueden eliminar la convocatoria.');
+      return;
+    }
     const c = this.convocatoria();
     if (!c) return;
     const ok = window.confirm(

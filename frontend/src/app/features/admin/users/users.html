@@ -1,198 +1,255 @@
-<div class="admin-layout">
-  <!-- Topbar con breadcrumb y navegación -->
-  <header class="admin-header">
-    <div class="admin-header__content">
-      <div class="admin-header__left">
-        <a routerLink="/dashboard" class="back-link">
-          &larr; Volver al Dashboard
-        </a>
-        <h1 class="admin-header__title">Administración de Usuarios</h1>
-        <p class="admin-header__desc">
-          Gestione las cuentas de acceso, roles asignados y el estado de activación en el sistema.
-        </p>
-      </div>
-      <div class="admin-header__right">
-        <button class="btn btn--primary" (click)="openCreateModal()" type="button">
-          + Nuevo Usuario
-        </button>
-      </div>
+<div class="users-view">
+  <!-- Cabecera de la vista -->
+  <header class="page-head">
+    <div class="page-head__left">
+      <a routerLink="/dashboard" class="page-head__crumbs">
+        &larr; Volver al Dashboard
+      </a>
+      <h1 class="page-head__title">Administración de Usuarios</h1>
+      <p class="page-head__desc">
+        Gestione cuentas de acceso, roles y estado de activación en el sistema.
+      </p>
+    </div>
+    <div class="page-head__right">
+      <button class="btn primary" (click)="openCreateModal()" type="button">
+        + Nuevo usuario
+      </button>
     </div>
   </header>
 
+  <!-- Banner de solicitudes pendientes de alta (RG-002) -->
+  @if (solicitudesPendientesCount() > 0) {
+    <div class="banner">
+      <div class="banner-icon" aria-hidden="true">!</div>
+      <div class="banner-text">
+        <strong>
+          {{ solicitudesPendientesCount() }}
+          {{ solicitudesPendientesCount() === 1 ? 'solicitud de alta espera' : 'solicitudes de alta esperan' }}
+          confirmación del AEA.
+        </strong>
+        <span>Se originan en la conformación de Comisiones de Autoevaluación (RG-002).</span>
+      </div>
+      <button class="btn ghost sm" (click)="filtrarPorPendientes()" type="button">
+        Revisar solicitudes
+      </button>
+    </div>
+  }
+
   <!-- Mensajes de feedback -->
-  <div class="admin-container">
-    @if (successMessage()) {
-      <div class="alert alert--success" role="alert">
+  @if (successMessage()) {
+    <div class="toast toast--success" role="status">
+      <i class="toast-icon">✓</i>
+      <div class="toast-text">
+        <strong>Operación exitosa</strong>
         <span>{{ successMessage() }}</span>
-        <button class="alert__close" (click)="dismissAlerts()" type="button">&times;</button>
       </div>
-    }
+      <button class="toast-close" (click)="dismissAlerts()" type="button" aria-label="Cerrar">&times;</button>
+    </div>
+  }
 
-    @if (errorMessage()) {
-      <div class="alert alert--danger" role="alert">
+  @if (errorMessage()) {
+    <div class="toast toast--error" role="alert">
+      <i class="toast-icon">!</i>
+      <div class="toast-text">
+        <strong>Atención</strong>
         <span>{{ errorMessage() }}</span>
-        <button class="alert__close" (click)="dismissAlerts()" type="button">&times;</button>
       </div>
-    }
+      <button class="toast-close" (click)="dismissAlerts()" type="button" aria-label="Cerrar">&times;</button>
+    </div>
+  }
 
-    <!-- Barra de búsqueda y filtros -->
-    <div class="table-toolbar">
-      <div class="search-box">
+  <!-- Tarjeta principal con tabla y barra de herramientas -->
+  <div class="card">
+    <!-- Toolbar de filtros -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
         <input
           type="text"
-          placeholder="Buscar por usuario o correo..."
+          placeholder="Buscar por usuario o correo…"
           [value]="searchQuery()"
-          (input)="searchQuery.set($any($event.target).value)"
+          (input)="onSearchInput($any($event.target).value)"
+          aria-label="Buscar usuarios o solicitudes"
         />
       </div>
-      <div class="table-stats">
-        @if (solicitudesPendientes().length > 0) {
-          <span class="badge badge--pending" style="margin-right: 0.75rem;">
-            {{ solicitudesPendientes().length }} pendiente(s) de confirmar alta
-          </span>
-        }
-        <span>Total: <strong>{{ filteredUsers().length }}</strong> usuarios</span>
+
+      <div class="chips">
+        <button
+          type="button"
+          class="chip"
+          [class.on]="filtroEstado() === 'TODOS'"
+          (click)="setFiltroEstado('TODOS')"
+        >
+          Todos
+        </button>
+
+        <button
+          type="button"
+          class="chip"
+          [class.on]="filtroEstado() === 'PENDIENTES'"
+          (click)="setFiltroEstado('PENDIENTES')"
+        >
+          Pendientes
+          @if (solicitudesPendientesCount() > 0) {
+            <span class="chip-badge">{{ solicitudesPendientesCount() }}</span>
+          }
+        </button>
+
+        <button
+          type="button"
+          class="chip"
+          [class.on]="filtroEstado() === 'ACTIVOS'"
+          (click)="setFiltroEstado('ACTIVOS')"
+        >
+          Activos
+        </button>
+
+        <button
+          type="button"
+          class="chip"
+          [class.on]="filtroEstado() === 'INACTIVOS'"
+          (click)="setFiltroEstado('INACTIVOS')"
+        >
+          Inactivos
+        </button>
       </div>
+
+      <select
+        class="school-select"
+        [value]="filtroEscuela()"
+        (change)="onEscuelaChange($any($event.target).value)"
+        aria-label="Filtrar por Escuela"
+      >
+        <option value="">Escuela: Todas</option>
+        @for (ua of unidadesAcademicas(); track ua.id) {
+          <option [value]="ua.id">{{ ua.nombre }} ({{ ua.sigla }})</option>
+        }
+      </select>
     </div>
 
-    <!-- Tabla responsiva -->
-    <div class="table-container">
-      @if (loading()) {
-        <div class="loading-state">
-          <span class="spinner"></span>
-          <span>Cargando usuarios...</span>
-        </div>
-      } @else if (filteredUsers().length === 0 && solicitudesPendientes().length === 0) {
-        <div class="empty-state">
-          <p>No se encontraron usuarios que coincidan con la búsqueda.</p>
-        </div>
-      } @else {
-        <table class="data-table">
+    <!-- Estados de carga y tabla de datos -->
+    @if (loading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <span>Cargando datos de usuarios y solicitudes...</span>
+      </div>
+    } @else if (totalItems() === 0) {
+      <div class="empty">
+        <div class="empty-ico">⌕</div>
+        <strong>Sin resultados</strong>
+        <span>No hay usuarios ni solicitudes que coincidan con los filtros aplicados.</span>
+        <button class="btn ghost sm" (click)="limpiarFiltros()" type="button">
+          Limpiar filtros
+        </button>
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table>
           <thead>
             <tr>
               <th>Usuario</th>
-              <th>Correo electrónico</th>
               <th>Escuela</th>
               <th>Roles</th>
-              <th>Tipo</th>
+              <th>Origen</th>
               <th>Estado</th>
-              <th class="text-right">Acciones</th>
+              <th class="r">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            @for (notif of solicitudesPendientes(); track notif.id) {
-              @let payload = parsePayload(notif.datosPayload);
-              <tr class="row--pending-approval">
-                <td>
-                  <div class="pending-user-cell">
-                    <span class="font-medium">
-                      {{ payload ? (payload.apellido + ', ' + payload.nombreCompleto) : notif.titulo }}
-                    </span>
-                    @if (payload) {
-                      <span class="pending-user-meta">
-                        Doc: {{ payload.documento || '—' }} | CUIT: {{ payload.cuitPasaporte || '—' }}
-                      </span>
-                    }
-                  </div>
-                </td>
-                <td>
-                  <div class="pending-user-cell">
-                    <span class="text-muted">{{ payload?.correoElectronico || '—' }}</span>
-                    @if (payload?.correoGmail) {
-                      <span class="pending-user-meta">Gmail: {{ payload?.correoGmail }}</span>
-                    }
-                  </div>
-                </td>
-                <td>
-                  <span class="badge badge--escuela">
-                    {{ notif.carreraNombre || 'Comisión CA' }}
-                  </span>
-                </td>
-                <td>
-                  <div class="chips-container">
-                    <span class="badge badge--role">SELF_EVALUATION_COMMITTEE_MEMBER</span>
+            @for (row of pagedRows(); track row.id) {
+              @if (row.kind === 'solicitud') {
+                @let notif = row.notif;
+                @let payload = row.payload;
+                <tr class="pending">
+                  <td>
+                    <div class="who">
+                      <div class="avatar">
+                        {{ getInitials(payload?.apellido || notif.titulo, payload?.nombreCompleto) }}
+                      </div>
+                      <div>
+                        <strong>{{ payload ? (payload.apellido + ', ' + payload.nombreCompleto) : notif.titulo }}</strong>
+                        <small>{{ payload?.correoElectronico || '—' }} · DNI {{ payload?.documento || '—' }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="plain">{{ notif.carreraNombre || 'Comisión CA' }}</span>
+                  </td>
+                  <td>
+                    <span class="plain">Miembro de Comisión CA</span>
                     @if (payload?.cargoFuncion) {
-                      <span class="badge badge--neutral">{{ payload?.cargoFuncion }}</span>
+                      <span class="plain text-muted">{{ payload?.cargoFuncion }}</span>
                     }
-                  </div>
-                </td>
-                <td>
-                  <span class="badge badge--system" title="Solicitud originada en conformación de Comisión de Autoevaluación">
-                    Solicitud RG-002
-                  </span>
-                </td>
-                <td>
-                  <span class="badge badge--pending">Pendiente de confirmar alta</span>
-                </td>
-                <td class="text-right">
-                  <div class="actions-group">
+                  </td>
+                  <td>
+                    <span class="plain">Solicitud RG-002</span>
+                  </td>
+                  <td>
+                    <span class="status pend">Pendiente de alta</span>
+                  </td>
+                  <td class="r">
                     <button
-                      class="btn-action btn-action--confirm"
-                      (click)="confirmarAltaMiembro(notif)"
+                      class="btn sm ok"
+                      (click)="abrirModalConfirmarAlta(notif)"
                       [disabled]="procesandoSolicitudId() === notif.id"
                       type="button"
-                      title="Confirmar alta del usuario en el sistema y en el catálogo permanente"
+                      title="Revisar y confirmar alta"
                     >
-                      ✓ Confirmar Alta
+                      Confirmar alta
                     </button>
                     <button
-                      class="btn-action btn-action--deactivate"
-                      (click)="rechazarAltaMiembro(notif)"
+                      class="btn sm danger-o"
+                      (click)="abrirModalRechazarAlta(notif)"
                       [disabled]="procesandoSolicitudId() === notif.id"
                       type="button"
                       title="Rechazar solicitud de alta"
                     >
-                      ✕ Rechazar
+                      Rechazar
                     </button>
-                  </div>
-                </td>
-              </tr>
-            }
-            @for (user of filteredUsers(); track user.id) {
-              <tr [class.row--inactive]="!user.active">
-                <td>
-                  <span class="font-medium">{{ user.username }}</span>
-                </td>
-                <td>
-                  <span class="text-muted">{{ user.email }}</span>
-                </td>
-                <td>
-                  @if (user.unidadAcademicaId) {
-                    <span class="badge badge--escuela" [title]="getDetalleUnidadAcademica(user.unidadAcademicaId)">
-                      {{ getNombreUnidadAcademica(user.unidadAcademicaId) }}
-                    </span>
-                  } @else {
-                    <span class="text-muted text-sm">—</span>
-                  }
-                </td>
-                <td>
-                  <div class="chips-container">
+                  </td>
+                </tr>
+              } @else {
+                @let user = row.user;
+                <tr [class.inactive]="!user.active">
+                  <td>
+                    <div class="who">
+                      <div class="avatar">
+                        {{ getInitials(user.username) }}
+                      </div>
+                      <div>
+                        <strong>{{ user.username }}</strong>
+                        <small>{{ user.email }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    @if (user.unidadAcademicaId) {
+                      <span class="plain">{{ getNombreUnidadAcademica(user.unidadAcademicaId) }}</span>
+                    } @else {
+                      <span class="plain text-muted">Ámbito central</span>
+                    }
+                  </td>
+                  <td>
                     @for (role of user.roleCodes; track role) {
-                      <span class="badge badge--role">{{ role }}</span>
+                      <span class="plain">{{ getNombreRol(role) }}</span>
                     }
                     @if (!user.roleCodes || user.roleCodes.length === 0) {
-                      <span class="badge badge--muted">Sin roles</span>
+                      <span class="plain text-muted">Sin roles</span>
                     }
-                  </div>
-                </td>
-                <td>
-                  @if (user.systemUser) {
-                    <span class="badge badge--system" title="Usuario esencial del sistema">Sistema</span>
-                  } @else {
-                    <span class="badge badge--neutral">Estándar</span>
-                  }
-                </td>
-                <td>
-                  @if (user.active) {
-                    <span class="badge badge--active">Activo</span>
-                  } @else {
-                    <span class="badge badge--inactive">Inactivo</span>
-                  }
-                </td>
-                <td class="text-right">
-                  <div class="actions-group">
+                  </td>
+                  <td>
+                    <span class="plain">{{ user.systemUser ? 'Sistema' : 'Estándar' }}</span>
+                  </td>
+                  <td>
+                    @if (user.active) {
+                      <span class="status act">Activo</span>
+                    } @else {
+                      <span class="status off">Inactivo</span>
+                    }
+                  </td>
+                  <td class="r">
                     <button
-                      class="btn-action btn-action--edit"
+                      class="btn sm ghost"
                       (click)="openEditModal(user)"
                       type="button"
                     >
@@ -201,16 +258,16 @@
 
                     @if (user.systemUser && user.active) {
                       <button
-                        class="btn-action btn-action--disabled"
+                        class="btn sm disabled"
                         type="button"
                         disabled
-                        title="Los usuarios del sistema no pueden ser desactivados"
+                        title="Esta cuenta es esencial y no puede desactivarse"
                       >
                         Desactivar
                       </button>
                     } @else if (user.active) {
                       <button
-                        class="btn-action btn-action--deactivate"
+                        class="btn sm danger-o"
                         (click)="openStatusConfirm(user)"
                         type="button"
                       >
@@ -218,283 +275,562 @@
                       </button>
                     } @else {
                       <button
-                        class="btn-action btn-action--activate"
+                        class="btn sm ok-o"
                         (click)="openStatusConfirm(user)"
                         type="button"
                       >
                         Activar
                       </button>
                     }
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                </tr>
+              }
             }
           </tbody>
         </table>
-      }
-    </div>
-  </div>
-
-  <!-- Modal Crear Usuario -->
-  @if (showCreateModal()) {
-    <div class="modal-backdrop" (click)="closeCreateModal()">
-      <div class="modal-dialog" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h2>Nuevo Usuario</h2>
-          <button class="modal-close" (click)="closeCreateModal()" type="button">&times;</button>
-        </div>
-
-        <form [formGroup]="createForm" (ngSubmit)="submitCreate()">
-          <div class="modal-body">
-            <div class="form-field">
-              <label for="create-username">Nombre de usuario</label>
-              <input
-                id="create-username"
-                type="text"
-                formControlName="username"
-                placeholder="ej. jperez"
-              />
-              @if (createForm.controls.username.invalid && createForm.controls.username.touched) {
-                <span class="form-error">El nombre de usuario debe tener al menos 3 caracteres.</span>
-              }
-            </div>
-
-            <div class="form-field">
-              <label for="create-email">Correo electrónico institucional</label>
-              <input
-                id="create-email"
-                type="email"
-                formControlName="email"
-                placeholder="ej. jperez@undec.edu.ar"
-              />
-              @if (createForm.controls.email.invalid && createForm.controls.email.touched) {
-                <span class="form-error">Ingrese un correo electrónico válido.</span>
-              }
-            </div>
-
-            <div class="form-field">
-              <label for="create-password">Contraseña inicial</label>
-              <input
-                id="create-password"
-                type="password"
-                formControlName="password"
-                placeholder="Mínimo 6 caracteres"
-              />
-              @if (createForm.controls.password.invalid && createForm.controls.password.touched) {
-                <span class="form-error">La contraseña debe tener al menos 6 caracteres.</span>
-              }
-            </div>
-
-            <div class="form-field">
-              <label for="create-unidad-academica">Escuela</label>
-              <select
-                id="create-unidad-academica"
-                formControlName="unidadAcademicaId"
-              >
-                <option value="">-- Sin Escuela / Ámbito Central --</option>
-                @for (ua of unidadesAcademicas(); track ua.id) {
-                  <option [value]="ua.id">{{ ua.nombre }} ({{ ua.sigla }})</option>
-                }
-              </select>
-              <span class="form-hint">Requerido para Directores de Escuela o Carrera para acceder a sus convocatorias.</span>
-            </div>
-
-            <div class="form-field">
-              <label>Asignación de Roles</label>
-              <div class="roles-checklist">
-                @for (role of roles(); track role.id) {
-                  <label class="checkbox-item">
-                    <input
-                      type="checkbox"
-                      [checked]="isRoleSelected(role.code)"
-                      (change)="toggleRole(role.code)"
-                    />
-                    <div class="checkbox-item__details">
-                      <strong>{{ role.name }}</strong>
-                      <span class="role-desc">{{ role.description }} ({{ role.code }})</span>
-                    </div>
-                  </label>
-                }
-              </div>
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button class="btn btn--secondary" (click)="closeCreateModal()" type="button">
-              Cancelar
-            </button>
-            <button
-              class="btn btn--primary"
-              type="submit"
-              [disabled]="submitting()"
-            >
-              @if (submitting()) {
-                Guardando…
-              } @else {
-                Crear Usuario
-              }
-            </button>
-          </div>
-        </form>
       </div>
-    </div>
-  }
 
-  <!-- Modal Editar Usuario -->
-  @if (showEditModal()) {
-    <div class="modal-backdrop" (click)="closeEditModal()">
-      <div class="modal-dialog" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h2>Editar Usuario: {{ selectedUser()?.username }}</h2>
-          <button class="modal-close" (click)="closeEditModal()" type="button">&times;</button>
-        </div>
-
-        <form [formGroup]="editForm" (ngSubmit)="submitEdit()">
-          <div class="modal-body">
-            @if (selectedUser()?.systemUser) {
-              <div class="alert alert--info mb-4">
-                <strong>Usuario del sistema:</strong> Esta cuenta es fundamental para el funcionamiento y no puede ser desactivada.
-              </div>
+      <!-- Paginador -->
+      <div class="pager">
+        <span>
+          Mostrando {{ paginationRange().start }}–{{ paginationRange().end }} de {{ paginationRange().total }}
+        </span>
+        @if (totalPages() > 1) {
+          <div>
+            <button
+              type="button"
+              class="pg"
+              (click)="setPage(currentPage() - 1)"
+              [disabled]="currentPage() === 1"
+              title="Página anterior"
+            >
+              ‹
+            </button>
+            @for (p of [].constructor(totalPages()); track $index; let i = $index) {
+              @let pageNum = i + 1;
+              <button
+                type="button"
+                class="pg"
+                [class.on]="currentPage() === pageNum"
+                (click)="setPage(pageNum)"
+              >
+                {{ pageNum }}
+              </button>
             }
-
-            <div class="form-field">
-              <label for="edit-username">Nombre de usuario</label>
-              <input
-                id="edit-username"
-                type="text"
-                formControlName="username"
-              />
-              @if (editForm.controls.username.invalid && editForm.controls.username.touched) {
-                <span class="form-error">El nombre de usuario debe tener al menos 3 caracteres.</span>
-              }
-            </div>
-
-            <div class="form-field">
-              <label for="edit-email">Correo electrónico</label>
-              <input
-                id="edit-email"
-                type="email"
-                formControlName="email"
-              />
-              @if (editForm.controls.email.invalid && editForm.controls.email.touched) {
-                <span class="form-error">Ingrese un correo electrónico válido.</span>
-              }
-            </div>
-
-            <div class="form-field">
-              <label for="edit-password">Nueva contraseña (opcional)</label>
-              <input
-                id="edit-password"
-                type="password"
-                formControlName="newPassword"
-                placeholder="Dejar en blanco para mantener la actual"
-              />
-            </div>
-
-            <div class="form-field">
-              <label for="edit-unidad-academica">Escuela</label>
-              <select
-                id="edit-unidad-academica"
-                formControlName="unidadAcademicaId"
-              >
-                <option value="">-- Sin Escuela / Ámbito Central --</option>
-                @for (ua of unidadesAcademicas(); track ua.id) {
-                  <option [value]="ua.id">{{ ua.nombre }} ({{ ua.sigla }})</option>
-                }
-              </select>
-              <span class="form-hint">Requerido para Directores de Escuela o Carrera para acceder a sus convocatorias.</span>
-            </div>
-
-            <div class="form-field">
-              <label>Asignación de Roles</label>
-              <div class="roles-checklist">
-                @for (role of roles(); track role.id) {
-                  <label class="checkbox-item">
-                    <input
-                      type="checkbox"
-                      [checked]="isRoleSelected(role.code)"
-                      (change)="toggleRole(role.code)"
-                    />
-                    <div class="checkbox-item__details">
-                      <strong>{{ role.name }}</strong>
-                      <span class="role-desc">{{ role.description }} ({{ role.code }})</span>
-                    </div>
-                  </label>
-                }
-              </div>
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button class="btn btn--secondary" (click)="closeEditModal()" type="button">
-              Cancelar
-            </button>
             <button
-              class="btn btn--primary"
-              type="submit"
-              [disabled]="submitting()"
+              type="button"
+              class="pg"
+              (click)="setPage(currentPage() + 1)"
+              [disabled]="currentPage() === totalPages()"
+              title="Página siguiente"
             >
-              @if (submitting()) {
-                Actualizando…
-              } @else {
-                Guardar Cambios
-              }
+              ›
             </button>
           </div>
-        </form>
+        }
       </div>
-    </div>
-  }
+    }
+  </div>
+</div>
 
-  <!-- Modal Confirmación Estado -->
-  @if (showConfirmModal()) {
-    <div class="modal-backdrop" (click)="closeStatusConfirm()">
-      <div class="modal-dialog modal-dialog--sm" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h2>
-            {{ selectedUser()?.active ? 'Desactivar Usuario' : 'Activar Usuario' }}
-          </h2>
-          <button class="modal-close" (click)="closeStatusConfirm()" type="button">&times;</button>
+<!-- ============ MODAL / DRAWER: NUEVO USUARIO (Figma Pantalla 2) ============ -->
+@if (showCreateDrawer()) {
+  <div class="scrim" (click)="closeCreateDrawer()"></div>
+  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="create-drawer-title">
+    <header class="drawer-head">
+      <div>
+        <h2 id="create-drawer-title">Nuevo usuario</h2>
+        <p>Complete los datos para habilitar el acceso al sistema.</p>
+      </div>
+      <button class="x" (click)="closeCreateDrawer()" type="button" aria-label="Cerrar">&times;</button>
+    </header>
+
+    <ol class="steps">
+      <li
+        [class.done]="createStep() > 1"
+        [class.cur]="createStep() === 1"
+        (click)="goToCreateStep(1)"
+      >
+        <i>{{ createStep() > 1 ? '✓' : '1' }}</i>
+        <span>Datos de cuenta</span>
+      </li>
+      <li
+        [class.done]="createStep() > 2"
+        [class.cur]="createStep() === 2"
+        (click)="goToCreateStep(2)"
+      >
+        <i>{{ createStep() > 2 ? '✓' : '2' }}</i>
+        <span>Escuela y roles</span>
+      </li>
+      <li
+        [class.cur]="createStep() === 3"
+        (click)="goToCreateStep(3)"
+      >
+        <i>3</i>
+        <span>Revisión</span>
+      </li>
+    </ol>
+
+    <div class="drawer-body">
+      @if (errorMessage()) {
+        <div class="toast error mb-3">
+          <i>!</i>
+          <div>
+            <strong>Error</strong>
+            <span>{{ errorMessage() }}</span>
+          </div>
         </div>
+      }
 
-        <div class="modal-body">
-          @if (selectedUser()?.active) {
-            <p>
-              ¿Está seguro de que desea desactivar a <strong>{{ selectedUser()?.username }}</strong>?
-            </p>
-            <p class="text-muted">
-              El usuario no podrá iniciar sesión en la plataforma ni acceder a los módulos de acreditación.
-            </p>
-          } @else {
-            <p>
-              ¿Está seguro de que desea reactivar a <strong>{{ selectedUser()?.username }}</strong>?
-            </p>
-            <p class="text-muted">
-              El usuario recuperará el acceso inmediato al sistema con sus roles previamente asignados.
-            </p>
+      @if (createStep() === 1) {
+        <div class="field">
+          <label for="create-username">Nombre de usuario</label>
+          <input
+            id="create-username"
+            type="text"
+            [formControl]="createForm.controls.username"
+            placeholder="ej. mgomez"
+          />
+          <small>Mínimo 3 caracteres para identificación en el sistema.</small>
+          @if (createForm.controls.username.invalid && createForm.controls.username.touched) {
+            <span class="field-error">El nombre de usuario es obligatorio (mínimo 3 caracteres).</span>
           }
         </div>
 
-        <div class="modal-footer">
-          <button class="btn btn--secondary" (click)="closeStatusConfirm()" type="button">
-            Cancelar
+        <div class="field">
+          <label for="create-email">Correo electrónico institucional</label>
+          <input
+            id="create-email"
+            type="email"
+            [formControl]="createForm.controls.email"
+            placeholder="ej. mgomez@undec.edu.ar"
+          />
+          <small>Debe pertenecer al dominio institucional (@undec.edu.ar).</small>
+          @if (createForm.controls.email.invalid && createForm.controls.email.touched) {
+            <span class="field-error">Ingrese un correo electrónico válido.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="create-password">Contraseña inicial</label>
+          <input
+            id="create-password"
+            type="password"
+            [formControl]="createForm.controls.password"
+            placeholder="Mínimo 6 caracteres"
+          />
+          <small>El usuario podrá actualizarla luego desde su perfil.</small>
+          @if (createForm.controls.password.invalid && createForm.controls.password.touched) {
+            <span class="field-error">La contraseña debe tener al menos 6 caracteres.</span>
+          }
+        </div>
+      } @else if (createStep() === 2) {
+        <div class="field">
+          <label for="create-escuela">Escuela</label>
+          <select
+            id="create-escuela"
+            [formControl]="createForm.controls.unidadAcademicaId"
+          >
+            <option value="">-- Sin Escuela / Ámbito Central --</option>
+            @for (ua of unidadesAcademicas(); track ua.id) {
+              <option [value]="ua.id">{{ ua.nombre }} ({{ ua.sigla }})</option>
+            }
+          </select>
+          <small>Requerido para Directores de Escuela o de Carrera.</small>
+        </div>
+
+        <div class="field">
+          <label>Roles asignados</label>
+          <div class="roles">
+            @for (role of roles(); track role.id) {
+              <div
+                class="role"
+                [class.sel-on]="isRoleSelected(role.code)"
+                (click)="toggleRole(role.code)"
+              >
+                <i class="cb" [class.on]="isRoleSelected(role.code)">
+                  @if (isRoleSelected(role.code)) { ✓ }
+                </i>
+                <div>
+                  <strong>{{ getNombreRol(role.code) }}</strong>
+                  <span>{{ getDescripcionRol(role.code) }}</span>
+                </div>
+              </div>
+            }
+          </div>
+          @if (selectedRoles().size === 0) {
+            <small class="field-error">Seleccione al menos un rol para el nuevo usuario.</small>
+          }
+        </div>
+      } @else if (createStep() === 3) {
+        <div class="summary">
+          <div class="row">
+            <span>Nombre de usuario</span>
+            <strong>{{ createForm.controls.username.value }}</strong>
+          </div>
+          <div class="row">
+            <span>Correo electrónico</span>
+            <strong>{{ createForm.controls.email.value }}</strong>
+          </div>
+          <div class="row">
+            <span>Escuela</span>
+            <strong>{{ getSelectedEscuelaName() }}</strong>
+          </div>
+          <div class="row">
+            <span>Roles seleccionados</span>
+            <div style="text-align: right">
+              @for (roleName of getSelectedRoleNames(); track roleName) {
+                <strong style="display: block">{{ roleName }}</strong>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="note">
+          Se enviarán las credenciales de acceso inicial al correo registrado. El usuario podrá actualizar su clave en el primer ingreso.
+        </div>
+      }
+    </div>
+
+    <footer class="drawer-foot">
+      <button class="btn ghost" (click)="closeCreateDrawer()" type="button">
+        Cancelar
+      </button>
+      <div>
+        @if (createStep() > 1) {
+          <button class="btn ghost" (click)="prevCreateStep()" type="button">
+            Atrás
           </button>
+        }
+        @if (createStep() < 3) {
+          <button class="btn primary" (click)="nextCreateStep()" type="button">
+            Continuar
+          </button>
+        } @else {
           <button
-            class="btn"
-            [class.btn--danger]="selectedUser()?.active"
-            [class.btn--primary]="!selectedUser()?.active"
-            (click)="confirmStatusChange()"
+            class="btn primary"
+            (click)="submitCreate()"
             [disabled]="submitting()"
             type="button"
           >
             @if (submitting()) {
-              Procesando…
+              Creando…
             } @else {
-              {{ selectedUser()?.active ? 'Confirmar Desactivación' : 'Confirmar Activación' }}
+              Crear usuario
             }
           </button>
+        }
+      </div>
+    </footer>
+  </aside>
+}
+
+<!-- ============ MODAL: CONFIRMAR ALTA DE USUARIO (Figma Pantalla 3) ============ -->
+@if (showConfirmAltaModal() && selectedSolicitud()) {
+  @let notif = selectedSolicitud()!;
+  @let payload = parsePayload(notif.datosPayload);
+  <div class="scrim" (click)="cerrarModalConfirmarAlta()"></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-alta-title">
+    <header class="modal-head">
+      <div class="modal-icon ok">✓</div>
+      <div>
+        <h2 id="confirm-alta-title">Confirmar alta de usuario</h2>
+        <p>Revise los datos antes de habilitar el acceso.</p>
+      </div>
+    </header>
+
+    <div class="summary">
+      <div class="row">
+        <span>Apellido y nombre</span>
+        <strong>{{ payload ? (payload.apellido + ', ' + payload.nombreCompleto) : notif.titulo }}</strong>
+      </div>
+      <div class="row">
+        <span>Documento / CUIT</span>
+        <strong>
+          {{ payload?.documento || '—' }} · {{ payload?.cuitPasaporte || '—' }}
+        </strong>
+      </div>
+      <div class="row">
+        <span>Correo institucional</span>
+        <strong>{{ payload?.correoElectronico || '—' }}</strong>
+      </div>
+      @if (payload?.correoGmail) {
+        <div class="row">
+          <span>Correo Gmail alternativo</span>
+          <strong>{{ payload?.correoGmail }}</strong>
         </div>
+      }
+      <div class="row">
+        <span>Escuela / Carrera</span>
+        <strong>{{ notif.carreraNombre || 'Comisión de Autoevaluación' }}</strong>
+      </div>
+      <div class="row">
+        <span>Rol en el sistema</span>
+        <span class="plain">Miembro de Comisión CA</span>
+      </div>
+      <div class="row">
+        <span>Cargo / función</span>
+        <strong>{{ payload?.cargoFuncion || '—' }}</strong>
       </div>
     </div>
-  }
-</div>
+
+    <div class="note">
+      Al confirmar, se crea la cuenta, se agrega al catálogo permanente de la comisión y se notifica al director de la carrera.
+    </div>
+
+    <footer class="modal-foot">
+      <button
+        class="btn danger-o"
+        (click)="abrirModalRechazarAlta(notif)"
+        [disabled]="procesandoSolicitudId() === notif.id"
+        type="button"
+      >
+        Rechazar solicitud
+      </button>
+      <div class="foot-actions">
+        <button class="btn ghost" (click)="cerrarModalConfirmarAlta()" type="button">
+          Cancelar
+        </button>
+        <button
+          class="btn ok"
+          (click)="confirmarAltaDesdeModal()"
+          [disabled]="procesandoSolicitudId() === notif.id"
+          type="button"
+        >
+          @if (procesandoSolicitudId() === notif.id) {
+            Confirmando…
+          } @else {
+            Confirmar alta
+          }
+        </button>
+      </div>
+    </footer>
+  </div>
+}
+
+<!-- ============ MODAL: RECHAZAR SOLICITUD DE ALTA ============ -->
+@if (showRejectConfirmModal() && selectedSolicitud()) {
+  @let notif = selectedSolicitud()!;
+  @let payload = parsePayload(notif.datosPayload);
+  <div class="scrim" (click)="cerrarModalRechazarAlta()"></div>
+  <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="reject-title">
+    <header class="modal-head">
+      <div class="modal-icon danger">✕</div>
+      <div>
+        <h2 id="reject-title">Rechazar solicitud de alta</h2>
+        <p>Esta acción desestimará la incorporación.</p>
+      </div>
+    </header>
+
+    <div class="modal-body">
+      <p>
+        ¿Desea rechazar la solicitud de alta de
+        <strong>{{ payload ? (payload.apellido + ', ' + payload.nombreCompleto) : notif.titulo }}</strong>?
+      </p>
+      <p class="text-muted">
+        Se notificará al director de la carrera correspondiente y no se creará la cuenta en el sistema.
+      </p>
+    </div>
+
+    <footer class="modal-foot">
+      <button class="btn ghost" (click)="cerrarModalRechazarAlta()" type="button">
+        Cancelar
+      </button>
+      <button
+        class="btn danger"
+        (click)="rechazarAltaDesdeModal()"
+        [disabled]="procesandoSolicitudId() === notif.id"
+        type="button"
+      >
+        @if (procesandoSolicitudId() === notif.id) {
+          Rechazando…
+        } @else {
+          Confirmar rechazo
+        }
+      </button>
+    </footer>
+  </div>
+}
+
+<!-- ============ MODAL: DIÁLOGO DE DESACTIVACIÓN / ACTIVACIÓN (Figma Pantalla 4) ============ -->
+@if (showConfirmModal() && selectedUser()) {
+  @let user = selectedUser()!;
+  <div class="scrim" (click)="closeStatusConfirm()"></div>
+  <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="status-title">
+    <header class="modal-head">
+      <div class="modal-icon" [class.danger]="user.active" [class.ok]="!user.active">
+        {{ user.active ? '!' : '✓' }}
+      </div>
+      <div>
+        <h2 id="status-title">{{ user.active ? 'Desactivar usuario' : 'Activar usuario' }}</h2>
+        <p>{{ user.active ? 'Suspender acceso temporalmente' : 'Restablecer acceso al sistema' }}</p>
+      </div>
+    </header>
+
+    <div class="modal-body">
+      @if (user.active) {
+        <p>
+          ¿Desea desactivar a <strong>{{ user.username }}</strong>?
+        </p>
+        <p class="text-muted">
+          No podrá iniciar sesión ni acceder a los módulos de acreditación hasta que sea reactivado.
+        </p>
+      } @else {
+        <p>
+          ¿Desea reactivar a <strong>{{ user.username }}</strong>?
+        </p>
+        <p class="text-muted">
+          Recuperará el acceso inmediato al sistema con sus roles previamente asignados.
+        </p>
+      }
+    </div>
+
+    <footer class="modal-foot">
+      <button class="btn ghost" (click)="closeStatusConfirm()" type="button">
+        Cancelar
+      </button>
+      <button
+        class="btn"
+        [class.danger]="user.active"
+        [class.ok]="!user.active"
+        (click)="confirmStatusChange()"
+        [disabled]="submitting()"
+        type="button"
+      >
+        @if (submitting()) {
+          Procesando…
+        } @else {
+          {{ user.active ? 'Confirmar desactivación' : 'Confirmar activación' }}
+        }
+      </button>
+    </footer>
+  </div>
+}
+
+<!-- ============ MODAL / DRAWER: EDITAR USUARIO ============ -->
+@if (showEditModal() && selectedUser()) {
+  @let user = selectedUser()!;
+  <div class="scrim" (click)="closeEditModal()"></div>
+  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="edit-drawer-title">
+    <header class="drawer-head">
+      <div>
+        <h2 id="edit-drawer-title">Editar usuario: {{ user.username }}</h2>
+        <p>Modifique roles, escuela o datos de acceso del usuario.</p>
+      </div>
+      <button class="x" (click)="closeEditModal()" type="button" aria-label="Cerrar">&times;</button>
+    </header>
+
+    <form [formGroup]="editForm" (ngSubmit)="submitEdit()" class="edit-form-wrapper">
+      <div class="drawer-body">
+        @if (errorMessage()) {
+          <div class="toast error mb-3">
+            <i>!</i>
+            <div>
+              <strong>Error</strong>
+              <span>{{ errorMessage() }}</span>
+            </div>
+          </div>
+        }
+
+        @if (user.systemUser) {
+          <div class="toast toast--info mb-2">
+            <i class="toast-icon">i</i>
+            <div class="toast-text">
+              <strong>Usuario del sistema</strong>
+              <span>Esta cuenta es esencial para el sistema y no puede desactivarse.</span>
+            </div>
+          </div>
+        }
+
+        <div class="field">
+          <label for="edit-username">Nombre de usuario</label>
+          <input
+            id="edit-username"
+            type="text"
+            formControlName="username"
+          />
+          @if (editForm.controls.username.invalid && editForm.controls.username.touched) {
+            <span class="field-error">El nombre de usuario debe tener al menos 3 caracteres.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="edit-email">Correo electrónico</label>
+          <input
+            id="edit-email"
+            type="email"
+            formControlName="email"
+          />
+          @if (editForm.controls.email.invalid && editForm.controls.email.touched) {
+            <span class="field-error">Ingrese un correo electrónico válido.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="edit-password">Nueva contraseña (opcional)</label>
+          <input
+            id="edit-password"
+            type="password"
+            formControlName="newPassword"
+            placeholder="Dejar en blanco para mantener la contraseña actual"
+          />
+        </div>
+
+        <div class="field">
+          <label for="edit-unidad-academica">Escuela</label>
+          <select
+            id="edit-unidad-academica"
+            formControlName="unidadAcademicaId"
+          >
+            <option value="">-- Sin Escuela / Ámbito Central --</option>
+            @for (ua of unidadesAcademicas(); track ua.id) {
+              <option [value]="ua.id">{{ ua.nombre }} ({{ ua.sigla }})</option>
+            }
+          </select>
+          <small>Requerido para Directores de Escuela o Carrera.</small>
+        </div>
+
+        <div class="field">
+          <label>Roles asignados</label>
+          <div class="roles">
+            @for (role of roles(); track role.id) {
+              <div
+                class="role"
+                [class.sel-on]="isRoleSelected(role.code)"
+                (click)="toggleRole(role.code)"
+              >
+                <i class="cb" [class.on]="isRoleSelected(role.code)">
+                  @if (isRoleSelected(role.code)) { ✓ }
+                </i>
+                <div>
+                  <strong>{{ getNombreRol(role.code) }}</strong>
+                  <span>{{ getDescripcionRol(role.code) }}</span>
+                </div>
+              </div>
+            }
+          </div>
+          @if (selectedRoles().size === 0) {
+            <small class="field-error">Seleccione al menos un rol.</small>
+          }
+        </div>
+      </div>
+
+      <footer class="drawer-foot">
+        <button class="btn ghost" (click)="closeEditModal()" type="button">
+          Cancelar
+        </button>
+        <button
+          class="btn primary"
+          type="submit"
+          [disabled]="submitting()"
+        >
+          @if (submitting()) {
+            Guardando…
+          } @else {
+            Guardar cambios
+          }
+        </button>
+      </footer>
+    </form>
+  </aside>
+}

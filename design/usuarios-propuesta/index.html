@@ -1,0 +1,170 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Administración de Usuarios – Propuesta visual</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<main class="board">
+
+  <!-- ============ PANTALLA 1: LISTADO ============ -->
+  <section class="screen" id="listado">
+    <div class="screen-label">1 · Listado y solicitudes pendientes de alta</div>
+    <div class="app">
+      <header class="topbar"><div class="brand"><div class="brand-mark">U</div><div><strong>UNdeC</strong><span>Acreditación de carreras</span></div></div><nav><a>Dashboard</a><a>Convocatorias</a><a>Autoevaluación</a><a class="active">Usuarios</a><a>Notificaciones</a></nav><div class="me">Área de Evaluación y Acreditación</div></header>
+
+      <div class="content">
+        <header class="page-head">
+          <div>
+            <div class="crumbs">Administración &rsaquo; Usuarios</div>
+            <h1>Administración de Usuarios</h1>
+            <p>Gestione cuentas de acceso, roles y estado de activación en el sistema.</p>
+          </div>
+          <button class="btn primary">+ Nuevo usuario</button>
+        </header>
+        <div class="banner">
+          <div class="banner-icon">!</div>
+          <div><strong>3 solicitudes de alta esperan confirmación del AEA.</strong>
+          <span>Se originan en la conformación de Comisiones de Autoevaluación (RG-002).</span></div>
+          <button class="btn ghost">Revisar solicitudes</button>
+        </div>
+
+        <div class="card">
+          <div class="toolbar">
+            <div class="search">Buscar por usuario o correo…</div>
+            <div class="chips"><span class="chip on">Todos</span><span class="chip">Pendientes (3)</span><span class="chip">Activos</span><span class="chip">Inactivos</span></div>
+            <div class="select">Escuela: Todas</div>
+          </div>
+
+          <table>
+            <thead><tr><th>Usuario</th><th>Escuela</th><th>Roles</th><th>Origen</th><th>Estado</th><th class="r">Acciones</th></tr></thead>
+            <tbody>
+              <tr class="pending">
+                <td><div class="who"><div class="avatar a1">MG</div><div><strong>Gómez, María Laura</strong><small>mgomez@undec.edu.ar · DNI 28.441.902</small></div></div></td>
+                <td><span class="plain">Esc. de Ciencias Aplicadas</span></td>
+                <td><span class="plain">Miembro de Comisión CA</span><span class="plain">Secretaria técnica</span></td>
+                <td><span class="plain">Solicitud RG-002</span></td>
+                <td><span class="status pend">Pendiente de alta</span></td>
+                <td class="r"><button class="btn sm ok">Confirmar alta</button><button class="btn sm danger-o">Rechazar</button></td>
+              </tr>
+              <tr class="pending">
+                <td><div class="who"><div class="avatar a2">RP</div><div><strong>Paz, Ricardo Daniel</strong><small>rpaz@undec.edu.ar · DNI 24.118.330</small></div></div></td>
+                <td><span class="plain">Esc. de Ciencias Aplicadas</span></td>
+                <td><span class="plain">Miembro de Comisión CA</span><span class="plain">Docente</span></td>
+                <td><span class="plain">Solicitud RG-002</span></td>
+                <td><span class="status pend">Pendiente de alta</span></td>
+                <td class="r"><button class="btn sm ok">Confirmar alta</button><button class="btn sm danger-o">Rechazar</button></td>
+              </tr>
+              <tr>
+                <td><div class="who"><div class="avatar a3">JC</div><div><strong>jclaramonte</strong><small>jclaramonte@undec.edu.ar</small></div></div></td>
+                <td><span class="plain">Esc. de Ciencias Aplicadas</span></td>
+                <td><span class="plain">Director de Carrera</span></td>
+                <td><span class="plain">Estándar</span></td>
+                <td><span class="status act">Activo</span></td>
+                <td class="r"><button class="btn sm ghost">Editar</button><button class="btn sm danger-o">Desactivar</button></td>
+              </tr>
+              <tr>
+                <td><div class="who"><div class="avatar a4">AE</div><div><strong>aea.admin</strong><small>aea@undec.edu.ar</small></div></div></td>
+                <td><span class="muted">Ámbito central</span></td>
+                <td><span class="plain">Administrador AEA</span></td>
+                <td><span class="plain">Sistema</span></td>
+                <td><span class="status act">Activo</span></td>
+                <td class="r"><button class="btn sm ghost">Editar</button><button class="btn sm disabled">Desactivar</button></td>
+              </tr>
+              <tr class="inactive">
+                <td><div class="who"><div class="avatar a5">LS</div><div><strong>lsosa</strong><small>lsosa@undec.edu.ar</small></div></div></td>
+                <td><span class="plain">Esc. de Ciencias de la Salud</span></td>
+                <td><span class="plain">Director de Escuela</span></td>
+                <td><span class="plain">Estándar</span></td>
+                <td><span class="status off">Inactivo</span></td>
+                <td class="r"><button class="btn sm ghost">Editar</button><button class="btn sm ok-o">Activar</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pager"><span>Mostrando 1–5 de 48</span><div><span class="pg">‹</span><span class="pg on">1</span><span class="pg">2</span><span class="pg">3</span><span class="pg">›</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA 2: ALTA ============ -->
+  <section class="screen" id="alta">
+    <div class="screen-label">2 · Alta de usuario (panel lateral con pasos)</div>
+    <div class="app dimmed">
+      <header class="topbar"><div class="brand"><div class="brand-mark">U</div><div><strong>UNdeC</strong><span>Acreditación de carreras</span></div></div><nav><a>Dashboard</a><a>Convocatorias</a><a>Autoevaluación</a><a class="active">Usuarios</a><a>Notificaciones</a></nav><div class="me">Área de Evaluación y Acreditación</div></header>
+      <div class="content"><div class="ghost-table"></div></div>
+      <div class="scrim"></div>
+      <aside class="drawer">
+        <header class="drawer-head">
+          <div><h2>Nuevo usuario</h2><p>Complete los datos para habilitar el acceso al sistema.</p></div>
+          <span class="x">×</span>
+        </header>
+        <ol class="steps">
+          <li class="done"><i>✓</i>Datos de cuenta</li>
+          <li class="cur"><i>2</i>Escuela y roles</li>
+          <li><i>3</i>Revisión</li>
+        </ol>
+        <div class="drawer-body">
+          <div class="field"><label>Nombre de usuario</label><div class="input">mgomez</div><small>Mínimo 3 caracteres.</small></div>
+          <div class="field"><label>Correo electrónico institucional</label><div class="input">mgomez@undec.edu.ar</div></div>
+          <div class="field"><label>Escuela</label><div class="input sel">Escuela de Ciencias Aplicadas (ECA)</div>
+            <small>Requerido para Directores de Escuela o Carrera.</small></div>
+          <div class="field"><label>Roles asignados</label>
+            <div class="roles">
+              <div class="role sel-on"><i class="cb on">✓</i><div><strong>Director de Carrera</strong><span>Gestiona la autoevaluación de su carrera · DIRECTOR_CARRERA</span></div></div>
+              <div class="role"><i class="cb"></i><div><strong>Director de Escuela</strong><span>Supervisa las carreras de su escuela · DIRECTOR_ESCUELA</span></div></div>
+              <div class="role"><i class="cb"></i><div><strong>Miembro de Comisión CA</strong><span>Participa en la autoevaluación · SELF_EVALUATION_COMMITTEE_MEMBER</span></div></div>
+              <div class="role"><i class="cb"></i><div><strong>Administrador AEA</strong><span>Acceso completo al sistema · ADMIN</span></div></div>
+            </div>
+          </div>
+        </div>
+        <footer class="drawer-foot"><button class="btn ghost">Cancelar</button><div><button class="btn ghost">Atrás</button><button class="btn primary">Continuar</button></div></footer>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA 3: CONFIRMAR ALTA ============ -->
+  <section class="screen" id="confirmar">
+    <div class="screen-label">3 · Confirmación de alta (solicitud RG-002)</div>
+    <div class="app dimmed">
+      <header class="topbar"><div class="brand"><div class="brand-mark">U</div><div><strong>UNdeC</strong><span>Acreditación de carreras</span></div></div><nav><a>Dashboard</a><a>Convocatorias</a><a>Autoevaluación</a><a class="active">Usuarios</a><a>Notificaciones</a></nav><div class="me">Área de Evaluación y Acreditación</div></header>
+      <div class="content"><div class="ghost-table"></div></div>
+      <div class="scrim"></div>
+      <div class="modal">
+        <header class="modal-head"><div class="modal-icon">✓</div><div><h2>Confirmar alta de usuario</h2><p>Revise los datos antes de habilitar el acceso.</p></div></header>
+        <div class="summary">
+          <div class="row"><span>Apellido y nombre</span><strong>Gómez, María Laura</strong></div>
+          <div class="row"><span>Documento / CUIT</span><strong>28.441.902 · 27-28441902-4</strong></div>
+          <div class="row"><span>Correo institucional</span><strong>mgomez@undec.edu.ar</strong></div>
+          <div class="row"><span>Escuela / Carrera</span><strong>ECA · Ingeniería en Agrimensura</strong></div>
+          <div class="row"><span>Rol en el sistema</span><span class="plain">Miembro de Comisión CA</span></div>
+          <div class="row"><span>Cargo / función</span><strong>Secretaria técnica</strong></div>
+        </div>
+        <div class="note">Al confirmar, se crea la cuenta, se agrega al catálogo permanente de la comisión y se notifica al director de la carrera.</div>
+        <footer class="modal-foot"><button class="btn danger-o">Rechazar solicitud</button><div><button class="btn ghost">Cancelar</button><button class="btn ok">Confirmar alta</button></div></footer>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA 4: ESTADOS ============ -->
+  <section class="screen" id="estados">
+    <div class="screen-label">4 · Estados y mensajes del sistema</div>
+    <div class="states">
+      <div class="toast success"><i>✓</i><div><strong>Alta confirmada</strong><span>mgomez ya puede ingresar al sistema.</span></div></div>
+      <div class="toast error"><i>!</i><div><strong>No se pudo crear el usuario</strong><span>El correo ya está registrado en otra cuenta.</span></div></div>
+      <div class="toast info"><i>i</i><div><strong>Usuario del sistema</strong><span>Esta cuenta es esencial y no puede desactivarse.</span></div></div>
+      <div class="dialog">
+        <h3>Desactivar usuario</h3>
+        <p>¿Desea desactivar a <strong>lsosa</strong>? No podrá iniciar sesión ni acceder a los módulos de acreditación.</p>
+        <div class="dialog-foot"><button class="btn ghost">Cancelar</button><button class="btn danger">Confirmar desactivación</button></div>
+      </div>
+      <div class="empty"><div class="empty-ico">⌕</div><strong>Sin resultados</strong><span>No hay usuarios que coincidan con la búsqueda.</span><button class="btn ghost">Limpiar filtros</button></div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>
+

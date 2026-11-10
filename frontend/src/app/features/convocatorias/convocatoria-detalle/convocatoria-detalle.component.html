@@ -72,6 +72,7 @@
             <div class="membrete-inferior">UNIVERSIDAD NACIONAL DE CHILECITO</div>
           </div>
           <div class="header-acciones">
+            @if (isAeaOrDev()) {
             <button
               type="button"
               class="btn-reiniciar-test"
@@ -92,6 +93,7 @@
               title="Eliminar convocatoria completa y sus procesos asociados (Modo Desarrollo)">
               <span>🗑 {{ reiniciando() ? 'Eliminando...' : 'Eliminar Convocatoria (Dev)' }}</span>
             </button>
+            }
             <a routerLink="/acreditacion/convocatorias" class="btn-volver-link">
               &larr; Volver a Convocatorias
             </a>
@@ -302,7 +304,7 @@
               &larr; Volver a convocatorias
             </a>
           }
-          @if (canManage()) {
+          @if (isAeaOrDev()) {
             <button
               type="button"
               class="btn-reiniciar-convocatoria-figma"
@@ -3430,7 +3432,7 @@
 }
 
   <!-- Modal Confirmar Reinicio para Pruebas (Modo Test) -->
-  @if (modalReiniciarTestAbierto()) {
+  @if (modalReiniciarTestAbierto() && isAeaOrDev()) {
     <div class="modal-backdrop" (click)="cerrarModalReiniciarTest()">
       <div class="modal-card modal-reiniciar-test" (click)="$event.stopPropagation()">
         <div class="modal-header">

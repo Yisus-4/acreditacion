@@ -155,7 +155,8 @@
                           Ver carreras &rarr;
                         }
                       </a>
-                      <button
+                      @if (canDeleteDev()) {
+                        <button
                         type="button"
                         (click)="eliminarConvocatoriaDev(c, $event)"
                         [disabled]="eliminandoId() === c.id"
@@ -164,6 +165,7 @@
                       >
                         {{ eliminandoId() === c.id ? 'Eliminando...' : '🗑 Eliminar' }}
                       </button>
+                      }
                     </div>
                   </td>
                 </tr>

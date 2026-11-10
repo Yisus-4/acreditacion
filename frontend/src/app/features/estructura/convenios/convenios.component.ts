@@ -9,7 +9,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { SubnavGestionInstitucionalComponent } from '../subnav-gestion-institucional/subnav-gestion-institucional.component';
+
 import { ConvenioService } from '../../../core/convenios/convenio.service';
 import { ConvenioInstitucional } from '../../../core/convenios/convenio.models';
 
@@ -21,7 +21,7 @@ import { ConvenioInstitucional } from '../../../core/convenios/convenio.models';
     RouterLink,
     FormsModule,
     ReactiveFormsModule,
-    SubnavGestionInstitucionalComponent,
+
   ],
   templateUrl: './convenios.component.html',
   styleUrls: ['../estructura-comun.scss', './convenios.component.scss'],

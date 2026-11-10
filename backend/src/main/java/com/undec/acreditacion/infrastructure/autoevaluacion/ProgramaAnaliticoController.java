@@ -35,6 +35,7 @@ public class ProgramaAnaliticoController {
 
     private final SpringDataProgramaAnaliticoAsignaturaRepository programaRepository;
     private final SpringDataPlanEstudioFt001Repository planEstudioRepository;
+    private final SpringDataActividadCurricularPlanRepository asignaturaRepository;
     private final SpringDataProcesoAcreditacionRepository procesoRepository;
     private final PlanTrabajoRepositoryPort planTrabajoRepository;
     private final DocumentStoragePort storagePort;
@@ -43,6 +44,7 @@ public class ProgramaAnaliticoController {
     public ProgramaAnaliticoController(
             SpringDataProgramaAnaliticoAsignaturaRepository programaRepository,
             SpringDataPlanEstudioFt001Repository planEstudioRepository,
+            SpringDataActividadCurricularPlanRepository asignaturaRepository,
             SpringDataProcesoAcreditacionRepository procesoRepository,
             PlanTrabajoRepositoryPort planTrabajoRepository,
             DocumentStoragePort storagePort,
@@ -50,10 +52,30 @@ public class ProgramaAnaliticoController {
     ) {
         this.programaRepository = programaRepository;
         this.planEstudioRepository = planEstudioRepository;
+        this.asignaturaRepository = asignaturaRepository;
         this.procesoRepository = procesoRepository;
         this.planTrabajoRepository = planTrabajoRepository;
         this.storagePort = storagePort;
         this.userRepository = userRepository;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ProgramaAnaliticoAsignaturaDto>> listar(
+            @RequestParam(required = false) UUID procesoId,
+            @RequestParam(required = false) UUID planId
+    ) {
+        List<ProgramaAnaliticoAsignaturaJpaEntity> list;
+        if (planId != null) {
+            list = programaRepository.findByPlanEstudioId(planId);
+            if (list.isEmpty() && procesoId != null) {
+                list = programaRepository.findByProcesoIdOrderByNombreAsignaturaAsc(procesoId);
+            }
+        } else if (procesoId != null) {
+            list = programaRepository.findByProcesoIdOrderByNombreAsignaturaAsc(procesoId);
+        } else {
+            list = programaRepository.findAll();
+        }
+        return ResponseEntity.ok(list.stream().map(this::toDto).collect(Collectors.toList()));
     }
 
     @GetMapping("/proceso/{procesoId}")
@@ -103,6 +125,86 @@ public class ProgramaAnaliticoController {
 
         List<ProgramaAnaliticoAsignaturaJpaEntity> total = programaRepository.findByProcesoIdOrderByNombreAsignaturaAsc(procesoId);
         return ResponseEntity.ok(total.stream().map(this::toDto).collect(Collectors.toList()));
+    }
+
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @Transactional
+    public ResponseEntity<ProgramaAnaliticoAsignaturaDto> subirPrograma(
+            @RequestParam("archivo") MultipartFile archivo,
+            @RequestParam("asignaturaPlanId") UUID asignaturaPlanId,
+            @RequestParam(value = "procesoId", required = false) UUID procesoId,
+            @RequestParam(value = "resolucionAprobacion", required = false) String resolucionAprobacion,
+            @RequestParam(value = "vigenciaDesde", required = false) Integer vigenciaDesde,
+            @RequestParam(value = "vigenciaHasta", required = false) Integer vigenciaHasta,
+            @RequestParam(value = "observaciones", required = false) String observaciones
+    ) throws IOException {
+        if (archivo == null || archivo.isEmpty()) {
+            throw new DomainValidationException("Debe seleccionar un archivo PDF para el programa analítico");
+        }
+
+        ActividadCurricularPlanJpaEntity asig = asignaturaRepository.findById(asignaturaPlanId)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró la asignatura del plan con ID: " + asignaturaPlanId));
+
+        UUID effectiveProcesoId = procesoId;
+        if (effectiveProcesoId == null) {
+            if (asig.getPlanEstudio() != null && asig.getPlanEstudio().getProcesoId() != null) {
+                effectiveProcesoId = asig.getPlanEstudio().getProcesoId();
+            } else if (asig.getPlanEstudio() != null && asig.getPlanEstudio().getCarrera() != null) {
+                effectiveProcesoId = procesoRepository.findByCarreraIdAndEstadoIn(
+                        asig.getPlanEstudio().getCarrera().getId(),
+                        List.of("EN_PREPARACION", "INICIADO", "CONFIRMADA", "PENDIENTE_DIRECTOR_ESCUELA", "EN_CURSO", "EN_FUNCIONAMIENTO")
+                ).map(ProcesoAcreditacionJpaEntity::getId).orElse(null);
+
+                if (effectiveProcesoId == null) {
+                    List<ProcesoAcreditacionJpaEntity> procesos = procesoRepository.findAllByOrderByCreadoEnDesc();
+                    effectiveProcesoId = procesos.stream()
+                            .filter(p -> p.getCarreraId() != null && p.getCarreraId().equals(asig.getPlanEstudio().getCarrera().getId()))
+                            .map(ProcesoAcreditacionJpaEntity::getId)
+                            .findFirst()
+                            .orElse(null);
+                }
+            }
+        }
+
+        Optional<ProgramaAnaliticoAsignaturaJpaEntity> progOpt = programaRepository.findByActividadCurricularId(asig.getId());
+        if (progOpt.isEmpty() && effectiveProcesoId != null) {
+            progOpt = programaRepository.findByProcesoIdAndNombreAsignatura(effectiveProcesoId, asig.getNombre().trim());
+        }
+
+        ProgramaAnaliticoAsignaturaJpaEntity entity = progOpt.orElseGet(ProgramaAnaliticoAsignaturaJpaEntity::new);
+        Instant now = Instant.now();
+        if (entity.getId() == null) {
+            entity.setId(UUID.randomUUID());
+            entity.setCreadoEn(now);
+        }
+
+        entity.setProcesoId(effectiveProcesoId);
+        entity.setActividadCurricular(asig);
+        entity.setNombreAsignatura(asig.getNombre().trim());
+        entity.setAnioCursada(asig.getSubgrupo());
+        entity.setResolucionAprobacion(resolucionAprobacion != null && !resolucionAprobacion.isBlank()
+                ? resolucionAprobacion.trim()
+                : (asig.getPlanEstudio() != null ? asig.getPlanEstudio().getCodigoResolucion() : null));
+        entity.setVigenciaDesde(vigenciaDesde);
+        entity.setVigenciaHasta(vigenciaHasta);
+        entity.setObservaciones(observaciones);
+        entity.setActualizadoEn(now);
+
+        String originalName = archivo.getOriginalFilename();
+        String extension = originalName != null && originalName.contains(".") ? originalName.substring(originalName.lastIndexOf(".")) : ".pdf";
+        String storageKey = "programas-analiticos/" + (effectiveProcesoId != null ? effectiveProcesoId : asig.getPlanEstudio().getId()) + "/" + entity.getId() + extension;
+        String ruta = storagePort.uploadFile(archivo.getBytes(), storageKey, archivo.getContentType() != null ? archivo.getContentType() : "application/pdf");
+
+        entity.setArchivoId(UUID.randomUUID());
+        entity.setArchivoNombre(originalName != null ? originalName : "Programa_" + asig.getNombre() + ".pdf");
+        entity.setArchivoRuta(ruta);
+        entity.setTamanioBytes(archivo.getSize());
+        entity.setMimeType(archivo.getContentType() != null ? archivo.getContentType() : "application/pdf");
+        entity.setEstado("CARGADO");
+
+        ProgramaAnaliticoAsignaturaJpaEntity guardado = programaRepository.save(entity);
+        return ResponseEntity.ok(toDto(guardado));
     }
 
     @PostMapping(value = "/proceso/{procesoId}/cargar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -173,6 +275,83 @@ public class ProgramaAnaliticoController {
                 .body(resource);
     }
 
+    @PostMapping("/validar-completar-8-4")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> validarYCompletar84(
+            @RequestParam(required = false) UUID procesoId,
+            @RequestParam(required = false) UUID planId
+    ) {
+        UUID effectiveProcesoId = procesoId;
+        UUID effectivePlanId = planId;
+
+        if (effectiveProcesoId == null && effectivePlanId != null) {
+            PlanEstudioFt001JpaEntity plan = planEstudioRepository.findById(effectivePlanId).orElse(null);
+            if (plan != null) {
+                if (plan.getProcesoId() != null) {
+                    effectiveProcesoId = plan.getProcesoId();
+                } else if (plan.getCarrera() != null) {
+                    effectiveProcesoId = procesoRepository.findByCarreraIdAndEstadoIn(
+                            plan.getCarrera().getId(),
+                            List.of("EN_PREPARACION", "INICIADO", "CONFIRMADA", "PENDIENTE_DIRECTOR_ESCUELA", "EN_CURSO", "EN_FUNCIONAMIENTO")
+                    ).map(ProcesoAcreditacionJpaEntity::getId).orElse(null);
+                }
+            }
+        }
+
+        if (effectivePlanId == null && effectiveProcesoId != null) {
+            ProcesoAcreditacionJpaEntity proc = procesoRepository.findById(effectiveProcesoId).orElse(null);
+            if (proc != null && proc.getCarreraId() != null) {
+                effectivePlanId = planEstudioRepository.findFirstByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(proc.getCarreraId())
+                        .map(PlanEstudioFt001JpaEntity::getId)
+                        .orElse(null);
+            }
+        }
+
+        long total = 0;
+        long cargados = 0;
+
+        if (effectivePlanId != null) {
+            total = asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(effectivePlanId).size();
+            List<ProgramaAnaliticoAsignaturaJpaEntity> list = programaRepository.findByPlanEstudioId(effectivePlanId);
+            cargados = list.stream().filter(p -> "CARGADO".equalsIgnoreCase(p.getEstado())).count();
+        } else if (effectiveProcesoId != null) {
+            total = programaRepository.countByProcesoId(effectiveProcesoId);
+            cargados = programaRepository.countByProcesoIdAndEstado(effectiveProcesoId, "CARGADO");
+        }
+
+        if (total == 0) {
+            throw new DomainValidationException("No se han configurado asignaturas para los programas analíticos");
+        }
+        if (cargados < total) {
+            throw new DomainValidationException("No se puede completar la actividad 8.4: faltan programas analíticos por cargar (" + cargados + " de " + total + " cargados).");
+        }
+
+        if (effectiveProcesoId != null) {
+            Optional<PlanTrabajo> planOpt = planTrabajoRepository.findByProcesoId(effectiveProcesoId);
+            if (planOpt.isPresent()) {
+                PlanTrabajo plan = planOpt.get();
+                Optional<ActividadPlanTrabajo> act84Opt = plan.getActividades().stream()
+                        .filter(a -> "8.4".equals(a.getCodigoActividad()))
+                        .findFirst();
+
+                if (act84Opt.isPresent()) {
+                    ActividadPlanTrabajo act84 = act84Opt.get();
+                    UUID usuarioId = resolverUsuarioAutenticadoId();
+                    act84.completar(usuarioId, "Programas analíticos en PDF recopilados y legalizados (" + cargados + " asignaturas)");
+                    planTrabajoRepository.saveActividad(act84);
+                }
+            }
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "mensaje", "Actividad 8.4 completada exitosamente.",
+                "totalAsignaturas", total,
+                "programasCargados", cargados
+        ));
+    }
+
     @PostMapping("/proceso/{procesoId}/completar-actividad-8-4")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
@@ -219,19 +398,29 @@ public class ProgramaAnaliticoController {
 
     private ProgramaAnaliticoAsignaturaDto toDto(ProgramaAnaliticoAsignaturaJpaEntity entity) {
         UUID asigId = entity.getActividadCurricular() != null ? entity.getActividadCurricular().getId() : null;
+        String asigCodigo = entity.getActividadCurricular() != null ? entity.getActividadCurricular().getCodigo() : null;
+        String archivoUrl = entity.getId() != null ? "/api/programas-analiticos/" + entity.getId() + "/descargar" : null;
+
         return new ProgramaAnaliticoAsignaturaDto(
                 entity.getId(),
                 entity.getProcesoId(),
                 asigId,
+                asigId, // asignaturaPlanId alias
+                asigCodigo, // asignaturaCodigo alias
                 entity.getNombreAsignatura(),
+                entity.getNombreAsignatura(), // asignaturaNombre alias
                 entity.getAnioCursada(),
                 entity.getResolucionAprobacion(),
+                entity.getVigenciaDesde(),
+                entity.getVigenciaHasta(),
                 entity.getArchivoId(),
                 entity.getArchivoNombre(),
                 entity.getArchivoRuta(),
+                archivoUrl,
                 entity.getTamanioBytes(),
                 entity.getMimeType(),
                 entity.getEstado(),
+                entity.getEstado(), // estadoCarga alias ('CARGADO' / 'PENDIENTE')
                 entity.getObservaciones(),
                 entity.getCreadoEn(),
                 entity.getActualizadoEn()
