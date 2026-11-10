@@ -30,6 +30,11 @@ public class ActualizarAsignaturaPlanService {
     }
 
     @Transactional
+    public ActividadCurricularPlanDto ejecutar(UUID planId, UUID asigId, ActualizarAsignaturaRequest request) {
+        return actualizarAsignatura(planId, asigId, request);
+    }
+
+    @Transactional
     public ActividadCurricularPlanDto actualizarAsignatura(UUID planId, UUID asigId, ActualizarAsignaturaRequest request) {
         PlanEstudioFt001JpaEntity plan = planRepository.findById(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el plan de estudio con ID: " + planId));

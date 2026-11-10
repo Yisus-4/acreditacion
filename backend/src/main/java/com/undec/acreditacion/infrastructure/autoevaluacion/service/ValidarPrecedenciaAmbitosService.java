@@ -33,6 +33,11 @@ public class ValidarPrecedenciaAmbitosService {
     }
 
     @Transactional(readOnly = true)
+    public void validar(UUID procesoId, String actividad) {
+        validarPrecedenciaParaCompletar(procesoId, actividad);
+    }
+
+    @Transactional(readOnly = true)
     public void validarPrecedenciaParaCompletar(UUID procesoId, String actividad) {
         if (procesoId == null) {
             return;

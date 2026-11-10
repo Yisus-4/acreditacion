@@ -29,6 +29,11 @@ public class EliminarAsignaturaPlanService {
     }
 
     @Transactional
+    public void ejecutar(UUID planId, UUID asigId) {
+        eliminarAsignatura(planId, asigId);
+    }
+
+    @Transactional
     public void eliminarAsignatura(UUID planId, UUID asigId) {
         PlanEstudioFt001JpaEntity plan = planRepository.findById(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el plan de estudio con ID: " + planId));

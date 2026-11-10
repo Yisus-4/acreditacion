@@ -30,6 +30,11 @@ public class CrearAsignaturaPlanService {
     }
 
     @Transactional
+    public ActividadCurricularPlanDto ejecutar(UUID planId, CrearAsignaturaRequest request) {
+        return crearAsignatura(planId, request);
+    }
+
+    @Transactional
     public ActividadCurricularPlanDto crearAsignatura(UUID planId, CrearAsignaturaRequest request) {
         PlanEstudioFt001JpaEntity plan = planRepository.findById(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el plan de estudio con ID: " + planId));

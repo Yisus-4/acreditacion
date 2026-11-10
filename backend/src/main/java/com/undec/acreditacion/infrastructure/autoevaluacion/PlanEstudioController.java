@@ -3,13 +3,19 @@ package com.undec.acreditacion.infrastructure.autoevaluacion;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.ActividadCurricularPlanDto;
+import com.undec.acreditacion.infrastructure.autoevaluacion.dto.ActualizarAsignaturaRequest;
+import com.undec.acreditacion.infrastructure.autoevaluacion.dto.CrearAsignaturaRequest;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.PlanEstudioFt001Dto;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.ActividadCurricularPlanJpaEntity;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.PlanEstudioFt001JpaEntity;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataActividadCurricularPlanRepository;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataPlanEstudioFt001Repository;
+import com.undec.acreditacion.infrastructure.autoevaluacion.service.ActualizarAsignaturaPlanService;
+import com.undec.acreditacion.infrastructure.autoevaluacion.service.CrearAsignaturaPlanService;
+import com.undec.acreditacion.infrastructure.autoevaluacion.service.EliminarAsignaturaPlanService;
 import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataCarreraRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,15 +34,24 @@ public class PlanEstudioController {
     private final SpringDataPlanEstudioFt001Repository planRepository;
     private final SpringDataActividadCurricularPlanRepository asignaturaRepository;
     private final SpringDataCarreraRepository carreraRepository;
+    private final CrearAsignaturaPlanService crearAsignaturaPlanService;
+    private final ActualizarAsignaturaPlanService actualizarAsignaturaPlanService;
+    private final EliminarAsignaturaPlanService eliminarAsignaturaPlanService;
 
     public PlanEstudioController(
             SpringDataPlanEstudioFt001Repository planRepository,
             SpringDataActividadCurricularPlanRepository asignaturaRepository,
-            SpringDataCarreraRepository carreraRepository
+            SpringDataCarreraRepository carreraRepository,
+            CrearAsignaturaPlanService crearAsignaturaPlanService,
+            ActualizarAsignaturaPlanService actualizarAsignaturaPlanService,
+            EliminarAsignaturaPlanService eliminarAsignaturaPlanService
     ) {
         this.planRepository = planRepository;
         this.asignaturaRepository = asignaturaRepository;
         this.carreraRepository = carreraRepository;
+        this.crearAsignaturaPlanService = crearAsignaturaPlanService;
+        this.actualizarAsignaturaPlanService = actualizarAsignaturaPlanService;
+        this.eliminarAsignaturaPlanService = eliminarAsignaturaPlanService;
     }
 
     @GetMapping
@@ -44,6 +59,13 @@ public class PlanEstudioController {
             @RequestParam(required = false) UUID carreraId,
             @RequestParam(required = false) UUID procesoId
     ) {
+        if (procesoId != null) {
+            List<PlanEstudioFt001JpaEntity> planes = planRepository.findByProcesoIdAndActivoTrue(procesoId);
+            List<PlanEstudioFt001Dto> dtos = planes.stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtos);
+        }
         if (carreraId != null) {
             return listarPorCarrera(carreraId);
         }
@@ -169,6 +191,37 @@ public class PlanEstudioController {
 
         PlanEstudioFt001JpaEntity actualizado = planRepository.save(plan);
         return ResponseEntity.ok(toDto(actualizado));
+    }
+
+    @PostMapping("/{id}/asignaturas")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    public ResponseEntity<ActividadCurricularPlanDto> crearAsignatura(
+            @PathVariable UUID id,
+            @RequestBody CrearAsignaturaRequest request
+    ) {
+        ActividadCurricularPlanDto creada = crearAsignaturaPlanService.ejecutar(id, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(creada);
+    }
+
+    @PutMapping("/{id}/asignaturas/{asigId}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    public ResponseEntity<ActividadCurricularPlanDto> actualizarAsignatura(
+            @PathVariable UUID id,
+            @PathVariable UUID asigId,
+            @RequestBody ActualizarAsignaturaRequest request
+    ) {
+        ActividadCurricularPlanDto actualizada = actualizarAsignaturaPlanService.ejecutar(id, asigId, request);
+        return ResponseEntity.ok(actualizada);
+    }
+
+    @DeleteMapping("/{id}/asignaturas/{asigId}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    public ResponseEntity<Void> eliminarAsignatura(
+            @PathVariable UUID id,
+            @PathVariable UUID asigId
+    ) {
+        eliminarAsignaturaPlanService.ejecutar(id, asigId);
+        return ResponseEntity.noContent().build();
     }
 
     private void mapearDatosPlan(PlanEstudioFt001JpaEntity plan, PlanEstudioFt001Dto dto) {
