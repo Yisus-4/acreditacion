@@ -49,9 +49,20 @@ export class AmbitoPracticaService {
     return this.http.post<AutoevaluacionCarreraAmbito>(`${this.baseUrl}/autoevaluacion`, dto);
   }
 
-  completarActividadAmbitos(procesoId: string, actividad: string): Observable<{ completado: boolean; mensaje: string }> {
+  completarActividadAmbitos(
+    procesoId: string,
+    actividad: string,
+    carreraId?: string
+  ): Observable<{ completado: boolean; mensaje: string }> {
     let params = new HttpParams().set('actividad', actividad);
-    return this.http.post<{ completado: boolean; mensaje: string }>(`${this.baseUrl}/carrera/${procesoId}/completar`, null, { params });
+    if (carreraId) {
+      params = params.set('carreraId', carreraId);
+    }
+    return this.http.post<{ completado: boolean; mensaje: string }>(
+      `${this.baseUrl}/carrera/${procesoId}/completar`,
+      null,
+      { params }
+    );
   }
 
   listarDocentes(query?: string): Observable<DocenteResumen[]> {

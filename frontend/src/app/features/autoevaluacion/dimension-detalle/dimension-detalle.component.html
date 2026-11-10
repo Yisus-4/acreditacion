@@ -63,14 +63,7 @@
         @for (act of actividadesFiltradas(); track act.nombre) {
           <tr>
             <td class="col-nombre">
-              <div style="display: flex; flex-direction: column; gap: 4px;">
-                <span>{{ act.nombre }}</span>
-                @if (act.dependencia) {
-                  <span style="font-size: 11.5px; color: #b45309; font-weight: 500;">
-                    Requisito: {{ act.dependencia }}
-                  </span>
-                }
-              </div>
+              <span>{{ act.nombre }}</span>
             </td>
             <td>{{ act.responsable }}</td>
             <td>{{ act.instrumento }}</td>
