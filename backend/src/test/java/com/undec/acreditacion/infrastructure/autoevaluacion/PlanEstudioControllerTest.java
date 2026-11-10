@@ -12,7 +12,10 @@ import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDa
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.ActualizarAsignaturaPlanService;
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.CrearAsignaturaPlanService;
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.EliminarAsignaturaPlanService;
+import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEntity;
+import com.undec.acreditacion.infrastructure.persistence.postgres.ProcesoAcreditacionJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataCarreraRepository;
+import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataProcesoAcreditacionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -52,6 +56,9 @@ class PlanEstudioControllerTest {
     private SpringDataCarreraRepository carreraRepository;
 
     @Mock
+    private SpringDataProcesoAcreditacionRepository procesoRepository;
+
+    @Mock
     private CrearAsignaturaPlanService crearAsignaturaPlanService;
 
     @Mock
@@ -69,6 +76,7 @@ class PlanEstudioControllerTest {
                 planRepository,
                 asignaturaRepository,
                 carreraRepository,
+                procesoRepository,
                 crearAsignaturaPlanService,
                 actualizarAsignaturaPlanService,
                 eliminarAsignaturaPlanService
@@ -80,10 +88,81 @@ class PlanEstudioControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/planes-estudio?procesoId={id} retorna lista vacía sin fallback a carrera cuando no hay plan registrado")
-    void deberiaRetornarListaVaciaParaNuevoProcesoSinFallback() throws Exception {
+    @DisplayName("GET /api/planes-estudio?procesoId={id}&carreraId={cId} hace fallback a carrera si proceso no tiene plan")
+    void deberiaHacerFallbackACarreraCuandoProcesoNoTienePlanYSePasaCarreraId() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        UUID carreraId = UUID.randomUUID();
+
+        CarreraJpaEntity carrera = new CarreraJpaEntity();
+        carrera.setId(carreraId);
+        carrera.setNombre("Ingeniería en Agrimensura");
+
+        PlanEstudioFt001JpaEntity planCarrera = new PlanEstudioFt001JpaEntity();
+        planCarrera.setId(UUID.randomUUID());
+        planCarrera.setCarrera(carrera);
+        planCarrera.setCodigoResolucion("RES-AGR-2018");
+        planCarrera.setActivo(true);
+        planCarrera.setCreadoEn(Instant.now());
+
+        when(planRepository.findByProcesoIdAndActivoTrue(procesoId)).thenReturn(Collections.emptyList());
+        when(planRepository.findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(carreraId)).thenReturn(List.of(planCarrera));
+
+        mockMvc.perform(get("/api/planes-estudio")
+                        .param("procesoId", procesoId.toString())
+                        .param("carreraId", carreraId.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].carreraId", is(carreraId.toString())))
+                .andExpect(jsonPath("$[0].codigoResolucion", is("RES-AGR-2018")));
+
+        verify(planRepository).findByProcesoIdAndActivoTrue(procesoId);
+        verify(planRepository).findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(carreraId);
+    }
+
+    @Test
+    @DisplayName("GET /api/planes-estudio?procesoId={id} busca carrera en procesoRepository y hace fallback si no se pasó carreraId")
+    void deberiaHacerFallbackACarreraBuscandoProcesoCuandoNoSePasaCarreraId() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        UUID carreraId = UUID.randomUUID();
+
+        ProcesoAcreditacionJpaEntity proceso = new ProcesoAcreditacionJpaEntity();
+        proceso.setId(procesoId);
+        proceso.setCarreraId(carreraId);
+
+        CarreraJpaEntity carrera = new CarreraJpaEntity();
+        carrera.setId(carreraId);
+        carrera.setNombre("Ingeniería en Agrimensura");
+
+        PlanEstudioFt001JpaEntity planCarrera = new PlanEstudioFt001JpaEntity();
+        planCarrera.setId(UUID.randomUUID());
+        planCarrera.setCarrera(carrera);
+        planCarrera.setCodigoResolucion("RES-AGR-2018");
+        planCarrera.setActivo(true);
+        planCarrera.setCreadoEn(Instant.now());
+
+        when(planRepository.findByProcesoIdAndActivoTrue(procesoId)).thenReturn(Collections.emptyList());
+        when(procesoRepository.findById(procesoId)).thenReturn(Optional.of(proceso));
+        when(planRepository.findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(carreraId)).thenReturn(List.of(planCarrera));
+
+        mockMvc.perform(get("/api/planes-estudio")
+                        .param("procesoId", procesoId.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].codigoResolucion", is("RES-AGR-2018")));
+
+        verify(planRepository).findByProcesoIdAndActivoTrue(procesoId);
+        verify(procesoRepository).findById(procesoId);
+        verify(planRepository).findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(carreraId);
+    }
+
+    @Test
+    @DisplayName("GET /api/planes-estudio?procesoId={id} retorna vacío si proceso no tiene plan y no existe en procesoRepository")
+    void deberiaRetornarVacioSiProcesoNoTienePlanYNoExisteEnProcesoRepository() throws Exception {
         UUID procesoId = UUID.randomUUID();
         when(planRepository.findByProcesoIdAndActivoTrue(procesoId)).thenReturn(Collections.emptyList());
+        when(procesoRepository.findById(procesoId)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/planes-estudio")
                         .param("procesoId", procesoId.toString())
@@ -92,8 +171,8 @@ class PlanEstudioControllerTest {
                 .andExpect(jsonPath("$", hasSize(0)));
 
         verify(planRepository).findByProcesoIdAndActivoTrue(procesoId);
+        verify(procesoRepository).findById(procesoId);
         verify(planRepository, never()).findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(any());
-        verify(planRepository, never()).findAll();
     }
 
     @Test
