@@ -219,6 +219,10 @@ export class AmbitosPracticaComponent implements OnInit {
       if (pId) {
         this.procesoId.set(pId);
       }
+      const cId = params.get('carreraId');
+      if (cId) {
+        this.carreraSeleccionadaId.set(cId);
+      }
       const act = params.get('actividad');
       if (
         act === 'MAESTRO_RG006' ||
@@ -241,8 +245,7 @@ export class AmbitosPracticaComponent implements OnInit {
       next: (data: CarreraResponse[]) => {
         this.carreras.set(data);
         if (data.length > 0 && !this.carreraSeleccionadaId()) {
-          const agri = data.find((c: CarreraResponse) => c.nombre.toLowerCase().includes('agrimensura'));
-          this.carreraSeleccionadaId.set(agri ? agri.id : data[0].id);
+          this.carreraSeleccionadaId.set(data[0].id);
         }
         this.cargarAutoevaluaciones();
       },
@@ -279,7 +282,7 @@ export class AmbitosPracticaComponent implements OnInit {
     const carreraId = this.carreraSeleccionadaId();
     if (!carreraId) return;
 
-    this.ambitoService.listarAutoevaluaciones(carreraId).subscribe({
+    this.ambitoService.listarAutoevaluaciones(carreraId, this.procesoId() || undefined).subscribe({
       next: (data) => this.autoevaluaciones.set(data),
       error: () => {},
     });

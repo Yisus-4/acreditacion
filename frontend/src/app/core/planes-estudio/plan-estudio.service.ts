@@ -1,7 +1,12 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ActividadCurricularPlan, PlanEstudioFt001 } from './plan-estudio.models';
+import {
+  ActividadCurricularPlan,
+  ActualizarAsignaturaRequest,
+  CrearAsignaturaRequest,
+  PlanEstudioFt001,
+} from './plan-estudio.models';
 
 @Injectable({
   providedIn: 'root',
@@ -31,5 +36,17 @@ export class PlanEstudioService {
 
   actualizarPlan(id: string, dto: PlanEstudioFt001): Observable<PlanEstudioFt001> {
     return this.http.put<PlanEstudioFt001>(`${this.baseUrl}/${id}`, dto);
+  }
+
+  crearAsignatura(planId: string, req: CrearAsignaturaRequest): Observable<ActividadCurricularPlan> {
+    return this.http.post<ActividadCurricularPlan>(`${this.baseUrl}/${planId}/asignaturas`, req);
+  }
+
+  actualizarAsignatura(planId: string, asigId: string, req: ActualizarAsignaturaRequest): Observable<ActividadCurricularPlan> {
+    return this.http.put<ActividadCurricularPlan>(`${this.baseUrl}/${planId}/asignaturas/${asigId}`, req);
+  }
+
+  eliminarAsignatura(planId: string, asigId: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${planId}/asignaturas/${asigId}`);
   }
 }

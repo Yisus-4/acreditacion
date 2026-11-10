@@ -13,6 +13,42 @@ export interface ActividadCurricularPlan {
   esObligatoria?: boolean;
 }
 
+export interface CrearAsignaturaRequest {
+  codigo: string;
+  nombre: string;
+  grupo?: string;
+  subgrupo?: string;
+  horasReloj: number;
+  horasPresenciales?: number;
+  horasNoPresenciales?: number;
+  correlativas?: string;
+  esObligatoria?: boolean;
+  numeroOrden?: number;
+}
+
+export interface ActualizarAsignaturaRequest {
+  id?: string;
+  codigo?: string;
+  nombre?: string;
+  grupo?: string;
+  subgrupo?: string;
+  horasReloj?: number;
+  horasPresenciales?: number;
+  horasNoPresenciales?: number;
+  correlativas?: string;
+  esObligatoria?: boolean;
+  numeroOrden?: number;
+}
+
+export interface DocenteResumen {
+  id: string;
+  username: string;
+  nombreCompleto: string;
+  email?: string;
+  unidadAcademicaId?: string;
+  unidadAcademicaNombre?: string;
+}
+
 export interface PlanEstudioFt001 {
   id?: string;
   carreraId: string;
