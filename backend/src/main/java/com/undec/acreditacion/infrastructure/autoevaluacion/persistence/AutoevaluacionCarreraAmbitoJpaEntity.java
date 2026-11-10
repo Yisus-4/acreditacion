@@ -7,9 +7,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Table(name = "autoevaluacion_carrera_ambito", uniqueConstraints = {
-        @UniqueConstraint(name = "uq_proceso_ambito", columnNames = {"proceso_id", "ambito_id"})
-})
+@Table(name = "autoevaluacion_carrera_ambito")
 public class AutoevaluacionCarreraAmbitoJpaEntity {
 
     @Id
@@ -18,6 +16,9 @@ public class AutoevaluacionCarreraAmbitoJpaEntity {
 
     @Column(name = "proceso_id", nullable = false)
     private UUID procesoId;
+
+    @Column(name = "carrera_id")
+    private UUID carreraId;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "ambito_id", nullable = false)
@@ -64,6 +65,14 @@ public class AutoevaluacionCarreraAmbitoJpaEntity {
 
     public void setProcesoId(UUID procesoId) {
         this.procesoId = procesoId;
+    }
+
+    public UUID getCarreraId() {
+        return carreraId;
+    }
+
+    public void setCarreraId(UUID carreraId) {
+        this.carreraId = carreraId;
     }
 
     public AmbitoPracticaJpaEntity getAmbito() {

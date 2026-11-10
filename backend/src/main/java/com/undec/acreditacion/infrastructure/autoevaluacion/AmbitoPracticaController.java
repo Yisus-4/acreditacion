@@ -293,6 +293,7 @@ public class AmbitoPracticaController {
         return new AutoevaluacionCarreraAmbitoDto(
                 entity.getId(),
                 entity.getProcesoId(),
+                entity.getCarreraId(),
                 entity.getAmbito() != null ? entity.getAmbito().getId() : null,
                 ambitoDto,
                 entity.getUtilizadoPorCarrera(),
