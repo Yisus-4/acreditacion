@@ -11,7 +11,12 @@ import { RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { SubnavAutoevaluacionComponent } from '../subnav-autoevaluacion/subnav-autoevaluacion.component';
 import { PlanEstudioService } from '../../../core/planes-estudio/plan-estudio.service';
-import { ActividadCurricularPlan, PlanEstudioFt001 } from '../../../core/planes-estudio/plan-estudio.models';
+import {
+  ActividadCurricularPlan,
+  ActualizarAsignaturaRequest,
+  CrearAsignaturaRequest,
+  PlanEstudioFt001,
+} from '../../../core/planes-estudio/plan-estudio.models';
 import { ProgramaAnaliticoService } from '../../../core/programas-analiticos/programa-analitico.service';
 import { ProgramaAnaliticoAsignatura } from '../../../core/programas-analiticos/programa-analitico.models';
 import { EstructuraService } from '../../../core/estructura/estructura.service';
@@ -94,6 +99,34 @@ export class EstructuraCurricularComponent implements OnInit {
     vigenciaDesde: [2024, [Validators.required]],
     vigenciaHasta: [null as number | null],
     observaciones: [''],
+  });
+
+  // Modal Gestión de Asignaturas (8.3 / FT-001)
+  readonly modalAsignaturaAbierto = signal<boolean>(false);
+  readonly asignaturaEnEdicion = signal<ActividadCurricularPlan | null>(null);
+  readonly guardandoAsignatura = signal<boolean>(false);
+  readonly deletingAsignaturaId = signal<string | null>(null);
+  readonly correlativasSeleccionadas = signal<string[]>([]);
+
+  readonly formAsignatura = this.fb.group({
+    codigo: ['', [Validators.required]],
+    nombre: ['', [Validators.required]],
+    numeroOrden: [null as number | null],
+    grupo: ['C.B.I.', [Validators.required]],
+    subgrupo: ['1º', [Validators.required]],
+    horasReloj: [64, [Validators.required, Validators.min(1)]],
+    horasPresenciales: [64, [Validators.min(0)]],
+    horasNoPresenciales: [0, [Validators.min(0)]],
+    esObligatoria: [true],
+  });
+
+  readonly asignaturasDisponiblesCorrelativas = computed(() => {
+    const editando = this.asignaturaEnEdicion();
+    return this.asignaturas().filter((a) => {
+      if (editando?.id && a.id === editando.id) return false;
+      if (editando?.nombre && a.nombre.toLowerCase().trim() === editando.nombre.toLowerCase().trim()) return false;
+      return true;
+    });
   });
 
   // Métricas de horas por ciclo
@@ -230,6 +263,10 @@ export class EstructuraCurricularComponent implements OnInit {
       if (pId) {
         this.procesoId.set(pId);
       }
+      const cId = params.get('carreraId');
+      if (cId) {
+        this.carreraSeleccionadaId.set(cId);
+      }
       const act = params.get('actividad');
       if (
         act === 'PLAN_FT001' ||
@@ -252,9 +289,11 @@ export class EstructuraCurricularComponent implements OnInit {
       next: (data: CarreraResponse[]) => {
         this.carreras.set(data);
         if (data.length > 0) {
-          const agri = data.find((c: CarreraResponse) => c.nombre.toLowerCase().includes('agrimensura'));
-          const id = agri ? agri.id : data[0].id;
-          this.carreraSeleccionadaId.set(id);
+          let id = this.carreraSeleccionadaId();
+          if (!id || !data.some((c: CarreraResponse) => c.id === id)) {
+            id = data[0].id;
+            this.carreraSeleccionadaId.set(id);
+          }
           this.cargarPlan(id);
         } else {
           this.loading.set(false);
@@ -275,7 +314,8 @@ export class EstructuraCurricularComponent implements OnInit {
 
   cargarPlan(carreraId: string): void {
     this.loading.set(true);
-    this.planService.listarPlanes(carreraId).subscribe({
+    const procId = this.procesoId() || undefined;
+    this.planService.listarPlanes(carreraId, procId).subscribe({
       next: (planes) => {
         this.planes.set(planes);
         if (planes.length > 0) {
@@ -315,6 +355,12 @@ export class EstructuraCurricularComponent implements OnInit {
     this.planService.listarAsignaturas(planId).subscribe({
       next: (asigs) => {
         this.asignaturas.set(asigs);
+        this.planService.obtenerPlan(planId).subscribe({
+          next: (p) => {
+            if (p) this.planActivo.set(p);
+          },
+          error: () => {},
+        });
         this.programaService.listarProgramas(undefined, planId).subscribe({
           next: (progs) => {
             this.programas.set(progs);
@@ -478,6 +524,169 @@ export class EstructuraCurricularComponent implements OnInit {
       },
       error: (err) => {
         this.errorMessage.set(err.error?.mensaje || 'Error al validar actividad 8.4');
+      },
+    });
+  }
+
+  // --- Modal Gestión de Asignaturas (8.3 / FT-001) ---
+  abrirModalNuevaAsignatura(): void {
+    this.asignaturaEnEdicion.set(null);
+    this.correlativasSeleccionadas.set([]);
+    const total = this.asignaturas().length;
+    this.formAsignatura.reset({
+      codigo: `ASIG-${String(total + 1).padStart(2, '0')}`,
+      nombre: '',
+      numeroOrden: total + 1,
+      grupo: 'C.B.I.',
+      subgrupo: '1º',
+      horasReloj: 64,
+      horasPresenciales: 64,
+      horasNoPresenciales: 0,
+      esObligatoria: true,
+    });
+    this.modalAsignaturaAbierto.set(true);
+  }
+
+  abrirModalEditarAsignatura(asig: ActividadCurricularPlan): void {
+    this.asignaturaEnEdicion.set(asig);
+    const corrArray = (asig.correlativas || '')
+      .split(/[,;]/)
+      .map((s) => s.trim())
+      .filter((s) => s && s.toLowerCase() !== 'sin correlativas previas' && s.toLowerCase() !== 'sin correlatividades previas');
+    this.correlativasSeleccionadas.set(corrArray);
+
+    this.formAsignatura.patchValue({
+      codigo: asig.codigo || '',
+      nombre: asig.nombre || '',
+      numeroOrden: asig.numeroOrden ?? null,
+      grupo: asig.grupo || 'C.B.I.',
+      subgrupo: asig.subgrupo || '1º',
+      horasReloj: asig.horasReloj || 64,
+      horasPresenciales: asig.horasPresenciales || asig.horasReloj || 64,
+      horasNoPresenciales: asig.horasNoPresenciales || 0,
+      esObligatoria: asig.esObligatoria ?? true,
+    });
+    this.modalAsignaturaAbierto.set(true);
+  }
+
+  cerrarModalAsignatura(): void {
+    this.modalAsignaturaAbierto.set(false);
+    this.asignaturaEnEdicion.set(null);
+    this.correlativasSeleccionadas.set([]);
+    this.formAsignatura.reset();
+  }
+
+  toggleCorrelativa(nombre: string): void {
+    const current = this.correlativasSeleccionadas();
+    if (current.includes(nombre)) {
+      this.correlativasSeleccionadas.set(current.filter((c) => c !== nombre));
+    } else {
+      this.correlativasSeleccionadas.set([...current, nombre]);
+    }
+  }
+
+  guardarAsignatura(): void {
+    const plan = this.planActivo();
+    if (!plan?.id) return;
+
+    if (this.formAsignatura.invalid) {
+      this.formAsignatura.markAllAsTouched();
+      return;
+    }
+
+    this.guardandoAsignatura.set(true);
+    const val = this.formAsignatura.value;
+    const correlativasStr =
+      this.correlativasSeleccionadas().length > 0
+        ? this.correlativasSeleccionadas().join(', ')
+        : 'Sin correlativas previas';
+
+    const editando = this.asignaturaEnEdicion();
+    if (editando?.id) {
+      const req: ActualizarAsignaturaRequest = {
+        id: editando.id,
+        codigo: val.codigo || '',
+        nombre: val.nombre || '',
+        numeroOrden: val.numeroOrden ?? editando.numeroOrden,
+        grupo: val.grupo || 'C.B.I.',
+        subgrupo: val.subgrupo || '1º',
+        horasReloj: Number(val.horasReloj) || 0,
+        horasPresenciales: Number(val.horasPresenciales) || 0,
+        horasNoPresenciales: Number(val.horasNoPresenciales) || 0,
+        correlativas: correlativasStr,
+        esObligatoria: val.esObligatoria ?? true,
+      };
+
+      this.planService.actualizarAsignatura(plan.id, editando.id, req).subscribe({
+        next: () => {
+          this.guardandoAsignatura.set(false);
+          this.cerrarModalAsignatura();
+          this.successMessage.set(`Asignatura "${req.nombre}" actualizada exitosamente.`);
+          this.cargarAsignaturasYProgramas(plan.id!);
+          setTimeout(() => this.successMessage.set(null), 3000);
+        },
+        error: (err) => {
+          this.guardandoAsignatura.set(false);
+          this.errorMessage.set(
+            'Error al actualizar asignatura: ' + (err.error?.message || err.error?.error || err.message)
+          );
+        },
+      });
+    } else {
+      const req: CrearAsignaturaRequest = {
+        codigo: val.codigo || '',
+        nombre: val.nombre || '',
+        numeroOrden: val.numeroOrden ?? undefined,
+        grupo: val.grupo || 'C.B.I.',
+        subgrupo: val.subgrupo || '1º',
+        horasReloj: Number(val.horasReloj) || 0,
+        horasPresenciales: Number(val.horasPresenciales) || 0,
+        horasNoPresenciales: Number(val.horasNoPresenciales) || 0,
+        correlativas: correlativasStr,
+        esObligatoria: val.esObligatoria ?? true,
+      };
+
+      this.planService.crearAsignatura(plan.id, req).subscribe({
+        next: () => {
+          this.guardandoAsignatura.set(false);
+          this.cerrarModalAsignatura();
+          this.successMessage.set(`Asignatura "${req.nombre}" creada exitosamente.`);
+          this.cargarAsignaturasYProgramas(plan.id!);
+          setTimeout(() => this.successMessage.set(null), 3000);
+        },
+        error: (err) => {
+          this.guardandoAsignatura.set(false);
+          this.errorMessage.set(
+            'Error al crear asignatura: ' + (err.error?.message || err.error?.error || err.message)
+          );
+        },
+      });
+    }
+  }
+
+  eliminarAsignatura(asig: ActividadCurricularPlan): void {
+    if (!asig.id) return;
+    const plan = this.planActivo();
+    if (!plan?.id) return;
+
+    const confirmado = window.confirm(`¿Está seguro de eliminar la asignatura "${asig.nombre}"?`);
+    if (!confirmado) return;
+
+    this.deletingAsignaturaId.set(asig.id);
+    this.planService.eliminarAsignatura(plan.id, asig.id).subscribe({
+      next: () => {
+        this.deletingAsignaturaId.set(null);
+        this.successMessage.set(`Asignatura "${asig.nombre}" eliminada exitosamente.`);
+        this.cargarAsignaturasYProgramas(plan.id!);
+        setTimeout(() => this.successMessage.set(null), 3000);
+      },
+      error: (err) => {
+        this.deletingAsignaturaId.set(null);
+        const msg =
+          err.error?.error ||
+          err.error?.message ||
+          'No se puede eliminar la asignatura porque está vinculada a ámbitos de práctica o es correlativa de otra.';
+        this.errorMessage.set(msg);
       },
     });
   }

@@ -324,15 +324,48 @@
         </select>
       </div>
 
-      <div class="toolbar-actions-right">
+      <div class="toolbar-actions-right" style="display: flex; align-items: center; gap: 12px;">
         <span class="stats-count-figma">
           {{ asignaturasFiltradas().length }} de {{ asignaturas().length }} asignaturas
         </span>
+        @if (planActivo()) {
+          <button
+            type="button"
+            class="btn-nuevo-figma"
+            style="background: #166534; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;"
+            (click)="abrirModalNuevaAsignatura()"
+          >
+            <svg style="width: 16px; height: 16px;" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+            </svg>
+            <span>+ Nueva Asignatura</span>
+          </button>
+        }
       </div>
     </div>
 
     <!-- Tabla Oficial de Asignaturas FT-001 usando tabla-figma -->
-    @if (asignaturasFiltradas().length === 0) {
+    @if (asignaturas().length === 0) {
+      <div style="background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 40px; text-align: center; margin-top: 16px;">
+        <div style="font-size: 36px; margin-bottom: 8px;">📚</div>
+        <h4 style="font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 8px 0;">
+          Este Plan de Estudios no tiene asignaturas cargadas
+        </h4>
+        <p style="color: #64748b; font-size: 14px; margin: 0 0 16px 0;">
+          Comience cargando las asignaturas del plan para habilitar los ámbitos de formación (6.1–6.5) y programas analíticos (8.4).
+        </p>
+        @if (planActivo()) {
+          <button
+            type="button"
+            class="btn-nuevo-figma"
+            style="background: #166534; padding: 8px 20px; font-size: 14px; cursor: pointer;"
+            (click)="abrirModalNuevaAsignatura()"
+          >
+            + Cargar Primera Asignatura
+          </button>
+        }
+      </div>
+    } @else if (asignaturasFiltradas().length === 0) {
       <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
         No se encontraron asignaturas con los filtros actuales.
       </div>
@@ -342,11 +375,12 @@
           <thead>
             <tr>
               <th style="width: 80px;">Cód.</th>
-              <th style="min-width: 260px;">Asignatura / Actividad Curricular</th>
+              <th style="min-width: 240px;">Asignatura / Actividad Curricular</th>
               <th style="width: 80px; text-align: center;">Año</th>
               <th style="width: 100px;">Ciclo</th>
-              <th style="width: 100px;">Hs Reloj</th>
+              <th style="width: 90px;">Hs Reloj</th>
               <th>Régimen y Correlatividades</th>
+              <th class="col-acciones" style="width: 150px; text-align: center;">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -369,6 +403,27 @@
                 </td>
                 <td class="col-desc">
                   {{ a.correlativas || 'Sin correlatividades previas' }}
+                </td>
+                <td class="col-acciones" style="white-space: nowrap; text-align: center;">
+                  <button
+                    type="button"
+                    class="btn-nuevo-figma"
+                    style="padding: 5px 12px; font-size: 12px; background: #6b4c5b; margin-right: 6px; cursor: pointer;"
+                    (click)="abrirModalEditarAsignatura(a)"
+                    title="Editar Asignatura"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-cancelar"
+                    style="padding: 5px 10px; font-size: 12px; color: #dc2626; border-color: #fca5a5; cursor: pointer;"
+                    (click)="eliminarAsignatura(a)"
+                    [disabled]="deletingAsignaturaId() === a.id"
+                    title="Eliminar Asignatura"
+                  >
+                    {{ deletingAsignaturaId() === a.id ? '...' : 'Eliminar' }}
+                  </button>
                 </td>
               </tr>
             }
@@ -607,6 +662,137 @@
           <button type="button" class="btn-cancelar" (click)="cerrarModalSubir()">Cancelar</button>
           <button type="submit" class="btn-guardar" [disabled]="subiendo() || !archivoSeleccionado()">
             {{ subiendo() ? 'Subiendo PDF...' : 'Guardar y Vincular Programa' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Modal Gestión de Asignaturas (8.3 / FT-001) -->
+@if (modalAsignaturaAbierto()) {
+  <div class="modal-backdrop-figma">
+    <div class="modal-card-figma" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3>{{ asignaturaEnEdicion() ? 'Editar Asignatura' : 'Nueva Asignatura / Actividad Curricular' }}</h3>
+        <button type="button" class="btn-accion-icono" (click)="cerrarModalAsignatura()">✕</button>
+      </div>
+
+      <form [formGroup]="formAsignatura" (ngSubmit)="guardarAsignatura()" class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Código de Asignatura *</label>
+            <input type="text" formControlName="codigo" placeholder="Ej: ASIG-01" />
+            @if (formAsignatura.get('codigo')?.invalid && formAsignatura.get('codigo')?.touched) {
+              <span class="error-text" style="color: #dc2626; font-size: 12px;">El código es obligatorio.</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>N° Orden en el Plan</label>
+            <input type="number" formControlName="numeroOrden" placeholder="Automático si se omite" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Nombre de la Asignatura / Actividad *</label>
+          <input type="text" formControlName="nombre" placeholder="Ej: Análisis Matemático I" />
+          @if (formAsignatura.get('nombre')?.invalid && formAsignatura.get('nombre')?.touched) {
+            <span class="error-text" style="color: #dc2626; font-size: 12px;">El nombre es obligatorio.</span>
+          }
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Ciclo / Grupo Formativo *</label>
+            <select formControlName="grupo">
+              <option value="C.B.I.">C.B.I. (Ciclo Básico de Ingeniería)</option>
+              <option value="T.B.">T.B. (Tecnologías Básicas)</option>
+              <option value="T.A.">T.A. (Tecnologías Aplicadas)</option>
+              <option value="C.T.C.">C.T.C. (Complementarias)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Año de Cursada (Subgrupo) *</label>
+            <select formControlName="subgrupo">
+              <option value="1º">1º Año</option>
+              <option value="2º">2º Año</option>
+              <option value="3º">3º Año</option>
+              <option value="4º">4º Año</option>
+              <option value="5º">5º Año</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label>Horas Reloj Totales *</label>
+            <input type="number" formControlName="horasReloj" min="1" />
+            @if (formAsignatura.get('horasReloj')?.invalid && formAsignatura.get('horasReloj')?.touched) {
+              <span class="error-text" style="color: #dc2626; font-size: 12px;">Debe ser mayor a 0.</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>Hs Presenciales</label>
+            <input type="number" formControlName="horasPresenciales" min="0" />
+          </div>
+
+          <div class="form-group">
+            <label>Hs No Presenciales</label>
+            <input type="number" formControlName="horasNoPresenciales" min="0" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" formControlName="esObligatoria" />
+            <span style="font-weight: 500;">Es asignatura obligatoria</span>
+          </label>
+        </div>
+
+        <!-- Multi-select Correlativas -->
+        <div class="form-group">
+          <label>Correlatividades Previas Requeridas:</label>
+          <div style="font-size: 12px; color: #6b7280; margin-bottom: 6px;">
+            Seleccione las asignaturas que deben estar regularizadas/aprobadas para cursar:
+          </div>
+          @if (asignaturasDisponiblesCorrelativas().length === 0) {
+            <div style="font-size: 13px; color: #9ca3af; font-style: italic; padding: 8px; background: #f9fafb; border-radius: 6px;">
+              No hay otras asignaturas en el plan para seleccionar como correlativas.
+            </div>
+          } @else {
+            <div class="correlativas-selector-list" style="max-height: 180px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: #ffffff;">
+              @for (disponible of asignaturasDisponiblesCorrelativas(); track disponible.id) {
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 4px 6px; border-radius: 4px;">
+                  <input
+                    type="checkbox"
+                    [checked]="correlativasSeleccionadas().includes(disponible.nombre)"
+                    (change)="toggleCorrelativa(disponible.nombre)"
+                  />
+                  <span><strong>{{ disponible.codigo || ('#' + disponible.numeroOrden) }}</strong> — {{ disponible.nombre }} ({{ disponible.subgrupo }})</span>
+                </label>
+              }
+            </div>
+          }
+
+          @if (correlativasSeleccionadas().length > 0) {
+            <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
+              @for (correlativa of correlativasSeleccionadas(); track correlativa) {
+                <span class="badge-correlativa-chip" style="background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                  {{ correlativa }}
+                  <button type="button" (click)="toggleCorrelativa(correlativa)" style="background: none; border: none; cursor: pointer; font-size: 12px; color: #4338ca; line-height: 1;">✕</button>
+                </span>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancelar" (click)="cerrarModalAsignatura()">Cancelar</button>
+          <button type="submit" class="btn-guardar" [disabled]="guardandoAsignatura() || formAsignatura.invalid">
+            {{ guardandoAsignatura() ? 'Guardando...' : (asignaturaEnEdicion() ? 'Actualizar Asignatura' : 'Crear Asignatura') }}
           </button>
         </div>
       </form>

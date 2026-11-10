@@ -5,12 +5,14 @@ import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.AmbitoPracticaDto;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.AutoevaluacionCarreraAmbitoDto;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.*;
+import com.undec.acreditacion.infrastructure.autoevaluacion.service.ValidarPrecedenciaAmbitosService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -23,17 +25,20 @@ public class AmbitoPracticaController {
     private final SpringDataAutoevaluacionCarreraAmbitoRepository autoevaluacionAmbitoRepository;
     private final SpringDataInmuebleRepository inmuebleRepository;
     private final SpringDataConvenioInstitucionalRepository convenioRepository;
+    private final ValidarPrecedenciaAmbitosService validarPrecedenciaAmbitosService;
 
     public AmbitoPracticaController(
             SpringDataAmbitoPracticaRepository ambitoRepository,
             SpringDataAutoevaluacionCarreraAmbitoRepository autoevaluacionAmbitoRepository,
             SpringDataInmuebleRepository inmuebleRepository,
-            SpringDataConvenioInstitucionalRepository convenioRepository
+            SpringDataConvenioInstitucionalRepository convenioRepository,
+            ValidarPrecedenciaAmbitosService validarPrecedenciaAmbitosService
     ) {
         this.ambitoRepository = ambitoRepository;
         this.autoevaluacionAmbitoRepository = autoevaluacionAmbitoRepository;
         this.inmuebleRepository = inmuebleRepository;
         this.convenioRepository = convenioRepository;
+        this.validarPrecedenciaAmbitosService = validarPrecedenciaAmbitosService;
     }
 
     @GetMapping
@@ -116,21 +121,33 @@ public class AmbitoPracticaController {
     // Endpoints de Autoevaluación de Carrera (CU-02 a CU-05)
     // =========================================================================
 
-    @GetMapping("/carrera/{procesoId}")
-    public ResponseEntity<List<AutoevaluacionCarreraAmbitoDto>> listarAutoevaluacionCarrera(@PathVariable UUID procesoId) {
-        List<AutoevaluacionCarreraAmbitoJpaEntity> vinculaciones = autoevaluacionAmbitoRepository.findByProcesoIdOrderByAmbitoNumeroOrdenAsc(procesoId);
+    @GetMapping({"/carrera/{procesoId}", "/autoevaluacion"})
+    public ResponseEntity<List<AutoevaluacionCarreraAmbitoDto>> listarAutoevaluacionCarrera(
+            @PathVariable(required = false) UUID procesoId,
+            @RequestParam(value = "procesoId", required = false) UUID queryProcesoId,
+            @RequestParam(value = "carreraId", required = false) UUID carreraId
+    ) {
+        UUID effectiveProcesoId = procesoId != null ? procesoId : queryProcesoId;
+        if (effectiveProcesoId == null) {
+            return ResponseEntity.ok(List.of());
+        }
+        List<AutoevaluacionCarreraAmbitoJpaEntity> vinculaciones = autoevaluacionAmbitoRepository.findByProcesoIdOrderByAmbitoNumeroOrdenAsc(effectiveProcesoId);
         List<AutoevaluacionCarreraAmbitoDto> dtos = vinculaciones.stream()
                 .map(this::toAutoevaluacionDto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
 
-    @PostMapping("/carrera/{procesoId}")
+    @PostMapping({"/carrera/{procesoId}", "/autoevaluacion"})
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
     public ResponseEntity<AutoevaluacionCarreraAmbitoDto> guardarVinculacionCarrera(
-            @PathVariable UUID procesoId,
+            @PathVariable(required = false) UUID procesoId,
             @RequestBody AutoevaluacionCarreraAmbitoDto dto
     ) {
+        UUID effectiveProcesoId = procesoId != null ? procesoId : dto.procesoId();
+        if (effectiveProcesoId == null) {
+            throw new DomainValidationException("El ID del proceso de autoevaluación es obligatorio");
+        }
         if (dto.ambitoId() == null) {
             throw new DomainValidationException("El ID del ámbito de práctica es obligatorio");
         }
@@ -138,12 +155,12 @@ public class AmbitoPracticaController {
         AmbitoPracticaJpaEntity ambito = ambitoRepository.findById(dto.ambitoId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el ámbito con ID: " + dto.ambitoId()));
 
-        Optional<AutoevaluacionCarreraAmbitoJpaEntity> existenteOpt = autoevaluacionAmbitoRepository.findByProcesoIdAndAmbitoId(procesoId, dto.ambitoId());
+        Optional<AutoevaluacionCarreraAmbitoJpaEntity> existenteOpt = autoevaluacionAmbitoRepository.findByProcesoIdAndAmbitoId(effectiveProcesoId, dto.ambitoId());
         AutoevaluacionCarreraAmbitoJpaEntity entity = existenteOpt.orElseGet(AutoevaluacionCarreraAmbitoJpaEntity::new);
 
         if (entity.getId() == null) {
             entity.setId(UUID.randomUUID());
-            entity.setProcesoId(procesoId);
+            entity.setProcesoId(effectiveProcesoId);
             entity.setAmbito(ambito);
             entity.setCreadoEn(Instant.now());
         }
@@ -158,6 +175,28 @@ public class AmbitoPracticaController {
 
         AutoevaluacionCarreraAmbitoJpaEntity guardado = autoevaluacionAmbitoRepository.save(entity);
         return ResponseEntity.ok(toAutoevaluacionDto(guardado));
+    }
+
+    @PostMapping({"/carrera/{procesoId}/completar", "/autoevaluacion/completar"})
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    public ResponseEntity<Map<String, Object>> completarActividadAmbitos(
+            @PathVariable(required = false) UUID procesoId,
+            @RequestParam(value = "procesoId", required = false) UUID queryProcesoId,
+            @RequestParam(value = "actividad", required = false) String actividad
+    ) {
+        UUID effectiveProcesoId = procesoId != null ? procesoId : queryProcesoId;
+        if (effectiveProcesoId == null) {
+            throw new DomainValidationException("El ID del proceso de autoevaluación es obligatorio");
+        }
+
+        validarPrecedenciaAmbitosService.validar(effectiveProcesoId, actividad);
+
+        return ResponseEntity.ok(Map.of(
+                "completado", true,
+                "procesoId", effectiveProcesoId,
+                "actividad", actividad != null ? actividad : "",
+                "mensaje", "Actividad validada y completada exitosamente."
+        ));
     }
 
     private void mapearDatos(AmbitoPracticaJpaEntity entity, AmbitoPracticaDto dto) {

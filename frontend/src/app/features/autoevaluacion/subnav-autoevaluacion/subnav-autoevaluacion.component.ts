@@ -8,22 +8,22 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   template: `
     <header class="autoeval-header">
       <nav class="subnav-tabs-bar" aria-label="Navegación Dimensiones Autoevaluación">
-        <a routerLink="/autoevaluacion/infraestructura" routerLinkActive="active" class="subnav-tab">
+        <a routerLink="/autoevaluacion/infraestructura" routerLinkActive="active" queryParamsHandling="preserve" class="subnav-tab">
           Infraestructura y biblioteca
         </a>
-        <a routerLink="/autoevaluacion/ambitos-formacion" routerLinkActive="active" class="subnav-tab">
+        <a routerLink="/autoevaluacion/ambitos-formacion" routerLinkActive="active" queryParamsHandling="preserve" class="subnav-tab">
           Ámbitos de formación
         </a>
-        <a routerLink="/autoevaluacion/organizacion-ua" routerLinkActive="active" class="subnav-tab">
+        <a routerLink="/autoevaluacion/organizacion-ua" routerLinkActive="active" queryParamsHandling="preserve" class="subnav-tab">
           Organización UA
         </a>
-        <a routerLink="/autoevaluacion/estructura-curricular" routerLinkActive="active" class="subnav-tab">
+        <a routerLink="/autoevaluacion/estructura-curricular" routerLinkActive="active" queryParamsHandling="preserve" class="subnav-tab">
           Estructura curricular
         </a>
-        <a routerLink="/autoevaluacion/estudiantes-graduados" routerLinkActive="active" class="subnav-tab">
+        <a routerLink="/autoevaluacion/estudiantes-graduados" routerLinkActive="active" queryParamsHandling="preserve" class="subnav-tab">
           Estudiantes y graduados
         </a>
-        <a routerLink="/autoevaluacion/cuerpo-academico" routerLinkActive="active" class="subnav-tab">
+        <a routerLink="/autoevaluacion/cuerpo-academico" routerLinkActive="active" queryParamsHandling="preserve" class="subnav-tab">
           Cuerpo académico
         </a>
       </nav>

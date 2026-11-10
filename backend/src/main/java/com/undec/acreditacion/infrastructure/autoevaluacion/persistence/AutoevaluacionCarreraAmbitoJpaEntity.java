@@ -29,7 +29,7 @@ public class AutoevaluacionCarreraAmbitoJpaEntity {
     @Column(name = "asignaturas_vinculadas", columnDefinition = "TEXT")
     private String asignaturasVinculadas;
 
-    @Column(name = "responsable_practica", length = 150)
+    @Column(name = "responsable_practica", length = 500)
     private String responsablePractica;
 
     @Column(name = "horarios_uso_anio_anterior", length = 100)

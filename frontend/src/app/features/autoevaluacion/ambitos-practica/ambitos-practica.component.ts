@@ -22,6 +22,11 @@ import { EstructuraService } from '../../../core/estructura/estructura.service';
 import { CarreraResponse } from '../../../core/estructura/estructura.types';
 import { AutoevaluacionService } from '../../../core/autoevaluacion/autoevaluacion.service';
 import { Inmueble } from '../../../core/autoevaluacion/autoevaluacion.models';
+import { PlanEstudioService } from '../../../core/planes-estudio/plan-estudio.service';
+import {
+  ActividadCurricularPlan,
+  DocenteResumen,
+} from '../../../core/planes-estudio/plan-estudio.models';
 
 export type ActividadAmbitoTipo =
   | 'MAESTRO_RG006'
@@ -49,6 +54,7 @@ export class AmbitosPracticaComponent implements OnInit {
   private readonly convenioService = inject(ConvenioService);
   private readonly estructuraService = inject(EstructuraService);
   private readonly autoevaluacionService = inject(AutoevaluacionService);
+  private readonly planService = inject(PlanEstudioService);
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
 
@@ -57,6 +63,10 @@ export class AmbitosPracticaComponent implements OnInit {
   readonly inmuebles = signal<Inmueble[]>([]);
   readonly carreras = signal<CarreraResponse[]>([]);
   readonly autoevaluaciones = signal<AutoevaluacionCarreraAmbito[]>([]);
+  readonly asignaturasDelPlan = signal<ActividadCurricularPlan[]>([]);
+  readonly docentesDisponibles = signal<DocenteResumen[]>([]);
+  readonly completandoActividad = signal<boolean>(false);
+  readonly actividadesCompletadas = signal<Set<string>>(new Set<string>());
 
   readonly loading = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
@@ -74,6 +84,10 @@ export class AmbitosPracticaComponent implements OnInit {
   // Selector de carrera para las fichas específicas (OLA 2)
   readonly carreraSeleccionadaId = signal<string>('');
 
+  // Precedencia PRG-002: Plan debe tener asignaturas cargadas
+  readonly tieneAsignaturas = computed(() => this.asignaturasDelPlan().length > 0);
+  readonly puedeCompletarActividadesPractica = computed(() => this.tieneAsignaturas());
+
   // Modal Alta / Modificación Maestro
   readonly modalAbierto = signal<boolean>(false);
   readonly ambitoSeleccionadoId = signal<string | null>(null);
@@ -82,6 +96,35 @@ export class AmbitosPracticaComponent implements OnInit {
   // Modal Vinculación Carrera (Snapshot)
   readonly modalVinculacionAbierto = signal<boolean>(false);
   readonly ambitoParaVincular = signal<AmbitoPractica | null>(null);
+
+  // Modal Vinculación Chips & Filtros
+  readonly asignaturasSeleccionadasChips = signal<string[]>([]);
+  readonly filtroAsignaturasTexto = signal<string>('');
+  readonly docentesSeleccionadosChips = signal<string[]>([]);
+  readonly filtroDocentesTexto = signal<string>('');
+
+  readonly asignaturasFiltradasParaModal = computed(() => {
+    const q = this.filtroAsignaturasTexto().toLowerCase().trim();
+    const asigs = this.asignaturasDelPlan();
+    if (!q) return asigs;
+    return asigs.filter(
+      (a) =>
+        a.nombre.toLowerCase().includes(q) ||
+        (a.codigo && a.codigo.toLowerCase().includes(q))
+    );
+  });
+
+  readonly docentesFiltradosParaModal = computed(() => {
+    const q = this.filtroDocentesTexto().toLowerCase().trim();
+    const docs = this.docentesDisponibles();
+    if (!q) return docs.slice(0, 10);
+    return docs.filter(
+      (d) =>
+        (d.nombreCompleto && d.nombreCompleto.toLowerCase().includes(q)) ||
+        (d.username && d.username.toLowerCase().includes(q)) ||
+        (d.email && d.email.toLowerCase().includes(q))
+    );
+  });
 
   readonly form = this.fb.group({
     denominacion: ['', [Validators.required, Validators.maxLength(250)]],
@@ -122,6 +165,7 @@ export class AmbitosPracticaComponent implements OnInit {
         responsable: 'Comisión de Carrera / AEA / SGA',
         instrumento: 'Formulario CONEAU (RG-006)',
         ola: 'OLA 1 (Independiente)',
+        dependencia: '',
         completada: tieneAmbitos,
         estado: tieneAmbitos ? 'Completada' : 'Pendiente',
       },
@@ -131,9 +175,9 @@ export class AmbitosPracticaComponent implements OnInit {
         responsable: 'Director de Carrera / Comisión Curricular',
         instrumento: 'Ficha FT-008: Registro de Laboratorios y Talleres',
         ola: 'OLA 2 (Dependiente)',
-        dependencia: 'Requiere Ámbitos maestro (RG-006)',
-        completada: tieneEvaluaciones && this.tieneVinculacionTipo('INTERNO'),
-        estado: tieneEvaluaciones && this.tieneVinculacionTipo('INTERNO') ? 'Completada' : 'Pendiente',
+        dependencia: 'Requiere Ámbitos maestro (RG-006) y Plan de Estudios (8.3)',
+        completada: this.actividadesCompletadas().has('INTERNOS_FT008') || (tieneEvaluaciones && this.tieneVinculacionTipo('INTERNO')),
+        estado: (this.actividadesCompletadas().has('INTERNOS_FT008') || (tieneEvaluaciones && this.tieneVinculacionTipo('INTERNO'))) ? 'Completada' : 'Pendiente',
       },
       {
         id: 'EXTERNOS_FT009' as const,
@@ -141,9 +185,9 @@ export class AmbitosPracticaComponent implements OnInit {
         responsable: 'Secretaría de Extensión / Carrera',
         instrumento: 'Ficha FT-009 y Convenios de Práctica (RG-007)',
         ola: 'OLA 2 (Dependiente)',
-        dependencia: 'Requiere Ámbitos maestro (RG-006) y Convenios vigentes',
-        completada: tieneEvaluaciones && this.tieneVinculacionTipo('EXTERNO'),
-        estado: tieneEvaluaciones && this.tieneVinculacionTipo('EXTERNO') ? 'Completada' : 'Pendiente',
+        dependencia: 'Requiere Ámbitos maestro (RG-006), Convenios vigentes y Plan (8.3)',
+        completada: this.actividadesCompletadas().has('EXTERNOS_FT009') || (tieneEvaluaciones && this.tieneVinculacionTipo('EXTERNO')),
+        estado: (this.actividadesCompletadas().has('EXTERNOS_FT009') || (tieneEvaluaciones && this.tieneVinculacionTipo('EXTERNO'))) ? 'Completada' : 'Pendiente',
       },
       {
         id: 'DEMOSTRATIVAS_FT010' as const,
@@ -151,9 +195,9 @@ export class AmbitosPracticaComponent implements OnInit {
         responsable: 'Área Académica / Dirección de Escuela',
         instrumento: 'Ficha FT-010: Campos Experimentales (Tilimuqui)',
         ola: 'OLA 2 (Dependiente)',
-        dependencia: 'Requiere Ámbitos maestro (RG-006)',
-        completada: tieneEvaluaciones && this.tieneVinculacionTipo('UNIDAD_DEMOSTRATIVA'),
-        estado: tieneEvaluaciones && this.tieneVinculacionTipo('UNIDAD_DEMOSTRATIVA') ? 'Completada' : 'Pendiente',
+        dependencia: 'Requiere Ámbitos maestro (RG-006) y Plan (8.3)',
+        completada: this.actividadesCompletadas().has('DEMOSTRATIVAS_FT010') || (tieneEvaluaciones && this.tieneVinculacionTipo('UNIDAD_DEMOSTRATIVA')),
+        estado: (this.actividadesCompletadas().has('DEMOSTRATIVAS_FT010') || (tieneEvaluaciones && this.tieneVinculacionTipo('UNIDAD_DEMOSTRATIVA'))) ? 'Completada' : 'Pendiente',
       },
       {
         id: 'CAM_FT011' as const,
@@ -161,9 +205,9 @@ export class AmbitosPracticaComponent implements OnInit {
         responsable: 'Dirección CAM / Escuela de Salud / Director Carrera',
         instrumento: 'Ficha FT-011: Habilitación Sanitaria y Convenios Médicos',
         ola: 'OLA 2 (Dependiente)',
-        dependencia: 'Requiere Ámbitos maestro (RG-006) y Convenios hospitalarios',
-        completada: tieneEvaluaciones && this.tieneVinculacionTipo('CAM'),
-        estado: tieneEvaluaciones && this.tieneVinculacionTipo('CAM') ? 'Completada' : 'Pendiente',
+        dependencia: 'Requiere Ámbitos maestro (RG-006), Convenios hospitalarios y Plan (8.3)',
+        completada: this.actividadesCompletadas().has('CAM_FT011') || (tieneEvaluaciones && this.tieneVinculacionTipo('CAM')),
+        estado: (this.actividadesCompletadas().has('CAM_FT011') || (tieneEvaluaciones && this.tieneVinculacionTipo('CAM'))) ? 'Completada' : 'Pendiente',
       },
     ];
 
@@ -219,6 +263,10 @@ export class AmbitosPracticaComponent implements OnInit {
       if (pId) {
         this.procesoId.set(pId);
       }
+      const cId = params.get('carreraId');
+      if (cId) {
+        this.carreraSeleccionadaId.set(cId);
+      }
       const act = params.get('actividad');
       if (
         act === 'MAESTRO_RG006' ||
@@ -229,6 +277,7 @@ export class AmbitosPracticaComponent implements OnInit {
       ) {
         this.actividadSeleccionada.set(act);
       }
+      this.cargarAsignaturasDelPlan();
     });
 
     this.cargarDatosIniciales();
@@ -241,10 +290,10 @@ export class AmbitosPracticaComponent implements OnInit {
       next: (data: CarreraResponse[]) => {
         this.carreras.set(data);
         if (data.length > 0 && !this.carreraSeleccionadaId()) {
-          const agri = data.find((c: CarreraResponse) => c.nombre.toLowerCase().includes('agrimensura'));
-          this.carreraSeleccionadaId.set(agri ? agri.id : data[0].id);
+          this.carreraSeleccionadaId.set(data[0].id);
         }
         this.cargarAutoevaluaciones();
+        this.cargarAsignaturasDelPlan();
       },
       error: () => {},
     });
@@ -259,7 +308,38 @@ export class AmbitosPracticaComponent implements OnInit {
       error: () => {},
     });
 
+    this.cargarDocentes();
     this.cargarAmbitos();
+  }
+
+  cargarDocentes(): void {
+    this.ambitoService.listarDocentes().subscribe({
+      next: (data) => this.docentesDisponibles.set(data),
+      error: () => {},
+    });
+  }
+
+  cargarAsignaturasDelPlan(): void {
+    const carreraId = this.carreraSeleccionadaId();
+    const procesoId = this.procesoId();
+    if (!carreraId && !procesoId) {
+      this.asignaturasDelPlan.set([]);
+      return;
+    }
+
+    this.planService.listarPlanes(carreraId || undefined, procesoId || undefined).subscribe({
+      next: (planes) => {
+        if (planes && planes.length > 0 && planes[0].id) {
+          this.planService.listarAsignaturas(planes[0].id).subscribe({
+            next: (asigs) => this.asignaturasDelPlan.set(asigs),
+            error: () => this.asignaturasDelPlan.set([]),
+          });
+        } else {
+          this.asignaturasDelPlan.set([]);
+        }
+      },
+      error: () => this.asignaturasDelPlan.set([]),
+    });
   }
 
   cargarAmbitos(): void {
@@ -279,7 +359,7 @@ export class AmbitosPracticaComponent implements OnInit {
     const carreraId = this.carreraSeleccionadaId();
     if (!carreraId) return;
 
-    this.ambitoService.listarAutoevaluaciones(carreraId).subscribe({
+    this.ambitoService.listarAutoevaluaciones(carreraId, this.procesoId() || undefined).subscribe({
       next: (data) => this.autoevaluaciones.set(data),
       error: () => {},
     });
@@ -312,6 +392,7 @@ export class AmbitosPracticaComponent implements OnInit {
     const select = event.target as HTMLSelectElement;
     this.carreraSeleccionadaId.set(select.value);
     this.cargarAutoevaluaciones();
+    this.cargarAsignaturasDelPlan();
   }
 
   seleccionarTabMaestro(tipo: TipoCategoriaAmbito): void {
@@ -450,6 +531,8 @@ export class AmbitosPracticaComponent implements OnInit {
   // --- Snapshot Autoevaluación Carrera ---
   abrirModalVinculacion(ambito: AmbitoPractica): void {
     this.ambitoParaVincular.set(ambito);
+    this.filtroAsignaturasTexto.set('');
+    this.filtroDocentesTexto.set('');
     const evaluacionExistente = this.obtenerEvaluacion(ambito.id);
 
     if (evaluacionExistente) {
@@ -460,6 +543,16 @@ export class AmbitosPracticaComponent implements OnInit {
         responsablePractica: evaluacionExistente.responsablePractica || '',
         observaciones: evaluacionExistente.observaciones || '',
       });
+
+      const asigTokens = evaluacionExistente.asignaturasVinculadas
+        ? evaluacionExistente.asignaturasVinculadas.split(/[,;]/).map((s) => s.trim()).filter((s) => s.length > 0)
+        : [];
+      this.asignaturasSeleccionadasChips.set(asigTokens);
+
+      const docTokens = evaluacionExistente.responsablePractica
+        ? evaluacionExistente.responsablePractica.split(/[,;]/).map((s) => s.trim()).filter((s) => s.length > 0)
+        : [];
+      this.docentesSeleccionadosChips.set(docTokens);
     } else {
       this.formVinculacion.reset({
         utilizadoPorCarrera: true,
@@ -468,6 +561,8 @@ export class AmbitosPracticaComponent implements OnInit {
         responsablePractica: '',
         observaciones: '',
       });
+      this.asignaturasSeleccionadasChips.set([]);
+      this.docentesSeleccionadosChips.set([]);
     }
     this.modalVinculacionAbierto.set(true);
   }
@@ -477,20 +572,89 @@ export class AmbitosPracticaComponent implements OnInit {
     this.ambitoParaVincular.set(null);
   }
 
+  isAsignaturaSeleccionada(nombre: string): boolean {
+    return this.asignaturasSeleccionadasChips().includes(nombre);
+  }
+
+  toggleAsignaturaVinculada(nombre: string): void {
+    const current = this.asignaturasSeleccionadasChips();
+    let updated: string[];
+    if (current.includes(nombre)) {
+      updated = current.filter((s) => s !== nombre);
+    } else {
+      updated = [...current, nombre];
+    }
+    this.asignaturasSeleccionadasChips.set(updated);
+    this.formVinculacion.patchValue({ asignaturasVinculadas: updated.join('; ') });
+  }
+
+  removerAsignaturaChip(nombre: string): void {
+    const updated = this.asignaturasSeleccionadasChips().filter((s) => s !== nombre);
+    this.asignaturasSeleccionadasChips.set(updated);
+    this.formVinculacion.patchValue({ asignaturasVinculadas: updated.join('; ') });
+  }
+
+  agregarAsignaturaManual(nombreInput: HTMLInputElement): void {
+    const val = nombreInput.value.trim();
+    if (!val) return;
+    if (!this.asignaturasSeleccionadasChips().includes(val)) {
+      const updated = [...this.asignaturasSeleccionadasChips(), val];
+      this.asignaturasSeleccionadasChips.set(updated);
+      this.formVinculacion.patchValue({ asignaturasVinculadas: updated.join('; ') });
+    }
+    nombreInput.value = '';
+  }
+
+  isDocenteSeleccionado(nombre: string): boolean {
+    return this.docentesSeleccionadosChips().includes(nombre);
+  }
+
+  toggleDocenteResponsable(nombreCompleto: string): void {
+    const current = this.docentesSeleccionadosChips();
+    let updated: string[];
+    if (current.includes(nombreCompleto)) {
+      updated = current.filter((s) => s !== nombreCompleto);
+    } else {
+      updated = [...current, nombreCompleto];
+    }
+    this.docentesSeleccionadosChips.set(updated);
+    this.formVinculacion.patchValue({ responsablePractica: updated.join('; ') });
+  }
+
+  removerDocenteChip(nombre: string): void {
+    const updated = this.docentesSeleccionadosChips().filter((s) => s !== nombre);
+    this.docentesSeleccionadosChips.set(updated);
+    this.formVinculacion.patchValue({ responsablePractica: updated.join('; ') });
+  }
+
+  agregarDocenteManual(nombreInput: HTMLInputElement): void {
+    const val = nombreInput.value.trim();
+    if (!val) return;
+    if (!this.docentesSeleccionadosChips().includes(val)) {
+      const updated = [...this.docentesSeleccionadosChips(), val];
+      this.docentesSeleccionadosChips.set(updated);
+      this.formVinculacion.patchValue({ responsablePractica: updated.join('; ') });
+    }
+    nombreInput.value = '';
+  }
+
   guardarVinculacion(): void {
     const ambito = this.ambitoParaVincular();
     const carreraId = this.carreraSeleccionadaId();
     if (!ambito?.id || !carreraId) return;
 
     const val = this.formVinculacion.value;
+    const asignaturasStr = val.asignaturasVinculadas || this.asignaturasSeleccionadasChips().join('; ');
+    const responsablesStr = val.responsablePractica || this.docentesSeleccionadosChips().join('; ');
+
     const dto: AutoevaluacionCarreraAmbito = {
       carreraId: carreraId,
       procesoId: this.procesoId() || undefined,
       ambitoPracticaId: ambito.id,
       utilizadoPorCarrera: val.utilizadoPorCarrera ?? true,
-      asignaturasVinculadas: val.asignaturasVinculadas || undefined,
+      asignaturasVinculadas: asignaturasStr || undefined,
       actividadesPrevistas: val.actividadesPrevistas || undefined,
-      responsablePractica: val.responsablePractica || undefined,
+      responsablePractica: responsablesStr || undefined,
       observaciones: val.observaciones || undefined,
     };
 
@@ -503,6 +667,51 @@ export class AmbitosPracticaComponent implements OnInit {
       },
       error: (err) => {
         this.errorMessage.set('Error al guardar vinculación: ' + (err.error?.message || err.message));
+      },
+    });
+  }
+
+  isActividadCompletada(actId: string): boolean {
+    return this.actividadesCompletadas().has(actId);
+  }
+
+  completarActividad(actividadCodigo?: string): void {
+    const pId = this.procesoId();
+    const act = actividadCodigo || this.actividadSeleccionada();
+
+    if (!pId) {
+      this.errorMessage.set('Debe seleccionar un proceso o convocatoria de autoevaluación activa para completar la actividad.');
+      return;
+    }
+
+    if (!act || act === 'MAESTRO_RG006') {
+      return;
+    }
+
+    if (!this.tieneAsignaturas()) {
+      this.errorMessage.set(
+        'Precedencia requerida (CONEAU PRG-002): Para vincular y completar los ámbitos de práctica es necesario cargar primero las asignaturas del Plan de Estudios (Actividad 8.3 / FT-001).'
+      );
+      return;
+    }
+
+    this.completandoActividad.set(true);
+    this.errorMessage.set(null);
+
+    this.ambitoService.completarActividadAmbitos(pId, act).subscribe({
+      next: (res) => {
+        this.completandoActividad.set(false);
+        this.successMessage.set(res?.mensaje || 'Actividad completada y validada exitosamente ante CONEAU.');
+        const comp = new Set(this.actividadesCompletadas());
+        comp.add(act);
+        this.actividadesCompletadas.set(comp);
+        this.cargarAutoevaluaciones();
+        setTimeout(() => this.successMessage.set(null), 4000);
+      },
+      error: (err) => {
+        this.completandoActividad.set(false);
+        const msg = err.error?.message || err.message || 'Error al completar la actividad.';
+        this.errorMessage.set(msg);
       },
     });
   }
