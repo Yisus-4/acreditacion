@@ -503,3 +503,17 @@
     cursor: not-allowed;
   }
 }
+
+.correlativas-selector-list {
+  label:hover {
+    background-color: #f3f4f6;
+  }
+}
+
+.badge-correlativa-chip {
+  transition: background-color 0.15s ease;
+
+  button:hover {
+    color: #1e1b4b;
+  }
+}

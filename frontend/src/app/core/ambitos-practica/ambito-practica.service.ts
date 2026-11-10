@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AmbitoPractica, AutoevaluacionCarreraAmbito, TipoCategoriaAmbito } from './ambito-practica.models';
+import { DocenteResumen } from '../planes-estudio/plan-estudio.models';
 
 @Injectable({
   providedIn: 'root',
@@ -46,5 +47,18 @@ export class AmbitoPracticaService {
 
   guardarAutoevaluacion(dto: AutoevaluacionCarreraAmbito): Observable<AutoevaluacionCarreraAmbito> {
     return this.http.post<AutoevaluacionCarreraAmbito>(`${this.baseUrl}/autoevaluacion`, dto);
+  }
+
+  completarActividadAmbitos(procesoId: string, actividad: string): Observable<{ completado: boolean; mensaje: string }> {
+    let params = new HttpParams().set('actividad', actividad);
+    return this.http.post<{ completado: boolean; mensaje: string }>(`${this.baseUrl}/carrera/${procesoId}/completar`, null, { params });
+  }
+
+  listarDocentes(query?: string): Observable<DocenteResumen[]> {
+    let params = new HttpParams();
+    if (query && query.trim()) {
+      params = params.set('query', query.trim());
+    }
+    return this.http.get<DocenteResumen[]>('/api/autoevaluacion/docentes', { params });
   }
 }
