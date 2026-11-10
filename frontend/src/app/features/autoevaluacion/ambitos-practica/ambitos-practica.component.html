@@ -56,6 +56,29 @@
     </div>
   }
 
+  <!-- Precedencia Crítica PRG-002: Plan sin asignaturas -->
+  @if (!tieneAsignaturas()) {
+    <div class="precedencia-warning-banner">
+      <div class="precedencia-icon-wrapper">
+        <svg viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+        </svg>
+      </div>
+      <div class="precedencia-text">
+        <strong>Precedencia requerida (CONEAU PRG-002):</strong>
+        <span> Para vincular y completar los ámbitos de práctica es necesario cargar primero las asignaturas del Plan de Estudios (Actividad 8.3 / FT-001).</span>
+      </div>
+      <a
+        routerLink="/autoevaluacion/estructura-curricular"
+        [queryParams]="{ actividad: 'PLAN_FT001' }"
+        queryParamsHandling="merge"
+        class="btn-ir-plan-precedencia"
+      >
+        <span>Cargar Asignaturas en FT-001 &rarr;</span>
+      </a>
+    </div>
+  }
+
   <!-- NIVEL 1: Listado Oficial de Actividades de la Dimensión -->
   @if (!actividadSeleccionada()) {
     <!-- Toolbar de Búsqueda de Actividades -->
@@ -88,7 +111,7 @@
             <th style="min-width: 220px;">Responsable Sugerido</th>
             <th style="min-width: 200px;">Normativa / Instrumento</th>
             <th style="width: 130px;">Estado</th>
-            <th class="col-acciones" style="width: 140px;">Acción</th>
+            <th class="col-acciones" style="width: 190px;">Acción</th>
           </tr>
         </thead>
         <tbody>
@@ -120,18 +143,31 @@
                     style="width: 7px; height: 7px; border-radius: 50%; display: inline-block;"
                     [style.background-color]="act.completada ? '#166534' : '#5a4a53'"
                   ></span>
-                  {{ act.completada ? 'Completada' : 'Pendiente' }}
+                  {{ act.estado }}
                 </span>
               </td>
               <td class="col-acciones">
-                <button
-                  type="button"
-                  class="btn-nuevo-figma"
-                  style="padding: 6px 14px; font-size: 13px; background: #6b4c5b;"
-                  (click)="seleccionarActividad(act.id)"
-                >
-                  Gestionar
-                </button>
+                <div style="display: flex; gap: 6px; align-items: center; justify-content: flex-end;">
+                  <button
+                    type="button"
+                    class="btn-nuevo-figma"
+                    style="padding: 6px 12px; font-size: 13px; background: #6b4c5b;"
+                    (click)="seleccionarActividad(act.id)"
+                  >
+                    Gestionar
+                  </button>
+                  @if (act.id !== 'MAESTRO_RG006') {
+                    <button
+                      type="button"
+                      class="btn-completar-mini"
+                      [disabled]="!tieneAsignaturas() || completandoActividad() || act.completada"
+                      (click)="completarActividad(act.id)"
+                      [title]="!tieneAsignaturas() ? 'Bloqueado: Plan de estudios sin asignaturas (PRG-002)' : 'Marcar actividad como completada'"
+                    >
+                      {{ act.completada ? '✓' : 'Completar' }}
+                    </button>
+                  }
+                </div>
               </td>
             </tr>
           }
@@ -301,7 +337,7 @@
   <!-- NIVEL 2B: Fichas de Carrera (OLA 2: FT-008, FT-009, FT-010, FT-011) -->
   @if (actividadSeleccionada() && actividadSeleccionada() !== 'MAESTRO_RG006') {
     <div class="banner-actividad-header">
-      <div style="flex: 1 1 500px;">
+      <div style="flex: 1 1 450px;">
         <h2 style="font-size: 18px; font-weight: 700; color: #1f1a1d; margin: 0 0 4px 0;">
           @if (actividadSeleccionada() === 'INTERNOS_FT008') { Ficha FT-008: Ámbitos de Práctica Internos de la Carrera }
           @else if (actividadSeleccionada() === 'EXTERNOS_FT009') { Ficha FT-009: Ámbitos de Práctica Externos de la Carrera }
@@ -313,19 +349,39 @@
         </p>
       </div>
 
-      <!-- Selector de Carrera -->
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <label for="carreraSelect" style="font-size: 13px; font-weight: 600; color: #374151;">Carrera en Evaluación:</label>
-        <select
-          id="carreraSelect"
-          [value]="carreraSeleccionadaId()"
-          (change)="onCarreraChange($event)"
-          style="padding: 8px 12px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13.5px; background: #ffffff; color: #1f2937; font-weight: 500;"
+      <!-- Controles de Carrera y Completar Actividad -->
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <!-- Selector de Carrera -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label for="carreraSelect" style="font-size: 13px; font-weight: 600; color: #374151;">Carrera en Evaluación:</label>
+          <select
+            id="carreraSelect"
+            [value]="carreraSeleccionadaId()"
+            (change)="onCarreraChange($event)"
+            style="padding: 8px 12px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13.5px; background: #ffffff; color: #1f2937; font-weight: 500;"
+          >
+            @for (c of carreras(); track c.id) {
+              <option [value]="c.id">{{ c.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Botón Completar Actividad -->
+        <button
+          type="button"
+          class="btn-completar-actividad"
+          [disabled]="!tieneAsignaturas() || completandoActividad() || isActividadCompletada(actividadSeleccionada()!)"
+          (click)="completarActividad()"
+          [title]="!tieneAsignaturas() ? 'Bloqueado por precedencia PRG-002: Plan sin asignaturas' : 'Validar y completar actividad ante CONEAU'"
         >
-          @for (c of carreras(); track c.id) {
-            <option [value]="c.id">{{ c.nombre }}</option>
+          @if (completandoActividad()) {
+            <span>Validando...</span>
+          } @else if (isActividadCompletada(actividadSeleccionada()!)) {
+            <span>✓ Actividad Completada</span>
+          } @else {
+            <span>Marcar Actividad como Completada</span>
           }
-        </select>
+        </button>
       </div>
     </div>
 
@@ -567,9 +623,77 @@
           </label>
         </div>
 
+        <!-- Asignaturas Curriculares Vinculadas (Multi-select) -->
         <div class="form-group">
           <label>Asignaturas Curriculares Vinculadas *</label>
-          <textarea rows="2" formControlName="asignaturasVinculadas" placeholder="Ej: Topografía I, Cartografía, Geodesia Geométrica, Práctica Profesional"></textarea>
+          <div class="sub-label-helper">
+            Seleccione las materias del plan de estudio que realizan actividades prácticas formativas en este ámbito:
+          </div>
+
+          @if (asignaturasDelPlan().length === 0) {
+            <div class="alerta-sin-asignaturas">
+              <span>⚠️ No se encontraron asignaturas cargadas en el plan de estudio de la carrera.</span>
+              <a
+                routerLink="/autoevaluacion/estructura-curricular"
+                [queryParams]="{ actividad: 'PLAN_FT001' }"
+                queryParamsHandling="merge"
+                (click)="cerrarModalVinculacion()"
+                class="link-cargar-plan"
+              >
+                Cargar asignaturas en FT-001 &rarr;
+              </a>
+            </div>
+          } @else {
+            <div class="search-mini-box">
+              <input
+                type="text"
+                placeholder="Filtrar asignaturas del plan..."
+                [value]="filtroAsignaturasTexto()"
+                (input)="filtroAsignaturasTexto.set($any($event.target).value)"
+              />
+            </div>
+
+            <div class="multiselect-scroll-container">
+              @for (asig of asignaturasFiltradasParaModal(); track asig.id || asig.codigo) {
+                <label class="multiselect-item-label">
+                  <input
+                    type="checkbox"
+                    [checked]="isAsignaturaSeleccionada(asig.nombre)"
+                    (change)="toggleAsignaturaVinculada(asig.nombre)"
+                  />
+                  <span class="item-code">{{ asig.codigo || ('#' + asig.numeroOrden) }}</span>
+                  <span class="item-name">{{ asig.nombre }}</span>
+                  <span class="item-group">({{ asig.subgrupo || asig.grupo || 'Plan' }})</span>
+                </label>
+              }
+            </div>
+          }
+
+          <!-- Fallback de entrada manual -->
+          <div class="manual-input-row" style="display: flex; gap: 8px; margin-top: 6px;">
+            <input
+              #manualAsigInput
+              type="text"
+              placeholder="O ingresar otra asignatura manual..."
+              style="flex: 1;"
+              (keydown.enter)="$event.preventDefault(); agregarAsignaturaManual(manualAsigInput)"
+            />
+            <button type="button" class="btn-agregar-manual" (click)="agregarAsignaturaManual(manualAsigInput)">
+              + Agregar
+            </button>
+          </div>
+
+          <!-- Badges de asignaturas seleccionadas -->
+          @if (asignaturasSeleccionadasChips().length > 0) {
+            <div class="chips-container">
+              @for (chip of asignaturasSeleccionadasChips(); track chip) {
+                <span class="badge-asig-chip">
+                  {{ chip }}
+                  <button type="button" (click)="removerAsignaturaChip(chip)" title="Quitar">✕</button>
+                </span>
+              }
+            </div>
+          }
         </div>
 
         <div class="form-group">
@@ -577,9 +701,68 @@
           <textarea rows="2" formControlName="actividadesPrevistas" placeholder="Trabajos de campo, mediciones catastrales, simulaciones clínicas..."></textarea>
         </div>
 
+        <!-- Docente(s) Responsable(s) Multi-select -->
         <div class="form-group">
-          <label>Docente Responsable / Coordinador de la Práctica</label>
-          <input type="text" formControlName="responsablePractica" placeholder="Nombre y apellido del profesor a cargo" />
+          <label>Docente(s) Responsable(s) / Coordinador de la Práctica</label>
+          <div class="sub-label-helper">
+            Busque y seleccione el/los docentes universitarios a cargo del ámbito o de las comisiones de práctica:
+          </div>
+
+          <div class="search-mini-box">
+            <input
+              type="text"
+              placeholder="Buscar docente por apellido, nombre o usuario..."
+              [value]="filtroDocentesTexto()"
+              (input)="filtroDocentesTexto.set($any($event.target).value)"
+            />
+          </div>
+
+          @if (docentesFiltradosParaModal().length > 0) {
+            <div class="multiselect-scroll-container docentes-list">
+              @for (doc of docentesFiltradosParaModal(); track doc.id) {
+                <div class="docente-item-row" (click)="toggleDocenteResponsable(doc.nombreCompleto)">
+                  <input
+                    type="checkbox"
+                    [checked]="isDocenteSeleccionado(doc.nombreCompleto)"
+                    (click)="$event.stopPropagation()"
+                    (change)="toggleDocenteResponsable(doc.nombreCompleto)"
+                  />
+                  <div class="docente-info">
+                    <span class="docente-nombre">{{ doc.nombreCompleto }}</span>
+                    <span class="docente-meta">
+                      {{ doc.email || doc.username }} @if (doc.unidadAcademicaNombre) { • {{ doc.unidadAcademicaNombre }} }
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Fallback de entrada manual de docente -->
+          <div class="manual-input-row" style="display: flex; gap: 8px; margin-top: 6px;">
+            <input
+              #manualDocInput
+              type="text"
+              placeholder="O ingresar nombre y apellido manual..."
+              style="flex: 1;"
+              (keydown.enter)="$event.preventDefault(); agregarDocenteManual(manualDocInput)"
+            />
+            <button type="button" class="btn-agregar-manual" (click)="agregarDocenteManual(manualDocInput)">
+              + Agregar
+            </button>
+          </div>
+
+          <!-- Badges de docentes seleccionados -->
+          @if (docentesSeleccionadosChips().length > 0) {
+            <div class="chips-container">
+              @for (chip of docentesSeleccionadosChips(); track chip) {
+                <span class="badge-docente-chip">
+                  {{ chip }}
+                  <button type="button" (click)="removerDocenteChip(chip)" title="Quitar">✕</button>
+                </span>
+              }
+            </div>
+          }
         </div>
 
         <div class="form-group">
