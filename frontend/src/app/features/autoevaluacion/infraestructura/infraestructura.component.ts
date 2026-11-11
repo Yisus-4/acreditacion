@@ -87,28 +87,17 @@ export class InfraestructuraComponent implements OnInit {
 
   readonly espacioExpandidoId = signal<string | null>(null);
 
-  // Permisos y Roles
-  readonly puedeGestionarInfraestructura = computed(() => {
-    if (!this.auth.isAuthenticated) return true;
-    return this.auth.hasAnyRole(
-      'ADMINISTRATOR',
-      'ADMIN',
-      'AEA',
-      'INFRAESTRUCTURA',
-      'BEDELIA',
-      'DIRECTOR_CARRERA',
-      'CAREER_DIRECTOR',
-      'COMISION_AUTOEVALUACION'
-    );
-  });
+  // Permisos y Roles (Strict Granular Roles)
+  readonly esAdmin = computed(() => this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN'));
+  readonly puedeExtenderPlazo = computed(() => this.esAdmin() || this.auth.hasAnyRole('AEA'));
+  readonly puedeEditarInfraestructura = computed(() => this.esAdmin() || this.auth.hasAnyRole('INFRAESTRUCTURA'));
+  readonly puedeEditarBedelia = computed(() => this.esAdmin() || this.auth.hasAnyRole('BEDELIA'));
+  readonly puedeModificarHigieneSeguridad = computed(() => this.esAdmin() || this.auth.hasAnyRole('HIGIENE_SEGURIDAD'));
+  readonly puedeGestionarAlgunoEnInmueble = computed(() => this.puedeEditarInfraestructura() || this.puedeEditarBedelia() || this.puedeModificarHigieneSeguridad());
+  readonly puedeGestionarInfraestructura = computed(() => this.puedeEditarInfraestructura());
 
   readonly esRolHigiene = computed(() => {
     return this.auth.hasRole('HIGIENE_SEGURIDAD');
-  });
-
-  readonly puedeModificarHigieneSeguridad = computed(() => {
-    if (!this.auth.isAuthenticated) return true;
-    return this.auth.hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD');
   });
 
   // Modal Extensión de Plazo (PT-001)
@@ -423,10 +412,11 @@ export class InfraestructuraComponent implements OnInit {
   }
 
   cargarEstadoInfraestructuraCarrera(): void {
-    const pId =
-      this.contextService.procesoIdActivo() ||
-      this.procesoId() ||
-      'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
+    const pId = this.contextService.procesoIdActivo() || this.procesoId();
+    if (!pId) {
+      this.infraestructuraConfirmadaCarrera.set(false);
+      return;
+    }
     const convId = this.contextService.convocatoriaSeleccionadaId();
     const carId = this.contextService.carreraSeleccionadaId();
 
@@ -534,6 +524,7 @@ export class InfraestructuraComponent implements OnInit {
   }
 
   abrirFormularioNuevo(): void {
+    this.form.enable();
     this.modoEdicion.set(false);
     this.inmuebleEditandoId.set(null);
     this.form.reset({
@@ -592,6 +583,12 @@ export class InfraestructuraComponent implements OnInit {
       estadoConeau: inm.estadoConeau || 'CARGADO',
       carrerasIds: inm.carreras ? inm.carreras.map((c) => c.id) : [],
     });
+
+    if (!this.puedeEditarInfraestructura()) {
+      this.form.disable();
+    } else {
+      this.form.enable();
+    }
 
     if (inm.provinciaId) {
       this.cargarDepartamentos(inm.provinciaId);
@@ -940,7 +937,7 @@ export class InfraestructuraComponent implements OnInit {
     }
 
     this.submitting.set(true);
-    const val = this.form.value;
+    const val = this.form.getRawValue();
 
     const req: RegistrarInmuebleRequest = {
       sedeId: val.sedeId,
@@ -1048,7 +1045,11 @@ export class InfraestructuraComponent implements OnInit {
   }
 
   confirmarExtensionPlazo(): void {
-    const pId = this.procesoId() || this.contextService.procesoIdActivo() || 'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
+    const pId = this.contextService.procesoIdActivo() || this.procesoId();
+    if (!pId) {
+      this.notif.mostrar(this.errorMessage, 'No se pudo identificar el proceso activo para extender el plazo.', 6000);
+      return;
+    }
     const nuevaFecha = this.nuevaFechaLimite();
     if (!nuevaFecha) return;
 
@@ -1072,7 +1073,11 @@ export class InfraestructuraComponent implements OnInit {
   // ---------------------------------------------------------------------------
 
   remitirADeaPorProceso(): void {
-    const pId = this.contextService.procesoIdActivo() || this.procesoId() || 'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
+    const pId = this.contextService.procesoIdActivo() || this.procesoId();
+    if (!pId) {
+      this.notif.mostrar(this.errorMessage, 'No se pudo identificar el proceso activo.', 6000);
+      return;
+    }
     const convId = this.contextService.convocatoriaSeleccionadaId();
     const carId = this.contextService.carreraSeleccionadaId();
     this.procesoId.set(pId);
@@ -1107,8 +1112,14 @@ export class InfraestructuraComponent implements OnInit {
   // ---------------------------------------------------------------------------
 
   cargarGuiaHigiene(): void {
+    const pId = this.contextService.procesoIdActivo() || this.procesoId();
+    if (!pId) {
+      return;
+    }
+    if (this.loadingHigiene()) {
+      return; // Debounce concurrent calls
+    }
     this.loadingHigiene.set(true);
-    const pId = this.procesoId() || 'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
 
     this.autoevalService.obtenerGuiaHigienePorProceso(pId)
       .pipe(
@@ -1126,9 +1137,14 @@ export class InfraestructuraComponent implements OnInit {
               observaciones: guia.observaciones || '',
             });
           }
+          if (!this.puedeModificarHigieneSeguridad()) {
+            this.formHigiene.disable();
+          } else {
+            this.formHigiene.enable();
+          }
         },
         error: () => {
-          this.errorMessage.set('Error al cargar la Guía de Higiene y Seguridad (GT-003)');
+          this.notif.mostrar(this.errorMessage, 'Error al cargar la Guía de Higiene y Seguridad (GT-003).', 6000);
         },
       });
   }
@@ -1227,7 +1243,11 @@ export class InfraestructuraComponent implements OnInit {
   }
 
   remitirHigieneADea(): void {
-    const pId = this.procesoId() || this.contextService.procesoIdActivo() || 'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
+    const pId = this.contextService.procesoIdActivo() || this.procesoId();
+    if (!pId) {
+      this.notif.mostrar(this.errorMessage, 'Debe seleccionar un proceso de acreditación para remitir la Guía de Higiene y Seguridad.', 6000);
+      return;
+    }
     this.autoevalService.verificarYRemitirHigienePorProceso(pId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
