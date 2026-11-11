@@ -136,7 +136,7 @@ public class PlanEstudioController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<PlanEstudioFt001Dto> crear(@RequestBody PlanEstudioFt001Dto dto) {
         if (dto.carreraId() == null) {
@@ -149,6 +149,13 @@ public class PlanEstudioController {
         plan.setId(dto.id() != null ? dto.id() : UUID.randomUUID());
         plan.setCarrera(carrera);
         mapearDatosPlan(plan, dto);
+        if (plan.getProcesoId() != null && procesoRepository.findById(plan.getProcesoId()).isEmpty()) {
+            UUID resolvedProcesoId = procesoRepository.findByCarreraIdAndEstadoIn(
+                    carrera.getId(),
+                    List.of("EN_PREPARACION", "INICIADO", "CONFIRMADA", "PENDIENTE_DIRECTOR_ESCUELA", "EN_CURSO", "EN_FUNCIONAMIENTO")
+            ).map(ProcesoAcreditacionJpaEntity::getId).orElse(null);
+            plan.setProcesoId(resolvedProcesoId);
+        }
         Instant now = Instant.now();
         plan.setCreadoEn(now);
         plan.setActualizadoEn(now);
@@ -171,13 +178,21 @@ public class PlanEstudioController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<PlanEstudioFt001Dto> actualizar(@PathVariable UUID id, @RequestBody PlanEstudioFt001Dto dto) {
         PlanEstudioFt001JpaEntity plan = planRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el plan de estudio con ID: " + id));
 
         mapearDatosPlan(plan, dto);
+        if (plan.getProcesoId() != null && procesoRepository.findById(plan.getProcesoId()).isEmpty()) {
+            UUID carreraId = plan.getCarrera() != null ? plan.getCarrera().getId() : dto.carreraId();
+            UUID resolvedProcesoId = carreraId != null ? procesoRepository.findByCarreraIdAndEstadoIn(
+                    carreraId,
+                    List.of("EN_PREPARACION", "INICIADO", "CONFIRMADA", "PENDIENTE_DIRECTOR_ESCUELA", "EN_CURSO", "EN_FUNCIONAMIENTO")
+            ).map(ProcesoAcreditacionJpaEntity::getId).orElse(null) : null;
+            plan.setProcesoId(resolvedProcesoId);
+        }
         plan.setActualizadoEn(Instant.now());
 
         PlanEstudioFt001JpaEntity actualizado = planRepository.save(plan);
@@ -185,7 +200,7 @@ public class PlanEstudioController {
     }
 
     @PostMapping("/{planId}/asignaturas")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     public ResponseEntity<ActividadCurricularPlanDto> crearAsignatura(
             @PathVariable UUID planId,
             @RequestBody CrearAsignaturaRequest request
@@ -195,7 +210,7 @@ public class PlanEstudioController {
     }
 
     @PutMapping("/{planId}/asignaturas/{asigId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     public ResponseEntity<ActividadCurricularPlanDto> actualizarAsignatura(
             @PathVariable UUID planId,
             @PathVariable UUID asigId,
@@ -206,7 +221,7 @@ public class PlanEstudioController {
     }
 
     @DeleteMapping("/{planId}/asignaturas/{asigId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     public ResponseEntity<Void> eliminarAsignatura(
             @PathVariable UUID planId,
             @PathVariable UUID asigId

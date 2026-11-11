@@ -144,7 +144,12 @@ export const routes: Routes = [
   {
     path: 'autoevaluacion',
     pathMatch: 'full',
-    redirectTo: 'autoevaluacion/infraestructura',
+    title: 'Autoevaluación Institucional por Convocatorias — UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/autoevaluacion/convocatorias-hub/autoevaluacion-convocatorias-hub.component'
+      ).then((m) => m.AutoevaluacionConvocatoriasHubComponent),
   },
   {
     path: 'autoevaluacion/infraestructura',

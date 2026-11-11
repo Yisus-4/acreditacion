@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Auth } from '../../../core/auth/auth';
 import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoevaluacion-context.service';
 
 @Component({
@@ -51,12 +52,13 @@ import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoe
           </div>
         </div>
 
-        @if (contextService.convocatoriaSeleccionadaId()) {
+        @if (esAeaOAdmin() && procesoIdCarrera()) {
           <div class="context-actions">
             <a
-              [routerLink]="['/convocatorias', contextService.convocatoriaSeleccionadaId(), 'plan-trabajo']"
+              [routerLink]="['/acreditacion/convocatorias', procesoIdCarrera()]"
+              [queryParams]="{ tab: 'PLAN_TRABAJO' }"
               class="btn-pt001"
-              title="Ver Plan de Trabajo y Cronograma PT-001"
+              title="Ver Plan de Trabajo y Cronograma PT-001 de la carrera convocada"
             >
               <svg
                 class="icon-pt"
@@ -284,6 +286,15 @@ import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoe
 export class SubnavAutoevaluacionComponent implements OnInit {
   readonly seccionActual = input<string>('');
   readonly contextService = inject(AutoevaluacionContextService);
+  private readonly auth = inject(Auth);
+
+  readonly esAeaOAdmin = computed(() => {
+    return this.auth.hasAnyRole('AEA', 'ADMINISTRATOR', 'ADMIN');
+  });
+
+  readonly procesoIdCarrera = computed(() => {
+    return this.contextService.procesoIdActivo() || this.contextService.convocatoriaSeleccionadaId();
+  });
 
   ngOnInit(): void {
     this.contextService.inicializarContexto().subscribe();

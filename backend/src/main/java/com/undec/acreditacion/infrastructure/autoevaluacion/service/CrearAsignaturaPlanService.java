@@ -53,6 +53,7 @@ public class CrearAsignaturaPlanService {
         }
 
         validarHoras(request.horasReloj(), request.horasPresenciales(), request.horasNoPresenciales());
+        validarCorrelativasConAsignaturasPrevias(planId, request.correlativas());
 
         if (request.codigo() != null && !request.codigo().trim().isEmpty()) {
             String codigo = request.codigo().trim();
@@ -92,6 +93,20 @@ public class CrearAsignaturaPlanService {
             (horasPresenciales != null && horasPresenciales < 0) ||
             (horasNoPresenciales != null && horasNoPresenciales < 0)) {
             throw new DomainValidationException("Las horas deben ser valores numéricos positivos o cero.");
+        }
+    }
+
+    private void validarCorrelativasConAsignaturasPrevias(UUID planId, String correlativas) {
+        if (correlativas == null || correlativas.trim().isEmpty() ||
+            "Sin correlativas previas".equalsIgnoreCase(correlativas.trim())) {
+            return;
+        }
+        List<ActividadCurricularPlanJpaEntity> existentes =
+                asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId);
+        if (existentes == null || existentes.isEmpty()) {
+            throw new DomainValidationException(
+                    "No se pueden asignar correlativas si no existen asignaturas cargadas previamente en el plan de estudio."
+            );
         }
     }
 

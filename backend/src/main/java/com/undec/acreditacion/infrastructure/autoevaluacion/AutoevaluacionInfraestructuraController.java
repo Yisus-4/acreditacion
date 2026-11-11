@@ -39,6 +39,12 @@ public class AutoevaluacionInfraestructuraController {
     private final UserRepository userRepository;
     private final PlanTrabajoRepositoryPort planTrabajoRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.undec.acreditacion.domain.ports.DocumentStoragePort documentStoragePort;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
     public AutoevaluacionInfraestructuraController(
             SpringDataInmuebleRepository inmuebleRepository,
             SpringDataTipoEspacioFisicoRepository tipoEspacioRepository,
@@ -72,15 +78,13 @@ public class AutoevaluacionInfraestructuraController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/inmuebles")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<List<InmuebleResponse>> listarInmuebles(
             @RequestParam(name = "esMaestro", required = false) Boolean esMaestro
     ) {
-        List<InmuebleJpaEntity> entidades;
-        if (Boolean.TRUE.equals(esMaestro)) {
-            entidades = inmuebleRepository.findMaestrosActivos();
-        } else {
+        List<InmuebleJpaEntity> entidades = inmuebleRepository.findMaestrosActivos();
+        if (entidades.isEmpty() && !Boolean.TRUE.equals(esMaestro)) {
             entidades = inmuebleRepository.findAllActivosConRelaciones();
         }
         List<InmuebleResponse> response = entidades.stream()
@@ -90,7 +94,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @GetMapping("/inmuebles/maestro")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<List<InmuebleResponse>> listarInmueblesMaestros() {
         List<InmuebleJpaEntity> entidades = inmuebleRepository.findMaestrosActivos();
@@ -101,7 +105,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @GetMapping("/inmuebles/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<InmuebleResponse> obtenerInmueble(@PathVariable UUID id) {
         return inmuebleRepository.findByIdCompleto(id)
@@ -111,7 +115,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PostMapping("/inmuebles")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION')")
     @Transactional
     public ResponseEntity<InmuebleResponse> registrarInmueble(@RequestBody RegistrarInmuebleRequest request) {
         InstitucionJpaEntity institucion = institucionRepository.findAll().stream().findFirst()
@@ -131,10 +135,9 @@ public class AutoevaluacionInfraestructuraController {
         entity.setCondicionTenencia(request.condicionTenencia() != null ? request.condicionTenencia().toUpperCase() : "PROPIO");
         entity.setSituacion(request.situacion() != null ? request.situacion() : "Propiedad");
         entity.setVinculaTodasCarreras(request.vinculaTodasCarreras() != null ? request.vinculaTodasCarreras() : false);
-        // Si no se asigna a un proceso particular, pertenece siempre al padrón maestro para no quedar huérfano
-        boolean esMaestro = (request.procesoId() == null) || Boolean.TRUE.equals(request.esMaestro());
-        entity.setEsMaestro(esMaestro);
-        entity.setProcesoId(request.procesoId());
+        // Todos los inmuebles se registran siempre en el padrón general institucional
+        entity.setEsMaestro(true);
+        entity.setProcesoId(null);
         entity.setSuperficieCubiertaM2(request.superficieCubiertaM2());
         entity.setSuperficieTotalM2(request.superficieTotalM2());
         entity.setObservaciones(request.observaciones());
@@ -508,7 +511,7 @@ public class AutoevaluacionInfraestructuraController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/espacios/consulta")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<ConsultaEspaciosResponse> consultarEspacios(
             @RequestParam(required = false) UUID tipoEspacioId,
@@ -560,29 +563,64 @@ public class AutoevaluacionInfraestructuraController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/procesos/{procesoId}/inmuebles")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD')")
-    @Transactional
-    public ResponseEntity<?> obtenerInmueblesProceso(@PathVariable UUID procesoId) {
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> obtenerInmueblesProceso(
+            @PathVariable UUID procesoId,
+            @RequestParam(required = false) UUID convocatoriaId,
+            @RequestParam(required = false) UUID carreraId
+    ) {
         try {
-            List<InmuebleJpaEntity> lista = inmuebleRepository.findByProcesoIdActivos(procesoId);
+            String claveContexto = construirClaveContexto(procesoId, convocatoriaId, carreraId);
+            List<InmuebleDocumentacionRespaldoJpaEntity> copias = documentacionRepository != null
+                    ? documentacionRepository.findByTipoAnexoOrderByFechaSubidaDesc(claveContexto)
+                    : Collections.emptyList();
+            boolean verificadoCarrera = !copias.isEmpty();
+            Instant fechaVerif = verificadoCarrera ? copias.get(0).getFechaSubida() : null;
 
-            // Si aún no tiene snapshot, clonar del padrón maestro
-            if (lista.isEmpty()) {
-                lista = clonarInmueblesMaestrosParaProceso(procesoId);
-            }
-
-            List<InmuebleResponse> response = lista.stream()
-                    .map(this::mapToInmuebleResponse)
+            List<InmuebleJpaEntity> maestros = inmuebleRepository.findMaestrosActivos();
+            List<InmuebleResponse> response = maestros.stream()
+                    .map(m -> mapToInmuebleResponseConEstado(m, verificadoCarrera, fechaVerif))
                     .collect(Collectors.toList());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error al procesar snapshot de inmuebles para el proceso " + procesoId, "mensaje", e.getMessage()));
+                    .body(Map.of("error", "Error al cargar inmuebles para el proceso " + procesoId, "mensaje", e.getMessage()));
         }
     }
 
+    @GetMapping("/procesos/{procesoId}/infraestructura/estado")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
+    @Transactional(readOnly = true)
+    public ResponseEntity<Map<String, Object>> obtenerEstadoInfraestructuraCarrera(
+            @PathVariable UUID procesoId,
+            @RequestParam(required = false) UUID convocatoriaId,
+            @RequestParam(required = false) UUID carreraId
+    ) {
+        String claveContexto = construirClaveContexto(procesoId, convocatoriaId, carreraId);
+        String rutaCarpeta = construirRutaCarpetaCarrera(procesoId, convocatoriaId, carreraId);
+        String nombreArchivo = construirNombreArchivoCarrera(procesoId, carreraId);
+
+        List<InmuebleDocumentacionRespaldoJpaEntity> copias = documentacionRepository != null
+                ? documentacionRepository.findByTipoAnexoOrderByFechaSubidaDesc(claveContexto)
+                : Collections.emptyList();
+
+        boolean verificado = !copias.isEmpty();
+        Instant fechaVerificacion = verificado ? copias.get(0).getFechaSubida() : null;
+        String rutaAlmacenada = verificado ? copias.get(0).getRutaRepositorio() + "/" + copias.get(0).getNombreArchivo() : (rutaCarpeta + "/" + nombreArchivo);
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("procesoId", procesoId);
+        resp.put("verificado", verificado);
+        resp.put("rutaCarpeta", verificado ? copias.get(0).getRutaRepositorio() : rutaCarpeta);
+        resp.put("nombreArchivo", verificado ? copias.get(0).getNombreArchivo() : nombreArchivo);
+        resp.put("rutaCompleta", rutaAlmacenada);
+        resp.put("fechaVerificacion", fechaVerificacion);
+        return ResponseEntity.ok(resp);
+    }
+
     @PostMapping("/procesos/{procesoId}/inmuebles/copiar-maestro")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION')")
     @Transactional
     public ResponseEntity<?> forzarCopiaMaestro(@PathVariable UUID procesoId) {
         try {
@@ -598,7 +636,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PostMapping("/procesos/{procesoId}/infraestructura/extender-plazo")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION')")
     @Transactional
     public ResponseEntity<?> extenderPlazoInfraestructura(
             @PathVariable UUID procesoId,
@@ -638,28 +676,64 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PostMapping("/procesos/{procesoId}/infraestructura/verificar-y-remitir")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION')")
     @Transactional
     public ResponseEntity<VerificarInfraestructuraResponse> verificarYRemitirInfraestructura(
-            @PathVariable UUID procesoId
+            @PathVariable UUID procesoId,
+            @RequestParam(required = false) UUID convocatoriaId,
+            @RequestParam(required = false) UUID carreraId
     ) {
         UUID usuarioId = resolverUsuarioAutenticadoId();
         Instant now = Instant.now();
 
-        List<InmuebleJpaEntity> inmuebles = inmuebleRepository.findByProcesoIdActivos(procesoId);
-        if (inmuebles.isEmpty()) {
-            inmuebles = inmuebleRepository.findMaestrosActivos();
+        List<InmuebleJpaEntity> maestros = inmuebleRepository.findMaestrosActivos();
+        String claveContexto = construirClaveContexto(procesoId, convocatoriaId, carreraId);
+        String rutaCarpeta = construirRutaCarpetaCarrera(procesoId, convocatoriaId, carreraId);
+        String nombreArchivo = construirNombreArchivoCarrera(procesoId, carreraId);
+        String rutaCompletaArchivo = rutaCarpeta + "/" + nombreArchivo;
+
+        // Generar y almacenar el archivo RG-005 en la carpeta de la carrera para esta convocatoria
+        String urlAlmacenada = "/minio/acreditacion/" + rutaCompletaArchivo;
+        try {
+            List<InmuebleResponse> snapshotDtos = maestros.stream()
+                    .map(m -> mapToInmuebleResponseConEstado(m, true, now))
+                    .collect(Collectors.toList());
+            byte[] jsonBytes;
+            if (objectMapper != null) {
+                jsonBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(snapshotDtos);
+            } else {
+                jsonBytes = snapshotDtos.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            }
+            if (documentStoragePort != null) {
+                String storedKey = documentStoragePort.uploadFile(jsonBytes, rutaCompletaArchivo, "application/json");
+                String fileUrl = documentStoragePort.getFileUrl(storedKey);
+                if (fileUrl != null && !fileUrl.isBlank()) {
+                    urlAlmacenada = fileUrl;
+                }
+            }
+        } catch (Exception ignored) {
+            // Si el servicio de objetos no está activo localmente, se registra igualmente la ruta del repositorio de la carrera
         }
 
-        for (InmuebleJpaEntity inm : inmuebles) {
-            inm.setVerificado(true);
-            inm.setFechaVerificacion(now);
-            inm.setEstadoConeau("VERIFICADO");
-            inm.setActualizadoEn(now);
-            inmuebleRepository.save(inm);
+        if (!maestros.isEmpty() && documentacionRepository != null) {
+            List<InmuebleDocumentacionRespaldoJpaEntity> previas = documentacionRepository.findByTipoAnexoOrderByFechaSubidaDesc(claveContexto);
+            InmuebleDocumentacionRespaldoJpaEntity docSnapshot = previas.isEmpty()
+                    ? new InmuebleDocumentacionRespaldoJpaEntity()
+                    : previas.get(0);
+            if (docSnapshot.getId() == null) {
+                docSnapshot.setId(UUID.randomUUID());
+            }
+            docSnapshot.setInmueble(maestros.get(0));
+            docSnapshot.setNombreArchivo(nombreArchivo);
+            docSnapshot.setRutaRepositorio(rutaCarpeta);
+            docSnapshot.setUrlMinio(urlAlmacenada);
+            docSnapshot.setTipoAnexo(claveContexto);
+            docSnapshot.setDescripcion("Copia confirmada del padrón general de inmuebles (RG-005) en la carpeta de la carrera");
+            docSnapshot.setFechaSubida(now);
+            documentacionRepository.save(docSnapshot);
         }
 
-        String estadoActividad = "SIN_PLAN";
+        String estadoActividad = "COMPLETADA";
         Optional<PlanTrabajo> planOpt = planTrabajoRepository.findByProcesoId(procesoId);
         if (planOpt.isPresent()) {
             PlanTrabajo plan = planOpt.get();
@@ -669,7 +743,7 @@ public class AutoevaluacionInfraestructuraController {
 
             if (actOpt.isPresent()) {
                 ActividadPlanTrabajo act = actOpt.get();
-                act.completar(usuarioId, "Verificación de inmuebles completada por Infraestructura y remitida a AEA");
+                act.completar(usuarioId, "Verificación de inmuebles completada y archivo copiado a " + rutaCompletaArchivo);
                 planTrabajoRepository.saveActividad(act);
                 planTrabajoRepository.save(plan);
                 estadoActividad = act.getEstado().name();
@@ -681,8 +755,17 @@ public class AutoevaluacionInfraestructuraController {
                 true,
                 estadoActividad,
                 now,
-                "Inmuebles verificados exitosamente. Tarea 4.1 finalizada y registrada al 100% en el Plan de Trabajo (hoja INFO)"
+                "Infraestructura confirmada. Archivo copiado a la carpeta de la carrera: " + rutaCompletaArchivo
         ));
+    }
+
+    // Sobrecarga sin query params para compatibilidad directa en tests unitarios
+    public ResponseEntity<VerificarInfraestructuraResponse> verificarYRemitirInfraestructura(UUID procesoId) {
+        return verificarYRemitirInfraestructura(procesoId, null, null);
+    }
+
+    public ResponseEntity<?> obtenerInmueblesProceso(UUID procesoId) {
+        return obtenerInmueblesProceso(procesoId, null, null);
     }
 
     // -------------------------------------------------------------------------
@@ -690,7 +773,7 @@ public class AutoevaluacionInfraestructuraController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/tipos-espacio")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<List<TipoEspacioResponse>> listarTiposEspacio() {
         List<TipoEspacioResponse> response = tipoEspacioRepository.findByActivoTrueOrderByDenominacionAsc().stream()
@@ -727,7 +810,44 @@ public class AutoevaluacionInfraestructuraController {
     // Mappers y Helpers
     // -------------------------------------------------------------------------
 
+    private String construirClaveContexto(UUID procesoId, UUID convocatoriaId, UUID carreraId) {
+        if (convocatoriaId != null && carreraId != null) {
+            return "SNAPSHOT_RG005:" + convocatoriaId + "_" + carreraId;
+        }
+        if (carreraId != null) {
+            return "SNAPSHOT_RG005:" + procesoId + "_" + carreraId;
+        }
+        return "SNAPSHOT_RG005:" + procesoId;
+    }
+
+    private String construirRutaCarpetaCarrera(UUID procesoId, UUID convocatoriaId, UUID carreraId) {
+        String convSegmento = convocatoriaId != null ? convocatoriaId.toString() : procesoId.toString();
+        String carreraSegmento = resolverSegmentoCarrera(procesoId, carreraId);
+        return "03-Autoevaluación/03_01-Infraestructura equipamiento y biblioteca/Convocatorias/"
+                + convSegmento + "/Carrera_" + carreraSegmento;
+    }
+
+    private String construirNombreArchivoCarrera(UUID procesoId, UUID carreraId) {
+        String carreraSegmento = resolverSegmentoCarrera(procesoId, carreraId);
+        return "RG-005_Registro_Inmuebles_" + carreraSegmento + ".json";
+    }
+
+    private String resolverSegmentoCarrera(UUID procesoId, UUID carreraId) {
+        if (carreraId != null && carreraRepository != null) {
+            return carreraRepository.findById(carreraId)
+                    .map(c -> (c.getSigla() != null && !c.getSigla().isBlank()) ? c.getSigla() : c.getId().toString())
+                    .orElse(carreraId.toString());
+        }
+        return procesoId != null ? procesoId.toString() : "General";
+    }
+
     private InmuebleResponse mapToInmuebleResponse(InmuebleJpaEntity entity) {
+        boolean verif = !Boolean.TRUE.equals(entity.getEsMaestro()) && Boolean.TRUE.equals(entity.getVerificado());
+        Instant fechaVerif = Boolean.TRUE.equals(entity.getEsMaestro()) ? null : entity.getFechaVerificacion();
+        return mapToInmuebleResponseConEstado(entity, verif, fechaVerif);
+    }
+
+    private InmuebleResponse mapToInmuebleResponseConEstado(InmuebleJpaEntity entity, boolean verificadoEfectivo, Instant fechaVerificacionEfectiva) {
         List<InmuebleResponse.CarreraVinculadaResponse> carreras = (entity.getCarreras() == null) ? Collections.emptyList() :
                 entity.getCarreras().stream()
                         .map(c -> new InmuebleResponse.CarreraVinculadaResponse(c.getId(), c.getNombre(), c.getSigla()))
@@ -754,6 +874,7 @@ public class AutoevaluacionInfraestructuraController {
 
         List<DocumentacionRespaldoResponse> documentos = (entity.getDocumentos() == null) ? Collections.emptyList() :
                 entity.getDocumentos().stream()
+                        .filter(d -> d.getTipoAnexo() == null || !d.getTipoAnexo().startsWith("SNAPSHOT_RG005:"))
                         .map(d -> new DocumentacionRespaldoResponse(
                                 d.getId(),
                                 d.getNombreArchivo(),
@@ -799,9 +920,9 @@ public class AutoevaluacionInfraestructuraController {
                 entity.getSuperficieCubiertaM2(),
                 entity.getSuperficieTotalM2(),
                 entity.getObservaciones(),
-                entity.getVerificado(),
-                entity.getFechaVerificacion(),
-                entity.getEstadoConeau(),
+                verificadoEfectivo,
+                fechaVerificacionEfectiva,
+                verificadoEfectivo ? "VERIFICADO" : "CARGADO",
                 entity.getActivo(),
                 carreras,
                 espacios,

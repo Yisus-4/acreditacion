@@ -15,7 +15,10 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.Map;
 
-@RestControllerAdvice(basePackages = "com.undec.acreditacion.infrastructure.web")
+@RestControllerAdvice(basePackages = {
+        "com.undec.acreditacion.infrastructure.web",
+        "com.undec.acreditacion.infrastructure.autoevaluacion"
+})
 public class ConvocatoriaExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ConvocatoriaExceptionHandler.class);
@@ -62,7 +65,7 @@ public class ConvocatoriaExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, String>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", "El archivo excede el tamaño máximo permitido de 20 MB"));
+                .body(Map.of("error", "El archivo excede el tamaño máximo permitido de 50 MB"));
     }
 
     @ExceptionHandler(Exception.class)

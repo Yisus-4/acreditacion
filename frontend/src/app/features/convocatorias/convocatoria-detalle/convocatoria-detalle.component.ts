@@ -975,6 +975,22 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
         this.cargarDatos(id);
       }
     });
+
+    this.routeSub?.add(
+      this.route.queryParamMap.subscribe((qParams) => {
+        const tabParam = qParams.get('tab');
+        if (
+          tabParam === 'PLAN_TRABAJO' ||
+          tabParam === 'ACTIVIDADES' ||
+          tabParam === 'COMISION_AUTOEVALUACION' ||
+          tabParam === 'USUARIOS_ATENEA' ||
+          tabParam === 'SEGUIMIENTO'
+        ) {
+          this.focoSeleccionadoManualmente = true;
+          this.tabActiva.set(tabParam);
+        }
+      })
+    );
   }
 
   ngOnDestroy(): void {

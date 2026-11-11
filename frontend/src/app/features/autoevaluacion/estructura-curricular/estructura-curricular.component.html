@@ -107,16 +107,13 @@
               <td class="col-nombre">
                 <div style="display: flex; flex-direction: column; gap: 3px;">
                   <strong>{{ act.nombre }}</strong>
-                  <div style="display: flex; gap: 8px; align-items: center;">
-                    <span class="badge-ola" [class.ola1]="act.id === 'PLAN_FT001' || act.id === 'PROGRAMAS_84' || act.id === 'GT_007A' || act.id === 'GT_001' || act.id === 'GT_006'" [class.ola3]="act.id === 'FT_003'">
-                      {{ act.ola }}
-                    </span>
-                    @if (act.dependencia) {
+                  @if (act.dependencia) {
+                    <div style="display: flex; gap: 8px; align-items: center;">
                       <span style="font-size: 11.5px; color: #b45309; font-weight: 500;">
                         {{ act.dependencia }}
                       </span>
-                    }
-                  </div>
+                    </div>
+                  }
                 </div>
               </td>
               <td>{{ act.responsable }}</td>
@@ -150,7 +147,7 @@
     </div>
   }
 
-  <!-- NIVEL 2A: Ficha de Plan de Estudio (FT-001 - OLA 1) -->
+  <!-- NIVEL 2A: Ficha de Plan de Estudio (FT-001) -->
   @if (actividadSeleccionada() === 'PLAN_FT001') {
     <!-- Selector de Carrera y Cabecera del Plan -->
     <div class="plan-header-card">
@@ -357,19 +354,17 @@
         <span class="stats-count-figma">
           {{ asignaturasFiltradas().length }} de {{ asignaturas().length }} asignaturas
         </span>
-        @if (planActivo()) {
-          <button
-            type="button"
-            class="btn-nuevo-figma"
-            style="background: #166534; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;"
-            (click)="abrirModalNuevaAsignatura()"
-          >
-            <svg style="width: 16px; height: 16px;" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-            </svg>
-            <span>+ Nueva Asignatura</span>
-          </button>
-        }
+        <button
+          type="button"
+          class="btn-nuevo-figma"
+          style="background: #166534; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; color: #ffffff; border: none;"
+          (click)="abrirModalNuevaAsignatura()"
+        >
+          <svg style="width: 16px; height: 16px;" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+          </svg>
+          <span>+ Nueva Asignatura</span>
+        </button>
       </div>
     </div>
 
@@ -383,16 +378,14 @@
         <p style="color: #64748b; font-size: 14px; margin: 0 0 16px 0;">
           Comience cargando las asignaturas del plan para habilitar los ámbitos de formación (6.1–6.5) y programas analíticos (8.4).
         </p>
-        @if (planActivo()) {
-          <button
-            type="button"
-            class="btn-nuevo-figma"
-            style="background: #166534; padding: 8px 20px; font-size: 14px; cursor: pointer;"
-            (click)="abrirModalNuevaAsignatura()"
-          >
-            + Cargar Primera Asignatura
-          </button>
-        }
+        <button
+          type="button"
+          class="btn-nuevo-figma"
+          style="background: #166534; padding: 8px 20px; font-size: 14px; cursor: pointer; color: #ffffff; border: none; border-radius: 6px; font-weight: 600;"
+          (click)="abrirModalNuevaAsignatura()"
+        >
+          + Cargar Primera Asignatura
+        </button>
       </div>
     } @else if (asignaturasFiltradas().length === 0) {
       <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
@@ -462,7 +455,7 @@
     }
   }
 
-  <!-- NIVEL 2B: Programas Analíticos en PDF (Actividad 8.4 - OLA 1) -->
+  <!-- NIVEL 2B: Programas Analíticos en PDF (Actividad 8.4) -->
   @if (actividadSeleccionada() === 'PROGRAMAS_84') {
     <!-- Banner de Requisitos PRG-002 y Progreso -->
     <div class="requisito-prg002-box">
@@ -485,6 +478,10 @@
         <button
           type="button"
           class="btn-validar-84"
+          [disabled]="asignaturas().length === 0 || programasCargadosCount() < asignaturas().length"
+          [style.opacity]="asignaturas().length === 0 || programasCargadosCount() < asignaturas().length ? '0.6' : '1'"
+          [style.cursor]="asignaturas().length === 0 || programasCargadosCount() < asignaturas().length ? 'not-allowed' : 'pointer'"
+          [title]="asignaturas().length === 0 ? 'Primero debe cargar las asignaturas del plan de estudios (FT-001)' : (programasCargadosCount() < asignaturas().length ? 'Debe cargar los programas analíticos de todas las asignaturas antes de completar la actividad' : 'Validar y Completar Actividad 8.4')"
           (click)="validarYCompletar84()"
         >
           Validar y Completar Actividad 8.4
@@ -492,6 +489,24 @@
       </div>
     </div>
 
+    @if (asignaturas().length === 0) {
+      <div class="tabla-figma-wrapper" style="padding: 40px 24px; text-align: center; background: #ffffff;">
+        <div style="font-size: 16px; font-weight: 700; color: #1f1a1d; margin-bottom: 8px;">
+          La carrera seleccionada aún no tiene asignaturas registradas en su Plan de Estudios (FT-001)
+        </div>
+        <p style="font-size: 13.5px; color: #5a4a53; max-width: 560px; margin: 0 auto 18px auto; line-height: 1.5;">
+          Para poder subir los programas analíticos en PDF, primero debe registrar las asignaturas de la carrera en la actividad <strong>Gestionar información de planes de estudio</strong>.
+        </p>
+        <button
+          type="button"
+          class="btn-nuevo-figma"
+          style="padding: 10px 20px; font-size: 14px; background: #6b4c5b;"
+          (click)="seleccionarActividad('PLAN_FT001')"
+        >
+          Ir a Gestionar Planes de Estudio (FT-001) &rarr;
+        </button>
+      </div>
+    } @else {
     <!-- Toolbar de Programas Analíticos -->
     <div class="vista-toolbar">
       <div class="toolbar-left-group">
@@ -598,6 +613,7 @@
         </tbody>
       </table>
     </div>
+    }
   }
 
   <!-- NIVEL 2C: Otras Actividades Curriculares Informativas -->
@@ -623,7 +639,7 @@
     @if (actividadSeleccionada() === 'FT_003') {
       <div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #dc2626; border-radius: 8px; padding: 16px 20px;">
         <h4 style="margin: 0 0 6px 0; font-size: 14.5px; color: #991b1b; font-weight: 700;">
-          Actividad Bloqueada por Precedencias Lógicas (OLA 3)
+          Actividad Bloqueada por Precedencias Lógicas
         </h4>
         <p style="margin: 0; font-size: 13px; color: #7f1d1d; line-height: 1.5;">
           Para completar las fichas de autoevaluación de asignaturas (FT-003) por parte del equipo docente, se requiere primero finalizar la verificación bibliográfica de Biblioteca (Actividad 4.4 / RG-014) y la consolidación de cohortes de alumnos y graduados por parte de la Secretaría Académica (Actividad 9.1).
@@ -788,8 +804,16 @@
             Seleccione las asignaturas que deben estar regularizadas/aprobadas para cursar:
           </div>
           @if (asignaturasDisponiblesCorrelativas().length === 0) {
-            <div style="font-size: 13px; color: #9ca3af; font-style: italic; padding: 8px; background: #f9fafb; border-radius: 6px;">
-              No hay otras asignaturas en el plan para seleccionar como correlativas.
+            <div
+              class="alerta-sin-correlativas"
+              style="font-size: 13px; color: #4b5563; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 14px; display: flex; align-items: flex-start; gap: 10px;"
+            >
+              <svg style="width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; color: #6b7280;" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+              </svg>
+              <span>
+                <strong>Sin correlativas disponibles:</strong> No es posible asignar correlativas porque aún no existen otras asignaturas registradas previamente en este plan de estudios. Esta asignatura se registrará como <em>"Sin correlativas previas"</em>.
+              </span>
             </div>
           } @else {
             <div class="correlativas-selector-list" style="max-height: 180px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: #ffffff;">

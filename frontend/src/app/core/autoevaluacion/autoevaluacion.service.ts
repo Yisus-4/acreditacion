@@ -41,8 +41,29 @@ export class AutoevaluacionService {
     return this.http.get<Inmueble[]>(`${this.baseUrl}/inmuebles/maestro`);
   }
 
-  obtenerInmueblesPorProceso(procesoId: string): Observable<Inmueble[]> {
-    return this.http.get<Inmueble[]>(`${this.baseUrl}/procesos/${procesoId}/inmuebles`);
+  obtenerInmueblesPorProceso(procesoId: string, convocatoriaId?: string | null, carreraId?: string | null): Observable<Inmueble[]> {
+    let params = new HttpParams();
+    if (convocatoriaId) params = params.set('convocatoriaId', convocatoriaId);
+    if (carreraId) params = params.set('carreraId', carreraId);
+    return this.http.get<Inmueble[]>(`${this.baseUrl}/procesos/${procesoId}/inmuebles`, { params });
+  }
+
+  obtenerEstadoInfraestructuraCarrera(
+    procesoId: string,
+    convocatoriaId?: string | null,
+    carreraId?: string | null
+  ): Observable<{
+    procesoId: string;
+    verificado: boolean;
+    rutaCarpeta: string;
+    nombreArchivo: string;
+    rutaCompleta: string;
+    fechaVerificacion?: string;
+  }> {
+    let params = new HttpParams();
+    if (convocatoriaId) params = params.set('convocatoriaId', convocatoriaId);
+    if (carreraId) params = params.set('carreraId', carreraId);
+    return this.http.get<any>(`${this.baseUrl}/procesos/${procesoId}/infraestructura/estado`, { params });
   }
 
   regenerarSnapshotDesdeMaestro(procesoId: string): Observable<Inmueble[]> {
@@ -53,10 +74,18 @@ export class AutoevaluacionService {
     return this.http.post(`${this.baseUrl}/procesos/${procesoId}/infraestructura/extender-plazo`, req);
   }
 
-  verificarYRemitirPorProceso(procesoId: string): Observable<VerificarInfraestructuraResponse> {
+  verificarYRemitirPorProceso(
+    procesoId: string,
+    convocatoriaId?: string | null,
+    carreraId?: string | null
+  ): Observable<VerificarInfraestructuraResponse> {
+    let params = new HttpParams();
+    if (convocatoriaId) params = params.set('convocatoriaId', convocatoriaId);
+    if (carreraId) params = params.set('carreraId', carreraId);
     return this.http.post<VerificarInfraestructuraResponse>(
       `${this.baseUrl}/procesos/${procesoId}/infraestructura/verificar-y-remitir`,
-      {}
+      {},
+      { params }
     );
   }
 

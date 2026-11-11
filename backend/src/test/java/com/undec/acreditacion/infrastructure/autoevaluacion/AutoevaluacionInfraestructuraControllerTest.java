@@ -54,6 +54,12 @@ class AutoevaluacionInfraestructuraControllerTest {
     @Mock
     private SpringDataSedeLocalizacionRepository sedeRepository;
 
+    @Mock
+    private com.undec.acreditacion.application.output.UserRepository userRepository;
+
+    @Mock
+    private com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort planTrabajoRepository;
+
     @InjectMocks
     private AutoevaluacionInfraestructuraController controller;
 
@@ -126,5 +132,56 @@ class AutoevaluacionInfraestructuraControllerTest {
         assertEquals(new BigDecimal("40.00"), resp.getBody().superficieTotalM2());
         assertTrue(resp.getBody().espacios().get(0).esSubespacio());
         assertEquals(espacioPadre.getId(), resp.getBody().espacios().get(0).espacioPadreId());
+    }
+
+    @Test
+    @DisplayName("GET /procesos/{procesoId}/inmuebles debe mostrar el padrón general con verificado=false mientras la carrera no haya confirmado su copia")
+    void obtenerInmueblesProcesoSinSnapshotMuestraTroncoPendiente() {
+        UUID procesoId = UUID.randomUUID();
+        inmueble.setEsMaestro(true);
+        inmueble.setVerificado(true); // Incluso si en BD maestro tuviera true, debe exponer false como pendiente
+        inmueble.setActivo(true);
+
+        when(documentacionRepository.findByTipoAnexoOrderByFechaSubidaDesc(anyString())).thenReturn(Collections.emptyList());
+        when(inmuebleRepository.findMaestrosActivos()).thenReturn(List.of(inmueble));
+
+        ResponseEntity<?> resp = controller.obtenerInmueblesProceso(procesoId);
+
+        assertEquals(HttpStatus.OK, resp.getStatusCode());
+        @SuppressWarnings("unchecked")
+        List<InmuebleResponse> lista = (List<InmuebleResponse>) resp.getBody();
+        assertNotNull(lista);
+        assertEquals(1, lista.size());
+        assertTrue(lista.get(0).esMaestro());
+        assertFalse(lista.get(0).verificado());
+        assertEquals("CARGADO", lista.get(0).estadoConeau());
+        verify(inmuebleRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("POST /procesos/{procesoId}/infraestructura/verificar-y-remitir debe copiar el archivo RG-005 a la carpeta de la carrera sin duplicar filas en inmueble")
+    void verificarYRemitirCopiaArchivoEnCarpetaDeCarrera() {
+        UUID procesoId = UUID.randomUUID();
+        inmueble.setEsMaestro(true);
+        inmueble.setVerificado(false);
+        inmueble.setActivo(true);
+        inmueble.getEspacios().add(espacioPadre);
+
+        when(inmuebleRepository.findMaestrosActivos()).thenReturn(List.of(inmueble));
+        when(documentacionRepository.findByTipoAnexoOrderByFechaSubidaDesc(anyString())).thenReturn(Collections.emptyList());
+        when(documentacionRepository.save(any(InmuebleDocumentacionRespaldoJpaEntity.class))).thenAnswer(i -> i.getArgument(0));
+        when(planTrabajoRepository.findByProcesoId(procesoId)).thenReturn(Optional.empty());
+
+        ResponseEntity<VerificarInfraestructuraResponse> resp = controller.verificarYRemitirInfraestructura(procesoId);
+
+        assertEquals(HttpStatus.OK, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertTrue(resp.getBody().verificado());
+        assertFalse(inmueble.getVerificado());
+        verify(inmuebleRepository, never()).save(any());
+        verify(documentacionRepository, times(1)).save(argThat(doc ->
+                doc.getTipoAnexo() != null && doc.getTipoAnexo().startsWith("SNAPSHOT_RG005:")
+                        && doc.getRutaRepositorio().contains("03_01-Infraestructura")
+        ));
     }
 }

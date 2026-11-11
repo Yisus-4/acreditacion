@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   inject,
   OnInit,
   signal,
@@ -76,6 +77,8 @@ export class InfraestructuraComponent implements OnInit {
   readonly filtroActividadesTexto = signal<string>('');
   readonly modoVista = signal<'MAESTRO' | 'PROCESO'>('MAESTRO');
   readonly procesoId = signal<string | null>(null);
+  readonly infraestructuraConfirmadaCarrera = signal<boolean>(false);
+  readonly rutaCarpetaCarrera = signal<string | null>(null);
 
   readonly searchQuery = signal<string>('');
   readonly selectedTenenciaFilter = signal<string>('');
@@ -87,7 +90,16 @@ export class InfraestructuraComponent implements OnInit {
   // Permisos y Roles
   readonly puedeGestionarInfraestructura = computed(() => {
     if (!this.auth.isAuthenticated) return true;
-    return this.auth.hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA');
+    return this.auth.hasAnyRole(
+      'ADMINISTRATOR',
+      'ADMIN',
+      'AEA',
+      'INFRAESTRUCTURA',
+      'BEDELIA',
+      'DIRECTOR_CARRERA',
+      'CAREER_DIRECTOR',
+      'COMISION_AUTOEVALUACION'
+    );
   });
 
   readonly esRolHigiene = computed(() => {
@@ -235,7 +247,7 @@ export class InfraestructuraComponent implements OnInit {
   });
 
   readonly actividad41Completada = computed<boolean>(() => {
-    return this.inmuebles().length > 0 && this.inmuebles().some((i) => i.verificado);
+    return this.infraestructuraConfirmadaCarrera();
   });
 
   readonly listaActividadesDimension = computed(() => {
@@ -279,6 +291,35 @@ export class InfraestructuraComponent implements OnInit {
     );
   });
 
+  private ultimoContextoClave = '';
+
+  constructor() {
+    effect(() => {
+      const convId = this.contextService.convocatoriaSeleccionadaId() || '';
+      const carId = this.contextService.carreraSeleccionadaId() || '';
+      const ctxProcesoId = this.contextService.procesoIdActivo() || '';
+      const clave = `${convId}|${carId}|${ctxProcesoId}`;
+
+      if (clave !== this.ultimoContextoClave) {
+        const cambioCarreraOConvocatoria = this.ultimoContextoClave !== '';
+        this.ultimoContextoClave = clave;
+        this.procesoId.set(ctxProcesoId || null);
+        this.modoVista.set('MAESTRO');
+
+        if (cambioCarreraOConvocatoria) {
+          this.notif.limpiar(this.errorMessage);
+          this.notif.limpiar(this.successMessage);
+        }
+
+        if (this.actividadSeleccionada() === 'HIGIENE_SEGURIDAD') {
+          this.cargarGuiaHigiene();
+        } else {
+          this.cargarInmuebles();
+        }
+      }
+    });
+  }
+
   volverAlListado(): void {
     this.actividadSeleccionada.set(null);
     this.notif.limpiar(this.errorMessage);
@@ -290,11 +331,14 @@ export class InfraestructuraComponent implements OnInit {
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
-        const pId = params.get('procesoId') || params.get('convocatoriaId') || this.contextService.procesoIdActivo();
-        if (pId) {
-          this.procesoId.set(pId);
-          this.modoVista.set('PROCESO');
-        }
+        const convIdParam = params.get('convocatoriaId');
+        const procIdParam = params.get('procesoId');
+        const validProcId =
+          procIdParam && procIdParam !== convIdParam
+            ? procIdParam
+            : this.contextService.procesoIdActivo();
+        this.procesoId.set(validProcId || null);
+        this.modoVista.set('MAESTRO');
         const act = params.get('actividad');
         if (act === 'INFRAESTRUCTURA' || act === 'HIGIENE_SEGURIDAD' || act === 'EQUIPAMIENTO_BIBLIOTECA') {
           this.actividadSeleccionada.set(act);
@@ -308,7 +352,7 @@ export class InfraestructuraComponent implements OnInit {
         const id = params.get('id');
         if (id) {
           this.procesoId.set(id);
-          this.modoVista.set('PROCESO');
+          this.modoVista.set('MAESTRO');
           this.cargarDatosIniciales();
         }
       });
@@ -361,19 +405,47 @@ export class InfraestructuraComponent implements OnInit {
 
   cargarInmuebles(): void {
     this.loading.set(true);
+    this.cargarEstadoInfraestructuraCarrera();
 
-    const call$ = (this.modoVista() === 'PROCESO' && this.procesoId())
-      ? this.autoevalService.obtenerInmueblesPorProceso(this.procesoId()!)
-      : this.autoevalService.listarInmueblesMaestros();
-
-    call$
+    this.autoevalService
+      .listarInmueblesMaestros()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: (data) => this.inmuebles.set(data),
+        next: (data) => {
+          this.notif.limpiar(this.errorMessage);
+          this.inmuebles.set(data);
+        },
         error: () => this.notif.mostrar(this.errorMessage, 'Error al cargar registro de inmuebles', 6000),
+      });
+  }
+
+  cargarEstadoInfraestructuraCarrera(): void {
+    const pId =
+      this.contextService.procesoIdActivo() ||
+      this.procesoId() ||
+      'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
+    const convId = this.contextService.convocatoriaSeleccionadaId();
+    const carId = this.contextService.carreraSeleccionadaId();
+
+    this.autoevalService
+      .obtenerEstadoInfraestructuraCarrera(pId, convId, carId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (estado) => {
+          this.infraestructuraConfirmadaCarrera.set(!!estado.verificado);
+          this.rutaCarpetaCarrera.set(estado.rutaCompleta || estado.rutaCarpeta || null);
+        },
+        error: () => {
+          this.infraestructuraConfirmadaCarrera.set(false);
+          const carSigla = this.contextService.carreraActiva()?.sigla || carId || 'Carrera';
+          const convCod = this.contextService.convocatoriaActiva()?.codigo || convId || 'Convocatoria';
+          this.rutaCarpetaCarrera.set(
+            `03-Autoevaluación/03_01-Infraestructura equipamiento y biblioteca/Convocatorias/${convCod}/Carrera_${carSigla}/RG-005_Registro_Inmuebles_${carSigla}.json`
+          );
+        },
       });
   }
 
@@ -886,8 +958,8 @@ export class InfraestructuraComponent implements OnInit {
       condicionTenencia: val.condicionTenencia,
       situacion: val.situacion,
       vinculaTodasCarreras: val.vinculaTodasCarreras,
-      esMaestro: this.modoVista() === 'MAESTRO',
-      procesoId: this.procesoId() || undefined,
+      esMaestro: true,
+      procesoId: undefined,
       superficieCubiertaM2: val.superficieCubiertaM2,
       superficieTotalM2: val.superficieTotalM2,
       observaciones: val.observaciones,
@@ -1000,15 +1072,21 @@ export class InfraestructuraComponent implements OnInit {
   // ---------------------------------------------------------------------------
 
   remitirADeaPorProceso(): void {
-    const pId = this.procesoId() || this.contextService.procesoIdActivo() || 'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
-    this.autoevalService.verificarYRemitirPorProceso(pId)
+    const pId = this.contextService.procesoIdActivo() || this.procesoId() || 'ceea6f16-19b4-4dee-91ef-f38d47cdd3b5';
+    const convId = this.contextService.convocatoriaSeleccionadaId();
+    const carId = this.contextService.carreraSeleccionadaId();
+    this.procesoId.set(pId);
+    this.notif.limpiar(this.errorMessage);
+
+    this.autoevalService.verificarYRemitirPorProceso(pId, convId, carId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
+          this.infraestructuraConfirmadaCarrera.set(true);
           this.notif.mostrar(this.successMessage, res.mensaje, 6000);
           this.cargarDatosIniciales();
         },
-        error: () => this.notif.mostrar(this.errorMessage, 'Error al remitir verificación a la AEA.', 6000),
+        error: () => this.notif.mostrar(this.errorMessage, 'Error al confirmar y almacenar la infraestructura de la carrera.', 6000),
       });
   }
 

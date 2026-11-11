@@ -61,6 +61,7 @@ public class ActualizarAsignaturaPlanService {
 
         validarHoras(request.horasReloj(), request.horasPresenciales(), request.horasNoPresenciales());
         validarAutocorrelatividad(asig, request);
+        validarCorrelativasConAsignaturasPrevias(planId, asigId, request.correlativas());
 
         if (request.codigo() != null && !request.codigo().trim().isEmpty()) {
             String nuevoCodigo = request.codigo().trim();
@@ -125,6 +126,22 @@ public class ActualizarAsignaturaPlanService {
             if (asig.getId() != null && token.equalsIgnoreCase(asig.getId().toString())) {
                 throw new DomainValidationException("Una asignatura no puede ser correlativa de sí misma.");
             }
+        }
+    }
+
+    private void validarCorrelativasConAsignaturasPrevias(UUID planId, UUID asigId, String correlativas) {
+        if (correlativas == null || correlativas.trim().isEmpty() ||
+            "Sin correlativas previas".equalsIgnoreCase(correlativas.trim())) {
+            return;
+        }
+        List<ActividadCurricularPlanJpaEntity> existentes =
+                asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId);
+        boolean existenOtras = existentes != null && existentes.stream()
+                .anyMatch(a -> a.getId() != null && !a.getId().equals(asigId));
+        if (!existenOtras) {
+            throw new DomainValidationException(
+                    "No se pueden asignar correlativas si no existen otras asignaturas cargadas previamente en el plan de estudio."
+            );
         }
     }
 

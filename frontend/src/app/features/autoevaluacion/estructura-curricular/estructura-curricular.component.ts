@@ -4,6 +4,7 @@ import {
   DestroyRef,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -182,7 +183,6 @@ export class EstructuraCurricularComponent implements OnInit {
         nombre: 'Gestionar información sobre mecanismos o instancias de gestión y seguimiento relacionadas a la carrera',
         responsable: 'Director de Carrera / Comisión Curricular',
         instrumento: 'Actas de Seguimiento (GT-007A)',
-        ola: 'OLA 1 (Independiente)',
         completada: false,
         estado: 'Pendiente',
       },
@@ -191,7 +191,6 @@ export class EstructuraCurricularComponent implements OnInit {
         nombre: 'Gestionar información sobre organización y gestión de la carrera',
         responsable: 'Dirección de Carrera',
         instrumento: 'Manual de Procedimientos (GT-001)',
-        ola: 'OLA 1 (Independiente)',
         completada: false,
         estado: 'Pendiente',
       },
@@ -200,7 +199,6 @@ export class EstructuraCurricularComponent implements OnInit {
         nombre: 'Gestionar información de planes de estudio',
         responsable: 'Secretaría Académica / Dirección de Carrera',
         instrumento: 'Resolución Ministerial / Ficha (FT-001)',
-        ola: 'OLA 1 (Independiente)',
         completada: tienePlan,
         estado: tienePlan ? 'Completada' : 'Pendiente',
       },
@@ -209,7 +207,6 @@ export class EstructuraCurricularComponent implements OnInit {
         nombre: 'Gestionar programas analíticos de las asignaturas',
         responsable: 'Docentes Titulares / Carrera / Comisión Curricular',
         instrumento: 'Programas Vigentes en PDF',
-        ola: 'OLA 1 (Crítico - Insumo para Biblioteca)',
         completada: programasOk,
         estado: programasOk ? 'Completada' : `${this.programasCargadosCount()}/${this.asignaturas().length} cargados`,
       },
@@ -218,7 +215,6 @@ export class EstructuraCurricularComponent implements OnInit {
         nombre: 'Gestionar información de las asignaturas',
         responsable: 'Secretaría Académica / Docentes',
         instrumento: 'Fichas FT-003',
-        ola: 'OLA 3 (Cuello de Botella)',
         dependencia: 'Requiere Biblioteca RG-014 y Cuadros SGA',
         completada: false,
         estado: 'Pendiente',
@@ -228,7 +224,6 @@ export class EstructuraCurricularComponent implements OnInit {
         nombre: 'Gestionar información sobre comisiones de planificación y seguimiento de la carrera',
         responsable: 'Comisión de Seguimiento Curricular',
         instrumento: 'Resolución de Designación (GT-006)',
-        ola: 'OLA 1 (Independiente)',
         completada: false,
         estado: 'Pendiente',
       },
@@ -265,16 +260,35 @@ export class EstructuraCurricularComponent implements OnInit {
     return lista;
   });
 
+  constructor() {
+    effect(() => {
+      const ctxProcesoId = this.contextService.procesoIdActivo();
+      if (ctxProcesoId && ctxProcesoId !== this.procesoId()) {
+        this.procesoId.set(ctxProcesoId);
+      }
+      const ctxCarreraId = this.contextService.carreraSeleccionadaId();
+      if (ctxCarreraId && ctxCarreraId !== this.carreraSeleccionadaId()) {
+        this.carreraSeleccionadaId.set(ctxCarreraId);
+        this.cargarPlan(ctxCarreraId);
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.notif.registrarTeardown(this.destroyRef);
 
     this.route.queryParamMap.subscribe((params) => {
-      const pId = params.get('procesoId') || params.get('convocatoriaId') || this.contextService.procesoIdActivo();
-      if (pId) {
-        this.procesoId.set(pId);
+      const convIdParam = params.get('convocatoriaId');
+      const procIdParam = params.get('procesoId');
+      const validProcId =
+        procIdParam && procIdParam !== convIdParam
+          ? procIdParam
+          : this.contextService.procesoIdActivo();
+      if (validProcId) {
+        this.procesoId.set(validProcId);
       }
       const cId = params.get('carreraId') || this.contextService.carreraSeleccionadaId();
-      if (cId) {
+      if (cId && cId !== this.carreraSeleccionadaId()) {
         this.carreraSeleccionadaId.set(cId);
         this.cargarPlan(cId);
       }
@@ -304,8 +318,12 @@ export class EstructuraCurricularComponent implements OnInit {
           if (!id || !data.some((c: CarreraResponse) => c.id === id)) {
             id = data[0].id;
           }
-          this.carreraSeleccionadaId.set(id);
-          this.cargarPlan(id);
+          if (id !== this.carreraSeleccionadaId() || !this.planActivo()) {
+            this.carreraSeleccionadaId.set(id);
+            this.cargarPlan(id);
+          } else {
+            this.loading.set(false);
+          }
         } else {
           this.loading.set(false);
         }
@@ -548,7 +566,8 @@ export class EstructuraCurricularComponent implements OnInit {
           }
         },
         error: (err) => {
-          this.notif.mostrar(this.errorMessage, 'Error al subir programa: ' + (err.error?.message || err.message), 6000);
+          const msg = err.error?.error || err.error?.mensaje || err.error?.message || err.message;
+          this.notif.mostrar(this.errorMessage, 'Error al subir programa: ' + msg, 6000);
           this.subiendo.set(false);
         },
       });
@@ -561,16 +580,33 @@ export class EstructuraCurricularComponent implements OnInit {
 
   validarYCompletar84(): void {
     const plan = this.planActivo();
-    if (!plan?.id) return;
+    if (!plan?.id || this.asignaturas().length === 0) {
+      this.notif.mostrar(
+        this.errorMessage,
+        'Primero debe cargar las asignaturas del plan de estudios en "Gestionar información de planes de estudio" (FT-001).',
+        6000
+      );
+      return;
+    }
 
-    const effectiveProcesoId = this.procesoId() || this.contextService.procesoIdActivo() || plan.procesoId || undefined;
+    if (this.programasCargadosCount() < this.asignaturas().length) {
+      this.notif.mostrar(
+        this.errorMessage,
+        `No se puede completar la actividad 8.4: faltan programas analíticos por cargar (${this.programasCargadosCount()} de ${this.asignaturas().length} cargados).`,
+        6000
+      );
+      return;
+    }
+
+    const effectiveProcesoId = this.contextService.procesoIdActivo() || this.procesoId() || plan.procesoId || undefined;
 
     this.programaService.validarYCompletarActividad84(effectiveProcesoId, plan.id).subscribe({
       next: (resp) => {
         this.notif.mostrar(this.successMessage, resp.mensaje, 6000);
       },
       error: (err) => {
-        this.notif.mostrar(this.errorMessage, err.error?.mensaje || 'Error al validar actividad 8.4', 6000);
+        const msg = err.error?.error || err.error?.mensaje || err.error?.message || 'Error al validar actividad 8.4';
+        this.notif.mostrar(this.errorMessage, msg, 6000);
       },
     });
   }
@@ -633,9 +669,6 @@ export class EstructuraCurricularComponent implements OnInit {
   }
 
   guardarAsignatura(): void {
-    const plan = this.planActivo();
-    if (!plan?.id) return;
-
     if (this.formAsignatura.invalid) {
       this.formAsignatura.markAllAsTouched();
       return;
@@ -644,11 +677,61 @@ export class EstructuraCurricularComponent implements OnInit {
     this.guardandoAsignatura.set(true);
     const val = this.formAsignatura.value;
     const correlativasStr =
-      this.correlativasSeleccionadas().length > 0
+      this.asignaturasDisponiblesCorrelativas().length > 0 && this.correlativasSeleccionadas().length > 0
         ? this.correlativasSeleccionadas().join(', ')
         : 'Sin correlativas previas';
 
     const editando = this.asignaturaEnEdicion();
+    const plan = this.planActivo();
+
+    if (!plan?.id) {
+      const cId = this.carreraSeleccionadaId() || this.contextService.carreraSeleccionadaId();
+      if (!cId) {
+        this.guardandoAsignatura.set(false);
+        this.notif.mostrar(this.errorMessage, 'Debe seleccionar una carrera de grado para registrar la asignatura.', 6000);
+        return;
+      }
+      const pId = this.procesoId() || this.contextService.procesoIdActivo() || undefined;
+
+      const nuevoPlanDto: PlanEstudioFt001 = {
+        carreraId: cId,
+        procesoId: pId,
+        codigoResolucion: 'RES-CS-INICIAL/2026',
+        anioAprobacion: 2026,
+        anioInicio: 2026,
+        duracionAnios: 5,
+        activo: true,
+        horasPresenciales: 0,
+        horasNoPresenciales: 0,
+        horasTotales: 0,
+      };
+
+      this.planService.crearPlan(nuevoPlanDto).subscribe({
+        next: (nuevoPlan) => {
+          this.planActivo.set(nuevoPlan);
+          this.ejecutarGuardadoAsignatura(nuevoPlan.id!, editando, val, correlativasStr);
+        },
+        error: (err) => {
+          this.guardandoAsignatura.set(false);
+          this.notif.mostrar(
+            this.errorMessage,
+            'Error al auto-inicializar plan de estudios: ' + (err.error?.message || err.message),
+            6000
+          );
+        },
+      });
+      return;
+    }
+
+    this.ejecutarGuardadoAsignatura(plan.id, editando, val, correlativasStr);
+  }
+
+  private ejecutarGuardadoAsignatura(
+    planId: string,
+    editando: ActividadCurricularPlan | null,
+    val: any,
+    correlativasStr: string
+  ): void {
     if (editando?.id) {
       const req: ActualizarAsignaturaRequest = {
         id: editando.id,
@@ -664,12 +747,12 @@ export class EstructuraCurricularComponent implements OnInit {
         esObligatoria: val.esObligatoria ?? true,
       };
 
-      this.planService.actualizarAsignatura(plan.id, editando.id, req).subscribe({
+      this.planService.actualizarAsignatura(planId, editando.id, req).subscribe({
         next: () => {
           this.guardandoAsignatura.set(false);
           this.cerrarModalAsignatura();
           this.notif.mostrar(this.successMessage, `Asignatura "${req.nombre}" actualizada exitosamente.`, 6000);
-          this.cargarAsignaturasYProgramas(plan.id!);
+          this.cargarAsignaturasYProgramas(planId);
         },
         error: (err) => {
           this.guardandoAsignatura.set(false);
@@ -694,12 +777,12 @@ export class EstructuraCurricularComponent implements OnInit {
         esObligatoria: val.esObligatoria ?? true,
       };
 
-      this.planService.crearAsignatura(plan.id, req).subscribe({
+      this.planService.crearAsignatura(planId, req).subscribe({
         next: () => {
           this.guardandoAsignatura.set(false);
           this.cerrarModalAsignatura();
           this.notif.mostrar(this.successMessage, `Asignatura "${req.nombre}" creada exitosamente.`, 6000);
-          this.cargarAsignaturasYProgramas(plan.id!);
+          this.cargarAsignaturasYProgramas(planId);
         },
         error: (err) => {
           this.guardandoAsignatura.set(false);

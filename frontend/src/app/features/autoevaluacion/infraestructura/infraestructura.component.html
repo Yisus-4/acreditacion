@@ -127,26 +127,28 @@
     </div>
   } @else {
     @if (actividadSeleccionada() === 'INFRAESTRUCTURA') {
-    <!-- Barra de Control: Padrón Maestro vs Snapshot + Acciones de Plan de Trabajo -->
+    <!-- Barra de Control: Padrón General + Copia a Carpeta de la Carrera + Plan de Trabajo -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; background: #ffffff; padding: 12px 18px; border-radius: 8px; border: 1px solid #e5e7eb;">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="font-weight: 600; font-size: 14px; color: var(--color-primary-dark, #6b4c5b);">Modo de datos:</span>
-        <button
-          type="button"
-          class="btn-tabla-accion"
-          [class.btn-modo-activo]="modoVista() === 'MAESTRO'"
-          (click)="cambiarModoVista('MAESTRO')"
-        >
-          Padrón Maestro Institucional
-        </button>
-        <button
-          type="button"
-          class="btn-tabla-accion"
-          [class.btn-modo-activo]="modoVista() === 'PROCESO'"
-          (click)="cambiarModoVista('PROCESO')"
-        >
-          Copia Autoevaluación Carrera (Snapshot)
-        </button>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span style="font-weight: 600; font-size: 13.5px; color: var(--color-primary-dark, #6b4c5b);">
+            Padrón General de Inmuebles (RG-005)
+          </span>
+          @if (actividad41Completada()) {
+            <span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #dcfce7; color: #166534;">
+              Archivo copiado en carpeta de la carrera
+            </span>
+          } @else {
+            <span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #fef3c7; color: #92400e;">
+              Pendiente de confirmar copia para esta carrera
+            </span>
+          }
+        </div>
+        @if (rutaCarpetaCarrera()) {
+          <div style="font-size: 12px; color: var(--color-text-muted, #6b7280);">
+            Carpeta destino: <code>{{ rutaCarpetaCarrera() }}</code>
+          </div>
+        }
       </div>
 
       @if (puedeGestionarInfraestructura()) {
@@ -164,9 +166,9 @@
             type="button"
             class="btn-control-remitir"
             (click)="remitirADeaPorProceso()"
-            title="Valida los inmuebles y actualiza la Actividad 4.1 a COMPLETADA en el Plan de Trabajo"
+            title="Confirma los datos que figuran, almacena la copia (snapshot) desde el tronco de infraestructura para la carrera y finaliza la Actividad 4.1 en el Plan de Trabajo"
           >
-            Validar inmuebles (Completar Tarea 4.1)
+            {{ actividad41Completada() ? '✓ Infraestructura Confirmada (Copia Almacenada)' : 'Confirmar y Almacenar Infraestructura (Finalizar Tarea 4.1)' }}
           </button>
         </div>
       }
@@ -316,15 +318,15 @@
                   </div>
                 </td>
                 <td>
-                  @if (inm.verificado) {
+                  @if (actividad41Completada()) {
                     <span style="display: inline-flex; align-items: center; gap: 6px; color: #166534; font-weight: 600; font-size: 13.5px; white-space: nowrap;">
                       <span style="width: 7px; height: 7px; border-radius: 50%; background-color: #166534; display: inline-block;"></span>
                       Verificado
                     </span>
                   } @else {
-                    <span style="display: inline-flex; align-items: center; gap: 6px; color: #166534; font-weight: 600; font-size: 13.5px; white-space: nowrap;">
-                      <span style="width: 7px; height: 7px; border-radius: 50%; background-color: #166534; display: inline-block;"></span>
-                      Cargado
+                    <span style="display: inline-flex; align-items: center; gap: 6px; color: #b45309; font-weight: 600; font-size: 13.5px; white-space: nowrap;">
+                      <span style="width: 7px; height: 7px; border-radius: 50%; background-color: #b45309; display: inline-block;"></span>
+                      Pendiente de verificar
                     </span>
                   }
                 </td>
@@ -334,11 +336,6 @@
                       <button type="button" class="btn-tabla-accion" (click)="abrirEditar(inm)">
                         Editar
                       </button>
-                      @if (!inm.verificado) {
-                        <button type="button" class="btn-tabla-accion btn-accion-verificar" (click)="verificarInmueble(inm)">
-                          Verificar
-                        </button>
-                      }
                     }
                   </div>
                 </td>

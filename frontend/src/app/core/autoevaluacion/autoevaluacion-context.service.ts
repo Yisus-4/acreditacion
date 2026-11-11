@@ -2,6 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { forkJoin, of, Observable } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
+import { Auth } from '../auth/auth';
 import { ConvocatoriaService } from '../convocatorias/convocatoria.service';
 import { ConvocatoriaDetalle, ConvocatoriaResumen } from '../convocatorias/models/convocatoria.model';
 import { EstructuraService } from '../estructura/estructura.service';
@@ -31,6 +32,7 @@ export class AutoevaluacionContextService {
   private readonly router = inject(Router);
   private readonly convocatoriaService = inject(ConvocatoriaService);
   private readonly estructuraService = inject(EstructuraService);
+  private readonly auth = inject(Auth);
 
   readonly STORAGE_KEY = 'acreditacion_autoeval_context';
 
@@ -64,14 +66,12 @@ export class AutoevaluacionContextService {
 
     if (detalle.carrerasPropuestas && detalle.carrerasPropuestas.length > 0) {
       const match = detalle.carrerasPropuestas.find((cp) => cp.carreraId === carreraId);
-      if (match && match.procesoId) {
-        return match.procesoId;
-      }
+      return match?.procesoId || null;
     }
     if (detalle.carreraId === carreraId) {
       return detalle.id;
     }
-    return detalle.id || null;
+    return null;
   });
 
   readonly carreraActiva = computed<CarreraResponse | null>(() => {
@@ -84,6 +84,37 @@ export class AutoevaluacionContextService {
     const convId = this.convocatoriaSeleccionadaId();
     if (!convId) return null;
     return this.convocatorias().find((c) => c.id === convId) || null;
+  });
+
+  // Permisos reactivos según roles del usuario para cada actividad de autoevaluación
+  readonly puedeEditarInfraestructura = computed<boolean>(() => {
+    return this.auth.hasAnyRole(
+      'ADMINISTRATOR',
+      'ADMIN',
+      'AEA',
+      'INFRAESTRUCTURA',
+      'BEDELIA',
+      'HIGIENE_SEGURIDAD',
+      'DIRECTOR_CARRERA',
+      'CAREER_DIRECTOR',
+      'COMISION_AUTOEVALUACION'
+    );
+  });
+
+  readonly puedeEditarBiblioteca = computed<boolean>(() => {
+    return this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA', 'BIBLIOTECA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION');
+  });
+
+  readonly puedeEditarAmbitosYConvenios = computed<boolean>(() => {
+    return this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION');
+  });
+
+  readonly puedeEditarPlanesEstudio = computed<boolean>(() => {
+    return this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION');
+  });
+
+  readonly puedeEditarProgramasAnaliticos = computed<boolean>(() => {
+    return this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA', 'DOCENTE', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION');
   });
 
   /**
@@ -231,6 +262,46 @@ export class AutoevaluacionContextService {
     if (syncRouter) {
       this.sincronizarRouterYStorage();
     }
+  }
+
+  /**
+   * Selects convocatoria and carrera simultaneously and navigates to the target autoevaluation activity.
+   */
+  seleccionarConvocatoriaYCarrera(convocatoriaId: string, carreraId: string, rutaDestino = '/autoevaluacion/infraestructura'): void {
+    this.convocatoriaSeleccionadaId.set(convocatoriaId);
+    this.carreraSeleccionadaId.set(carreraId);
+    this.convocatoriaService.obtenerConvocatoria(convocatoriaId).subscribe({
+      next: (detalle) => {
+        this.convocatoriaDetalle.set(detalle);
+        const procesoId = this.procesoIdActivo();
+        const payload: StoredAutoevalContext = {
+          convocatoriaId,
+          carreraId,
+          procesoId,
+        };
+        try {
+          window.sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(payload));
+        } catch (e) {
+          console.warn('Unable to persist autoeval context', e);
+        }
+        void this.router.navigate([rutaDestino], {
+          queryParams: {
+            convocatoriaId,
+            carreraId,
+            procesoId: procesoId || undefined,
+          },
+        });
+      },
+      error: (err) => {
+        console.error('Error fetching convocatoria detalle', err);
+        void this.router.navigate([rutaDestino], {
+          queryParams: {
+            convocatoriaId,
+            carreraId,
+          },
+        });
+      },
+    });
   }
 
   /**

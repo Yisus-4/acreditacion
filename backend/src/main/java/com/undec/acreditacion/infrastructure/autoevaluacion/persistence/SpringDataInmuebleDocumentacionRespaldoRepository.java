@@ -8,4 +8,6 @@ import java.util.UUID;
 public interface SpringDataInmuebleDocumentacionRespaldoRepository extends JpaRepository<InmuebleDocumentacionRespaldoJpaEntity, UUID> {
 
     List<InmuebleDocumentacionRespaldoJpaEntity> findByInmuebleIdOrderByFechaSubidaDesc(UUID inmuebleId);
+
+    List<InmuebleDocumentacionRespaldoJpaEntity> findByTipoAnexoOrderByFechaSubidaDesc(String tipoAnexo);
 }

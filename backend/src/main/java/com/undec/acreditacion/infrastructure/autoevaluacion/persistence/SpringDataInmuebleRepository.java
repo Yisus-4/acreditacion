@@ -11,6 +11,9 @@ import java.util.UUID;
 public interface SpringDataInmuebleRepository extends JpaRepository<InmuebleJpaEntity, UUID> {
 
     @Query("SELECT DISTINCT i FROM InmuebleJpaEntity i " +
+            "LEFT JOIN FETCH i.institucion " +
+            "LEFT JOIN FETCH i.sede s " +
+            "LEFT JOIN FETCH s.unidadAcademica " +
             "LEFT JOIN FETCH i.provincia " +
             "LEFT JOIN FETCH i.departamentoGeografico " +
             "LEFT JOIN FETCH i.localidad " +
@@ -20,6 +23,9 @@ public interface SpringDataInmuebleRepository extends JpaRepository<InmuebleJpaE
     List<InmuebleJpaEntity> findAllActivosConRelaciones();
 
     @Query("SELECT DISTINCT i FROM InmuebleJpaEntity i " +
+            "LEFT JOIN FETCH i.institucion " +
+            "LEFT JOIN FETCH i.sede s " +
+            "LEFT JOIN FETCH s.unidadAcademica " +
             "LEFT JOIN FETCH i.provincia " +
             "LEFT JOIN FETCH i.departamentoGeografico " +
             "LEFT JOIN FETCH i.localidad " +
@@ -29,6 +35,9 @@ public interface SpringDataInmuebleRepository extends JpaRepository<InmuebleJpaE
     List<InmuebleJpaEntity> findMaestrosActivos();
 
     @Query("SELECT DISTINCT i FROM InmuebleJpaEntity i " +
+            "LEFT JOIN FETCH i.institucion " +
+            "LEFT JOIN FETCH i.sede s " +
+            "LEFT JOIN FETCH s.unidadAcademica " +
             "LEFT JOIN FETCH i.provincia " +
             "LEFT JOIN FETCH i.departamentoGeografico " +
             "LEFT JOIN FETCH i.localidad " +
@@ -38,6 +47,9 @@ public interface SpringDataInmuebleRepository extends JpaRepository<InmuebleJpaE
     List<InmuebleJpaEntity> findByProcesoIdActivos(@Param("procesoId") UUID procesoId);
 
     @Query("SELECT DISTINCT i FROM InmuebleJpaEntity i " +
+            "LEFT JOIN FETCH i.institucion " +
+            "LEFT JOIN FETCH i.sede s " +
+            "LEFT JOIN FETCH s.unidadAcademica " +
             "LEFT JOIN FETCH i.provincia " +
             "LEFT JOIN FETCH i.departamentoGeografico " +
             "LEFT JOIN FETCH i.localidad " +

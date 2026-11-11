@@ -167,7 +167,7 @@ public class ConvocatoriaController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR', 'BEDELIA', 'INFRAESTRUCTURA', 'HIGIENE_SEGURIDAD', 'BIBLIOTECA', 'DOCENTE', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ') or hasAuthority('AUTOEVALUACION_READ')")
     public ResponseEntity<List<ConvocatoriaResumenResponse>> listarConvocatorias(
             @RequestParam(required = false) UUID carreraId,
             @RequestParam(required = false) UUID unidadAcademicaId,
@@ -246,7 +246,7 @@ public class ConvocatoriaController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR', 'BEDELIA', 'INFRAESTRUCTURA', 'HIGIENE_SEGURIDAD', 'BIBLIOTECA', 'DOCENTE', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ') or hasAuthority('AUTOEVALUACION_READ')")
     public ResponseEntity<ConvocatoriaDetalleResponse> obtenerPorId(@PathVariable UUID id) {
         Optional<Convocatoria> convOpt = convocatoriaEscuelaRepository.findById(id);
         if (convOpt.isPresent()) {
@@ -736,11 +736,18 @@ public class ConvocatoriaController {
         }
         if (auth.getAuthorities() != null && auth.getAuthorities().stream().anyMatch(a ->
                 a.getAuthority().equals("ROLE_ADMINISTRATOR") || a.getAuthority().equals("ROLE_AEA")
-                        || a.getAuthority().equals("ADMINISTRATOR") || a.getAuthority().equals("AEA"))) {
+                        || a.getAuthority().equals("ROLE_INFRAESTRUCTURA") || a.getAuthority().equals("ROLE_BEDELIA")
+                        || a.getAuthority().equals("ROLE_HIGIENE_SEGURIDAD") || a.getAuthority().equals("ROLE_BIBLIOTECA")
+                        || a.getAuthority().equals("ADMINISTRATOR") || a.getAuthority().equals("AEA")
+                        || a.getAuthority().equals("INFRAESTRUCTURA") || a.getAuthority().equals("BEDELIA")
+                        || a.getAuthority().equals("HIGIENE_SEGURIDAD") || a.getAuthority().equals("BIBLIOTECA")
+                        || a.getAuthority().equals("AUTOEVALUACION_READ"))) {
             return true;
         }
         return userOpt.map(u -> u.getRoles().stream()
-                .anyMatch(r -> "ADMINISTRATOR".equals(r.getCode()) || "AEA".equals(r.getCode())))
+                .anyMatch(r -> "ADMINISTRATOR".equals(r.getCode()) || "AEA".equals(r.getCode())
+                        || "INFRAESTRUCTURA".equals(r.getCode()) || "BEDELIA".equals(r.getCode())
+                        || "HIGIENE_SEGURIDAD".equals(r.getCode()) || "BIBLIOTECA".equals(r.getCode())))
                 .orElse(false);
     }
 

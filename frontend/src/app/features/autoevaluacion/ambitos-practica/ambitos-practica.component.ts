@@ -4,6 +4,7 @@ import {
   DestroyRef,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -88,7 +89,7 @@ export class AmbitosPracticaComponent implements OnInit {
   readonly tabCategoriaMaestro = signal<TipoCategoriaAmbito>('INTERNO');
   readonly searchQuery = signal<string>('');
 
-  // Selector de carrera para las fichas específicas (OLA 2)
+  // Selector de carrera para las fichas específicas
   readonly carreraSeleccionadaId = signal<string>('');
 
   // Precedencia PRG-002: Plan debe tener asignaturas cargadas
@@ -171,7 +172,6 @@ export class AmbitosPracticaComponent implements OnInit {
         nombre: 'Gestionar información sobre ámbitos de formación práctica y unidades demostrativas',
         responsable: 'Comisión de Carrera / AEA / SGA',
         instrumento: 'Formulario CONEAU (RG-006)',
-        ola: 'OLA 1 (Independiente)',
         dependencia: '',
         completada: tieneAmbitos,
         estado: tieneAmbitos ? 'Completada' : 'Pendiente',
@@ -181,7 +181,6 @@ export class AmbitosPracticaComponent implements OnInit {
         nombre: 'Gestionar información de ámbitos de práctica internos de la carrera',
         responsable: 'Director de Carrera / Comisión Curricular',
         instrumento: 'Ficha FT-008: Registro de Laboratorios y Talleres',
-        ola: 'OLA 2 (Dependiente)',
         dependencia: 'Requiere Ámbitos maestro (RG-006) y Plan de Estudios (8.3)',
         completada: this.actividadesCompletadas().has('INTERNOS_FT008') || (tieneEvaluaciones && this.tieneVinculacionTipo('INTERNO')),
         estado: (this.actividadesCompletadas().has('INTERNOS_FT008') || (tieneEvaluaciones && this.tieneVinculacionTipo('INTERNO'))) ? 'Completada' : 'Pendiente',
@@ -191,7 +190,6 @@ export class AmbitosPracticaComponent implements OnInit {
         nombre: 'Gestionar información de ámbitos de práctica externos de la carrera',
         responsable: 'Secretaría de Extensión / Carrera',
         instrumento: 'Ficha FT-009 y Convenios de Práctica (RG-007)',
-        ola: 'OLA 2 (Dependiente)',
         dependencia: 'Requiere Ámbitos maestro (RG-006), Convenios vigentes y Plan (8.3)',
         completada: this.actividadesCompletadas().has('EXTERNOS_FT009') || (tieneEvaluaciones && this.tieneVinculacionTipo('EXTERNO')),
         estado: (this.actividadesCompletadas().has('EXTERNOS_FT009') || (tieneEvaluaciones && this.tieneVinculacionTipo('EXTERNO'))) ? 'Completada' : 'Pendiente',
@@ -201,7 +199,6 @@ export class AmbitosPracticaComponent implements OnInit {
         nombre: 'Gestionar información de unidades demostrativas de la carrera',
         responsable: 'Área Académica / Dirección de Escuela',
         instrumento: 'Ficha FT-010: Campos Experimentales (Tilimuqui)',
-        ola: 'OLA 2 (Dependiente)',
         dependencia: 'Requiere Ámbitos maestro (RG-006) y Plan (8.3)',
         completada: this.actividadesCompletadas().has('DEMOSTRATIVAS_FT010') || (tieneEvaluaciones && this.tieneVinculacionTipo('UNIDAD_DEMOSTRATIVA')),
         estado: (this.actividadesCompletadas().has('DEMOSTRATIVAS_FT010') || (tieneEvaluaciones && this.tieneVinculacionTipo('UNIDAD_DEMOSTRATIVA'))) ? 'Completada' : 'Pendiente',
@@ -211,7 +208,6 @@ export class AmbitosPracticaComponent implements OnInit {
         nombre: 'Gestionar información de centros de atención médica (CAM) de la carrera',
         responsable: 'Dirección CAM / Escuela de Salud / Director Carrera',
         instrumento: 'Ficha FT-011: Habilitación Sanitaria y Convenios Médicos',
-        ola: 'OLA 2 (Dependiente)',
         dependencia: 'Requiere Ámbitos maestro (RG-006), Convenios hospitalarios y Plan (8.3)',
         completada: this.actividadesCompletadas().has('CAM_FT011') || (tieneEvaluaciones && this.tieneVinculacionTipo('CAM')),
         estado: (this.actividadesCompletadas().has('CAM_FT011') || (tieneEvaluaciones && this.tieneVinculacionTipo('CAM'))) ? 'Completada' : 'Pendiente',
@@ -264,13 +260,33 @@ export class AmbitosPracticaComponent implements OnInit {
     return lista;
   });
 
+  constructor() {
+    effect(() => {
+      const ctxProcesoId = this.contextService.procesoIdActivo();
+      if (ctxProcesoId && ctxProcesoId !== this.procesoId()) {
+        this.procesoId.set(ctxProcesoId);
+      }
+      const ctxCarreraId = this.contextService.carreraSeleccionadaId();
+      if (ctxCarreraId && ctxCarreraId !== this.carreraSeleccionadaId()) {
+        this.carreraSeleccionadaId.set(ctxCarreraId);
+        this.cargarAutoevaluaciones();
+        this.cargarAsignaturasDelPlan();
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.notif.registrarTeardown(this.destroyRef);
 
     this.route.queryParamMap.subscribe((params) => {
-      const pId = params.get('procesoId') || params.get('convocatoriaId') || this.contextService.procesoIdActivo();
-      if (pId) {
-        this.procesoId.set(pId);
+      const convIdParam = params.get('convocatoriaId');
+      const procIdParam = params.get('procesoId');
+      const validProcId =
+        procIdParam && procIdParam !== convIdParam
+          ? procIdParam
+          : this.contextService.procesoIdActivo();
+      if (validProcId) {
+        this.procesoId.set(validProcId);
       }
       const cId = params.get('carreraId') || this.contextService.carreraSeleccionadaId();
       if (cId) {

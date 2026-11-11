@@ -180,4 +180,103 @@ class CrearAsignaturaPlanServiceTest {
         assertEquals(10, savedPlan.getHorasNoPresenciales()); // 10 + 0
         assertEquals(90, savedPlan.getHorasTotales()); // 80 + 10 (o 60 + 0 + 30)
     }
+
+    @Test
+    @DisplayName("deberiaPermitirCrearPrimeraAsignaturaSinCorrelativasEnPlanVacio")
+    void deberiaPermitirCrearPrimeraAsignaturaSinCorrelativasEnPlanVacio() {
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(asignaturaRepository.save(any(ActividadCurricularPlanJpaEntity.class)))
+                .thenAnswer(inv -> {
+                    ActividadCurricularPlanJpaEntity entity = inv.getArgument(0);
+                    if (entity.getId() == null) entity.setId(UUID.randomUUID());
+                    return entity;
+                });
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId)).thenReturn(List.of());
+
+        CrearAsignaturaRequest request = new CrearAsignaturaRequest(
+                "SIS-101",
+                "Introducción a los Algoritmos",
+                "C.B.I.",
+                "1º",
+                64,
+                48,
+                16,
+                null,
+                true,
+                1
+        );
+
+        ActividadCurricularPlanDto result = service.crearAsignatura(planId, request);
+
+        assertNotNull(result);
+        assertEquals("Introducción a los Algoritmos", result.nombre());
+        assertEquals("Sin correlativas previas", result.correlativas());
+    }
+
+    @Test
+    @DisplayName("deberiaRechazarCorrelativasCuandoNoExistenAsignaturasPreviasEnElPlan")
+    void deberiaRechazarCorrelativasCuandoNoExistenAsignaturasPreviasEnElPlan() {
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId)).thenReturn(List.of());
+
+        CrearAsignaturaRequest request = new CrearAsignaturaRequest(
+                "SIS-102",
+                "Programación I",
+                "C.B.I.",
+                "1º",
+                64,
+                48,
+                16,
+                "Introducción a los Algoritmos",
+                true,
+                1
+        );
+
+        DomainValidationException ex = assertThrows(
+                DomainValidationException.class,
+                () -> service.crearAsignatura(planId, request)
+        );
+        assertTrue(ex.getMessage().toLowerCase().contains("correlativas"));
+        verify(asignaturaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("deberiaPermitirCorrelativasCuandoExistenAsignaturasPreviasEnElPlan")
+    void deberiaPermitirCorrelativasCuandoExistenAsignaturasPreviasEnElPlan() {
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+
+        ActividadCurricularPlanJpaEntity previa = new ActividadCurricularPlanJpaEntity();
+        previa.setId(UUID.randomUUID());
+        previa.setNombre("Introducción a los Algoritmos");
+        previa.setHorasReloj(64);
+        previa.setHorasPresenciales(48);
+        previa.setHorasNoPresenciales(16);
+
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId))
+                .thenReturn(List.of(previa));
+        when(asignaturaRepository.save(any(ActividadCurricularPlanJpaEntity.class)))
+                .thenAnswer(inv -> {
+                    ActividadCurricularPlanJpaEntity entity = inv.getArgument(0);
+                    if (entity.getId() == null) entity.setId(UUID.randomUUID());
+                    return entity;
+                });
+
+        CrearAsignaturaRequest request = new CrearAsignaturaRequest(
+                "SIS-102",
+                "Programación I",
+                "C.B.I.",
+                "1º",
+                64,
+                48,
+                16,
+                "Introducción a los Algoritmos",
+                true,
+                2
+        );
+
+        ActividadCurricularPlanDto result = service.crearAsignatura(planId, request);
+
+        assertNotNull(result);
+        assertEquals("Introducción a los Algoritmos", result.correlativas());
+    }
 }

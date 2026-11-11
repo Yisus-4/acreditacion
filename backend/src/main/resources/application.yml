@@ -1,5 +1,8 @@
 server:
   port: 8080
+  tomcat:
+    max-swallow-size: -1
+    max-http-form-post-size: 50MB
 
 spring:
   main:
@@ -8,6 +11,11 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:postgres}
   application:
     name: acreditacion-backend
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
 
 logging:
   level:
