@@ -115,7 +115,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PostMapping("/inmuebles")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'INFRAESTRUCTURA')")
     @Transactional
     public ResponseEntity<InmuebleResponse> registrarInmueble(@RequestBody RegistrarInmuebleRequest request) {
         InstitucionJpaEntity institucion = institucionRepository.findAll().stream().findFirst()
@@ -271,54 +271,72 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PutMapping("/inmuebles/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'INFRAESTRUCTURA', 'BEDELIA')")
     @Transactional
     public ResponseEntity<InmuebleResponse> actualizarInmueble(
             @PathVariable UUID id,
             @RequestBody RegistrarInmuebleRequest request
     ) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Set<String> roles = (auth != null && auth.getAuthorities() != null)
+                ? auth.getAuthorities().stream().map(a -> a.getAuthority()).collect(Collectors.toSet())
+                : Collections.emptySet();
+
+        boolean isAdmin = roles.contains("ROLE_ADMINISTRATOR") || roles.contains("ROLE_ADMIN");
+        boolean isInfra = roles.contains("ROLE_INFRAESTRUCTURA");
+        boolean isBedelia = roles.contains("ROLE_BEDELIA");
+        boolean isHyS = roles.contains("ROLE_HIGIENE_SEGURIDAD");
+
         Optional<InmuebleJpaEntity> opt = inmuebleRepository.findById(id);
         if (opt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
         InmuebleJpaEntity entity = opt.get();
-        if (request.numeroOrden() != null) entity.setNumeroOrden(request.numeroOrden());
-        entity.setNombre(request.nombre());
-        entity.setDomicilio(request.domicilio() != null ? request.domicilio() : (request.calle() + " " + request.numero()));
-        if (request.calle() != null) entity.setCalle(request.calle());
-        if (request.numero() != null) entity.setNumero(request.numero());
-        if (request.sedeId() != null) {
-            sedeRepository.findById(request.sedeId()).ifPresent(entity::setSede);
+
+        // 1. Mutar metadatos del inmueble ONLY if isAdmin || isInfra
+        if (isAdmin || isInfra) {
+            if (request.numeroOrden() != null) entity.setNumeroOrden(request.numeroOrden());
+            if (request.nombre() != null) entity.setNombre(request.nombre());
+            if (request.domicilio() != null) {
+                entity.setDomicilio(request.domicilio());
+            } else if (request.calle() != null && request.numero() != null) {
+                entity.setDomicilio(request.calle() + " " + request.numero());
+            }
+            if (request.calle() != null) entity.setCalle(request.calle());
+            if (request.numero() != null) entity.setNumero(request.numero());
+            if (request.sedeId() != null) {
+                sedeRepository.findById(request.sedeId()).ifPresent(entity::setSede);
+            }
+            if (request.anioConstruccion() != null) entity.setAnioConstruccion(request.anioConstruccion());
+            if (request.anioInicioInstitucion() != null) entity.setAnioInicioInstitucion(request.anioInicioInstitucion());
+            if (request.propiedadInstitucion() != null) entity.setPropiedadInstitucion(request.propiedadInstitucion());
+            if (request.condicionTenencia() != null) entity.setCondicionTenencia(request.condicionTenencia().toUpperCase());
+            if (request.situacion() != null) entity.setSituacion(request.situacion());
+            if (request.vinculaTodasCarreras() != null) entity.setVinculaTodasCarreras(request.vinculaTodasCarreras());
+            if (request.superficieCubiertaM2() != null) entity.setSuperficieCubiertaM2(request.superficieCubiertaM2());
+            if (request.superficieTotalM2() != null) entity.setSuperficieTotalM2(request.superficieTotalM2());
+            if (request.observaciones() != null) entity.setObservaciones(request.observaciones());
+            if (request.estadoConeau() != null) entity.setEstadoConeau(request.estadoConeau());
+
+            if (request.provinciaId() != null) {
+                provinciaRepository.findById(request.provinciaId()).ifPresent(entity::setProvincia);
+            }
+            if (request.departamentoId() != null) {
+                departamentoRepository.findById(request.departamentoId()).ifPresent(entity::setDepartamentoGeografico);
+            }
+            if (request.localidadId() != null) {
+                localidadRepository.findById(request.localidadId()).ifPresent(entity::setLocalidad);
+            }
+
+            if (request.carrerasIds() != null) {
+                Set<CarreraJpaEntity> carreras = new HashSet<>(carreraRepository.findAllById(request.carrerasIds()));
+                entity.setCarreras(carreras);
+            }
         }
-        if (request.anioConstruccion() != null) entity.setAnioConstruccion(request.anioConstruccion());
-        if (request.anioInicioInstitucion() != null) entity.setAnioInicioInstitucion(request.anioInicioInstitucion());
-        entity.setPropiedadInstitucion(request.propiedadInstitucion() != null ? request.propiedadInstitucion() : true);
-        entity.setCondicionTenencia(request.condicionTenencia() != null ? request.condicionTenencia().toUpperCase() : "PROPIO");
-        if (request.situacion() != null) entity.setSituacion(request.situacion());
-        if (request.vinculaTodasCarreras() != null) entity.setVinculaTodasCarreras(request.vinculaTodasCarreras());
-        entity.setSuperficieCubiertaM2(request.superficieCubiertaM2());
-        entity.setSuperficieTotalM2(request.superficieTotalM2());
-        entity.setObservaciones(request.observaciones());
-        if (request.estadoConeau() != null) entity.setEstadoConeau(request.estadoConeau());
         entity.setActualizadoEn(Instant.now());
 
-        if (request.provinciaId() != null) {
-            provinciaRepository.findById(request.provinciaId()).ifPresent(entity::setProvincia);
-        }
-        if (request.departamentoId() != null) {
-            departamentoRepository.findById(request.departamentoId()).ifPresent(entity::setDepartamentoGeografico);
-        }
-        if (request.localidadId() != null) {
-            localidadRepository.findById(request.localidadId()).ifPresent(entity::setLocalidad);
-        }
-
-        if (request.carrerasIds() != null) {
-            Set<CarreraJpaEntity> carreras = new HashSet<>(carreraRepository.findAllById(request.carrerasIds()));
-            entity.setCarreras(carreras);
-        }
-
-        // Espacios físicos y subespacios - Sincronizar
+        // 2. Espacios físicos y subespacios - Sincronizar
         if (request.espacios() != null) {
             List<EspacioFisicoJpaEntity> actuales = espacioFisicoRepository.findByInmuebleIdAndActivoTrue(entity.getId());
             Set<UUID> idsEnviados = new HashSet<>();
@@ -331,20 +349,28 @@ public class AutoevaluacionInfraestructuraController {
                 }
             }
 
-            // Desactivar los que ya no existen
-            for (EspacioFisicoJpaEntity act : actuales) {
-                if (!idsEnviados.contains(act.getId())) {
-                    act.setActivo(false);
-                    espacioFisicoRepository.save(act);
+            // Desactivar los que ya no existen (ONLY isAdmin || isInfra)
+            if (isAdmin || isInfra) {
+                for (EspacioFisicoJpaEntity act : actuales) {
+                    if (!idsEnviados.contains(act.getId())) {
+                        act.setActivo(false);
+                        espacioFisicoRepository.save(act);
+                    }
                 }
             }
 
             // Actualizar o crear padres y subespacios
             for (EspacioFisicoRequest espReq : request.espacios()) {
+                // Si el espacio es nuevo (id == null) y el usuario es strictly Bedelía, no se permite crear espacios
+                if (espReq.id() == null && !isAdmin && !isInfra) {
+                    continue;
+                }
+
                 EspacioFisicoJpaEntity esp;
                 if (espReq.id() != null) {
                     esp = espacioFisicoRepository.findById(espReq.id()).orElse(new EspacioFisicoJpaEntity());
                     if (esp.getId() == null) {
+                        if (!isAdmin && !isInfra) continue; // no crear
                         esp.setId(espReq.id());
                         esp.setCreadoEn(Instant.now());
                     }
@@ -355,37 +381,62 @@ public class AutoevaluacionInfraestructuraController {
                 }
                 esp.setInmueble(entity);
                 esp.setEspacioPadre(null);
-                String espDenom = (espReq.denominacion() != null && !espReq.denominacion().isBlank()) ? espReq.denominacion() :
-                        (espReq.descripcionInfraestructura() != null && !espReq.descripcionInfraestructura().isBlank() ? espReq.descripcionInfraestructura() : "Espacio Físico");
-                esp.setDenominacion(espDenom);
-                esp.setDescripcionInfraestructura(espReq.descripcionInfraestructura() != null ? espReq.descripcionInfraestructura() : espDenom);
-                esp.setCantidad(espReq.cantidad() != null ? espReq.cantidad() : 1);
-                int cap = espReq.capacidadPersonasSentadas() != null ? espReq.capacidadPersonasSentadas() :
-                        (espReq.capacidadEstudiantes() != null ? espReq.capacidadEstudiantes() : 0);
-                esp.setCapacidadPersonasSentadas(cap);
-                esp.setCapacidadEstudiantes(cap);
-                esp.setSuperficieM2(espReq.superficieM2());
-                esp.setEquipamientoDisponible(espReq.equipamientoDisponible());
-                esp.setObservacionHigieneSeguridad(espReq.observacionHigieneSeguridad());
-                boolean tieneSubs = espReq.tieneSubespacios() != null && espReq.tieneSubespacios();
-                esp.setTieneSubespacios(tieneSubs);
-                esp.setEstadoConeau(espReq.estadoConeau() != null ? espReq.estadoConeau() : "CARGADO");
-                esp.setActivo(true);
-                if (espReq.tipoEspacioId() != null) {
-                    tipoEspacioRepository.findById(espReq.tipoEspacioId()).ifPresent(esp::setTipoEspacio);
+
+                // Campos de Infraestructura
+                if (isAdmin || isInfra) {
+                    String espDenom = (espReq.denominacion() != null && !espReq.denominacion().isBlank()) ? espReq.denominacion() :
+                            (espReq.descripcionInfraestructura() != null && !espReq.descripcionInfraestructura().isBlank() ? espReq.descripcionInfraestructura() : "Espacio Físico");
+                    esp.setDenominacion(espDenom);
+                    esp.setDescripcionInfraestructura(espReq.descripcionInfraestructura() != null ? espReq.descripcionInfraestructura() : espDenom);
+                    esp.setSuperficieM2(espReq.superficieM2());
+                    esp.setEquipamientoDisponible(espReq.equipamientoDisponible());
+                    boolean tieneSubs = espReq.tieneSubespacios() != null && espReq.tieneSubespacios();
+                    esp.setTieneSubespacios(tieneSubs);
+                    if (espReq.estadoConeau() != null) esp.setEstadoConeau(espReq.estadoConeau());
+                    esp.setActivo(true);
+                    if (espReq.tipoEspacioId() != null) {
+                        tipoEspacioRepository.findById(espReq.tipoEspacioId()).ifPresent(esp::setTipoEspacio);
+                    }
+                    if (esp.getTipoEspacio() == null) {
+                        tipoEspacioRepository.findAll().stream().findFirst().ifPresent(esp::setTipoEspacio);
+                    }
                 }
-                if (esp.getTipoEspacio() == null) {
-                    tipoEspacioRepository.findAll().stream().findFirst().ifPresent(esp::setTipoEspacio);
+
+                // Campos de Bedelía
+                if (isAdmin || isBedelia) {
+                    if (espReq.cantidad() != null) esp.setCantidad(espReq.cantidad());
+                    if (espReq.capacidadPersonasSentadas() != null) {
+                        esp.setCapacidadPersonasSentadas(espReq.capacidadPersonasSentadas());
+                    }
+                    if (espReq.capacidadEstudiantes() != null) {
+                        esp.setCapacidadEstudiantes(espReq.capacidadEstudiantes());
+                    } else if (espReq.capacidadPersonasSentadas() != null && esp.getCapacidadEstudiantes() == 0) {
+                        esp.setCapacidadEstudiantes(espReq.capacidadPersonasSentadas());
+                    }
                 }
+
+                // Campo Higiene y Seguridad: Solo se modifica si isAdmin || isHyS. Si no, se preserva el valor existente.
+                if (isAdmin || isHyS) {
+                    if (espReq.observacionHigieneSeguridad() != null) {
+                        esp.setObservacionHigieneSeguridad(espReq.observacionHigieneSeguridad());
+                    }
+                }
+
                 espacioFisicoRepository.save(esp);
 
                 // Subespacios hijos
-                if (tieneSubs && espReq.subespacios() != null) {
+                boolean tieneSubsActual = Boolean.TRUE.equals(esp.getTieneSubespacios());
+                if (tieneSubsActual && espReq.subespacios() != null) {
                     for (EspacioFisicoRequest subReq : espReq.subespacios()) {
+                        if (subReq.id() == null && !isAdmin && !isInfra) {
+                            continue;
+                        }
+
                         EspacioFisicoJpaEntity sub;
                         if (subReq.id() != null) {
                             sub = espacioFisicoRepository.findById(subReq.id()).orElse(new EspacioFisicoJpaEntity());
                             if (sub.getId() == null) {
+                                if (!isAdmin && !isInfra) continue;
                                 sub.setId(subReq.id());
                                 sub.setCreadoEn(Instant.now());
                             }
@@ -397,37 +448,53 @@ public class AutoevaluacionInfraestructuraController {
                         sub.setInmueble(entity);
                         sub.setEspacioPadre(esp);
                         sub.setTieneSubespacios(false);
-                        String subDenom = (subReq.denominacion() != null && !subReq.denominacion().isBlank()) ? subReq.denominacion() :
-                                (subReq.descripcionInfraestructura() != null && !subReq.descripcionInfraestructura().isBlank() ? subReq.descripcionInfraestructura() : "Subespacio");
-                        sub.setDenominacion(subDenom);
-                        sub.setDescripcionInfraestructura(subReq.descripcionInfraestructura() != null ? subReq.descripcionInfraestructura() : subDenom);
-                        sub.setCantidad(subReq.cantidad() != null ? subReq.cantidad() : 1);
-                        int subCap = subReq.capacidadPersonasSentadas() != null ? subReq.capacidadPersonasSentadas() :
-                                (subReq.capacidadEstudiantes() != null ? subReq.capacidadEstudiantes() : 0);
-                        sub.setCapacidadPersonasSentadas(subCap);
-                        sub.setCapacidadEstudiantes(subCap);
-                        sub.setSuperficieM2(subReq.superficieM2());
-                        sub.setEquipamientoDisponible(subReq.equipamientoDisponible());
-                        sub.setObservacionHigieneSeguridad(subReq.observacionHigieneSeguridad());
-                        sub.setEstadoConeau(subReq.estadoConeau() != null ? subReq.estadoConeau() : "CARGADO");
-                        sub.setActivo(true);
-                        if (subReq.tipoEspacioId() != null) {
-                            tipoEspacioRepository.findById(subReq.tipoEspacioId()).ifPresent(sub::setTipoEspacio);
+
+                        if (isAdmin || isInfra) {
+                            String subDenom = (subReq.denominacion() != null && !subReq.denominacion().isBlank()) ? subReq.denominacion() :
+                                    (subReq.descripcionInfraestructura() != null && !subReq.descripcionInfraestructura().isBlank() ? subReq.descripcionInfraestructura() : "Subespacio");
+                            sub.setDenominacion(subDenom);
+                            sub.setDescripcionInfraestructura(subReq.descripcionInfraestructura() != null ? subReq.descripcionInfraestructura() : subDenom);
+                            sub.setSuperficieM2(subReq.superficieM2());
+                            sub.setEquipamientoDisponible(subReq.equipamientoDisponible());
+                            if (subReq.estadoConeau() != null) sub.setEstadoConeau(subReq.estadoConeau());
+                            sub.setActivo(true);
+                            if (subReq.tipoEspacioId() != null) {
+                                tipoEspacioRepository.findById(subReq.tipoEspacioId()).ifPresent(sub::setTipoEspacio);
+                            }
+                            if (sub.getTipoEspacio() == null) {
+                                sub.setTipoEspacio(esp.getTipoEspacio());
+                            }
+                            if (sub.getTipoEspacio() == null) {
+                                tipoEspacioRepository.findAll().stream().findFirst().ifPresent(sub::setTipoEspacio);
+                            }
                         }
-                        if (sub.getTipoEspacio() == null) {
-                            sub.setTipoEspacio(esp.getTipoEspacio());
+
+                        if (isAdmin || isBedelia) {
+                            if (subReq.cantidad() != null) sub.setCantidad(subReq.cantidad());
+                            if (subReq.capacidadPersonasSentadas() != null) {
+                                sub.setCapacidadPersonasSentadas(subReq.capacidadPersonasSentadas());
+                            }
+                            if (subReq.capacidadEstudiantes() != null) {
+                                sub.setCapacidadEstudiantes(subReq.capacidadEstudiantes());
+                            } else if (subReq.capacidadPersonasSentadas() != null && sub.getCapacidadEstudiantes() == 0) {
+                                sub.setCapacidadEstudiantes(subReq.capacidadPersonasSentadas());
+                            }
                         }
-                        if (sub.getTipoEspacio() == null) {
-                            tipoEspacioRepository.findAll().stream().findFirst().ifPresent(sub::setTipoEspacio);
+
+                        if (isAdmin || isHyS) {
+                            if (subReq.observacionHigieneSeguridad() != null) {
+                                sub.setObservacionHigieneSeguridad(subReq.observacionHigieneSeguridad());
+                            }
                         }
+
                         espacioFisicoRepository.save(sub);
                     }
                 }
             }
         }
 
-        // Documentos de respaldo (Adjuntar Documentos en Actualizar Inmueble)
-        if (request.documentos() != null && !request.documentos().isEmpty()) {
+        // Documentos de respaldo (Adjuntar Documentos en Actualizar Inmueble) - Solo Admin o Infra
+        if ((isAdmin || isInfra) && request.documentos() != null && !request.documentos().isEmpty()) {
             List<InmuebleDocumentacionRespaldoJpaEntity> docsExistentes = documentacionRepository.findByInmuebleIdOrderByFechaSubidaDesc(entity.getId());
             Set<String> nombresExistentes = docsExistentes.stream()
                     .map(InmuebleDocumentacionRespaldoJpaEntity::getNombreArchivo)
@@ -457,7 +524,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PostMapping("/inmuebles/{id}/verificar")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'INFRAESTRUCTURA')")
     @Transactional
     public ResponseEntity<InmuebleResponse> verificarYRemitirADea(@PathVariable UUID id) {
         Optional<InmuebleJpaEntity> opt = inmuebleRepository.findById(id);
@@ -475,7 +542,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @DeleteMapping("/inmuebles/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'INFRAESTRUCTURA')")
     @Transactional
     public ResponseEntity<Void> eliminarInmueble(@PathVariable UUID id) {
         Optional<InmuebleJpaEntity> opt = inmuebleRepository.findById(id);
@@ -493,7 +560,7 @@ public class AutoevaluacionInfraestructuraController {
     // -------------------------------------------------------------------------
 
     @PatchMapping("/espacios/{id}/higiene-seguridad")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'HIGIENE_SEGURIDAD')")
     @Transactional
     public ResponseEntity<EspacioFisicoResponse> actualizarHigieneSeguridad(
             @PathVariable UUID id,
@@ -620,7 +687,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PostMapping("/procesos/{procesoId}/inmuebles/copiar-maestro")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'INFRAESTRUCTURA')")
     @Transactional
     public ResponseEntity<?> forzarCopiaMaestro(@PathVariable UUID procesoId) {
         try {
@@ -636,7 +703,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PostMapping("/procesos/{procesoId}/infraestructura/extender-plazo")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA')")
     @Transactional
     public ResponseEntity<?> extenderPlazoInfraestructura(
             @PathVariable UUID procesoId,
@@ -676,7 +743,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PostMapping("/procesos/{procesoId}/infraestructura/verificar-y-remitir")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'INFRAESTRUCTURA')")
     @Transactional
     public ResponseEntity<VerificarInfraestructuraResponse> verificarYRemitirInfraestructura(
             @PathVariable UUID procesoId,
@@ -783,7 +850,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @PostMapping("/tipos-espacio")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'INFRAESTRUCTURA', 'BEDELIA')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'INFRAESTRUCTURA')")
     @Transactional
     public ResponseEntity<TipoEspacioResponse> crearTipoEspacio(@RequestBody CrearTipoEspacioRequest request) {
         if (request.denominacion() == null || request.denominacion().isBlank()) {
