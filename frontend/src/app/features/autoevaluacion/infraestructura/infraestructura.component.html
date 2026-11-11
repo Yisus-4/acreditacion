@@ -151,8 +151,8 @@
         }
       </div>
 
-      @if (puedeGestionarInfraestructura()) {
-        <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        @if (puedeExtenderPlazo()) {
           <button
             type="button"
             class="btn-control-extender"
@@ -161,7 +161,9 @@
           >
             Extender Plazo (PT-001)
           </button>
+        }
 
+        @if (puedeEditarInfraestructura()) {
           <button
             type="button"
             class="btn-control-remitir"
@@ -170,9 +172,18 @@
           >
             {{ actividad41Completada() ? '✓ Infraestructura Confirmada (Copia Almacenada)' : 'Confirmar y Almacenar Infraestructura (Finalizar Tarea 4.1)' }}
           </button>
-        </div>
-      }
+        }
+      </div>
     </div>
+
+    @if (!puedeGestionarAlgunoEnInmueble()) {
+      <div class="alert-banner-figma info" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+        <svg style="width: 20px; height: 20px; flex-shrink: 0;" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+        </svg>
+        <span><strong>Modo consulta: solo lectura.</strong> Los cambios en infraestructura deben ser gestionados por las áreas competentes (Infraestructura o Bedelía).</span>
+      </div>
+    }
 
     <!-- Toolbar de Búsqueda y Acción Nuevo -->
     <div class="vista-toolbar">
@@ -218,7 +229,7 @@
         >
           Consultar por m²
         </button>
-        @if (puedeGestionarInfraestructura()) {
+        @if (puedeEditarInfraestructura()) {
           <button class="btn-nuevo-figma" type="button" (click)="abrirFormularioNuevo()">
             + Nuevo inmueble (RG-005)
           </button>
@@ -332,9 +343,13 @@
                 </td>
                 <td class="col-acciones">
                   <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
-                    @if (puedeGestionarInfraestructura()) {
+                    @if (puedeGestionarAlgunoEnInmueble()) {
                       <button type="button" class="btn-tabla-accion" (click)="abrirEditar(inm)">
                         Editar
+                      </button>
+                    } @else {
+                      <button type="button" class="btn-tabla-accion" (click)="abrirEditar(inm)">
+                        Ver Inmueble
                       </button>
                     }
                   </div>
@@ -464,32 +479,36 @@
       </div>
 
       <div style="display: flex; align-items: center; gap: 10px;">
-        <button
-          type="button"
-          class="btn-control-extender"
-          (click)="abrirModalExtensionPlazo()"
-          title="Extiende la fecha de la Actividad 4.2 en el Plan de Trabajo (PT-001)"
-        >
-          Extender Plazo (PT-001)
-        </button>
+        @if (puedeExtenderPlazo()) {
+          <button
+            type="button"
+            class="btn-control-extender"
+            (click)="abrirModalExtensionPlazo()"
+            title="Extiende la fecha de la Actividad 4.2 en el Plan de Trabajo (PT-001)"
+          >
+            Extender Plazo (PT-001)
+          </button>
+        }
 
-        <button
-          type="button"
-          class="btn-nuevo-figma"
-          [disabled]="guardandoHigiene()"
-          (click)="guardarGuiaHigiene()"
-        >
-          {{ guardandoHigiene() ? 'Guardando...' : 'Guardar Cambios GT-003' }}
-        </button>
+        @if (puedeModificarHigieneSeguridad()) {
+          <button
+            type="button"
+            class="btn-nuevo-figma"
+            [disabled]="guardandoHigiene()"
+            (click)="guardarGuiaHigiene()"
+          >
+            {{ guardandoHigiene() ? 'Guardando...' : 'Guardar Cambios GT-003' }}
+          </button>
 
-        <button
-          type="button"
-          class="btn-control-remitir"
-          (click)="remitirHigieneADea()"
-          title="Informa la tarea completa a la AEA y actualiza la Actividad 4.2 a COMPLETADA en el Plan de Trabajo"
-        >
-          Remitir a AEA (Completar Tarea 4.2)
-        </button>
+          <button
+            type="button"
+            class="btn-control-remitir"
+            (click)="remitirHigieneADea()"
+            title="Informa la tarea completa a la AEA y actualiza la Actividad 4.2 a COMPLETADA en el Plan de Trabajo"
+          >
+            Remitir a AEA (Completar Tarea 4.2)
+          </button>
+        }
       </div>
     </div>
 
@@ -500,6 +519,15 @@
       </div>
     } @else {
       <div style="display: flex; flex-direction: column; gap: 20px;">
+
+        @if (!puedeModificarHigieneSeguridad()) {
+          <div class="alert-banner-figma info" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 12px 16px; border-radius: 8px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+            <svg style="width: 20px; height: 20px; flex-shrink: 0;" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            </svg>
+            <span><strong>Modo consulta: solo lectura.</strong> Los cambios deben ser gestionados por el área de Higiene y Seguridad.</span>
+          </div>
+        }
 
         <!-- Formulario Secciones 6.2 y 5.1 -->
         <div class="tabla-figma-wrapper" style="padding: 24px; background: #ffffff;">
@@ -599,14 +627,16 @@
             <h5 style="font-size: 14.5px; font-weight: 700; color: var(--color-primary-dark); margin: 0;">
               Tabla de Normativa de Respaldo (Resoluciones, Ordenanzas y Actos Administrativos)
             </h5>
-            <button
-              type="button"
-              class="btn-nuevo-figma"
-              style="padding: 6px 12px; font-size: 12.5px;"
-              (click)="abrirModalNormativaHigiene()"
-            >
-              + Agregar normativa
-            </button>
+            @if (puedeModificarHigieneSeguridad()) {
+              <button
+                type="button"
+                class="btn-nuevo-figma"
+                style="padding: 6px 12px; font-size: 12.5px;"
+                (click)="abrirModalNormativaHigiene()"
+              >
+                + Agregar normativa
+              </button>
+            }
           </div>
 
           <table class="tabla-figma" style="font-size: 13px;">
@@ -793,7 +823,7 @@
     <div class="drawer-panel-figma" style="width: 650px;">
       <div class="drawer-header">
         <h3 class="drawer-title">
-          {{ modoEdicion() ? 'Editar Inmueble (RG-005)' : 'Nuevo Inmueble en Registro (RG-005)' }}
+          {{ modoEdicion() ? (puedeGestionarAlgunoEnInmueble() ? 'Editar Inmueble (RG-005)' : 'Consulta de Inmueble (RG-005)') : 'Nuevo Inmueble en Registro (RG-005)' }}
         </h3>
         <button type="button" class="btn-accion-icono" (click)="cerrarFormulario()">✕</button>
       </div>
@@ -904,44 +934,48 @@
             </div>
 
             @if (!form.get('vinculaTodasCarreras')?.value) {
-              <div style="background: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 12px;">
-                <label style="display: block; font-size: 13px; font-weight: 600; color: var(--color-primary-dark); margin-bottom: 6px;">
-                  Vincular carrera específica (Diagrama de Secuencia)
-                </label>
-                <div style="display: flex; gap: 8px;">
-                  <select
-                    class="form-input-figma"
-                    style="flex: 1;"
-                    [value]="carreraParaVincularId()"
-                    (change)="carreraParaVincularId.set($any($event.target).value)"
-                  >
-                    <option value="">Seleccione una carrera...</option>
-                    @for (car of carreras(); track car.id) {
-                      <option [value]="car.id">{{ car.nombre }} {{ car.sigla ? '(' + car.sigla + ')' : '' }}</option>
-                    }
-                  </select>
-                  <button
-                    type="button"
-                    class="btn-nuevo-figma"
-                    style="padding: 8px 14px; font-size: 12.5px; white-space: nowrap;"
-                    (click)="vincularCarrera()"
-                  >
-                    + Vincular
-                  </button>
+              @if (puedeEditarInfraestructura()) {
+                <div style="background: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 12px;">
+                  <label style="display: block; font-size: 13px; font-weight: 600; color: var(--color-primary-dark); margin-bottom: 6px;">
+                    Vincular carrera específica (Diagrama de Secuencia)
+                  </label>
+                  <div style="display: flex; gap: 8px;">
+                    <select
+                      class="form-input-figma"
+                      style="flex: 1;"
+                      [value]="carreraParaVincularId()"
+                      (change)="carreraParaVincularId.set($any($event.target).value)"
+                    >
+                      <option value="">Seleccione una carrera...</option>
+                      @for (car of carreras(); track car.id) {
+                        <option [value]="car.id">{{ car.nombre }} {{ car.sigla ? '(' + car.sigla + ')' : '' }}</option>
+                      }
+                    </select>
+                    <button
+                      type="button"
+                      class="btn-nuevo-figma"
+                      style="padding: 8px 14px; font-size: 12.5px; white-space: nowrap;"
+                      (click)="vincularCarrera()"
+                    >
+                      + Vincular
+                    </button>
+                  </div>
                 </div>
-              </div>
+              }
 
               @if (carrerasSeleccionadas().length > 0) {
                 <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
                   @for (c of carrerasSeleccionadas(); track c.id) {
                     <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 16px; font-size: 12.5px; font-weight: 500; color: #374151;">
                       <span>{{ c.nombre }}</span>
-                      <button
-                        type="button"
-                        class="btn-accion-icono"
-                        style="color: #ef4444; font-size: 11px; padding: 0;"
-                        (click)="desvincularCarrera(c.id)"
-                      >✕</button>
+                      @if (puedeEditarInfraestructura()) {
+                        <button
+                          type="button"
+                          class="btn-accion-icono"
+                          style="color: #ef4444; font-size: 11px; padding: 0;"
+                          (click)="desvincularCarrera(c.id)"
+                        >✕</button>
+                      }
                     </span>
                   }
                 </div>
@@ -959,13 +993,15 @@
               <h4 style="font-size: 14.5px; font-weight: 700; color: var(--color-primary-dark); margin: 0;">
                 Espacios Físicos Declarados ({{ espaciosAgregados().length }})
               </h4>
-              <button
-                type="button"
-                class="btn-tabla-accion"
-                (click)="abrirNuevoEspacio()"
-              >
-                + Agregar espacio
-              </button>
+              @if (puedeEditarInfraestructura()) {
+                <button
+                  type="button"
+                  class="btn-tabla-accion"
+                  (click)="abrirNuevoEspacio()"
+                >
+                  + Agregar espacio
+                </button>
+              }
             </div>
 
             @if (mostrarFormEspacio()) {
@@ -982,6 +1018,7 @@
                       type="text"
                       placeholder="Ej: Aula 1-2-3-4-17-18 o Laboratorio de Microscopía"
                       class="form-input-figma"
+                      [disabled]="!puedeEditarInfraestructura()"
                       [value]="nuevoEspacioDescInfra()"
                       (input)="nuevoEspacioDescInfra.set($any($event.target).value)"
                     />
@@ -992,6 +1029,7 @@
                       type="text"
                       placeholder="Ej: Aula Común o Lab Especial"
                       class="form-input-figma"
+                      [disabled]="!puedeEditarInfraestructura()"
                       [value]="nuevoEspacioNombre()"
                       (input)="nuevoEspacioNombre.set($any($event.target).value)"
                     />
@@ -1003,18 +1041,21 @@
                   <div class="form-grid-cell">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                       <label style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 0;">Tipo de espacio físico *</label>
-                      <button
-                        type="button"
-                        class="btn-tabla-accion"
-                        style="padding: 2px 8px; font-size: 11px; white-space: nowrap; line-height: 1.2;"
-                        title="Caso 2: Agrega un nuevo tipo de espacio al catálogo"
-                        (click)="abrirModalNuevoTipo()"
-                      >
-                        + Nuevo Tipo
-                      </button>
+                      @if (puedeEditarInfraestructura()) {
+                        <button
+                          type="button"
+                          class="btn-tabla-accion"
+                          style="padding: 2px 8px; font-size: 11px; white-space: nowrap; line-height: 1.2;"
+                          title="Caso 2: Agrega un nuevo tipo de espacio al catálogo"
+                          (click)="abrirModalNuevoTipo()"
+                        >
+                          + Nuevo Tipo
+                        </button>
+                      }
                     </div>
                     <select
                       class="form-input-figma"
+                      [disabled]="!puedeEditarInfraestructura()"
                       [value]="nuevoEspacioTipoId()"
                       (change)="nuevoEspacioTipoId.set($any($event.target).value)"
                     >
@@ -1033,6 +1074,7 @@
                         min="0"
                         class="form-input-figma"
                         style="padding-right: 48px;"
+                        [disabled]="!puedeEditarBedelia()"
                         [value]="nuevoEspacioCapacidad()"
                         (input)="nuevoEspacioCapacidad.set(+$any($event.target).value)"
                       />
@@ -1052,6 +1094,7 @@
                         placeholder="Ej: 45.5"
                         class="form-input-figma"
                         style="padding-right: 36px;"
+                        [disabled]="!puedeEditarInfraestructura()"
                         [value]="nuevoEspacioSuperficieM2() ?? ''"
                         (input)="nuevoEspacioSuperficieM2.set($any($event.target).value ? +$any($event.target).value : null)"
                       />
@@ -1069,6 +1112,7 @@
                     rows="2"
                     placeholder="Detalle u observaciones de higiene, seguridad, ventilación o vías de escape asignadas a este espacio..."
                     class="form-input-figma"
+                    [disabled]="!puedeModificarHigieneSeguridad()"
                     [value]="nuevoEspacioObservacionHyS()"
                     (input)="nuevoEspacioObservacionHyS.set($any($event.target).value)"
                   ></textarea>
@@ -1079,6 +1123,7 @@
                   <input
                     id="chkSubespacios"
                     type="checkbox"
+                    [disabled]="!puedeEditarInfraestructura()"
                     [checked]="nuevoEspacioTieneSubespacios()"
                     (change)="nuevoEspacioTieneSubespacios.set($any($event.target).checked)"
                   />
@@ -1104,6 +1149,7 @@
                             type="text"
                             placeholder="Ej: Box 1 o Zona de reactivos"
                             class="form-input-figma"
+                            [disabled]="!puedeEditarInfraestructura()"
                             [value]="subDescInfra()"
                             (input)="subDescInfra.set($any($event.target).value)"
                           />
@@ -1114,6 +1160,7 @@
                             type="text"
                             placeholder="Ej: Box 1"
                             class="form-input-figma"
+                            [disabled]="!puedeEditarInfraestructura()"
                             [value]="subDenominacion()"
                             (input)="subDenominacion.set($any($event.target).value)"
                           />
@@ -1126,6 +1173,7 @@
                           <label style="font-size: 12px; font-weight: 600; color: #475569;">Tipo de espacio</label>
                           <select
                             class="form-input-figma"
+                            [disabled]="!puedeEditarInfraestructura()"
                             [value]="subTipoEspacioId()"
                             (change)="subTipoEspacioId.set($any($event.target).value)"
                           >
@@ -1141,6 +1189,7 @@
                             type="number"
                             min="0"
                             class="form-input-figma"
+                            [disabled]="!puedeEditarBedelia()"
                             [value]="subCapacidad()"
                             (input)="subCapacidad.set(+$any($event.target).value)"
                           />
@@ -1153,6 +1202,7 @@
                             step="0.01"
                             placeholder="Ej: 15.5"
                             class="form-input-figma"
+                            [disabled]="!puedeEditarInfraestructura()"
                             [value]="subSuperficieM2() ?? ''"
                             (input)="subSuperficieM2.set($any($event.target).value ? +$any($event.target).value : null)"
                           />
@@ -1166,21 +1216,24 @@
                           type="text"
                           placeholder="Observaciones y detalle HyS para este subespacio..."
                           class="form-input-figma"
+                          [disabled]="!puedeModificarHigieneSeguridad()"
                           [value]="subObservacionHyS()"
                           (input)="subObservacionHyS.set($any($event.target).value)"
                         />
                       </div>
 
-                      <div style="display: flex; justify-content: flex-end;">
-                        <button
-                          type="button"
-                          class="btn-tabla-accion"
-                          style="font-size: 12.5px; font-weight: 600; padding: 6px 16px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 6px;"
-                          (click)="agregarSubespacio()"
-                        >
-                          + Agregar subespacio
-                        </button>
-                      </div>
+                      @if (puedeEditarInfraestructura()) {
+                        <div style="display: flex; justify-content: flex-end;">
+                          <button
+                            type="button"
+                            class="btn-tabla-accion"
+                            style="font-size: 12.5px; font-weight: 600; padding: 6px 16px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 6px;"
+                            (click)="agregarSubespacio()"
+                          >
+                            + Agregar subespacio
+                          </button>
+                        </div>
+                      }
                     </div>
 
                     <!-- Lista de subespacios cargados -->
@@ -1195,18 +1248,20 @@
                               </span>
                               @if (sub.observacionHigieneSeguridad) {
                                 <div style="font-size: 11.5px; color: #15803d; margin-top: 2px;">
-                                  HyS: {{ sub.observacionHigieneSeguridad }}
+                                   HyS: {{ sub.observacionHigieneSeguridad }}
                                 </div>
                               }
                             </div>
-                            <button
-                              type="button"
-                              class="btn-accion-icono"
-                              style="color: #dc2626; font-size: 13px;"
-                              (click)="eliminarSubespacio($index)"
-                            >
-                              ✕
-                            </button>
+                            @if (puedeEditarInfraestructura()) {
+                              <button
+                                type="button"
+                                class="btn-accion-icono"
+                                style="color: #dc2626; font-size: 13px;"
+                                (click)="eliminarSubespacio($index)"
+                              >
+                                ✕
+                              </button>
+                            }
                           </div>
                         }
                       </div>
@@ -1220,9 +1275,11 @@
 
                 <div style="display: flex; justify-content: flex-end; gap: 8px;">
                   <button type="button" class="btn-tabla-accion" (click)="mostrarFormEspacio.set(false)">Cancelar</button>
-                  <button type="button" class="btn-nuevo-figma" (click)="guardarEspacioFisico()">
-                    {{ espacioEditandoIndex() !== null ? 'Actualizar espacio' : 'Confirmar espacio' }}
-                  </button>
+                  @if (puedeGestionarAlgunoEnInmueble()) {
+                    <button type="button" class="btn-nuevo-figma" (click)="guardarEspacioFisico()">
+                      {{ espacioEditandoIndex() !== null ? 'Actualizar espacio' : 'Confirmar espacio' }}
+                    </button>
+                  }
                 </div>
               </div>
             }
@@ -1243,21 +1300,25 @@
                       }
                     </div>
                     <div style="display: flex; gap: 6px; align-items: center;">
-                      <button
-                        type="button"
-                        class="btn-tabla-accion"
-                        style="padding: 3px 8px; font-size: 11.5px;"
-                        (click)="editarEspacioFisico($index)"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        class="btn-accion-icono"
-                        style="color: #dc2626; font-size: 13px;"
-                        title="Dar de baja espacio físico"
-                        (click)="eliminarEspacioFisico(esp)"
-                      >✕</button>
+                      @if (puedeGestionarAlgunoEnInmueble()) {
+                        <button
+                          type="button"
+                          class="btn-tabla-accion"
+                          style="padding: 3px 8px; font-size: 11.5px;"
+                          (click)="editarEspacioFisico($index)"
+                        >
+                          Editar
+                        </button>
+                      }
+                      @if (puedeEditarInfraestructura()) {
+                        <button
+                          type="button"
+                          class="btn-accion-icono"
+                          style="color: #dc2626; font-size: 13px;"
+                          title="Dar de baja espacio físico"
+                          (click)="eliminarEspacioFisico(esp)"
+                        >✕</button>
+                      }
                     </div>
                   </div>
                 }
@@ -1346,15 +1407,19 @@
           }
 
           <div class="drawer-actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 10px;">
-            <button type="button" class="btn-tabla-accion" (click)="cerrarFormulario()">Cancelar</button>
-            <button
-              type="button"
-              class="btn-nuevo-figma"
-              [disabled]="submitting()"
-              (click)="solicitarConfirmacion()"
-            >
-              {{ modoEdicion() ? 'Guardar Cambios' : 'Registrar Inmueble (RG-005)' }}
+            <button type="button" class="btn-tabla-accion" (click)="cerrarFormulario()">
+              {{ puedeGestionarAlgunoEnInmueble() ? 'Cancelar' : 'Cerrar' }}
             </button>
+            @if (puedeGestionarAlgunoEnInmueble()) {
+              <button
+                type="button"
+                class="btn-nuevo-figma"
+                [disabled]="submitting()"
+                (click)="solicitarConfirmacion()"
+              >
+                {{ modoEdicion() ? 'Guardar Cambios' : 'Registrar Inmueble (RG-005)' }}
+              </button>
+            }
           </div>
         </form>
       </div>

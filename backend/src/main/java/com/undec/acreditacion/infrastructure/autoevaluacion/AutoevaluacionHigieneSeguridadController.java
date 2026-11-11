@@ -7,8 +7,10 @@ import com.undec.acreditacion.domain.entities.User;
 import com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.*;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.*;
+import com.undec.acreditacion.infrastructure.autoevaluacion.service.GuiaHigieneSeguridadClonerService;
 import com.undec.acreditacion.infrastructure.persistence.postgres.InstitucionJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataInstitucionRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,19 +33,22 @@ public class AutoevaluacionHigieneSeguridadController {
     private final SpringDataInstitucionRepository institucionRepository;
     private final PlanTrabajoRepositoryPort planTrabajoRepository;
     private final UserRepository userRepository;
+    private final GuiaHigieneSeguridadClonerService clonerService;
 
     public AutoevaluacionHigieneSeguridadController(
             SpringDataGuiaHigieneSeguridadRepository guiaRepository,
             SpringDataGuiaHigieneDocumentoRepository documentoRepository,
             SpringDataInstitucionRepository institucionRepository,
             PlanTrabajoRepositoryPort planTrabajoRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            GuiaHigieneSeguridadClonerService clonerService
     ) {
         this.guiaRepository = guiaRepository;
         this.documentoRepository = documentoRepository;
         this.institucionRepository = institucionRepository;
         this.planTrabajoRepository = planTrabajoRepository;
         this.userRepository = userRepository;
+        this.clonerService = clonerService;
     }
 
     // -------------------------------------------------------------------------
@@ -51,7 +56,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/maestro")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION', 'AC_COORDINATOR', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<GuiaHigieneSeguridadResponse> obtenerGuiaMaestra() {
         return guiaRepository.findGuiaMaestraCompleta()
@@ -65,23 +70,26 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/procesos/{procesoId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA')")
-    @Transactional
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION', 'AC_COORDINATOR', 'DOCENTE')")
     public ResponseEntity<GuiaHigieneSeguridadResponse> obtenerGuiaPorProceso(@PathVariable UUID procesoId) {
         Optional<GuiaHigieneSeguridadJpaEntity> opt = guiaRepository.findByProcesoIdCompleta(procesoId);
-        GuiaHigieneSeguridadJpaEntity guia;
-
         if (opt.isPresent()) {
-            guia = opt.get();
-        } else {
-            guia = clonarGuiaMaestraParaProceso(procesoId);
+            return ResponseEntity.ok(mapToResponse(opt.get()));
         }
 
-        return ResponseEntity.ok(mapToResponse(guia));
+        try {
+            GuiaHigieneSeguridadJpaEntity guia = clonerService.clonarGuiaMaestraParaProceso(procesoId);
+            return ResponseEntity.ok(mapToResponse(guia));
+        } catch (DataIntegrityViolationException ex) {
+            // Concurrencia: otro hilo o petición clonó la guía simultáneamente
+            GuiaHigieneSeguridadJpaEntity reloaded = guiaRepository.findByProcesoIdCompleta(procesoId)
+                    .orElseThrow(() -> ex);
+            return ResponseEntity.ok(mapToResponse(reloaded));
+        }
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'HIGIENE_SEGURIDAD')")
     @Transactional
     public ResponseEntity<GuiaHigieneSeguridadResponse> actualizarGuia(
             @PathVariable UUID id,
@@ -111,12 +119,43 @@ public class AutoevaluacionHigieneSeguridadController {
         return ResponseEntity.ok(mapToResponse(guardado));
     }
 
+    @PutMapping("/procesos/{procesoId}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'HIGIENE_SEGURIDAD')")
+    @Transactional
+    public ResponseEntity<GuiaHigieneSeguridadResponse> actualizarGuiaPorProceso(
+            @PathVariable UUID procesoId,
+            @RequestBody ActualizarGuiaHigieneRequest request
+    ) {
+        Optional<GuiaHigieneSeguridadJpaEntity> opt = guiaRepository.findByProcesoIdCompleta(procesoId);
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        GuiaHigieneSeguridadJpaEntity entity = opt.get();
+        if (request.instanciaResponsableUa() != null) {
+            entity.setInstanciaResponsableUa(request.instanciaResponsableUa());
+        }
+        if (request.politicaUnidadesApoyo() != null) {
+            entity.setPoliticaUnidadesApoyo(request.politicaUnidadesApoyo());
+        }
+        if (request.aplicaUnidadesApoyo() != null) {
+            entity.setAplicaUnidadesApoyo(request.aplicaUnidadesApoyo());
+        }
+        if (request.observaciones() != null) {
+            entity.setObservaciones(request.observaciones());
+        }
+        entity.setActualizadoEn(Instant.now());
+
+        GuiaHigieneSeguridadJpaEntity guardado = guiaRepository.save(entity);
+        return ResponseEntity.ok(mapToResponse(guardado));
+    }
+
     // -------------------------------------------------------------------------
     // 3. Documentación de Respaldo y Normativa MinIO
     // -------------------------------------------------------------------------
 
     @PostMapping("/{id}/documentos")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'HIGIENE_SEGURIDAD')")
     @Transactional
     public ResponseEntity<GuiaHigieneDocumentoResponse> agregarOActualizarDocumento(
             @PathVariable UUID id,
@@ -164,7 +203,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @PostMapping("/procesos/{procesoId}/extender-plazo")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA')")
     @Transactional
     public ResponseEntity<Map<String, Object>> extenderPlazoActividad(
             @PathVariable UUID procesoId,
@@ -215,7 +254,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @PostMapping("/procesos/{procesoId}/verificar-y-remitir")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'HIGIENE_SEGURIDAD')")
     @Transactional
     public ResponseEntity<VerificarInfraestructuraResponse> verificarYRemitirADea(
             @PathVariable UUID procesoId
@@ -259,59 +298,6 @@ public class AutoevaluacionHigieneSeguridadController {
                 now,
                 "Guía GT-003 y documentación de respaldo verificadas. Tarea 4.2 finalizada y asentada en hoja INFO del PT-001"
         ));
-    }
-
-    // -------------------------------------------------------------------------
-    // Helper: Clonar Guía Maestra
-    // -------------------------------------------------------------------------
-
-    private GuiaHigieneSeguridadJpaEntity clonarGuiaMaestraParaProceso(UUID procesoId) {
-        GuiaHigieneSeguridadJpaEntity maestro = guiaRepository.findGuiaMaestraCompleta()
-                .orElseThrow(() -> new IllegalStateException("No existe Guía Maestra GT-003 en el sistema"));
-
-        InstitucionJpaEntity institucion = institucionRepository.findAll().stream().findFirst()
-                .orElse(maestro.getInstitucion());
-
-        GuiaHigieneSeguridadJpaEntity c = new GuiaHigieneSeguridadJpaEntity();
-        c.setId(UUID.randomUUID());
-        c.setProcesoId(procesoId);
-        c.setInstitucion(institucion);
-        c.setEsMaestro(false);
-        c.setEdicion(maestro.getEdicion());
-        c.setFechaVigencia(maestro.getFechaVigencia());
-        c.setElaboradoPor(maestro.getElaboradoPor());
-        c.setRevisadoPor(maestro.getRevisadoPor());
-        c.setInstanciaResponsableUa(maestro.getInstanciaResponsableUa());
-        c.setPoliticaUnidadesApoyo(maestro.getPoliticaUnidadesApoyo());
-        c.setAplicaUnidadesApoyo(maestro.getAplicaUnidadesApoyo());
-        c.setVerificado(false);
-        c.setFechaSolicitud(Instant.now());
-        c.setFechaLimite(LocalDate.now().plusDays(10));
-        c.setEstado("PENDIENTE");
-        c.setCreadoEn(Instant.now());
-        c.setActualizadoEn(Instant.now());
-
-        List<GuiaHigieneDocumentoJpaEntity> docsMaestros = documentoRepository.findByGuiaIdOrderByCreadoEnAsc(maestro.getId());
-        for (GuiaHigieneDocumentoJpaEntity docM : docsMaestros) {
-            GuiaHigieneDocumentoJpaEntity docC = new GuiaHigieneDocumentoJpaEntity();
-            docC.setId(UUID.randomUUID());
-            docC.setGuia(c);
-            docC.setTipoDocumentoClave(docM.getTipoDocumentoClave());
-            docC.setTipoDocumentoNombre(docM.getTipoDocumentoNombre());
-            docC.setOrganismoEmisor(docM.getOrganismoEmisor());
-            docC.setNumeroNormativa(docM.getNumeroNormativa());
-            docC.setDescripcion(docM.getDescripcion());
-            docC.setNombreArchivo(docM.getNombreArchivo());
-            docC.setUrlMinio(docM.getUrlMinio());
-            docC.setRutaRepositorio(docM.getRutaRepositorio());
-            docC.setObligatorio(docM.getObligatorio());
-            docC.setCargado(docM.getCargado());
-            docC.setFechaSubida(docM.getFechaSubida());
-            docC.setCreadoEn(Instant.now());
-            c.getDocumentos().add(docC);
-        }
-
-        return guiaRepository.save(c);
     }
 
     private GuiaHigieneSeguridadResponse mapToResponse(GuiaHigieneSeguridadJpaEntity g) {

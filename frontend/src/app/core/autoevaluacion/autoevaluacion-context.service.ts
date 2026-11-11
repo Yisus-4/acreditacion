@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { forkJoin, of, Observable } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
@@ -51,13 +51,51 @@ export class AutoevaluacionContextService {
   readonly carrerasDisponibles = computed<CarreraResponse[]>(() => {
     const detalle = this.convocatoriaDetalle();
     const todas = this.carrerasTodas();
-    if (!detalle || !detalle.carrerasPropuestas || detalle.carrerasPropuestas.length === 0) {
-      return todas;
+    let baseCarreras = todas;
+
+    if (detalle && detalle.carrerasPropuestas && detalle.carrerasPropuestas.length > 0) {
+      const propuestasIds = new Set(detalle.carrerasPropuestas.map((cp) => cp.carreraId));
+      const filtradas = todas.filter((c) => propuestasIds.has(c.id));
+      if (filtradas.length > 0) {
+        baseCarreras = filtradas;
+      }
     }
-    const propuestasIds = new Set(detalle.carrerasPropuestas.map((cp) => cp.carreraId));
-    const filtradas = todas.filter((c) => propuestasIds.has(c.id));
-    return filtradas.length > 0 ? filtradas : todas;
+
+    // Multi-tenancy filter by Academic Unit for non-admin academic roles
+    const currentUser = this.auth.currentSession?.user;
+    const esAdmin = this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN');
+    const esTransversal = this.auth.hasAnyRole('AEA');
+
+    if (!esAdmin && !esTransversal && currentUser?.unidadAcademicaId) {
+      const esAcademico = this.auth.hasAnyRole(
+        'CAREER_DIRECTOR',
+        'DIRECTOR_CARRERA',
+        'SCHOOL_DIRECTOR',
+        'DIRECTOR_ESCUELA',
+        'SELF_EVALUATION_COMMITTEE_MEMBER',
+        'COMISION_AUTOEVALUACION',
+        'DOCENTE'
+      );
+      if (esAcademico) {
+        return baseCarreras.filter(
+          (carrera) => carrera.unidadAcademicaId === currentUser.unidadAcademicaId
+        );
+      }
+    }
+
+    return baseCarreras;
   });
+
+  constructor() {
+    effect(() => {
+      const disp = this.carrerasDisponibles();
+      const current = this.carreraSeleccionadaId();
+      if (current && !disp.some((c) => c.id === current)) {
+        const defaultCarId = disp.length > 0 ? disp[0].id : null;
+        this.carreraSeleccionadaId.set(defaultCarId);
+      }
+    });
+  }
 
   readonly procesoIdActivo = computed<string | null>(() => {
     const detalle = this.convocatoriaDetalle();

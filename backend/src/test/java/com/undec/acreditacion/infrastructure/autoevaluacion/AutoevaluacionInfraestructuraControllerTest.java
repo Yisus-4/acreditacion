@@ -3,6 +3,7 @@ package com.undec.acreditacion.infrastructure.autoevaluacion;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.*;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.*;
 import com.undec.acreditacion.infrastructure.persistence.postgres.*;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -72,13 +78,23 @@ class AutoevaluacionInfraestructuraControllerTest {
         inmueble = new InmuebleJpaEntity();
         inmueble.setId(UUID.randomUUID());
         inmueble.setNombre("Campus Universitario");
+        inmueble.setDomicilio("Av. Los Sarmientos 123");
+        inmueble.setCalle("Av. Los Sarmientos");
+        inmueble.setNumero("123");
+        inmueble.setSuperficieCubiertaM2(new BigDecimal("1200.00"));
+        inmueble.setSuperficieTotalM2(new BigDecimal("3000.00"));
+        inmueble.setCondicionTenencia("PROPIO");
+        inmueble.setPropiedadInstitucion(true);
+        inmueble.setActivo(true);
 
         espacioPadre = new EspacioFisicoJpaEntity();
         espacioPadre.setId(UUID.randomUUID());
         espacioPadre.setInmueble(inmueble);
         espacioPadre.setDenominacion("Lab Alta Complejidad");
+        espacioPadre.setDescripcionInfraestructura("Laboratorio Central");
         espacioPadre.setCantidad(1);
         espacioPadre.setCapacidadPersonasSentadas(60);
+        espacioPadre.setCapacidadEstudiantes(60);
         espacioPadre.setSuperficieM2(new BigDecimal("180.00"));
         espacioPadre.setTieneSubespacios(true);
         espacioPadre.setObservacionHigieneSeguridad("Ventilación forzada");
@@ -89,12 +105,163 @@ class AutoevaluacionInfraestructuraControllerTest {
         subespacio.setInmueble(inmueble);
         subespacio.setEspacioPadre(espacioPadre);
         subespacio.setDenominacion("Área Microscopía");
+        subespacio.setDescripcionInfraestructura("Microscopios");
         subespacio.setCantidad(1);
         subespacio.setCapacidadPersonasSentadas(15);
+        subespacio.setCapacidadEstudiantes(15);
         subespacio.setSuperficieM2(new BigDecimal("40.00"));
         subespacio.setTieneSubespacios(false);
         subespacio.setObservacionHigieneSeguridad("Campana extractora OK");
         subespacio.setActivo(true);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticateRole(String role) {
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                "user@undec.edu.ar",
+                "secret",
+                List.of(new SimpleGrantedAuthority("ROLE_" + role))
+        );
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(auth);
+        SecurityContextHolder.setContext(context);
+    }
+
+    @Test
+    @DisplayName("Bedelía en PUT /inmuebles/{id} solo puede mutar capacidades y no modifica metadatos ni crea espacios")
+    void bedeliaNoModificaMetadatosInmuebleNiCreaEspacios() {
+        authenticateRole("BEDELIA");
+
+        when(inmuebleRepository.findById(inmueble.getId())).thenReturn(Optional.of(inmueble));
+        when(inmuebleRepository.save(any(InmuebleJpaEntity.class))).thenAnswer(i -> i.getArgument(0));
+        when(espacioFisicoRepository.findByInmuebleIdAndActivoTrue(inmueble.getId())).thenReturn(List.of(espacioPadre));
+        when(espacioFisicoRepository.findById(espacioPadre.getId())).thenReturn(Optional.of(espacioPadre));
+        when(espacioFisicoRepository.save(any(EspacioFisicoJpaEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Request intentando modificar nombre, metros cuadrados y capacidad
+        EspacioFisicoRequest espReq = new EspacioFisicoRequest(
+                espacioPadre.getId(),
+                null,
+                "Intento Cambio Denominacion",
+                "Intento Cambio Descripcion",
+                2,
+                80,
+                80,
+                new BigDecimal("500.00"), // Intento alterar m2
+                "Nuevo Equipamiento",
+                "CARGADO",
+                true,
+                "Intento alterar HyS", // Intento alterar HyS
+                Collections.emptyList()
+        );
+
+        // Intento crear un nuevo espacio físico siendo Bedelía
+        EspacioFisicoRequest nuevoEspReq = new EspacioFisicoRequest(
+                null, null, "Nuevo Espacio Ilegal", "Desc", 1, 30, 30, new BigDecimal("40.00"), null, "CARGADO", false, null, Collections.emptyList()
+        );
+
+        RegistrarInmuebleRequest req = new RegistrarInmuebleRequest(
+                1,
+                "Nombre Hackeado",
+                "Calle Falsa 123",
+                "Calle Falsa",
+                "123",
+                null,
+                null, null, null, // provinciaId, departamentoId, localidadId
+                2020, 2020, false, "ALQUILADO", "Alquiler", false,
+                true, null, // esMaestro, procesoId
+                new BigDecimal("9999.00"), // Intento alterar superficie
+                new BigDecimal("9999.00"),
+                "Observacion",
+                "CARGADO",
+                null, // carrerasIds
+                List.of(espReq, nuevoEspReq),
+                List.of(new RegistrarInmuebleRequest.DocumentoRespaldoRequest("doc.pdf", "/minio/doc.pdf", "ANEXO", "Desc"))
+        );
+
+        ResponseEntity<InmuebleResponse> response = controller.actualizarInmueble(inmueble.getId(), req);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        // Metadatos preservados intactos
+        assertEquals("Campus Universitario", inmueble.getNombre());
+        assertEquals("Av. Los Sarmientos 123", inmueble.getDomicilio());
+        assertEquals(new BigDecimal("1200.00"), inmueble.getSuperficieCubiertaM2());
+        assertEquals("PROPIO", inmueble.getCondicionTenencia());
+        assertTrue(inmueble.getPropiedadInstitucion());
+
+        // Espacio físico: capacidad modificada a 80
+        assertEquals(80, espacioPadre.getCapacidadPersonasSentadas());
+        assertEquals(2, espacioPadre.getCantidad());
+        // Características físicas y HyS preservadas
+        assertEquals("Lab Alta Complejidad", espacioPadre.getDenominacion());
+        assertEquals(new BigDecimal("180.00"), espacioPadre.getSuperficieM2());
+        assertEquals("Ventilación forzada", espacioPadre.getObservacionHigieneSeguridad());
+
+        // Documentos de respaldo no fueron agregados
+        verify(documentacionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Infraestructura en PUT /inmuebles/{id} preserva observacionHigieneSeguridad existente")
+    void infraestructuraNoSobrescribeObservacionHyS() {
+        authenticateRole("INFRAESTRUCTURA");
+
+        when(inmuebleRepository.findById(inmueble.getId())).thenReturn(Optional.of(inmueble));
+        when(inmuebleRepository.save(any(InmuebleJpaEntity.class))).thenAnswer(i -> i.getArgument(0));
+        when(espacioFisicoRepository.findByInmuebleIdAndActivoTrue(inmueble.getId())).thenReturn(List.of(espacioPadre));
+        when(espacioFisicoRepository.findById(espacioPadre.getId())).thenReturn(Optional.of(espacioPadre));
+        when(espacioFisicoRepository.save(any(EspacioFisicoJpaEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        EspacioFisicoRequest espReq = new EspacioFisicoRequest(
+                espacioPadre.getId(),
+                null,
+                "Lab Renovado",
+                "Infraestructura actualizada",
+                1,
+                60,
+                60,
+                new BigDecimal("210.00"),
+                "Equipamiento completo",
+                "CARGADO",
+                true,
+                "Intento de sobreescritura HyS por Infra",
+                Collections.emptyList()
+        );
+
+        RegistrarInmuebleRequest req = new RegistrarInmuebleRequest(
+                1,
+                "Campus Norte",
+                "Av. Nueva 456",
+                "Av. Nueva",
+                "456",
+                null,
+                null, null, null,
+                2010, 2012, true, "PROPIO", "Propiedad", true,
+                true, null,
+                new BigDecimal("1500.00"),
+                new BigDecimal("3500.00"),
+                "Observacion Infra",
+                "CARGADO",
+                null,
+                List.of(espReq),
+                Collections.emptyList()
+        );
+
+        ResponseEntity<InmuebleResponse> response = controller.actualizarInmueble(inmueble.getId(), req);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        // Metadatos de Infra actualizados
+        assertEquals("Campus Norte", inmueble.getNombre());
+        assertEquals(new BigDecimal("1500.00"), inmueble.getSuperficieCubiertaM2());
+        assertEquals("Lab Renovado", espacioPadre.getDenominacion());
+        assertEquals(new BigDecimal("210.00"), espacioPadre.getSuperficieM2());
+
+        // Observación de HyS PRESERVADA INTACTA
+        assertEquals("Ventilación forzada", espacioPadre.getObservacionHigieneSeguridad());
     }
 
     @Test
