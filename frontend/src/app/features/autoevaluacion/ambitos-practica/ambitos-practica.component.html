@@ -148,9 +148,9 @@
                     <button
                       type="button"
                       class="btn-completar-mini"
-                      [disabled]="!tieneAsignaturas() || completandoActividad() || act.completada"
+                      [disabled]="!tieneAsignaturas() || completandoActividad() || act.completada || !puedeCompletarActividadTipo(act.tipoFicha)"
                       (click)="completarActividad(act.id)"
-                      [title]="!tieneAsignaturas() ? 'Bloqueado: Plan de estudios sin asignaturas (PRG-002)' : 'Marcar actividad como completada'"
+                      [title]="!tieneAsignaturas() ? 'Bloqueado: Plan de estudios sin asignaturas (PRG-002)' : (!puedeEditarFichasAmbitos() ? 'Sin permisos para completar actividad' : (!puedeCompletarActividadTipo(act.tipoFicha) ? 'Debe vincular al menos un ámbito de práctica a esta actividad para poder completarla' : 'Marcar actividad como completada'))"
                     >
                       {{ act.completada ? '✓' : 'Completar' }}
                     </button>
@@ -176,6 +176,18 @@
         </p>
       </div>
     </div>
+
+    <!-- Banner Informativo de Consulta en Modo Lectura -->
+    @if (!puedeGestionarPadronMaestroRg006()) {
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 12px 18px; margin-bottom: 16px;">
+        <div style="font-weight: 700; color: #1e40af; font-size: 13.5px; margin-bottom: 2px;">
+          Modo Consulta (Solo Lectura)
+        </div>
+        <p style="margin: 0; font-size: 13px; color: #1d4ed8; line-height: 1.4;">
+          El Padrón Maestro Institucional (RG-006) es de administración transversal reservado a la Autoridad de Evaluación y Acreditación (AEA) y Administradores.
+        </p>
+      </div>
+    }
 
     <!-- Tabs de Categoría CONEAU RG-006 -->
     <div class="categoria-tabs-bar">
@@ -231,9 +243,11 @@
         <span class="stats-count-figma">
           {{ ambitosMaestroFiltrados().length }} ámbitos registrados
         </span>
-        <button class="btn-nuevo-figma" type="button" (click)="abrirModalNuevo()">
-          + Nuevo Ámbito
-        </button>
+        @if (puedeGestionarPadronMaestroRg006()) {
+          <button class="btn-nuevo-figma" type="button" (click)="abrirModalNuevo()">
+            + Nuevo Ámbito
+          </button>
+        }
       </div>
     </div>
 
@@ -297,22 +311,26 @@
                   </span>
                 </td>
                 <td class="col-acciones">
-                  <button
-                    type="button"
-                    class="btn-accion-icono"
-                    (click)="abrirModalEditar(a)"
-                    title="Modificar ámbito"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-accion-icono btn-peligro"
-                    (click)="eliminar(a)"
-                    title="Eliminar ámbito"
-                  >
-                    Eliminar
-                  </button>
+                  @if (puedeGestionarPadronMaestroRg006()) {
+                    <button
+                      type="button"
+                      class="btn-accion-icono"
+                      (click)="abrirModalEditar(a)"
+                      title="Modificar ámbito"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-accion-icono btn-peligro"
+                      (click)="eliminar(a)"
+                      title="Eliminar ámbito"
+                    >
+                      Eliminar
+                    </button>
+                  } @else {
+                    <span style="font-size: 12px; color: #6b7280;">Solo lectura</span>
+                  }
                 </td>
               </tr>
             }
@@ -358,9 +376,9 @@
         <button
           type="button"
           class="btn-completar-actividad"
-          [disabled]="!tieneAsignaturas() || completandoActividad() || isActividadCompletada(actividadSeleccionada()!)"
+          [disabled]="!tieneAsignaturas() || completandoActividad() || isActividadCompletada(actividadSeleccionada()!) || !puedeCompletarActividadAmbito()"
           (click)="completarActividad()"
-          [title]="!tieneAsignaturas() ? 'Bloqueado por precedencia PRG-002: Plan sin asignaturas' : 'Validar y completar actividad ante CONEAU'"
+          [title]="!tieneAsignaturas() ? 'Bloqueado por precedencia PRG-002: Plan sin asignaturas' : (!puedeEditarFichasAmbitos() ? 'Sin permisos para completar actividad' : (!puedeCompletarActividadAmbito() ? 'Debe vincular al menos un ámbito de práctica a esta actividad para poder completarla.' : 'Validar y completar actividad ante CONEAU'))"
         >
           @if (completandoActividad()) {
             <span>Validando...</span>
@@ -372,6 +390,27 @@
         </button>
       </div>
     </div>
+
+    <!-- Banners Informativos de Modo Consulta y Pertenencia a Carrera -->
+    @if (!perteneceACarreraActiva()) {
+      <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 12px 18px; margin-bottom: 16px;">
+        <div style="font-weight: 700; color: #92400e; font-size: 13.5px; margin-bottom: 2px;">
+          Acceso en Modo Consulta (Unidad Académica Diferente)
+        </div>
+        <p style="margin: 0; font-size: 13px; color: #b45309; line-height: 1.4;">
+          La carrera seleccionada no pertenece a su Unidad Académica designada. Las vinculaciones y la validación de actividades de autoevaluación están reservadas a la Dirección o Comisión de Autoevaluación de la carrera.
+        </p>
+      </div>
+    } @else if (!puedeEditarFichasAmbitos()) {
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 12px 18px; margin-bottom: 16px;">
+        <div style="font-weight: 700; color: #1e40af; font-size: 13.5px; margin-bottom: 2px;">
+          Modo Consulta (Solo Lectura)
+        </div>
+        <p style="margin: 0; font-size: 13px; color: #1d4ed8; line-height: 1.4;">
+          No dispone de permisos de edición para vincular ámbitos ni completar actividades. Solo la Dirección de Carrera o Miembros de la Comisión de Autoevaluación pueden modificar estas fichas.
+        </p>
+      </div>
+    }
 
     <!-- Advertencia de control crítico de convenios para Externos y CAM -->
     @if (actividadSeleccionada() === 'EXTERNOS_FT009' || actividadSeleccionada() === 'CAM_FT011') {
@@ -463,14 +502,18 @@
                   {{ evalCarrera?.responsablePractica || 'No designado' }}
                 </td>
                 <td class="col-acciones">
-                  <button
-                    type="button"
-                    class="btn-nuevo-figma"
-                    style="padding: 6px 14px; font-size: 13px; background: #6b4c5b;"
-                    (click)="abrirModalVinculacion(a)"
-                  >
-                    {{ evalCarrera ? 'Editar Vinculación' : 'Vincular' }}
-                  </button>
+                  @if (puedeEditarFichasAmbitos()) {
+                    <button
+                      type="button"
+                      class="btn-nuevo-figma"
+                      style="padding: 6px 14px; font-size: 13px; background: #6b4c5b;"
+                      (click)="abrirModalVinculacion(a)"
+                    >
+                      {{ evalCarrera ? 'Editar Vinculación' : 'Vincular' }}
+                    </button>
+                  } @else {
+                    <span style="font-size: 12px; color: #6b7280;">Solo lectura</span>
+                  }
                 </td>
               </tr>
             }

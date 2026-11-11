@@ -31,6 +31,7 @@ import {
 } from '../../../core/planes-estudio/plan-estudio.models';
 import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoevaluacion-context.service';
 import { NotificationState } from '../../../core/autoevaluacion/notification-state.helper';
+import { Auth } from '../../../core/auth/auth';
 
 export type ActividadAmbitoTipo =
   | 'MAESTRO_RG006'
@@ -60,6 +61,7 @@ export class AmbitosPracticaComponent implements OnInit {
   private readonly autoevaluacionService = inject(AutoevaluacionService);
   private readonly planService = inject(PlanEstudioService);
   readonly contextService = inject(AutoevaluacionContextService);
+  private readonly auth = inject(Auth);
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
@@ -95,6 +97,50 @@ export class AmbitosPracticaComponent implements OnInit {
   // Precedencia PRG-002: Plan debe tener asignaturas cargadas
   readonly tieneAsignaturas = computed(() => this.asignaturasDelPlan().length > 0);
   readonly puedeCompletarActividadesPractica = computed(() => this.tieneAsignaturas());
+
+  // Permisos y Roles (Strict Granular Roles PRG-002 / CONEAU)
+  readonly esAdmin = computed(() => this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN'));
+  readonly puedeGestionarPadronMaestroRg006 = computed(() =>
+    this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA')
+  );
+
+  readonly perteneceACarreraActiva = computed(() => {
+    if (this.esAdmin()) return true;
+    const user = this.auth.currentSession?.user;
+    const carreraId = this.carreraSeleccionadaId() || this.contextService.carreraSeleccionadaId();
+    const carrera =
+      this.contextService.carreraActiva() ||
+      this.carreras().find((c) => c.id === carreraId);
+    if (!user?.unidadAcademicaId || !carrera) return false;
+    return carrera.unidadAcademicaId === user.unidadAcademicaId;
+  });
+
+  readonly puedeEditarFichasAmbitos = computed(() => {
+    if (this.esAdmin()) return true;
+    return (
+      this.perteneceACarreraActiva() &&
+      this.auth.hasAnyRole(
+        'CAREER_DIRECTOR',
+        'DIRECTOR_CARRERA',
+        'SCHOOL_DIRECTOR',
+        'DIRECTOR_ESCUELA',
+        'SELF_EVALUATION_COMMITTEE_MEMBER',
+        'COMISION_AUTOEVALUACION'
+      )
+    );
+  });
+
+  readonly puedeCompletarActividadAmbito = computed(() => {
+    if (!this.puedeEditarFichasAmbitos()) return false;
+    if (!this.tieneAsignaturas()) return false;
+    const act = this.actividadSeleccionada();
+    if (!act || act === 'MAESTRO_RG006') return false;
+    let tipo: TipoCategoriaAmbito = 'INTERNO';
+    if (act === 'EXTERNOS_FT009') tipo = 'EXTERNO';
+    if (act === 'DEMOSTRATIVAS_FT010') tipo = 'UNIDAD_DEMOSTRATIVA';
+    if (act === 'CAM_FT011') tipo = 'CAM';
+    return this.tieneVinculacionTipo(tipo);
+  });
 
   // Modal Alta / Modificación Maestro
   readonly modalAbierto = signal<boolean>(false);
@@ -175,6 +221,7 @@ export class AmbitosPracticaComponent implements OnInit {
         dependencia: '',
         completada: tieneAmbitos,
         estado: tieneAmbitos ? 'Completada' : 'Pendiente',
+        tipoFicha: undefined as TipoCategoriaAmbito | undefined,
       },
       {
         id: 'INTERNOS_FT008' as const,
@@ -184,6 +231,7 @@ export class AmbitosPracticaComponent implements OnInit {
         dependencia: 'Requiere Ámbitos maestro (RG-006) y Plan de Estudios (8.3)',
         completada: this.actividadesCompletadas().has('INTERNOS_FT008') || (tieneEvaluaciones && this.tieneVinculacionTipo('INTERNO')),
         estado: (this.actividadesCompletadas().has('INTERNOS_FT008') || (tieneEvaluaciones && this.tieneVinculacionTipo('INTERNO'))) ? 'Completada' : 'Pendiente',
+        tipoFicha: 'INTERNO' as TipoCategoriaAmbito,
       },
       {
         id: 'EXTERNOS_FT009' as const,
@@ -193,6 +241,7 @@ export class AmbitosPracticaComponent implements OnInit {
         dependencia: 'Requiere Ámbitos maestro (RG-006), Convenios vigentes y Plan (8.3)',
         completada: this.actividadesCompletadas().has('EXTERNOS_FT009') || (tieneEvaluaciones && this.tieneVinculacionTipo('EXTERNO')),
         estado: (this.actividadesCompletadas().has('EXTERNOS_FT009') || (tieneEvaluaciones && this.tieneVinculacionTipo('EXTERNO'))) ? 'Completada' : 'Pendiente',
+        tipoFicha: 'EXTERNO' as TipoCategoriaAmbito,
       },
       {
         id: 'DEMOSTRATIVAS_FT010' as const,
@@ -202,6 +251,7 @@ export class AmbitosPracticaComponent implements OnInit {
         dependencia: 'Requiere Ámbitos maestro (RG-006) y Plan (8.3)',
         completada: this.actividadesCompletadas().has('DEMOSTRATIVAS_FT010') || (tieneEvaluaciones && this.tieneVinculacionTipo('UNIDAD_DEMOSTRATIVA')),
         estado: (this.actividadesCompletadas().has('DEMOSTRATIVAS_FT010') || (tieneEvaluaciones && this.tieneVinculacionTipo('UNIDAD_DEMOSTRATIVA'))) ? 'Completada' : 'Pendiente',
+        tipoFicha: 'UNIDAD_DEMOSTRATIVA' as TipoCategoriaAmbito,
       },
       {
         id: 'CAM_FT011' as const,
@@ -211,6 +261,7 @@ export class AmbitosPracticaComponent implements OnInit {
         dependencia: 'Requiere Ámbitos maestro (RG-006), Convenios hospitalarios y Plan (8.3)',
         completada: this.actividadesCompletadas().has('CAM_FT011') || (tieneEvaluaciones && this.tieneVinculacionTipo('CAM')),
         estado: (this.actividadesCompletadas().has('CAM_FT011') || (tieneEvaluaciones && this.tieneVinculacionTipo('CAM'))) ? 'Completada' : 'Pendiente',
+        tipoFicha: 'CAM' as TipoCategoriaAmbito,
       },
     ];
 
@@ -404,6 +455,13 @@ export class AmbitosPracticaComponent implements OnInit {
     );
   }
 
+  puedeCompletarActividadTipo(tipo?: TipoCategoriaAmbito): boolean {
+    if (!this.puedeEditarFichasAmbitos()) return false;
+    if (!this.tieneAsignaturas()) return false;
+    if (!tipo) return false;
+    return this.tieneVinculacionTipo(tipo);
+  }
+
   seleccionarActividad(tipo: ActividadAmbitoTipo): void {
     this.actividadSeleccionada.set(tipo);
     this.searchQuery.set('');
@@ -488,6 +546,11 @@ export class AmbitosPracticaComponent implements OnInit {
   }
 
   guardar(): void {
+    if (!this.puedeGestionarPadronMaestroRg006()) {
+      this.notif.mostrar(this.errorMessage, 'No posee permisos para gestionar el padrón maestro de ámbitos de práctica.', 6000);
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -544,6 +607,10 @@ export class AmbitosPracticaComponent implements OnInit {
   }
 
   eliminar(ambito: AmbitoPractica): void {
+    if (!this.puedeGestionarPadronMaestroRg006()) {
+      this.notif.mostrar(this.errorMessage, 'No posee permisos para eliminar ámbitos del padrón maestro.', 6000);
+      return;
+    }
     if (!ambito.id) return;
     if (!confirm(`¿Eliminar el ámbito "${ambito.denominacion}"?`)) return;
 
@@ -669,6 +736,10 @@ export class AmbitosPracticaComponent implements OnInit {
   }
 
   guardarVinculacion(): void {
+    if (!this.puedeEditarFichasAmbitos()) {
+      this.notif.mostrar(this.errorMessage, 'No posee permisos para vincular ámbitos a esta carrera.', 6000);
+      return;
+    }
     const ambito = this.ambitoParaVincular();
     const carreraId = this.carreraSeleccionadaId() || this.contextService.carreraSeleccionadaId();
     if (!ambito?.id || !carreraId) return;
@@ -719,10 +790,29 @@ export class AmbitosPracticaComponent implements OnInit {
       return;
     }
 
+    if (!this.puedeEditarFichasAmbitos()) {
+      this.notif.mostrar(this.errorMessage, 'No posee permisos para completar actividades de autoevaluación en esta carrera.', 6000);
+      return;
+    }
+
     if (!this.tieneAsignaturas()) {
       this.notif.mostrar(
         this.errorMessage,
         'Precedencia requerida (CONEAU PRG-002): Para vincular y completar los ámbitos de práctica es necesario cargar primero las asignaturas del Plan de Estudios (Actividad 8.3 / FT-001).',
+        6000
+      );
+      return;
+    }
+
+    let tipo: TipoCategoriaAmbito = 'INTERNO';
+    if (act === 'EXTERNOS_FT009') tipo = 'EXTERNO';
+    if (act === 'DEMOSTRATIVAS_FT010') tipo = 'UNIDAD_DEMOSTRATIVA';
+    if (act === 'CAM_FT011') tipo = 'CAM';
+
+    if (!this.tieneVinculacionTipo(tipo)) {
+      this.notif.mostrar(
+        this.errorMessage,
+        'No es posible completar la actividad: debe existir al menos un ámbito de práctica vinculado a la carrera.',
         6000
       );
       return;
