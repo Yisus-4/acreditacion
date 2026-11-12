@@ -72,6 +72,11 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_prog_analitico_es_maestro ON programa_analitico_asignatura(es_maestro);
 CREATE INDEX IF NOT EXISTS idx_prog_analitico_origen_maestro ON programa_analitico_asignatura(origen_maestro_id);
 
+-- Legacy syllabus records with proceso_id are local clones, not master syllabi
+UPDATE programa_analitico_asignatura
+SET es_maestro = FALSE
+WHERE proceso_id IS NOT NULL;
+
 -- 3. Alter inmueble & espacio_fisico
 ALTER TABLE inmueble
     ADD COLUMN IF NOT EXISTS es_maestro BOOLEAN NOT NULL DEFAULT TRUE,
