@@ -11,6 +11,46 @@ export interface TipoEspacioFisico {
   activo: boolean;
 }
 
+export interface EspacioFisicoActividadCurricularDto {
+  id: string;
+  espacioFisicoId: string;
+  carreraId: string;
+  carreraNombre?: string;
+  planEstudioId: string;
+  planEstudioNombre?: string;
+  actividadCurricularId: string;
+  actividadCodigo?: string;
+  actividadNombre?: string;
+  comisionesAsignadas?: number;
+  observacionesUso?: string;
+  creadoEn?: string;
+}
+
+export interface AsignarActividadEspacioRequest {
+  carreraId: string;
+  planEstudioId: string;
+  actividadCurricularId: string;
+  comisionesAsignadas?: number;
+  observacionesUso?: string;
+}
+
+export interface ResultadoSincronizacionDto {
+  planesClonados: number;
+  asignaturasClonadas: number;
+  correlativasMapeadas: number;
+  programasAnaliticosClonados: number;
+  inmueblesClonados: number;
+  espaciosFisicosClonados: number;
+  subespaciosClonados: number;
+  ambitosPracticaClonados: number;
+  cuerpoAcademicoClonado: number;
+  asignacionesCatedraClonadas: number;
+  espaciosActividadesClonados: number;
+  seccionesProcesadas: string[];
+  modo: string;
+  ejecutadoEn: string;
+}
+
 export interface EspacioFisico {
   id?: string;
   tipoEspacioId?: string;

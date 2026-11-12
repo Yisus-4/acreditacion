@@ -58,8 +58,13 @@ export class ConvocatoriaService {
     return this.http.post<ConvocatoriaDetalle>('/api/convocatorias', request);
   }
 
-  confirmarConvocatoriaDe(id: string, carrerasSeleccionadas: string[]): Observable<ConvocatoriaDetalle> {
-    return this.http.post<ConvocatoriaDetalle>(`/api/convocatorias/${id}/confirmar-de`, { carrerasSeleccionadas });
+  confirmarConvocatoriaDe(
+    id: string,
+    carrerasSeleccionadas: string[],
+    planesPorCarrera?: { [carreraId: string]: string[] }
+  ): Observable<ConvocatoriaDetalle> {
+    const payload = { carrerasSeleccionadas, planesPorCarrera };
+    return this.http.post<ConvocatoriaDetalle>(`/api/convocatorias/${id}/confirmar-de`, payload);
   }
 
   reiniciarConvocatoriaTest(convocatoriaId: string): Observable<ConvocatoriaDetalle> {

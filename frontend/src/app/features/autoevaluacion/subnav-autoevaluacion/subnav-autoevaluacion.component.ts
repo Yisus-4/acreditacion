@@ -50,6 +50,25 @@ import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoe
               </select>
             </div>
           </div>
+
+          @if (contextService.planesConvocados().length > 1) {
+            <div class="context-field plan-switcher-field">
+              <span class="context-label">Plan de Estudio:</span>
+              <div class="plan-switcher-pills" role="radiogroup" aria-label="Selector de plan de estudio">
+                @for (plan of contextService.planesConvocados(); track plan.id) {
+                  <button
+                    type="button"
+                    class="plan-pill-btn"
+                    [class.active]="plan.id === contextService.planConvocadoActivoId()"
+                    (click)="seleccionarPlan(plan.id!)"
+                    [title]="'Cambiar a ' + (plan.codigoResolucion || 'Plan ' + plan.anioAprobacion)"
+                  >
+                    {{ plan.codigoResolucion || ('Plan ' + plan.anioAprobacion) }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
         </div>
 
         @if (esAeaOAdmin() && procesoIdCarrera()) {
@@ -209,6 +228,42 @@ import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoe
       }
     }
 
+    .plan-switcher-field {
+      min-width: 180px;
+    }
+
+    .plan-switcher-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      height: 38px;
+    }
+
+    .plan-pill-btn {
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b4c5b;
+      background-color: #f7eff3;
+      border: 1px solid #ebdbe2;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: #ebdbe2;
+        color: #4a2c3a;
+      }
+
+      &.active {
+        background-color: #6b4c5b;
+        color: #ffffff;
+        border-color: #6b4c5b;
+        box-shadow: 0 1px 3px rgba(107, 76, 91, 0.2);
+      }
+    }
+
     .context-actions {
       display: flex;
       align-items: center;
@@ -312,5 +367,9 @@ export class SubnavAutoevaluacionComponent implements OnInit {
     if (select && select.value) {
       this.contextService.seleccionarCarrera(select.value);
     }
+  }
+
+  seleccionarPlan(planId: string): void {
+    this.contextService.setPlanActivo(planId);
   }
 }

@@ -7,6 +7,8 @@ import { ConvocatoriaService } from '../convocatorias/convocatoria.service';
 import { ConvocatoriaDetalle, ConvocatoriaResumen } from '../convocatorias/models/convocatoria.model';
 import { EstructuraService } from '../estructura/estructura.service';
 import { CarreraResponse } from '../estructura/estructura.types';
+import { PlanEstudioFt001, PlanEstudioVigenteDto } from '../planes-estudio/plan-estudio.models';
+import { PlanEstudioService } from '../planes-estudio/plan-estudio.service';
 
 export interface AutoevaluacionContextState {
   convocatorias: ConvocatoriaResumen[];
@@ -32,6 +34,7 @@ export class AutoevaluacionContextService {
   private readonly router = inject(Router);
   private readonly convocatoriaService = inject(ConvocatoriaService);
   private readonly estructuraService = inject(EstructuraService);
+  private readonly planEstudioService = inject(PlanEstudioService);
   private readonly auth = inject(Auth);
 
   readonly STORAGE_KEY = 'acreditacion_autoeval_context';
@@ -46,6 +49,17 @@ export class AutoevaluacionContextService {
   readonly carrerasTodas = signal<CarreraResponse[]>([]);
   readonly carreraSeleccionadaId = signal<string | null>(null);
   readonly cargando = signal<boolean>(false);
+
+  // Multi-Plan Signals
+  readonly planesConvocados = signal<PlanEstudioFt001[]>([]);
+  readonly planConvocadoActivoId = signal<string | null>(null);
+
+  readonly planConvocadoActivo = computed<PlanEstudioFt001 | null>(() => {
+    const list = this.planesConvocados();
+    const activeId = this.planConvocadoActivoId();
+    if (!activeId) return list.length > 0 ? list[0] : null;
+    return list.find((p) => p.id === activeId) || (list.length > 0 ? list[0] : null);
+  });
 
   // Computed signals
   readonly carrerasDisponibles = computed<CarreraResponse[]>(() => {
@@ -224,6 +238,7 @@ export class AutoevaluacionContextService {
               }
               if (carId) {
                 this.carreraSeleccionadaId.set(carId);
+                this.actualizarPlanesConvocados(carId);
               }
               this.sincronizarRouterYStorage();
               this.cargando.set(false);
@@ -240,6 +255,7 @@ export class AutoevaluacionContextService {
           }
           if (carId) {
             this.carreraSeleccionadaId.set(carId);
+            this.actualizarPlanesConvocados(carId);
           }
           this.sincronizarRouterYStorage();
           this.cargando.set(false);
@@ -279,6 +295,9 @@ export class AutoevaluacionContextService {
           );
           const defaultCarId = agrimensura ? agrimensura.id : disp.length > 0 ? disp[0].id : null;
           this.carreraSeleccionadaId.set(defaultCarId);
+          this.actualizarPlanesConvocados(defaultCarId);
+        } else {
+          this.actualizarPlanesConvocados(currentCar);
         }
 
         if (syncRouter) {
@@ -286,6 +305,37 @@ export class AutoevaluacionContextService {
         }
       },
       error: (err) => console.error('Error fetching convocatoria detalle', err),
+    });
+  }
+
+  setPlanActivo(planId: string): void {
+    if (this.planConvocadoActivoId() === planId) {
+      return;
+    }
+    this.planConvocadoActivoId.set(planId);
+  }
+
+  actualizarPlanesConvocados(carreraId?: string | null, procesoId?: string | null): void {
+    const carId = carreraId || this.carreraSeleccionadaId();
+    const procId = procesoId || this.procesoIdActivo() || undefined;
+    if (!carId) {
+      this.planesConvocados.set([]);
+      this.planConvocadoActivoId.set(null);
+      return;
+    }
+    this.planEstudioService.listarPlanes(carId, procId).subscribe({
+      next: (planes) => {
+        this.planesConvocados.set(planes || []);
+        const currentActive = this.planConvocadoActivoId();
+        if (planes && planes.length > 0) {
+          if (!currentActive || !planes.some((p) => p.id === currentActive)) {
+            this.planConvocadoActivoId.set(planes[0].id || null);
+          }
+        } else {
+          this.planConvocadoActivoId.set(null);
+        }
+      },
+      error: (err) => console.error('Error fetching planes convocados', err),
     });
   }
 
@@ -297,6 +347,7 @@ export class AutoevaluacionContextService {
       return;
     }
     this.carreraSeleccionadaId.set(carreraId);
+    this.actualizarPlanesConvocados(carreraId);
     if (syncRouter) {
       this.sincronizarRouterYStorage();
     }
@@ -311,6 +362,7 @@ export class AutoevaluacionContextService {
     this.convocatoriaService.obtenerConvocatoria(convocatoriaId).subscribe({
       next: (detalle) => {
         this.convocatoriaDetalle.set(detalle);
+        this.actualizarPlanesConvocados(carreraId);
         const procesoId = this.procesoIdActivo();
         const payload: StoredAutoevalContext = {
           convocatoriaId,

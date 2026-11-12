@@ -25,6 +25,11 @@ export interface ItemCarreraSeleccion {
   esObligatoria?: boolean;
 }
 
+export interface ConfirmarConvocatoriaDeRequest {
+  carrerasSeleccionadas: string[];
+  planesPorCarrera?: { [carreraId: string]: string[] };
+}
+
 export interface IniciarConvocatoriaRequest {
   carreraId?: string;
   unidadAcademicaId?: string;

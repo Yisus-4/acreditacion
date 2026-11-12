@@ -14,6 +14,9 @@ import {
   GuiaHigieneDocumento,
   ActualizarGuiaHigieneRequest,
   DocumentoHigieneItemRequest,
+  EspacioFisicoActividadCurricularDto,
+  AsignarActividadEspacioRequest,
+  ResultadoSincronizacionDto,
 } from './autoevaluacion.models';
 
 export * from './autoevaluacion.models';
@@ -189,6 +192,28 @@ export class AutoevaluacionService {
     return this.http.post<VerificarInfraestructuraResponse>(
       `${this.baseUrl}/higiene-seguridad/procesos/${procesoId}/verificar-y-remitir`,
       {}
+    );
+  }
+
+  // Multi-Plan y Sincronización
+  obtenerActividadesPorEspacio(espacioId: string): Observable<EspacioFisicoActividadCurricularDto[]> {
+    return this.http.get<EspacioFisicoActividadCurricularDto[]>(`${this.baseUrl}/espacios/${espacioId}/actividades-curriculares`);
+  }
+
+  guardarActividadesPorEspacio(
+    espacioId: string,
+    asignaciones: AsignarActividadEspacioRequest[]
+  ): Observable<EspacioFisicoActividadCurricularDto[]> {
+    return this.http.put<EspacioFisicoActividadCurricularDto[]>(
+      `${this.baseUrl}/espacios/${espacioId}/actividades-curriculares`,
+      asignaciones
+    );
+  }
+
+  copiarDatosCentrales(procesoId: string, payload?: { modo?: string; secciones?: string[] }): Observable<ResultadoSincronizacionDto> {
+    return this.http.post<ResultadoSincronizacionDto>(
+      `${this.baseUrl}/procesos/${procesoId}/copiar-datos-centrales`,
+      payload || {}
     );
   }
 }

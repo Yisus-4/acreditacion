@@ -6,6 +6,7 @@ import {
   ActualizarAsignaturaRequest,
   CrearAsignaturaRequest,
   PlanEstudioFt001,
+  PlanEstudioVigenteDto,
 } from './plan-estudio.models';
 
 @Injectable({
@@ -20,6 +21,10 @@ export class PlanEstudioService {
     if (carreraId) params = params.set('carreraId', carreraId);
     if (procesoId) params = params.set('procesoId', procesoId);
     return this.http.get<PlanEstudioFt001[]>(this.baseUrl, { params });
+  }
+
+  listarPlanesVigentesPorCarrera(carreraId: string): Observable<PlanEstudioVigenteDto[]> {
+    return this.http.get<PlanEstudioVigenteDto[]>(`${this.baseUrl}/carrera/${carreraId}/vigentes`);
   }
 
   obtenerPlan(id: string): Observable<PlanEstudioFt001> {

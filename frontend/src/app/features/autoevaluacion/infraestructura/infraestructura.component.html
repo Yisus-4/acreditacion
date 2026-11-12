@@ -223,6 +223,15 @@
         <button
           type="button"
           class="btn-tabla-accion"
+          style="padding: 9px 14px; font-size: 13.5px; background: #fdf2f8; color: #9d174d; border: 1px solid #fbcfe8; font-weight: 600;"
+          (click)="abrirModalCopiarDatosCentrales()"
+          title="Copiar datos centrales (inmuebles, espacios, docentes, planes) al proceso de acreditación"
+        >
+          Copiar Datos Centrales
+        </button>
+        <button
+          type="button"
+          class="btn-tabla-accion"
           style="padding: 9px 14px; font-size: 13.5px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 600;"
           (click)="abrirModalConsultaM2()"
           title="Consultar cantidad de espacios por superficie en m²"
@@ -373,6 +382,7 @@
                             <th style="padding: 10px 14px; text-align: center; width: 140px;">Dimensión (m²)</th>
                             <th style="padding: 10px 14px; text-align: center; width: 130px;">Estado CONEAU</th>
                             <th style="padding: 10px 14px; text-align: center; width: 130px;">Higiene y Seg.</th>
+                            <th style="padding: 10px 14px; text-align: center; width: 140px;">Actividades</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -409,6 +419,17 @@
                                   title="Ver y gestionar Higiene y Seguridad asignado para este espacio"
                                 >
                                   Ver HyS
+                                </button>
+                              </td>
+                              <td style="padding: 10px 14px; text-align: center;">
+                                <button
+                                  type="button"
+                                  class="btn-tabla-accion"
+                                  style="padding: 3px 8px; font-size: 11px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;"
+                                  (click)="abrirModalActividadesEspacio(esp)"
+                                  title="Vincular asignaturas / actividades curriculares a este espacio físico"
+                                >
+                                  Actividades
                                 </button>
                               </td>
                             </tr>
@@ -1760,6 +1781,193 @@
       <div style="display: flex; justify-content: flex-end; margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 12px;">
         <button type="button" class="btn-cancelar-figma" (click)="cerrarModalConsultaM2()">
           Cerrar
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================= -->
+  <!-- MODAL: VINCULAR ACTIVIDADES CURRICULARES (CASCADING SELECTOR) -->
+  <!-- ============================================================= -->
+  @if (mostrarModalActividadesEspacio() && espacioSeleccionadoActividades()) {
+    <div class="modal-backdrop-figma" (click)="cerrarModalActividadesEspacio()"></div>
+    <div class="modal-contenido-figma" style="max-width: 700px; width: 90%;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+        <div>
+          <h3 style="font-size: 16px; font-weight: 700; color: var(--color-primary-dark); margin: 0;">
+            Actividades Curriculares vinculadas al Espacio Físico
+          </h3>
+          <p style="font-size: 12.5px; color: #64748b; margin: 4px 0 0 0;">
+            Espacio: <strong>{{ espacioSeleccionadoActividades()?.descripcionInfraestructura || espacioSeleccionadoActividades()?.denominacion }}</strong>
+          </p>
+        </div>
+        <button type="button" class="btn-cerrar-modal" (click)="cerrarModalActividadesEspacio()">&times;</button>
+      </div>
+
+      <!-- Formulario Selector en Cascada: Carrera -> Plan -> Asignatura -->
+      <div style="background: #fdfafb; border: 1px solid #ebdbe2; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+        <div style="font-weight: 700; font-size: 12px; color: #6b4c5b; text-transform: uppercase; margin-bottom: 8px;">
+          Agregar nueva actividad curricular
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+          <div>
+            <label style="font-size: 11.5px; font-weight: 600; color: #4b5563; display: block; margin-bottom: 4px;">Carrera:</label>
+            <select
+              style="width: 100%; height: 34px; font-size: 12.5px; border-radius: 6px; border: 1px solid #d1d5db; padding: 4px 8px;"
+              [value]="cascadaCarreraId()"
+              (change)="onCascadaCarreraChange($event)"
+            >
+              <option value="">Seleccione una carrera...</option>
+              @for (c of carreras(); track c.id) {
+                <option [value]="c.id">{{ c.nombre }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 11.5px; font-weight: 600; color: #4b5563; display: block; margin-bottom: 4px;">Plan de Estudio:</label>
+            <select
+              style="width: 100%; height: 34px; font-size: 12.5px; border-radius: 6px; border: 1px solid #d1d5db; padding: 4px 8px;"
+              [value]="cascadaPlanId()"
+              (change)="onCascadaPlanChange($event)"
+              [disabled]="cascadaPlanesDisponibles().length === 0"
+            >
+              <option value="">{{ cascadaPlanesDisponibles().length === 0 ? 'Sin planes disponibles' : 'Seleccione plan...' }}</option>
+              @for (p of cascadaPlanesDisponibles(); track p.id) {
+                <option [value]="p.id">{{ p.codigoResolucion || ('Plan ' + p.anioAprobacion) }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 11.5px; font-weight: 600; color: #4b5563; display: block; margin-bottom: 4px;">Actividad Curricular / Asignatura:</label>
+          <select
+            style="width: 100%; height: 34px; font-size: 12.5px; border-radius: 6px; border: 1px solid #d1d5db; padding: 4px 8px;"
+            [value]="cascadaAsignaturaSeleccionadaId()"
+            (change)="cascadaAsignaturaSeleccionadaId.set($any($event.target).value)"
+            [disabled]="cascadaAsignaturasDisponibles().length === 0"
+          >
+            <option value="">{{ cascadaAsignaturasDisponibles().length === 0 ? 'Seleccione plan primero...' : 'Seleccione asignatura...' }}</option>
+            @for (a of cascadaAsignaturasDisponibles(); track a.id) {
+              <option [value]="a.id">[{{ a.codigo }}] {{ a.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button
+            type="button"
+            class="btn-tabla-accion"
+            style="padding: 6px 14px; background: #6b4c5b; color: #fff; font-weight: 600; border-radius: 6px;"
+            (click)="agregarAsignacionEspacio()"
+            [disabled]="!cascadaAsignaturaSeleccionadaId()"
+          >
+            + Vincular Actividad
+          </button>
+        </div>
+      </div>
+
+      <!-- Lista de Actividades Asignadas -->
+      <div style="max-height: 220px; overflow-y: auto; margin-bottom: 16px;">
+        @if (cargandoActividadesEspacio()) {
+          <div style="padding: 16px; text-align: center; color: #64748b; font-size: 13px;">Cargando vinculaciones...</div>
+        } @else if (asignacionesEspacio().length === 0) {
+          <div style="padding: 16px; text-align: center; color: #64748b; font-size: 13px; background: #f8fafc; border-radius: 6px;">
+            Este espacio no tiene actividades curriculares vinculadas.
+          </div>
+        } @else {
+          <table style="width: 100%; border-collapse: collapse; font-size: 12.5px;">
+            <thead>
+              <tr style="background: #f1f5f9; text-align: left; border-bottom: 1px solid #e2e8f0;">
+                <th style="padding: 6px 10px;">Carrera</th>
+                <th style="padding: 6px 10px;">Plan</th>
+                <th style="padding: 6px 10px;">Actividad Curricular</th>
+                <th style="padding: 6px 10px; width: 40px; text-align: center;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (asig of asignacionesEspacio(); track asig.id || $index; let idx = $index) {
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 6px 10px; color: #1e293b; font-weight: 600;">{{ asig.carreraNombre || '-' }}</td>
+                  <td style="padding: 6px 10px; color: #475569;">{{ asig.planEstudioNombre || '-' }}</td>
+                  <td style="padding: 6px 10px; color: #1e40af; font-weight: 500;">
+                    [{{ asig.actividadCodigo }}] {{ asig.actividadNombre }}
+                  </td>
+                  <td style="padding: 6px 10px; text-align: center;">
+                    <button
+                      type="button"
+                      style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 14px;"
+                      (click)="eliminarAsignacionEspacio(idx)"
+                      title="Eliminar vinculación"
+                    >
+                      &times;
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e5e7eb; padding-top: 12px;">
+        <button type="button" class="btn-cancelar-figma" (click)="cerrarModalActividadesEspacio()">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn-nuevo-figma"
+          style="background: #166534;"
+          (click)="guardarAsignacionesEspacio()"
+          [disabled]="guardandoActividadesEspacio()"
+        >
+          @if (guardandoActividadesEspacio()) {
+            Guardando...
+          } @else {
+            Guardar Cambios
+          }
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================= -->
+  <!-- MODAL: CONFIRMAR COPIAR DATOS CENTRALES (SNAPSHOT MANUAL)     -->
+  <!-- ============================================================= -->
+  @if (mostrarModalCopiarDatosCentrales()) {
+    <div class="modal-backdrop-figma" (click)="cerrarModalCopiarDatosCentrales()"></div>
+    <div class="modal-contenido-figma" style="max-width: 520px; width: 90%;">
+      <h3 style="font-size: 16px; font-weight: 700; color: #831843; margin-top: 0; margin-bottom: 8px;">
+        Copiar Datos Centrales al Proceso
+      </h3>
+      <p style="font-size: 13.5px; color: #374151; line-height: 1.5; margin-bottom: 14px;">
+        Esta acción creará un <strong>snapshot transaccional</strong> de los datos centrales de la institución (inmuebles, espacios físicos, docentes del cuerpo académico y planes de estudio maestros) copiándolos de manera aislada al proceso de autoevaluación actual.
+      </p>
+      <div style="background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 6px; padding: 10px 14px; font-size: 12px; color: #9d174d; margin-bottom: 16px;">
+        <strong>Nota:</strong> Los datos existentes no se eliminarán; se inicializarán o agregarán los registros maestros faltantes respetando la trazabilidad.
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button
+          type="button"
+          class="btn-cancelar-figma"
+          (click)="cerrarModalCopiarDatosCentrales()"
+          [disabled]="copiandoDatosCentrales()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn-nuevo-figma"
+          style="background: #9d174d; border-color: #831843;"
+          (click)="confirmarCopiarDatosCentrales()"
+          [disabled]="copiandoDatosCentrales()"
+        >
+          @if (copiandoDatosCentrales()) {
+            Copiando datos centrales...
+          } @else {
+            Confirmar Copia &rarr;
+          }
         </button>
       </div>
     </div>

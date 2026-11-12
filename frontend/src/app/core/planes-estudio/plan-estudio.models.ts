@@ -49,6 +49,17 @@ export interface DocenteResumen {
   unidadAcademicaNombre?: string;
 }
 
+export interface PlanEstudioVigenteDto {
+  id: string;
+  carreraId: string;
+  carreraNombre?: string;
+  nombrePlan: string;
+  codigoResolucion: string;
+  anioAprobacion?: number;
+  estadoVigencia?: string;
+  esMaestro?: boolean;
+}
+
 export interface PlanEstudioFt001 {
   id?: string;
   carreraId: string;

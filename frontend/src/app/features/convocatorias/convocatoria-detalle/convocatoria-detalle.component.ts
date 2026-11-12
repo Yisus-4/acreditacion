@@ -41,6 +41,8 @@ import {
   TipoDocumentoNormativa,
 } from '../../../core/normativa/models/normativa.model';
 import { NotificationService } from '../../../core/notifications/notification.service';
+import { PlanEstudioService } from '../../../core/planes-estudio/plan-estudio.service';
+import { PlanEstudioVigenteDto } from '../../../core/planes-estudio/plan-estudio.models';
 
 export interface SiguientePasoInfo {
   codigo: string;
@@ -73,6 +75,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   private readonly normativaService = inject(NormativaService);
   private readonly notificationService = inject(NotificationService);
   private readonly usuariosAteneaService = inject(UsuariosAteneaService);
+  private readonly planEstudioService = inject(PlanEstudioService);
   private readonly auth = inject(Auth);
   private routeSub?: Subscription;
   private idCargadoActualmente: string | null = null;
@@ -270,6 +273,8 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
 
   // Estado Convocatoria de Escuela (Selección y Confirmación del Director de Escuela)
   readonly carrerasSeleccionadasDe = signal<Set<string>>(new Set<string>());
+  readonly planesPorCarrera = signal<Record<string, PlanEstudioVigenteDto[]>>({});
+  readonly planesSeleccionadosDe = signal<Record<string, Set<string>>>({});
   readonly guardandoConfirmacionDe = signal<boolean>(false);
   readonly errorConfirmacionDe = signal<string | null>(null);
 
@@ -1076,8 +1081,45 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
           seleccionadas.add(item.carreraId);
         }
       }
+      this.cargarPlanesVigentesCarrera(item.carreraId);
     }
     this.carrerasSeleccionadasDe.set(seleccionadas);
+  }
+
+  cargarPlanesVigentesCarrera(carreraId: string): void {
+    this.planEstudioService.listarPlanesVigentesPorCarrera(carreraId).subscribe({
+      next: (planes) => {
+        const mapa = { ...this.planesPorCarrera(), [carreraId]: planes || [] };
+        this.planesPorCarrera.set(mapa);
+        // Default: todos los planes vigentes marcados
+        const selMap = { ...this.planesSeleccionadosDe() };
+        if (!selMap[carreraId]) {
+          selMap[carreraId] = new Set((planes || []).map((p) => p.id));
+          this.planesSeleccionadosDe.set(selMap);
+        }
+      },
+      error: (err) => console.error('Error cargando planes vigentes para carrera ' + carreraId, err),
+    });
+  }
+
+  togglePlanCarreraDe(carreraId: string, planId: string): void {
+    const selMap = { ...this.planesSeleccionadosDe() };
+    const current = new Set(selMap[carreraId] || []);
+    if (current.has(planId)) {
+      current.delete(planId);
+    } else {
+      current.add(planId);
+    }
+    selMap[carreraId] = current;
+    this.planesSeleccionadosDe.set(selMap);
+  }
+
+  estaPlanSeleccionadoDe(carreraId: string, planId: string): boolean {
+    return !!this.planesSeleccionadosDe()[carreraId]?.has(planId);
+  }
+
+  obtenerPlanesDeCarrera(carreraId: string): PlanEstudioVigenteDto[] {
+    return this.planesPorCarrera()[carreraId] || [];
   }
 
   toggleCarreraDe(carreraId: string, esObligatoria: boolean): void {
@@ -1117,10 +1159,29 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Validar y armar planesPorCarrera: al menos 1 plan por cada carrera seleccionada
+    const planesPayload: { [carreraId: string]: string[] } = {};
+    for (const carreraId of seleccionadas) {
+      const planesCarrera = this.obtenerPlanesDeCarrera(carreraId);
+      const seleccionadosSet = this.planesSeleccionadosDe()[carreraId] || new Set<string>();
+      const planesIds = Array.from(seleccionadosSet);
+
+      if (planesCarrera.length > 0 && planesIds.length === 0) {
+        const item = conv.carrerasPropuestas?.find((c) => c.carreraId === carreraId);
+        this.errorConfirmacionDe.set(
+          `Debe seleccionar al menos un plan de estudio para la carrera "${item?.carreraNombre || carreraId}".`
+        );
+        return;
+      }
+      if (planesIds.length > 0) {
+        planesPayload[carreraId] = planesIds;
+      }
+    }
+
     this.guardandoConfirmacionDe.set(true);
     this.errorConfirmacionDe.set(null);
 
-    this.convocatoriaService.confirmarConvocatoriaDe(conv.id, seleccionadas).subscribe({
+    this.convocatoriaService.confirmarConvocatoriaDe(conv.id, seleccionadas, planesPayload).subscribe({
       next: (actualizada) => {
         this.convocatoria.set(actualizada);
         this.initSeleccionDirectorEscuela(actualizada);

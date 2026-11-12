@@ -39,6 +39,15 @@ import {
 import { SubnavAutoevaluacionComponent } from '../subnav-autoevaluacion/subnav-autoevaluacion.component';
 import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoevaluacion-context.service';
 import { NotificationState } from '../../../core/autoevaluacion/notification-state.helper';
+import { PlanEstudioService } from '../../../core/planes-estudio/plan-estudio.service';
+import {
+  ActividadCurricularPlan,
+  PlanEstudioFt001,
+} from '../../../core/planes-estudio/plan-estudio.models';
+import {
+  AsignarActividadEspacioRequest,
+  EspacioFisicoActividadCurricularDto,
+} from '../../../core/autoevaluacion/autoevaluacion.models';
 
 @Component({
   selector: 'app-infraestructura',
@@ -53,6 +62,7 @@ export class InfraestructuraComponent implements OnInit {
   private readonly autoevalService = inject(AutoevaluacionService);
   private readonly estructuraService = inject(EstructuraService);
   private readonly geografiaService = inject(GeografiaService);
+  private readonly planEstudioService = inject(PlanEstudioService);
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
@@ -165,6 +175,26 @@ export class InfraestructuraComponent implements OnInit {
   readonly inputDocNombre = signal<string>('');
   readonly inputDocTipoAnexo = signal<string>('CONVENIO_COMODATO');
   readonly inputDocDescripcion = signal<string>('');
+
+  // Modal Vinculación Actividades Curriculares a Espacio Físico (Cascading Selector)
+  readonly mostrarModalActividadesEspacio = signal<boolean>(false);
+  readonly espacioSeleccionadoActividades = signal<EspacioFisico | null>(null);
+  readonly cargandoActividadesEspacio = signal<boolean>(false);
+  readonly guardandoActividadesEspacio = signal<boolean>(false);
+  readonly asignacionesEspacio = signal<EspacioFisicoActividadCurricularDto[]>([]);
+
+  // Selectores en cascada: Carrera -> Plan -> Asignaturas
+  readonly cascadaCarreraId = signal<string>('');
+  readonly cascadaPlanesDisponibles = signal<PlanEstudioFt001[]>([]);
+  readonly cascadaPlanId = signal<string>('');
+  readonly cascadaAsignaturasDisponibles = signal<ActividadCurricularPlan[]>([]);
+  readonly cascadaAsignaturaSeleccionadaId = signal<string>('');
+  readonly cascadaComisiones = signal<number>(1);
+  readonly cascadaObservaciones = signal<string>('');
+
+  // Modal Copiar Datos Centrales (Snapshot manual)
+  readonly mostrarModalCopiarDatosCentrales = signal<boolean>(false);
+  readonly copiandoDatosCentrales = signal<boolean>(false);
 
   // Doble Confirmación al Guardar
   readonly mostrarConfirmacionGuardado = signal<boolean>(false);
@@ -1257,5 +1287,183 @@ export class InfraestructuraComponent implements OnInit {
         },
         error: () => this.notif.mostrar(this.errorMessage, 'Error al verificar la Guía de Higiene y Seguridad.', 6000),
       });
+  }
+
+  // ==========================================
+  // Métodos Cascada Espacio -> Actividades
+  // ==========================================
+
+  abrirModalActividadesEspacio(espacio: EspacioFisico): void {
+    this.espacioSeleccionadoActividades.set(espacio);
+    this.mostrarModalActividadesEspacio.set(true);
+    this.cascadaCarreraId.set('');
+    this.cascadaPlanId.set('');
+    this.cascadaPlanesDisponibles.set([]);
+    this.cascadaAsignaturaSeleccionadaId.set('');
+    this.cascadaAsignaturasDisponibles.set([]);
+    this.cascadaComisiones.set(1);
+    this.cascadaObservaciones.set('');
+
+    if (espacio.id) {
+      this.cargandoActividadesEspacio.set(true);
+      this.autoevalService.obtenerActividadesPorEspacio(espacio.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (items) => {
+            this.asignacionesEspacio.set(items || []);
+            this.cargandoActividadesEspacio.set(false);
+          },
+          error: (err) => {
+            console.error('Error cargando actividades del espacio', err);
+            this.cargandoActividadesEspacio.set(false);
+          },
+        });
+    } else {
+      this.asignacionesEspacio.set([]);
+    }
+  }
+
+  cerrarModalActividadesEspacio(): void {
+    this.mostrarModalActividadesEspacio.set(false);
+    this.espacioSeleccionadoActividades.set(null);
+  }
+
+  onCascadaCarreraChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const carId = select?.value || '';
+    this.cascadaCarreraId.set(carId);
+    this.cascadaPlanId.set('');
+    this.cascadaPlanesDisponibles.set([]);
+    this.cascadaAsignaturaSeleccionadaId.set('');
+    this.cascadaAsignaturasDisponibles.set([]);
+
+    if (carId) {
+      const procId = this.contextService.procesoIdActivo() || undefined;
+      this.planEstudioService.listarPlanes(carId, procId).subscribe({
+        next: (planes) => this.cascadaPlanesDisponibles.set(planes || []),
+        error: () => this.cascadaPlanesDisponibles.set([]),
+      });
+    }
+  }
+
+  onCascadaPlanChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const pId = select?.value || '';
+    this.cascadaPlanId.set(pId);
+    this.cascadaAsignaturaSeleccionadaId.set('');
+    this.cascadaAsignaturasDisponibles.set([]);
+
+    if (pId) {
+      this.planEstudioService.listarAsignaturas(pId).subscribe({
+        next: (asigs) => this.cascadaAsignaturasDisponibles.set(asigs || []),
+        error: () => this.cascadaAsignaturasDisponibles.set([]),
+      });
+    }
+  }
+
+  agregarAsignacionEspacio(): void {
+    const carId = this.cascadaCarreraId();
+    const planId = this.cascadaPlanId();
+    const asigId = this.cascadaAsignaturaSeleccionadaId();
+    if (!carId || !planId || !asigId) {
+      alert('Debe seleccionar Carrera, Plan de Estudio y Actividad Curricular.');
+      return;
+    }
+    const esp = this.espacioSeleccionadoActividades();
+    if (!esp?.id) return;
+
+    const car = this.carreras().find((c) => c.id === carId);
+    const plan = this.cascadaPlanesDisponibles().find((p) => p.id === planId);
+    const asig = this.cascadaAsignaturasDisponibles().find((a) => a.id === asigId);
+
+    const nueva: EspacioFisicoActividadCurricularDto = {
+      id: 'temp-' + Date.now(),
+      espacioFisicoId: esp.id,
+      carreraId: carId,
+      carreraNombre: car?.nombre,
+      planEstudioId: planId,
+      planEstudioNombre: plan?.codigoResolucion || ('Plan ' + plan?.anioAprobacion),
+      actividadCurricularId: asigId,
+      actividadCodigo: asig?.codigo,
+      actividadNombre: asig?.nombre,
+      comisionesAsignadas: this.cascadaComisiones() || 1,
+      observacionesUso: this.cascadaObservaciones().trim() || undefined,
+    };
+
+    this.asignacionesEspacio.update((prev) => [...prev, nueva]);
+    this.cascadaAsignaturaSeleccionadaId.set('');
+    this.cascadaObservaciones.set('');
+  }
+
+  eliminarAsignacionEspacio(index: number): void {
+    this.asignacionesEspacio.update((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  guardarAsignacionesEspacio(): void {
+    const esp = this.espacioSeleccionadoActividades();
+    if (!esp?.id) return;
+
+    const payload: AsignarActividadEspacioRequest[] = this.asignacionesEspacio().map((item) => ({
+      carreraId: item.carreraId,
+      planEstudioId: item.planEstudioId,
+      actividadCurricularId: item.actividadCurricularId,
+      comisionesAsignadas: item.comisionesAsignadas,
+      observacionesUso: item.observacionesUso,
+    }));
+
+    this.guardandoActividadesEspacio.set(true);
+    this.autoevalService.guardarActividadesPorEspacio(esp.id, payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.guardandoActividadesEspacio.set(false);
+          this.asignacionesEspacio.set(res || []);
+          this.notif.mostrar(this.successMessage, 'Actividades curriculares vinculadas exitosamente al espacio.', 5000);
+          this.cerrarModalActividadesEspacio();
+        },
+        error: (err) => {
+          this.guardandoActividadesEspacio.set(false);
+          this.notif.mostrar(this.errorMessage, 'Error al guardar asignaciones: ' + (err.error?.message || err.message), 6000);
+        },
+      });
+  }
+
+  // ==========================================
+  // Snapshot Manual: Copiar Datos Centrales
+  // ==========================================
+
+  abrirModalCopiarDatosCentrales(): void {
+    this.mostrarModalCopiarDatosCentrales.set(true);
+  }
+
+  cerrarModalCopiarDatosCentrales(): void {
+    if (!this.copiandoDatosCentrales()) {
+      this.mostrarModalCopiarDatosCentrales.set(false);
+    }
+  }
+
+  confirmarCopiarDatosCentrales(): void {
+    const pId = this.contextService.procesoIdActivo() || this.procesoId();
+    if (!pId) {
+      alert('Debe seleccionar un proceso de acreditación activo.');
+      return;
+    }
+    this.copiandoDatosCentrales.set(true);
+    this.autoevalService.copiarDatosCentrales(pId).subscribe({
+      next: (res) => {
+        this.copiandoDatosCentrales.set(false);
+        this.cerrarModalCopiarDatosCentrales();
+        this.notif.mostrar(
+          this.successMessage,
+          `¡Datos centrales copiados exitosamente! (${res.espaciosFisicosClonados} espacios, ${res.planesClonados} planes, ${res.cuerpoAcademicoClonado} docentes)`,
+          7000
+        );
+        this.cargarInmuebles();
+      },
+      error: (err) => {
+        this.copiandoDatosCentrales.set(false);
+        this.notif.mostrar(this.errorMessage, 'Error al copiar datos centrales: ' + (err.error?.message || err.message), 6000);
+      },
+    });
   }
 }

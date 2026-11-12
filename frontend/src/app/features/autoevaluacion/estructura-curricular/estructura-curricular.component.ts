@@ -271,6 +271,10 @@ export class EstructuraCurricularComponent implements OnInit {
         this.carreraSeleccionadaId.set(ctxCarreraId);
         this.cargarPlan(ctxCarreraId);
       }
+      const planActivoId = this.contextService.planConvocadoActivoId();
+      if (planActivoId && planActivoId !== this.planActivo()?.id) {
+        this.cargarPlanPorId(planActivoId);
+      }
     });
   }
 
@@ -342,6 +346,48 @@ export class EstructuraCurricularComponent implements OnInit {
     this.cargarPlan(select.value);
   }
 
+  cargarPlanPorId(planId: string): void {
+    const cached = this.planes().find((p) => p.id === planId);
+    if (cached) {
+      this.aplicarPlanActivo(cached);
+      return;
+    }
+    this.loading.set(true);
+    this.planService.obtenerPlan(planId).subscribe({
+      next: (plan) => {
+        if (plan) {
+          this.aplicarPlanActivo(plan);
+        } else {
+          this.loading.set(false);
+        }
+      },
+      error: (err) => {
+        this.notif.mostrar(this.errorMessage, 'Error al cargar plan de estudios: ' + (err.error?.message || err.message), 6000);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  private aplicarPlanActivo(p: PlanEstudioFt001): void {
+    this.planActivo.set(p);
+    this.formPlan.patchValue({
+      codigoResolucion: p.codigoResolucion,
+      anioAprobacion: p.anioAprobacion || 2024,
+      duracionAnios: p.duracionAnios || 5,
+      horasTotales: p.horasTotales || 3650,
+      horasPresenciales: p.horasPresenciales || 3650,
+      horasNoPresenciales: p.horasNoPresenciales || 0,
+      estructuraSintetica: p.estructuraSintetica || '',
+      instanciaFinalGraduacion: p.instanciaFinalGraduacion || '',
+      otraInformacion: p.otraInformacion || '',
+    });
+    if (p.id) {
+      this.cargarAsignaturasYProgramas(p.id);
+    } else {
+      this.loading.set(false);
+    }
+  }
+
   cargarPlan(carreraId: string): void {
     this.loading.set(true);
     const procId = this.procesoId() || this.contextService.procesoIdActivo() || undefined;
@@ -349,24 +395,9 @@ export class EstructuraCurricularComponent implements OnInit {
       next: (planes) => {
         this.planes.set(planes);
         if (planes.length > 0) {
-          const p = planes[0];
-          this.planActivo.set(p);
-          this.formPlan.patchValue({
-            codigoResolucion: p.codigoResolucion,
-            anioAprobacion: p.anioAprobacion || 2024,
-            duracionAnios: p.duracionAnios || 5,
-            horasTotales: p.horasTotales || 3650,
-            horasPresenciales: p.horasPresenciales || 3650,
-            horasNoPresenciales: p.horasNoPresenciales || 0,
-            estructuraSintetica: p.estructuraSintetica || '',
-            instanciaFinalGraduacion: p.instanciaFinalGraduacion || '',
-            otraInformacion: p.otraInformacion || '',
-          });
-          if (p.id) {
-            this.cargarAsignaturasYProgramas(p.id);
-          } else {
-            this.loading.set(false);
-          }
+          const activePlanId = this.contextService.planConvocadoActivoId();
+          const targetPlan = (activePlanId && planes.find((p) => p.id === activePlanId)) || planes[0];
+          this.aplicarPlanActivo(targetPlan);
         } else {
           this.planActivo.set(null);
           this.asignaturas.set([]);

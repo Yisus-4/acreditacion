@@ -7,6 +7,8 @@ import { ConvocatoriaService } from '../../../core/convocatorias/convocatoria.se
 import { ConvocatoriaDetalle, ConvocatoriaResumen } from '../../../core/convocatorias/models/convocatoria.model';
 import { EstructuraService } from '../../../core/estructura/estructura.service';
 import { CarreraResponse } from '../../../core/estructura/estructura.types';
+import { PlanEstudioService } from '../../../core/planes-estudio/plan-estudio.service';
+import { PlanEstudioVigenteDto } from '../../../core/planes-estudio/plan-estudio.models';
 
 interface CarreraConvocadaItem {
   id: string;
@@ -16,6 +18,7 @@ interface CarreraConvocadaItem {
   estado?: string;
   rolEdicionDisponible: boolean;
   actividadesPermitidas: string[];
+  planes?: PlanEstudioVigenteDto[];
 }
 
 @Component({
@@ -141,6 +144,16 @@ interface CarreraConvocadaItem {
                             </div>
 
                             <h4 class="carrera-nombre">{{ carrera.nombre }}</h4>
+
+                            @if (carrera.planes && carrera.planes.length > 0) {
+                              <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;">
+                                @for (p of carrera.planes; track p.id) {
+                                  <span style="font-size: 11px; font-weight: 600; background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 12px;">
+                                    {{ p.codigoResolucion || ('Plan ' + p.anioAprobacion) }}
+                                  </span>
+                                }
+                              </div>
+                            }
 
                             <div class="actividades-permitidas">
                               <span class="actividades-label">Actividades según rol asignado:</span>
@@ -613,10 +626,12 @@ export class AutoevaluacionConvocatoriasHubComponent implements OnInit {
   readonly contextService = inject(AutoevaluacionContextService);
   private readonly convocatoriaService = inject(ConvocatoriaService);
   private readonly estructuraService = inject(EstructuraService);
+  private readonly planEstudioService = inject(PlanEstudioService);
 
   readonly cargando = signal<boolean>(true);
   readonly convocatorias = signal<ConvocatoriaResumen[]>([]);
   readonly carrerasTodas = signal<CarreraResponse[]>([]);
+  readonly planesPorCarreraMap = signal<Map<string, PlanEstudioVigenteDto[]>>(new Map());
   readonly convocatoriaAbiertaId = signal<string | null>(null);
   readonly cargandoDetalleConvocatoriaId = signal<string | null>(null);
 
@@ -726,6 +741,10 @@ export class AutoevaluacionConvocatoriasHubComponent implements OnInit {
         actividades.push('Consulta de Autoevaluación');
       }
 
+      if (!this.planesPorCarreraMap().has(c.id)) {
+        this.cargarPlanesCarrera(c.id);
+      }
+
       return {
         id: c.id,
         nombre: c.nombre,
@@ -734,7 +753,19 @@ export class AutoevaluacionConvocatoriasHubComponent implements OnInit {
         estado: matchPropuesta?.estadoProceso || 'En Curso',
         rolEdicionDisponible: tieneCargaHabilitada,
         actividadesPermitidas: actividades,
+        planes: this.planesPorCarreraMap().get(c.id) || [],
       };
+    });
+  }
+
+  cargarPlanesCarrera(carreraId: string): void {
+    this.planEstudioService.listarPlanesVigentesPorCarrera(carreraId).subscribe({
+      next: (planes) => {
+        const mapa = new Map(this.planesPorCarreraMap());
+        mapa.set(carreraId, planes || []);
+        this.planesPorCarreraMap.set(mapa);
+      },
+      error: () => {},
     });
   }
 
