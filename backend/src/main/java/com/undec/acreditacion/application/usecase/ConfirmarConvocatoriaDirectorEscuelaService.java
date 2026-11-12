@@ -98,6 +98,8 @@ public class ConfirmarConvocatoriaDirectorEscuelaService implements ConfirmarCon
                             .findByCarreraIdAndEstadoVigenciaAndEsMaestroTrue(carreraId, EstadoVigenciaPlan.VIGENTE);
                     if (!planesVigentes.isEmpty()) {
                         planesSeleccionados = planesVigentes.stream().map(PlanEstudioFt001JpaEntity::getId).toList();
+                    } else {
+                        throw new DomainValidationException("La carrera " + carrera.getNombre() + " no posee planes de estudio maestros vigentes para convocar.");
                     }
                 }
 
@@ -147,8 +149,19 @@ public class ConfirmarConvocatoriaDirectorEscuelaService implements ConfirmarCon
                     planTrabajoRepository.save(plan);
                 }
 
-                // Persistir planes confirmados en convocatoria_carrera_plan
+                // Persistir planes confirmados en convocatoria_carrera_plan y desmarcar deseleccionados
                 if (convocatoriaCarreraPlanRepository != null && planesSeleccionados != null && planEstudioRepository != null) {
+                    List<ConvocatoriaCarreraPlanJpaEntity> planesExistentes = convocatoriaCarreraPlanRepository
+                            .findByConvocatoriaCarreraId(item.getId());
+                    for (ConvocatoriaCarreraPlanJpaEntity existente : planesExistentes) {
+                        UUID maestroId = existente.getPlanEstudioMaestro() != null ? existente.getPlanEstudioMaestro().getId() : null;
+                        if (maestroId != null && !planesSeleccionados.contains(maestroId)) {
+                            existente.setSeleccionadoPorDe(false);
+                            existente.setActualizadoEn(Instant.now());
+                            convocatoriaCarreraPlanRepository.save(existente);
+                        }
+                    }
+
                     for (UUID planId : planesSeleccionados) {
                         Optional<ConvocatoriaCarreraPlanJpaEntity> existingOpt = convocatoriaCarreraPlanRepository
                                 .findByConvocatoriaCarreraIdAndPlanEstudioMaestroId(item.getId(), planId);

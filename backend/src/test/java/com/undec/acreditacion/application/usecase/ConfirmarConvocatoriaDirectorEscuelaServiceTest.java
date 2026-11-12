@@ -71,8 +71,16 @@ class ConfirmarConvocatoriaDirectorEscuelaServiceTest {
 
         Carrera carrera = Carrera.registrar(escuelaId, "Ingeniería en Sistemas", "ISI", "Ingeniería", ModalidadCarrera.PRESENCIAL, EstadoCarrera.EN_FUNCIONAMIENTO, "Título", 5, "Desc", List.of());
 
+        PlanEstudioFt001JpaEntity planVigente = new PlanEstudioFt001JpaEntity();
+        planVigente.setId(UUID.randomUUID());
+        planVigente.setNombrePlan("Plan 2024");
+        planVigente.setEsMaestro(true);
+        planVigente.setEstadoVigencia(EstadoVigenciaPlan.VIGENTE);
+
         when(convocatoriaRepository.findById(convId)).thenReturn(Optional.of(conv));
         when(carreraRepository.findById(c1)).thenReturn(Optional.of(carrera));
+        when(planEstudioRepository.findByCarreraIdAndEstadoVigenciaAndEsMaestroTrue(eq(c1), eq(EstadoVigenciaPlan.VIGENTE)))
+                .thenReturn(List.of(planVigente));
         when(procesoRepository.countByAnio(anyInt())).thenReturn(0L);
         when(procesoRepository.save(any(ProcesoAcreditacion.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(convocatoriaRepository.save(any(Convocatoria.class))).thenAnswer(invocation -> invocation.getArgument(0));

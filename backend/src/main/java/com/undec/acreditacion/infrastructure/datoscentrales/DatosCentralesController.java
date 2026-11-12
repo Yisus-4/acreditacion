@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/datos-centrales")
-@PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA')")
+@PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'INFRAESTRUCTURA', 'BEDELIA')")
 public class DatosCentralesController {
 
     private final DatosCentralesService datosCentralesService;
@@ -37,6 +37,7 @@ public class DatosCentralesController {
     }
 
     @PostMapping("/planes-estudio")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA')")
     public ResponseEntity<PlanEstudioMaestroDto> crearPlanEstudio(
             @RequestBody CrearPlanEstudioMaestroRequest request
     ) {
@@ -45,6 +46,7 @@ public class DatosCentralesController {
     }
 
     @PatchMapping("/planes-estudio/{id}/estado-vigencia")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA')")
     public ResponseEntity<PlanEstudioMaestroDto> cambiarEstadoVigencia(
             @PathVariable UUID id,
             @RequestBody CambiarVigenciaPlanRequest request
@@ -62,6 +64,7 @@ public class DatosCentralesController {
     }
 
     @PostMapping("/cuerpo-academico")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA')")
     public ResponseEntity<CuerpoAcademicoMaestroDto> crearCuerpoAcademico(
             @RequestBody CrearCuerpoAcademicoMaestroRequest request
     ) {

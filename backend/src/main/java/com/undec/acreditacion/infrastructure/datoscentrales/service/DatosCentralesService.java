@@ -144,7 +144,14 @@ public class DatosCentralesService {
     @Transactional(readOnly = true)
     public List<CuerpoAcademicoMaestroDto> listarCuerpoAcademico(UUID carreraId, String query) {
         List<CuerpoAcademicoMaestroJpaEntity> list;
-        if (carreraId != null) {
+        if (carreraId != null && query != null && !query.isBlank()) {
+            String q = query.trim().toLowerCase();
+            list = cuerpoAcademicoRepository.findByCarreraId(carreraId).stream()
+                    .filter(d -> (d.getApellido() != null && d.getApellido().toLowerCase().contains(q))
+                            || (d.getNombre() != null && d.getNombre().toLowerCase().contains(q))
+                            || (d.getDni() != null && d.getDni().toLowerCase().contains(q)))
+                    .collect(Collectors.toList());
+        } else if (carreraId != null) {
             list = cuerpoAcademicoRepository.findByCarreraId(carreraId);
         } else if (query != null && !query.isBlank()) {
             list = cuerpoAcademicoRepository.buscarPorTexto(query.trim());
