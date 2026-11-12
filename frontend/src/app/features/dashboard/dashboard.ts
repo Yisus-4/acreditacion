@@ -50,6 +50,11 @@ export class Dashboard implements OnInit {
     );
   }
 
+  get canAccessDatosCentrales(): boolean {
+    const allowed = ['ADMIN', 'ADMINISTRATOR', 'AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'INFRAESTRUCTURA', 'BEDELIA'];
+    return this.user?.roleCodes?.some((role) => allowed.includes(role)) ?? false;
+  }
+
   onSignOut(): void {
     this.auth.signOut();
   }

@@ -187,5 +187,14 @@ export const routes: Routes = [
         './features/autoevaluacion/dimension-detalle/dimension-detalle.component'
       ).then((m) => m.DimensionDetalleComponent),
   },
+  {
+    path: 'datos-centrales',
+    title: 'Datos Centrales Institucionales — Sistema de Acreditación UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/datos-centrales/datos-centrales.component'
+      ).then((m) => m.DatosCentralesComponent),
+  },
   { path: '**', redirectTo: 'dashboard' },
 ];

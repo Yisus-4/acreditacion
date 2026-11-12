@@ -77,6 +77,17 @@
           </p>
           <span class="btn-link-action">Acceder &rarr;</span>
         </a>
+
+        <!-- Módulo 5: Datos Centrales Institucionales -->
+        @if (canAccessDatosCentrales) {
+          <a class="modulo-card" routerLink="/datos-centrales">
+            <h3 class="modulo-title">Datos Centrales Institucionales</h3>
+            <p class="modulo-desc">
+              Carga y gestión centralizada de planes de estudio maestros, cuerpo docente, infraestructura y convenios.
+            </p>
+            <span class="btn-link-action">Acceder &rarr;</span>
+          </a>
+        }
       </div>
     </section>
   </div>
