@@ -6,7 +6,14 @@ import com.undec.acreditacion.domain.entities.*;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.domain.ports.*;
+import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.PlanEstudioFt001JpaEntity;
+import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataPlanEstudioFt001Repository;
+import com.undec.acreditacion.infrastructure.persistence.postgres.ConvocatoriaCarreraJpaEntity;
+import com.undec.acreditacion.infrastructure.persistence.postgres.ConvocatoriaCarreraPlanJpaEntity;
+import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataConvocatoriaCarreraPlanRepository;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,6 +25,8 @@ public class ConfirmarConvocatoriaDirectorEscuelaService implements ConfirmarCon
     private final RegistroConvocatoriaRepositoryPort registroRepository;
     private final PlanTrabajoRepositoryPort planTrabajoRepository;
     private final CarreraRepositoryPort carreraRepository;
+    private final SpringDataConvocatoriaCarreraPlanRepository convocatoriaCarreraPlanRepository;
+    private final SpringDataPlanEstudioFt001Repository planEstudioRepository;
 
     public ConfirmarConvocatoriaDirectorEscuelaService(
             ConvocatoriaEscuelaRepositoryPort convocatoriaRepository,
@@ -25,11 +34,24 @@ public class ConfirmarConvocatoriaDirectorEscuelaService implements ConfirmarCon
             RegistroConvocatoriaRepositoryPort registroRepository,
             PlanTrabajoRepositoryPort planTrabajoRepository,
             CarreraRepositoryPort carreraRepository) {
+        this(convocatoriaRepository, procesoRepository, registroRepository, planTrabajoRepository, carreraRepository, null, null);
+    }
+
+    public ConfirmarConvocatoriaDirectorEscuelaService(
+            ConvocatoriaEscuelaRepositoryPort convocatoriaRepository,
+            ProcesoAcreditacionRepositoryPort procesoRepository,
+            RegistroConvocatoriaRepositoryPort registroRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            CarreraRepositoryPort carreraRepository,
+            SpringDataConvocatoriaCarreraPlanRepository convocatoriaCarreraPlanRepository,
+            SpringDataPlanEstudioFt001Repository planEstudioRepository) {
         this.convocatoriaRepository = Objects.requireNonNull(convocatoriaRepository);
         this.procesoRepository = Objects.requireNonNull(procesoRepository);
         this.registroRepository = Objects.requireNonNull(registroRepository);
         this.planTrabajoRepository = Objects.requireNonNull(planTrabajoRepository);
         this.carreraRepository = Objects.requireNonNull(carreraRepository);
+        this.convocatoriaCarreraPlanRepository = convocatoriaCarreraPlanRepository;
+        this.planEstudioRepository = planEstudioRepository;
     }
 
     @Override
@@ -54,6 +76,30 @@ public class ConfirmarConvocatoriaDirectorEscuelaService implements ConfirmarCon
                 UUID carreraId = item.getCarreraId();
                 Carrera carrera = carreraRepository.findById(carreraId)
                         .orElseThrow(() -> new ResourceNotFoundException("No se encontró la carrera ID: " + carreraId));
+
+                List<UUID> planesSeleccionados = null;
+                if (command.planesPorCarrera() != null && command.planesPorCarrera().containsKey(carreraId)) {
+                    planesSeleccionados = command.planesPorCarrera().get(carreraId);
+                    if (planesSeleccionados == null || planesSeleccionados.isEmpty()) {
+                        throw new DomainValidationException("Debe seleccionar al menos un plan de estudio vigente para la carrera " + carrera.getNombre());
+                    }
+                }
+
+                if (planesSeleccionados != null && planEstudioRepository != null) {
+                    for (UUID planId : planesSeleccionados) {
+                        PlanEstudioFt001JpaEntity planEnt = planEstudioRepository.findById(planId)
+                                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el plan de estudio ID: " + planId));
+                        if (!Boolean.TRUE.equals(planEnt.getEsMaestro()) || planEnt.getEstadoVigencia() != EstadoVigenciaPlan.VIGENTE) {
+                            throw new DomainValidationException("El plan de estudio seleccionado no es un plan maestro vigente para la carrera " + carrera.getNombre());
+                        }
+                    }
+                } else if (planesSeleccionados == null && planEstudioRepository != null) {
+                    List<PlanEstudioFt001JpaEntity> planesVigentes = planEstudioRepository
+                            .findByCarreraIdAndEstadoVigenciaAndEsMaestroTrue(carreraId, EstadoVigenciaPlan.VIGENTE);
+                    if (!planesVigentes.isEmpty()) {
+                        planesSeleccionados = planesVigentes.stream().map(PlanEstudioFt001JpaEntity::getId).toList();
+                    }
+                }
 
                 // Si la carrera en esta convocatoria aún no tiene proceso creado, lo inicializamos de forma aislada
                 if (item.getProcesoId() == null) {
@@ -99,6 +145,36 @@ public class ConfirmarConvocatoriaDirectorEscuelaService implements ConfirmarCon
                             TipoPlanTrabajo.PT_001_ACREDITACION
                     );
                     planTrabajoRepository.save(plan);
+                }
+
+                // Persistir planes confirmados en convocatoria_carrera_plan
+                if (convocatoriaCarreraPlanRepository != null && planesSeleccionados != null && planEstudioRepository != null) {
+                    for (UUID planId : planesSeleccionados) {
+                        Optional<ConvocatoriaCarreraPlanJpaEntity> existingOpt = convocatoriaCarreraPlanRepository
+                                .findByConvocatoriaCarreraIdAndPlanEstudioMaestroId(item.getId(), planId);
+                        if (existingOpt.isPresent()) {
+                            ConvocatoriaCarreraPlanJpaEntity existing = existingOpt.get();
+                            existing.setSeleccionadoPorDe(true);
+                            existing.setActualizadoEn(Instant.now());
+                            convocatoriaCarreraPlanRepository.save(existing);
+                        } else {
+                            PlanEstudioFt001JpaEntity planEnt = planEstudioRepository.findById(planId).orElse(null);
+                            if (planEnt != null) {
+                                ConvocatoriaCarreraJpaEntity ccEntity = new ConvocatoriaCarreraJpaEntity();
+                                ccEntity.setId(item.getId());
+                                ConvocatoriaCarreraPlanJpaEntity ccp = new ConvocatoriaCarreraPlanJpaEntity(
+                                        UUID.randomUUID(),
+                                        ccEntity,
+                                        carreraId,
+                                        planEnt,
+                                        null,
+                                        true,
+                                        true
+                                );
+                                convocatoriaCarreraPlanRepository.save(ccp);
+                            }
+                        }
+                    }
                 }
             }
         }

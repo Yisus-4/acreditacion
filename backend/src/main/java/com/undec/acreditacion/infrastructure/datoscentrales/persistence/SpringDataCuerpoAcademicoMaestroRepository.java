@@ -18,6 +18,11 @@ public interface SpringDataCuerpoAcademicoMaestroRepository extends JpaRepositor
 
     boolean existsByDni(String dni);
 
+    long countByActivoTrue();
+
+    @Query("SELECT d FROM CuerpoAcademicoMaestroJpaEntity d WHERE d.activo = true AND (:query IS NULL OR LOWER(d.nombre) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(d.apellido) LIKE LOWER(CONCAT('%', :query, '%')) OR d.dni LIKE CONCAT('%', :query, '%'))")
+    List<CuerpoAcademicoMaestroJpaEntity> buscarPorTexto(@Param("query") String query);
+
     @Query("SELECT DISTINCT d FROM CuerpoAcademicoMaestroJpaEntity d JOIN d.asignaciones a WHERE a.carreraId = :carreraId AND d.activo = true")
     List<CuerpoAcademicoMaestroJpaEntity> findByCarreraId(@Param("carreraId") UUID carreraId);
 }

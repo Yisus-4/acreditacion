@@ -16,6 +16,10 @@ public interface SpringDataEspacioFisicoRepository extends JpaRepository<Espacio
 
     List<EspacioFisicoJpaEntity> findByEspacioPadreIdAndActivoTrue(UUID espacioPadreId);
 
+    long countByEsMaestroTrue();
+
+    List<EspacioFisicoJpaEntity> findByEsMaestroTrue();
+
     @Query("SELECT e FROM EspacioFisicoJpaEntity e " +
            "JOIN e.inmueble i " +
            "LEFT JOIN i.sede s " +

@@ -158,7 +158,8 @@ public class ConvocatoriaController {
         ConfirmarConvocatoriaDirectorEscuelaCommand command = new ConfirmarConvocatoriaDirectorEscuelaCommand(
                 id,
                 request.carrerasSeleccionadas() != null ? request.carrerasSeleccionadas() : Collections.emptyList(),
-                usuarioId
+                usuarioId,
+                request.planesPorCarrera()
         );
 
         confirmarConvocatoriaDirectorEscuelaUseCase.confirmar(command);

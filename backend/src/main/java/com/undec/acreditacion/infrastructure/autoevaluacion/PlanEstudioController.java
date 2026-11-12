@@ -1,7 +1,9 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion;
 
+import com.undec.acreditacion.domain.entities.EstadoVigenciaPlan;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
+import com.undec.acreditacion.infrastructure.datoscentrales.dto.PlanEstudioVigenteDto;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.ActividadCurricularPlanDto;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.ActualizarAsignaturaRequest;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.CrearAsignaturaRequest;
@@ -102,6 +104,25 @@ public class PlanEstudioController {
         List<PlanEstudioFt001JpaEntity> planes = planRepository.findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(carreraId);
         List<PlanEstudioFt001Dto> dtos = planes.stream()
                 .map(this::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/carrera/{carreraId}/vigentes")
+    public ResponseEntity<List<PlanEstudioVigenteDto>> listarVigentesPorCarrera(@PathVariable UUID carreraId) {
+        List<PlanEstudioFt001JpaEntity> planes = planRepository.findByCarreraIdAndEstadoVigenciaAndEsMaestroTrueOrderByAnioAprobacionDesc(
+                carreraId, EstadoVigenciaPlan.VIGENTE);
+        List<PlanEstudioVigenteDto> dtos = planes.stream()
+                .map(p -> new PlanEstudioVigenteDto(
+                        p.getId(),
+                        carreraId,
+                        p.getCarrera() != null ? p.getCarrera().getNombre() : null,
+                        p.getNombrePlan(),
+                        p.getCodigoResolucion(),
+                        p.getAnioAprobacion(),
+                        p.getEstadoVigencia(),
+                        p.getEsMaestro()
+                ))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }

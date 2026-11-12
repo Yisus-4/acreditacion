@@ -19,7 +19,15 @@ public interface SpringDataPlanEstudioFt001Repository extends JpaRepository<Plan
 
     List<PlanEstudioFt001JpaEntity> findByCarreraIdAndEstadoVigenciaAndEsMaestroTrue(UUID carreraId, EstadoVigenciaPlan estadoVigencia);
 
+    List<PlanEstudioFt001JpaEntity> findByCarreraIdAndEstadoVigenciaAndEsMaestroTrueOrderByAnioAprobacionDesc(UUID carreraId, EstadoVigenciaPlan estadoVigencia);
+
     List<PlanEstudioFt001JpaEntity> findByCarreraIdAndEsMaestroTrueOrderByAnioAprobacionDesc(UUID carreraId);
+
+    List<PlanEstudioFt001JpaEntity> findByEsMaestroTrueOrderByAnioAprobacionDesc();
+
+    List<PlanEstudioFt001JpaEntity> findByEsMaestroTrueAndEstadoVigenciaOrderByAnioAprobacionDesc(EstadoVigenciaPlan estadoVigencia);
+
+    long countByEsMaestroTrueAndEstadoVigencia(EstadoVigenciaPlan estadoVigencia);
 
     Optional<PlanEstudioFt001JpaEntity> findByProcesoIdAndOrigenMaestroId(UUID procesoId, UUID origenMaestroId);
 }

@@ -435,10 +435,12 @@ public class UseCaseConfiguration {
             ProcesoAcreditacionRepositoryPort procesoRepository,
             RegistroConvocatoriaRepositoryPort registroConvocatoriaRepository,
             PlanTrabajoRepositoryPort planTrabajoRepository,
-            CarreraRepositoryPort carreraRepository) {
+            CarreraRepositoryPort carreraRepository,
+            com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataConvocatoriaCarreraPlanRepository convocatoriaCarreraPlanRepository,
+            com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataPlanEstudioFt001Repository planEstudioRepository) {
         return new com.undec.acreditacion.application.usecase.ConfirmarConvocatoriaDirectorEscuelaService(
                 convocatoriaRepository, procesoRepository, registroConvocatoriaRepository,
-                planTrabajoRepository, carreraRepository);
+                planTrabajoRepository, carreraRepository, convocatoriaCarreraPlanRepository, planEstudioRepository);
     }
 
     @Bean

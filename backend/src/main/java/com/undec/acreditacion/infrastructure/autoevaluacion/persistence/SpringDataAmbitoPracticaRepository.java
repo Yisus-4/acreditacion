@@ -15,6 +15,8 @@ public interface SpringDataAmbitoPracticaRepository extends JpaRepository<Ambito
 
     List<AmbitoPracticaJpaEntity> findByActivoTrueOrderByNumeroOrdenAsc();
 
+    long countByActivoTrue();
+
     @Query("SELECT a FROM AmbitoPracticaJpaEntity a WHERE a.activo = true AND (" +
            "LOWER(a.denominacion) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "LOWER(a.tipoAmbito) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
