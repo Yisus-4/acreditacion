@@ -20,4 +20,6 @@ public interface SpringDataActividadCurricularPlanRepository extends JpaReposito
 
     @Query("SELECT a FROM ActividadCurricularPlanJpaEntity a WHERE a.planEstudio.id = :planEstudioId AND LOWER(a.correlativas) LIKE LOWER(CONCAT('%', :nombre, '%'))")
     List<ActividadCurricularPlanJpaEntity> findCorrelativeDependents(@Param("planEstudioId") UUID planEstudioId, @Param("nombre") String nombre);
+
+    java.util.Optional<ActividadCurricularPlanJpaEntity> findByPlanEstudioIdAndOrigenMaestroId(UUID planEstudioId, UUID origenMaestroId);
 }

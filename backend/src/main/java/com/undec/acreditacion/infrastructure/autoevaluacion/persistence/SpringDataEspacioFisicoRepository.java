@@ -20,6 +20,10 @@ public interface SpringDataEspacioFisicoRepository extends JpaRepository<Espacio
 
     List<EspacioFisicoJpaEntity> findByEsMaestroTrue();
 
+    List<EspacioFisicoJpaEntity> findByProcesoId(UUID procesoId);
+
+    java.util.Optional<EspacioFisicoJpaEntity> findByProcesoIdAndOrigenMaestroId(UUID procesoId, UUID origenMaestroId);
+
     @Query("SELECT e FROM EspacioFisicoJpaEntity e " +
            "JOIN e.inmueble i " +
            "LEFT JOIN i.sede s " +

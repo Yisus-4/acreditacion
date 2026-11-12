@@ -59,4 +59,6 @@ public interface SpringDataInmuebleRepository extends JpaRepository<InmuebleJpaE
             "LEFT JOIN FETCH i.documentos " +
             "WHERE i.id = :id AND i.activo = true")
     Optional<InmuebleJpaEntity> findByIdCompleto(@Param("id") UUID id);
+
+    Optional<InmuebleJpaEntity> findByProcesoIdAndOrigenMaestroId(UUID procesoId, UUID origenMaestroId);
 }

@@ -16,5 +16,10 @@ public interface SpringDataConvocatoriaCarreraPlanRepository extends JpaReposito
 
     List<ConvocatoriaCarreraPlanJpaEntity> findByCarreraId(UUID carreraId);
 
+    @org.springframework.data.jpa.repository.Query("SELECT ccp FROM ConvocatoriaCarreraPlanJpaEntity ccp " +
+            "JOIN ccp.convocatoriaCarrera cc " +
+            "WHERE cc.procesoId = :procesoId AND ccp.seleccionadoPorDe = true")
+    List<ConvocatoriaCarreraPlanJpaEntity> findByProcesoIdAndSeleccionadoPorDeTrue(@org.springframework.data.repository.query.Param("procesoId") UUID procesoId);
+
     Optional<ConvocatoriaCarreraPlanJpaEntity> findByConvocatoriaCarreraIdAndPlanEstudioMaestroId(UUID convocatoriaCarreraId, UUID planEstudioMaestroId);
 }

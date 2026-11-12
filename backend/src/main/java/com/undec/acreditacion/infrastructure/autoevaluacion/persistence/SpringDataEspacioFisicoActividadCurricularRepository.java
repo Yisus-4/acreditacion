@@ -17,5 +17,6 @@ public interface SpringDataEspacioFisicoActividadCurricularRepository extends Jp
 
     List<EspacioFisicoActividadCurricularJpaEntity> findByCarreraId(UUID carreraId);
 
+    @org.springframework.transaction.annotation.Transactional
     void deleteByEspacioFisicoId(UUID espacioFisicoId);
 }
