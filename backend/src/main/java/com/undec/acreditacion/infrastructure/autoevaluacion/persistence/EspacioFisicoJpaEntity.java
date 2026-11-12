@@ -64,6 +64,15 @@ public class EspacioFisicoJpaEntity {
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
 
+    @Column(name = "es_maestro", nullable = false)
+    private Boolean esMaestro = true;
+
+    @Column(name = "proceso_id")
+    private UUID procesoId;
+
+    @Column(name = "origen_maestro_id")
+    private UUID origenMaestroId;
+
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn = Instant.now();
 
@@ -208,5 +217,29 @@ public class EspacioFisicoJpaEntity {
 
     public void setObservacionHigieneSeguridad(String observacionHigieneSeguridad) {
         this.observacionHigieneSeguridad = observacionHigieneSeguridad;
+    }
+
+    public Boolean getEsMaestro() {
+        return esMaestro;
+    }
+
+    public void setEsMaestro(Boolean esMaestro) {
+        this.esMaestro = esMaestro;
+    }
+
+    public UUID getProcesoId() {
+        return procesoId;
+    }
+
+    public void setProcesoId(UUID procesoId) {
+        this.procesoId = procesoId;
+    }
+
+    public UUID getOrigenMaestroId() {
+        return origenMaestroId;
+    }
+
+    public void setOrigenMaestroId(UUID origenMaestroId) {
+        this.origenMaestroId = origenMaestroId;
     }
 }

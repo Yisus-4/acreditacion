@@ -1,5 +1,6 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion.persistence;
 
+import com.undec.acreditacion.domain.entities.EstadoVigenciaPlan;
 import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEntity;
 import jakarta.persistence.*;
 
@@ -20,6 +21,19 @@ public class PlanEstudioFt001JpaEntity {
 
     @Column(name = "proceso_id")
     private UUID procesoId;
+
+    @Column(name = "nombre_plan", length = 150, nullable = false)
+    private String nombrePlan;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_vigencia", length = 30, nullable = false)
+    private EstadoVigenciaPlan estadoVigencia = EstadoVigenciaPlan.VIGENTE;
+
+    @Column(name = "es_maestro", nullable = false)
+    private Boolean esMaestro = true;
+
+    @Column(name = "origen_maestro_id")
+    private UUID origenMaestroId;
 
     @Column(name = "codigo_resolucion", length = 150)
     private String codigoResolucion;
@@ -110,6 +124,38 @@ public class PlanEstudioFt001JpaEntity {
 
     public void setProcesoId(UUID procesoId) {
         this.procesoId = procesoId;
+    }
+
+    public String getNombrePlan() {
+        return nombrePlan;
+    }
+
+    public void setNombrePlan(String nombrePlan) {
+        this.nombrePlan = nombrePlan;
+    }
+
+    public EstadoVigenciaPlan getEstadoVigencia() {
+        return estadoVigencia;
+    }
+
+    public void setEstadoVigencia(EstadoVigenciaPlan estadoVigencia) {
+        this.estadoVigencia = estadoVigencia;
+    }
+
+    public Boolean getEsMaestro() {
+        return esMaestro;
+    }
+
+    public void setEsMaestro(Boolean esMaestro) {
+        this.esMaestro = esMaestro;
+    }
+
+    public UUID getOrigenMaestroId() {
+        return origenMaestroId;
+    }
+
+    public void setOrigenMaestroId(UUID origenMaestroId) {
+        this.origenMaestroId = origenMaestroId;
     }
 
     public String getCodigoResolucion() {

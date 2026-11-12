@@ -48,6 +48,9 @@ public class ActividadCurricularPlanJpaEntity {
     @Column(name = "es_obligatoria", nullable = false)
     private Boolean esObligatoria = true;
 
+    @Column(name = "origen_maestro_id")
+    private UUID origenMaestroId;
+
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
 
@@ -148,6 +151,14 @@ public class ActividadCurricularPlanJpaEntity {
 
     public void setEsObligatoria(Boolean esObligatoria) {
         this.esObligatoria = esObligatoria;
+    }
+
+    public UUID getOrigenMaestroId() {
+        return origenMaestroId;
+    }
+
+    public void setOrigenMaestroId(UUID origenMaestroId) {
+        this.origenMaestroId = origenMaestroId;
     }
 
     public Instant getCreadoEn() {

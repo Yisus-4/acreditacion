@@ -84,6 +84,9 @@ public class InmuebleJpaEntity {
     @Column(name = "proceso_id")
     private UUID procesoId;
 
+    @Column(name = "origen_maestro_id")
+    private UUID origenMaestroId;
+
     @Column(name = "superficie_cubierta_m2", precision = 10, scale = 2)
     private BigDecimal superficieCubiertaM2;
 
@@ -278,6 +281,14 @@ public class InmuebleJpaEntity {
 
     public void setProcesoId(UUID procesoId) {
         this.procesoId = procesoId;
+    }
+
+    public UUID getOrigenMaestroId() {
+        return origenMaestroId;
+    }
+
+    public void setOrigenMaestroId(UUID origenMaestroId) {
+        this.origenMaestroId = origenMaestroId;
     }
 
     public BigDecimal getSuperficieCubiertaM2() {
