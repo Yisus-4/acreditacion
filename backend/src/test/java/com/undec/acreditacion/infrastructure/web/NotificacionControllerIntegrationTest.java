@@ -45,7 +45,7 @@ class NotificacionControllerIntegrationTest {
         NotificacionController controller = new NotificacionController(
                 consultarUseCase,
                 gestionarUseCase,
-                userRepository
+                new com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider(userRepository)
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();

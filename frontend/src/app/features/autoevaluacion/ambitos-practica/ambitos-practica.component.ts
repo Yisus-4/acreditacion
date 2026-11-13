@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { SubnavAutoevaluacionComponent } from '../subnav-autoevaluacion/subnav-autoevaluacion.component';
@@ -329,7 +330,7 @@ export class AmbitosPracticaComponent implements OnInit {
   ngOnInit(): void {
     this.notif.registrarTeardown(this.destroyRef);
 
-    this.route.queryParamMap.subscribe((params) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const convIdParam = params.get('convocatoriaId');
       const procIdParam = params.get('procesoId');
       const validProcId =
@@ -363,7 +364,7 @@ export class AmbitosPracticaComponent implements OnInit {
   cargarDatosIniciales(): void {
     this.loading.set(true);
 
-    this.estructuraService.listarCarreras().subscribe({
+    this.estructuraService.listarCarreras().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data: CarreraResponse[]) => {
         this.carreras.set(data);
         if (data.length > 0 && !this.carreraSeleccionadaId()) {
@@ -376,12 +377,12 @@ export class AmbitosPracticaComponent implements OnInit {
       error: () => {},
     });
 
-    this.convenioService.listarConvenios().subscribe({
+    this.convenioService.listarConvenios().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => this.convenios.set(data),
       error: () => {},
     });
 
-    this.autoevaluacionService.listarInmueblesMaestros().subscribe({
+    this.autoevaluacionService.listarInmueblesMaestros().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data: Inmueble[]) => this.inmuebles.set(data),
       error: () => {},
     });
@@ -391,7 +392,7 @@ export class AmbitosPracticaComponent implements OnInit {
   }
 
   cargarDocentes(): void {
-    this.ambitoService.listarDocentes().subscribe({
+    this.ambitoService.listarDocentes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => this.docentesDisponibles.set(data),
       error: () => {},
     });
@@ -405,10 +406,10 @@ export class AmbitosPracticaComponent implements OnInit {
       return;
     }
 
-    this.planService.listarPlanes(carreraId || undefined, procesoId || undefined).subscribe({
+    this.planService.listarPlanes(carreraId || undefined, procesoId || undefined).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (planes) => {
         if (planes && planes.length > 0 && planes[0].id) {
-          this.planService.listarAsignaturas(planes[0].id).subscribe({
+          this.planService.listarAsignaturas(planes[0].id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
             next: (asigs) => this.asignaturasDelPlan.set(asigs),
             error: () => this.asignaturasDelPlan.set([]),
           });
@@ -421,7 +422,7 @@ export class AmbitosPracticaComponent implements OnInit {
   }
 
   cargarAmbitos(): void {
-    this.ambitoService.listarAmbitos().subscribe({
+    this.ambitoService.listarAmbitos().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => {
         this.ambitos.set(data);
         this.loading.set(false);
@@ -438,7 +439,7 @@ export class AmbitosPracticaComponent implements OnInit {
     if (!carreraId) return;
     const procesoId = this.procesoId() || this.contextService.procesoIdActivo();
 
-    this.ambitoService.listarAutoevaluaciones(carreraId, procesoId || undefined).subscribe({
+    this.ambitoService.listarAutoevaluaciones(carreraId, procesoId || undefined).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => this.autoevaluaciones.set(data),
       error: () => {},
     });
@@ -578,7 +579,7 @@ export class AmbitosPracticaComponent implements OnInit {
 
     const id = this.ambitoSeleccionadoId();
     if (id) {
-      this.ambitoService.actualizarAmbito(id, dto).subscribe({
+      this.ambitoService.actualizarAmbito(id, dto).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.notif.mostrar(this.successMessage, 'Ámbito de práctica actualizado.', 6000);
           this.guardando.set(false);
@@ -591,7 +592,7 @@ export class AmbitosPracticaComponent implements OnInit {
         },
       });
     } else {
-      this.ambitoService.crearAmbito(dto).subscribe({
+      this.ambitoService.crearAmbito(dto).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.notif.mostrar(this.successMessage, 'Ámbito de práctica registrado en el padrón maestro.', 6000);
           this.guardando.set(false);
@@ -614,7 +615,7 @@ export class AmbitosPracticaComponent implements OnInit {
     if (!ambito.id) return;
     if (!confirm(`¿Eliminar el ámbito "${ambito.denominacion}"?`)) return;
 
-    this.ambitoService.eliminarAmbito(ambito.id).subscribe({
+    this.ambitoService.eliminarAmbito(ambito.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.notif.mostrar(this.successMessage, 'Ámbito eliminado.', 6000);
         this.cargarAmbitos();
@@ -760,7 +761,7 @@ export class AmbitosPracticaComponent implements OnInit {
       observaciones: val.observaciones || undefined,
     };
 
-    this.ambitoService.guardarAutoevaluacion(dto).subscribe({
+    this.ambitoService.guardarAutoevaluacion(dto).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.notif.mostrar(this.successMessage, 'Vinculación de carrera guardada para CONEAU.', 6000);
         this.cerrarModalVinculacion();
@@ -821,7 +822,7 @@ export class AmbitosPracticaComponent implements OnInit {
     this.completandoActividad.set(true);
     this.errorMessage.set(null);
 
-    this.ambitoService.completarActividadAmbitos(pId, act, carreraId).subscribe({
+    this.ambitoService.completarActividadAmbitos(pId, act, carreraId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.completandoActividad.set(false);
         this.notif.mostrar(this.successMessage, res?.mensaje || 'Actividad completada y validada exitosamente ante CONEAU.', 6000);

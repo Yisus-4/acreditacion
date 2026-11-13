@@ -28,6 +28,8 @@ import java.util.UUID;
 @RequestMapping
 public class NormativaController {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(NormativaController.class);
+
     private final SolicitarNormativaUseCase solicitarNormativaUseCase;
     private final ObtenerNormativaDetalleUseCase obtenerNormativaDetalleUseCase;
     private final GuardarDocumentoBorradorUseCase guardarDocumentoBorradorUseCase;
@@ -37,7 +39,7 @@ public class NormativaController {
     private final ExportarHojaInfoExcelUseCase exportarHojaInfoExcelUseCase;
     private final DocumentoNormativaRepositoryPort documentoRepository;
     private final DocumentStoragePort storagePort;
-    private final UserRepository userRepository;
+    private final com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider authenticatedUserProvider;
 
     public NormativaController(
             SolicitarNormativaUseCase solicitarNormativaUseCase,
@@ -49,7 +51,7 @@ public class NormativaController {
             ExportarHojaInfoExcelUseCase exportarHojaInfoExcelUseCase,
             DocumentoNormativaRepositoryPort documentoRepository,
             DocumentStoragePort storagePort,
-            UserRepository userRepository
+            com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider authenticatedUserProvider
     ) {
         this.solicitarNormativaUseCase = solicitarNormativaUseCase;
         this.obtenerNormativaDetalleUseCase = obtenerNormativaDetalleUseCase;
@@ -60,7 +62,7 @@ public class NormativaController {
         this.exportarHojaInfoExcelUseCase = exportarHojaInfoExcelUseCase;
         this.documentoRepository = documentoRepository;
         this.storagePort = storagePort;
-        this.userRepository = userRepository;
+        this.authenticatedUserProvider = authenticatedUserProvider;
     }
 
     @PostMapping({"/api/v1/procesos/{procesoId}/normativa", "/api/convocatorias/{procesoId}/normativa"})
@@ -209,8 +211,8 @@ public class NormativaController {
                             .location(URI.create(presignedUrl))
                             .build();
                 }
-            } catch (Exception ignored) {
-                // Fallback a descarga directa de bytes
+            } catch (Exception ex) {
+                log.warn("No se pudo generar URL prefirmada para normativa '{}'; usando descarga directa: {}", doc.getStoragePath(), ex.getMessage());
             }
         }
 
@@ -285,17 +287,6 @@ public class NormativaController {
     }
 
     private UUID resolverUsuarioAutenticadoId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() != null) {
-            String principal = auth.getPrincipal().toString();
-            Optional<User> userOpt = userRepository.findByEmail(principal);
-            if (userOpt.isPresent()) {
-                return userOpt.get().getId();
-            }
-        }
-        return userRepository.findByEmail("admin@undec.edu.ar")
-                .map(User::getId)
-                .orElseGet(() -> userRepository.findAll().stream().findFirst().map(User::getId)
-                        .orElse(UUID.fromString("00000000-0000-0000-0000-000000000001")));
+        return authenticatedUserProvider.getAuthenticatedUserIdOrFallback();
     }
 }

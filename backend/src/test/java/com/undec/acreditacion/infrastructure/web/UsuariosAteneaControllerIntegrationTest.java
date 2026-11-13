@@ -54,7 +54,8 @@ class UsuariosAteneaControllerIntegrationTest {
         objectMapper = new ObjectMapper();
 
         UsuariosAteneaController controller = new UsuariosAteneaController(
-                consultarUseCase, guardarUseCase, finalizarUseCase, storagePort, userRepository
+                consultarUseCase, guardarUseCase, finalizarUseCase, storagePort,
+                new com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider(userRepository)
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();

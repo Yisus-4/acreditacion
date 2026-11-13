@@ -52,7 +52,7 @@ class ProgramaAnaliticoControllerTest {
     private DocumentStoragePort storagePort;
 
     @Mock
-    private UserRepository userRepository;
+    private com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider authenticatedUserProvider;
 
     @InjectMocks
     private ProgramaAnaliticoController controller;

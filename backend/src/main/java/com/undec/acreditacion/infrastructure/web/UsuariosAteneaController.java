@@ -4,20 +4,16 @@ import com.undec.acreditacion.application.input.ConsultarRegistroUsuariosAteneaU
 import com.undec.acreditacion.application.input.FinalizarRegistroUsuariosAteneaUseCase;
 import com.undec.acreditacion.application.input.GuardarRegistroUsuariosAteneaUseCase;
 import com.undec.acreditacion.application.output.RegistroUsuariosAteneaDto;
-import com.undec.acreditacion.application.output.UserRepository;
-import com.undec.acreditacion.domain.entities.User;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.domain.ports.DocumentStoragePort;
+import com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider;
 import com.undec.acreditacion.infrastructure.web.dto.GuardarUsuariosAteneaRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -28,20 +24,20 @@ public class UsuariosAteneaController {
     private final GuardarRegistroUsuariosAteneaUseCase guardarUseCase;
     private final FinalizarRegistroUsuariosAteneaUseCase finalizarUseCase;
     private final DocumentStoragePort storagePort;
-    private final UserRepository userRepository;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
     public UsuariosAteneaController(
             ConsultarRegistroUsuariosAteneaUseCase consultarUseCase,
             GuardarRegistroUsuariosAteneaUseCase guardarUseCase,
             FinalizarRegistroUsuariosAteneaUseCase finalizarUseCase,
             DocumentStoragePort storagePort,
-            UserRepository userRepository
+            AuthenticatedUserProvider authenticatedUserProvider
     ) {
         this.consultarUseCase = consultarUseCase;
         this.guardarUseCase = guardarUseCase;
         this.finalizarUseCase = finalizarUseCase;
         this.storagePort = storagePort;
-        this.userRepository = userRepository;
+        this.authenticatedUserProvider = authenticatedUserProvider;
     }
 
     @GetMapping
@@ -107,22 +103,7 @@ public class UsuariosAteneaController {
                 .body(bytes);
     }
 
-    private Optional<User> resolverUsuarioAutenticado() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() != null) {
-            String principal = auth.getPrincipal().toString();
-            Optional<User> userOpt = userRepository.findByEmail(principal);
-            if (userOpt.isPresent()) {
-                return userOpt;
-            }
-        }
-        return userRepository.findByEmail("admin@undec.edu.ar");
-    }
-
     private UUID resolverUsuarioAutenticadoId() {
-        return resolverUsuarioAutenticado()
-                .map(User::getId)
-                .orElseGet(() -> userRepository.findAll().stream().findFirst().map(User::getId)
-                        .orElse(UUID.fromString("00000000-0000-0000-0000-000000000001")));
+        return authenticatedUserProvider.getAuthenticatedUserIdOrFallback();
     }
 }

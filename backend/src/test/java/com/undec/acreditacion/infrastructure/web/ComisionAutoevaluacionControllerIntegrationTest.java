@@ -65,7 +65,7 @@ class ComisionAutoevaluacionControllerIntegrationTest {
                 consultarUseCase, solicitarUseCase, guardarBorradorUseCase,
                 remitirUseCase, aprobarUseCase, observarUseCase,
                 confirmarRegistroUseCase, cancelarRegistroUseCase,
-                storagePort, userRepository, objectMapper
+                storagePort, new com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider(userRepository), objectMapper
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)

@@ -4,16 +4,12 @@ import com.undec.acreditacion.application.input.ConsultarNotificacionesUseCase;
 import com.undec.acreditacion.application.input.GestionarSolicitudNotificacionUseCase;
 import com.undec.acreditacion.application.output.ConteoNotificacionesDto;
 import com.undec.acreditacion.application.output.SolicitudNotificacionDto;
-import com.undec.acreditacion.application.output.UserRepository;
-import com.undec.acreditacion.domain.entities.User;
+import com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -22,16 +18,16 @@ public class NotificacionController {
 
     private final ConsultarNotificacionesUseCase consultarNotificacionesUseCase;
     private final GestionarSolicitudNotificacionUseCase gestionarSolicitudNotificacionUseCase;
-    private final UserRepository userRepository;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
     public NotificacionController(
             ConsultarNotificacionesUseCase consultarNotificacionesUseCase,
             GestionarSolicitudNotificacionUseCase gestionarSolicitudNotificacionUseCase,
-            UserRepository userRepository
+            AuthenticatedUserProvider authenticatedUserProvider
     ) {
         this.consultarNotificacionesUseCase = consultarNotificacionesUseCase;
         this.gestionarSolicitudNotificacionUseCase = gestionarSolicitudNotificacionUseCase;
-        this.userRepository = userRepository;
+        this.authenticatedUserProvider = authenticatedUserProvider;
     }
 
     @GetMapping
@@ -76,22 +72,7 @@ public class NotificacionController {
         return ResponseEntity.ok(res);
     }
 
-    private Optional<User> resolverUsuarioAutenticado() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() != null) {
-            String principal = auth.getPrincipal().toString();
-            Optional<User> userOpt = userRepository.findByEmail(principal);
-            if (userOpt.isPresent()) {
-                return userOpt;
-            }
-        }
-        return userRepository.findByEmail("admin@undec.edu.ar");
-    }
-
     private UUID resolverUsuarioAutenticadoId() {
-        return resolverUsuarioAutenticado()
-                .map(User::getId)
-                .orElseGet(() -> userRepository.findAll().stream().findFirst().map(User::getId)
-                        .orElse(UUID.fromString("00000000-0000-0000-0000-000000000001")));
+        return authenticatedUserProvider.getAuthenticatedUserIdOrFallback();
     }
 }

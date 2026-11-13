@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { SubnavAutoevaluacionComponent } from '../subnav-autoevaluacion/subnav-autoevaluacion.component';
@@ -281,7 +282,7 @@ export class EstructuraCurricularComponent implements OnInit {
   ngOnInit(): void {
     this.notif.registrarTeardown(this.destroyRef);
 
-    this.route.queryParamMap.subscribe((params) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const convIdParam = params.get('convocatoriaId');
       const procIdParam = params.get('procesoId');
       const validProcId =
@@ -314,7 +315,7 @@ export class EstructuraCurricularComponent implements OnInit {
 
   cargarCarreras(): void {
     this.loading.set(true);
-    this.estructuraService.listarCarreras().subscribe({
+    this.estructuraService.listarCarreras().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data: CarreraResponse[]) => {
         this.carreras.set(data);
         if (data.length > 0) {
@@ -353,7 +354,7 @@ export class EstructuraCurricularComponent implements OnInit {
       return;
     }
     this.loading.set(true);
-    this.planService.obtenerPlan(planId).subscribe({
+    this.planService.obtenerPlan(planId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (plan) => {
         if (plan) {
           this.aplicarPlanActivo(plan);
@@ -391,7 +392,7 @@ export class EstructuraCurricularComponent implements OnInit {
   cargarPlan(carreraId: string): void {
     this.loading.set(true);
     const procId = this.procesoId() || this.contextService.procesoIdActivo() || undefined;
-    this.planService.listarPlanes(carreraId, procId).subscribe({
+    this.planService.listarPlanes(carreraId, procId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (planes) => {
         this.planes.set(planes);
         if (planes.length > 0) {
@@ -434,7 +435,7 @@ export class EstructuraCurricularComponent implements OnInit {
       horasTotales: 0,
     };
 
-    this.planService.crearPlan(dto).subscribe({
+    this.planService.crearPlan(dto).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.inicializandoPlan.set(false);
         this.notif.mostrar(this.successMessage, 'Ficha base de Plan de Estudios (FT-001) creada exitosamente.', 6000);
@@ -448,16 +449,16 @@ export class EstructuraCurricularComponent implements OnInit {
   }
 
   cargarAsignaturasYProgramas(planId: string): void {
-    this.planService.listarAsignaturas(planId).subscribe({
+    this.planService.listarAsignaturas(planId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (asigs) => {
         this.asignaturas.set(asigs);
-        this.planService.obtenerPlan(planId).subscribe({
+        this.planService.obtenerPlan(planId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (p) => {
             if (p) this.planActivo.set(p);
           },
           error: () => {},
         });
-        this.programaService.listarProgramas(undefined, planId).subscribe({
+        this.programaService.listarProgramas(undefined, planId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (progs) => {
             this.programas.set(progs);
             this.loading.set(false);
@@ -507,7 +508,7 @@ export class EstructuraCurricularComponent implements OnInit {
       otraInformacion: val.otraInformacion || plan.otraInformacion,
     };
 
-    this.planService.actualizarPlan(plan.id, dto).subscribe({
+    this.planService.actualizarPlan(plan.id, dto).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (actualizado) => {
         this.planActivo.set(actualizado);
         this.guardandoPlan.set(false);
@@ -587,6 +588,7 @@ export class EstructuraCurricularComponent implements OnInit {
         formVal.vigenciaHasta || undefined,
         formVal.observaciones || undefined
       )
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.notif.mostrar(this.successMessage, `Programa analítico de "${asig.nombre}" subido correctamente.`, 6000);
@@ -631,7 +633,7 @@ export class EstructuraCurricularComponent implements OnInit {
 
     const effectiveProcesoId = this.contextService.procesoIdActivo() || this.procesoId() || plan.procesoId || undefined;
 
-    this.programaService.validarYCompletarActividad84(effectiveProcesoId, plan.id).subscribe({
+    this.programaService.validarYCompletarActividad84(effectiveProcesoId, plan.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (resp) => {
         this.notif.mostrar(this.successMessage, resp.mensaje, 6000);
       },
@@ -737,7 +739,7 @@ export class EstructuraCurricularComponent implements OnInit {
         horasTotales: 0,
       };
 
-      this.planService.crearPlan(nuevoPlanDto).subscribe({
+      this.planService.crearPlan(nuevoPlanDto).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (nuevoPlan) => {
           this.planActivo.set(nuevoPlan);
           this.ejecutarGuardadoAsignatura(nuevoPlan.id!, editando, val, correlativasStr);
@@ -778,7 +780,7 @@ export class EstructuraCurricularComponent implements OnInit {
         esObligatoria: val.esObligatoria ?? true,
       };
 
-      this.planService.actualizarAsignatura(planId, editando.id, req).subscribe({
+      this.planService.actualizarAsignatura(planId, editando.id, req).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.guardandoAsignatura.set(false);
           this.cerrarModalAsignatura();
@@ -808,7 +810,7 @@ export class EstructuraCurricularComponent implements OnInit {
         esObligatoria: val.esObligatoria ?? true,
       };
 
-      this.planService.crearAsignatura(planId, req).subscribe({
+      this.planService.crearAsignatura(planId, req).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.guardandoAsignatura.set(false);
           this.cerrarModalAsignatura();
@@ -836,7 +838,7 @@ export class EstructuraCurricularComponent implements OnInit {
     if (!confirmado) return;
 
     this.deletingAsignaturaId.set(asig.id);
-    this.planService.eliminarAsignatura(plan.id, asig.id).subscribe({
+    this.planService.eliminarAsignatura(plan.id, asig.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.deletingAsignaturaId.set(null);
         this.notif.mostrar(this.successMessage, `Asignatura "${asig.nombre}" eliminada exitosamente.`, 6000);

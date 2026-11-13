@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -27,6 +28,7 @@ export class DatosCentralesComponent implements OnInit {
   private readonly estructura = inject(EstructuraService);
   private readonly auth = inject(Auth);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly tab = signal<TabTipo>('planes');
   readonly resumen = signal<ResumenDatosCentrales | null>(null);
@@ -54,8 +56,8 @@ export class DatosCentralesComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.datos.getResumen().subscribe((r) => this.resumen.set(r));
-    this.estructura.listarCarreras().subscribe((cs) => {
+    this.datos.getResumen().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((r) => this.resumen.set(r));
+    this.estructura.listarCarreras().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((cs) => {
       this.carreras.set(cs);
       this.cargarPlanes();
       this.cargarDocentes();
@@ -65,14 +67,14 @@ export class DatosCentralesComponent implements OnInit {
   cargarPlanes(): void {
     const c = this.carreraId() || undefined;
     const v = this.vigencia() || undefined;
-    this.datos.getPlanesEstudio(c, v).subscribe((ps) => this.planes.set(ps));
+    this.datos.getPlanesEstudio(c, v).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((ps) => this.planes.set(ps));
   }
 
   cambiarVigencia(plan: PlanEstudioMaestro, estado: EstadoVigenciaPlan): void {
     if (!this.canEdit()) return;
-    this.datos.cambiarEstadoVigencia(plan.id, { estadoVigencia: estado }).subscribe(() => {
+    this.datos.cambiarEstadoVigencia(plan.id, { estadoVigencia: estado }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.cargarPlanes();
-      this.datos.getResumen().subscribe((r) => this.resumen.set(r));
+      this.datos.getResumen().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((r) => this.resumen.set(r));
     });
   }
 
@@ -86,17 +88,17 @@ export class DatosCentralesComponent implements OnInit {
       anioAprobacion: Number(val.anioAprobacion),
       duracionAnios: Number(val.duracionAnios),
       horasTotales: Number(val.horasTotales),
-    }).subscribe(() => {
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.modalPlan.set(false);
       this.planForm.reset({ carreraId: '', nombrePlan: '', codigoResolucion: '', anioAprobacion: new Date().getFullYear(), duracionAnios: 5, horasTotales: 3000 });
       this.cargarPlanes();
-      this.datos.getResumen().subscribe((r) => this.resumen.set(r));
+      this.datos.getResumen().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((r) => this.resumen.set(r));
     });
   }
 
   cargarDocentes(): void {
     const c = this.carreraId() || undefined;
     const q = this.busquedaDocente() || undefined;
-    this.datos.getCuerpoAcademico(c, q).subscribe((ds) => this.docentes.set(ds));
+    this.datos.getCuerpoAcademico(c, q).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((ds) => this.docentes.set(ds));
   }
 }

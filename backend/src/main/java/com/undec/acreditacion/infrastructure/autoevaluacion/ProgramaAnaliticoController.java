@@ -1,9 +1,7 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion;
 
-import com.undec.acreditacion.application.output.UserRepository;
 import com.undec.acreditacion.domain.entities.ActividadPlanTrabajo;
 import com.undec.acreditacion.domain.entities.PlanTrabajo;
-import com.undec.acreditacion.domain.entities.User;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.domain.ports.DocumentStoragePort;
@@ -12,14 +10,15 @@ import com.undec.acreditacion.infrastructure.autoevaluacion.dto.ProgramaAnalitic
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.*;
 import com.undec.acreditacion.infrastructure.persistence.postgres.ProcesoAcreditacionJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataProcesoAcreditacionRepository;
+import com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,13 +32,15 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/programas-analiticos")
 public class ProgramaAnaliticoController {
 
+    private static final Logger log = LoggerFactory.getLogger(ProgramaAnaliticoController.class);
+
     private final SpringDataProgramaAnaliticoAsignaturaRepository programaRepository;
     private final SpringDataPlanEstudioFt001Repository planEstudioRepository;
     private final SpringDataActividadCurricularPlanRepository asignaturaRepository;
     private final SpringDataProcesoAcreditacionRepository procesoRepository;
     private final PlanTrabajoRepositoryPort planTrabajoRepository;
     private final DocumentStoragePort storagePort;
-    private final UserRepository userRepository;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
     public ProgramaAnaliticoController(
             SpringDataProgramaAnaliticoAsignaturaRepository programaRepository,
@@ -48,7 +49,7 @@ public class ProgramaAnaliticoController {
             SpringDataProcesoAcreditacionRepository procesoRepository,
             PlanTrabajoRepositoryPort planTrabajoRepository,
             DocumentStoragePort storagePort,
-            UserRepository userRepository
+            AuthenticatedUserProvider authenticatedUserProvider
     ) {
         this.programaRepository = programaRepository;
         this.planEstudioRepository = planEstudioRepository;
@@ -56,7 +57,7 @@ public class ProgramaAnaliticoController {
         this.procesoRepository = procesoRepository;
         this.planTrabajoRepository = planTrabajoRepository;
         this.storagePort = storagePort;
-        this.userRepository = userRepository;
+        this.authenticatedUserProvider = authenticatedUserProvider;
     }
 
     @GetMapping
@@ -197,8 +198,8 @@ public class ProgramaAnaliticoController {
         String ruta = storageKey;
         try {
             ruta = storagePort.uploadFile(archivo.getBytes(), storageKey, archivo.getContentType() != null ? archivo.getContentType() : "application/pdf");
-        } catch (Exception ignored) {
-            // Si MinIO no está disponible en entorno local, conservar la ruta lógica del repositorio
+        } catch (Exception ex) {
+            log.warn("No se pudo subir archivo '{}' a almacenamiento externo; usando ruta lógica: {}", storageKey, ex.getMessage());
         }
 
         entity.setArchivoId(UUID.randomUUID());
@@ -250,8 +251,8 @@ public class ProgramaAnaliticoController {
             String ruta = storageKey;
             try {
                 ruta = storagePort.uploadFile(archivo.getBytes(), storageKey, archivo.getContentType() != null ? archivo.getContentType() : "application/pdf");
-            } catch (Exception ignored) {
-                // Si MinIO no está disponible en entorno local, conservar la ruta lógica del repositorio
+            } catch (Exception ex) {
+                log.warn("No se pudo subir archivo '{}' a almacenamiento externo; usando ruta lógica: {}", storageKey, ex.getMessage());
             }
 
             entity.setArchivoId(UUID.randomUUID());
@@ -410,11 +411,7 @@ public class ProgramaAnaliticoController {
     }
 
     private UUID resolverUsuarioAutenticadoId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getName() == null) {
-            return null;
-        }
-        return userRepository.findByEmail(auth.getName()).map(User::getId).orElse(null);
+        return authenticatedUserProvider.getAuthenticatedUserIdOrNull();
     }
 
     private ProgramaAnaliticoAsignaturaDto toDto(ProgramaAnaliticoAsignaturaJpaEntity entity) {

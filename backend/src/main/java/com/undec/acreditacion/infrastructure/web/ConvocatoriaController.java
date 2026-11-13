@@ -51,6 +51,9 @@ public class ConvocatoriaController {
     private final UserRepository userRepository;
     private final ReiniciarConvocatoriaEscuelaTestUseCase reiniciarConvocatoriaEscuelaTestUseCase;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider authenticatedUserProvider;
+
     public ConvocatoriaController(
             IniciarConvocatoriaUseCase iniciarConvocatoriaUseCase,
             IniciarConvocatoriaEscuelaUseCase iniciarConvocatoriaEscuelaUseCase,
@@ -594,7 +597,9 @@ public class ConvocatoriaController {
         Optional<PlanTrabajo> planOpt = Optional.empty();
         try {
             planOpt = Optional.ofNullable(consultarPlanTrabajoUseCase.obtenerPorProcesoId(proceso.getId()));
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            org.slf4j.LoggerFactory.getLogger(ConvocatoriaController.class)
+                    .warn("No se pudo obtener el plan de trabajo para el proceso {}: {}", proceso.getId(), ex.getMessage());
         }
 
         String areaCarreraFallback = carreraOpt.map(Carrera::getAreaDisciplinaria).orElse("Ingeniería / Sistemas");
@@ -753,6 +758,9 @@ public class ConvocatoriaController {
     }
 
     private UUID resolverUsuarioAutenticadoId() {
+        if (authenticatedUserProvider != null) {
+            return authenticatedUserProvider.getAuthenticatedUserIdOrFallback();
+        }
         return resolverUsuarioAutenticado()
                 .map(User::getId)
                 .orElseGet(() -> userRepository.findAll().stream().findFirst().map(User::getId)

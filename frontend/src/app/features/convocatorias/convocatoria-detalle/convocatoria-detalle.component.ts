@@ -66,7 +66,7 @@ export interface SiguientePasoInfo {
     NormativaDetalleComponent,
   ],
   templateUrl: './convocatoria-detalle.component.html',
-  styleUrls: ['./convocatoria-detalle.component.scss'],
+  styleUrls: ['./convocatoria-detalle.component.scss', './convocatoria-detalle-ext.scss'],
 })
 export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { Auth } from '../../../core/auth/auth';
 import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoevaluacion-context.service';
@@ -627,6 +628,7 @@ export class AutoevaluacionConvocatoriasHubComponent implements OnInit {
   private readonly convocatoriaService = inject(ConvocatoriaService);
   private readonly estructuraService = inject(EstructuraService);
   private readonly planEstudioService = inject(PlanEstudioService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly cargando = signal<boolean>(true);
   readonly convocatorias = signal<ConvocatoriaResumen[]>([]);
@@ -644,10 +646,10 @@ export class AutoevaluacionConvocatoriasHubComponent implements OnInit {
 
   cargarDatosIniciales(): void {
     this.cargando.set(true);
-    this.convocatoriaService.listarConvocatorias().subscribe({
+    this.convocatoriaService.listarConvocatorias().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (convs) => {
         this.convocatorias.set(convs);
-        this.estructuraService.listarCarreras().subscribe({
+        this.estructuraService.listarCarreras().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (carrs) => {
             this.carrerasTodas.set(carrs);
             this.cargando.set(false);
@@ -688,7 +690,7 @@ export class AutoevaluacionConvocatoriasHubComponent implements OnInit {
     }
 
     this.cargandoDetalleConvocatoriaId.set(convocatoriaId);
-    this.convocatoriaService.obtenerConvocatoria(convocatoriaId).subscribe({
+    this.convocatoriaService.obtenerConvocatoria(convocatoriaId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (detalle) => {
         const mapa = new Map(this.detallesConvocatoria());
         mapa.set(convocatoriaId, detalle);
@@ -759,7 +761,7 @@ export class AutoevaluacionConvocatoriasHubComponent implements OnInit {
   }
 
   cargarPlanesCarrera(carreraId: string): void {
-    this.planEstudioService.listarPlanesVigentesPorCarrera(carreraId).subscribe({
+    this.planEstudioService.listarPlanesVigentesPorCarrera(carreraId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (planes) => {
         const mapa = new Map(this.planesPorCarreraMap());
         mapa.set(carreraId, planes || []);

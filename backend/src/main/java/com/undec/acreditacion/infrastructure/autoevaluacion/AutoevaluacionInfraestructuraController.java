@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/autoevaluacion")
 public class AutoevaluacionInfraestructuraController {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AutoevaluacionInfraestructuraController.class);
+
     private final SpringDataInmuebleRepository inmuebleRepository;
     private final SpringDataTipoEspacioFisicoRepository tipoEspacioRepository;
     private final SpringDataEspacioFisicoRepository espacioFisicoRepository;
@@ -44,6 +46,9 @@ public class AutoevaluacionInfraestructuraController {
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider authenticatedUserProvider;
 
     public AutoevaluacionInfraestructuraController(
             SpringDataInmuebleRepository inmuebleRepository,
@@ -778,8 +783,8 @@ public class AutoevaluacionInfraestructuraController {
                     urlAlmacenada = fileUrl;
                 }
             }
-        } catch (Exception ignored) {
-            // Si el servicio de objetos no está activo localmente, se registra igualmente la ruta del repositorio de la carrera
+        } catch (Exception ex) {
+            log.warn("No se pudo subir snapshot '{}' a almacenamiento externo; se conserva ruta lógica: {}", rutaCompletaArchivo, ex.getMessage());
         }
 
         if (!maestros.isEmpty() && documentacionRepository != null) {
@@ -1123,6 +1128,9 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     private UUID resolverUsuarioAutenticadoId() {
+        if (authenticatedUserProvider != null) {
+            return authenticatedUserProvider.getAuthenticatedUserIdOrFallback();
+        }
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() != null) {
             String principal = auth.getPrincipal().toString();

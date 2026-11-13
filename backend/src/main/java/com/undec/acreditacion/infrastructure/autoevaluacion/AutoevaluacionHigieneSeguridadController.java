@@ -1,21 +1,18 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion;
 
-import com.undec.acreditacion.application.output.UserRepository;
 import com.undec.acreditacion.domain.entities.ActividadPlanTrabajo;
 import com.undec.acreditacion.domain.entities.PlanTrabajo;
-import com.undec.acreditacion.domain.entities.User;
 import com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.*;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.*;
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.GuiaHigieneSeguridadClonerService;
 import com.undec.acreditacion.infrastructure.persistence.postgres.InstitucionJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataInstitucionRepository;
+import com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,7 +29,7 @@ public class AutoevaluacionHigieneSeguridadController {
     private final SpringDataGuiaHigieneDocumentoRepository documentoRepository;
     private final SpringDataInstitucionRepository institucionRepository;
     private final PlanTrabajoRepositoryPort planTrabajoRepository;
-    private final UserRepository userRepository;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
     private final GuiaHigieneSeguridadClonerService clonerService;
 
     public AutoevaluacionHigieneSeguridadController(
@@ -40,14 +37,14 @@ public class AutoevaluacionHigieneSeguridadController {
             SpringDataGuiaHigieneDocumentoRepository documentoRepository,
             SpringDataInstitucionRepository institucionRepository,
             PlanTrabajoRepositoryPort planTrabajoRepository,
-            UserRepository userRepository,
+            AuthenticatedUserProvider authenticatedUserProvider,
             GuiaHigieneSeguridadClonerService clonerService
     ) {
         this.guiaRepository = guiaRepository;
         this.documentoRepository = documentoRepository;
         this.institucionRepository = institucionRepository;
         this.planTrabajoRepository = planTrabajoRepository;
-        this.userRepository = userRepository;
+        this.authenticatedUserProvider = authenticatedUserProvider;
         this.clonerService = clonerService;
     }
 
@@ -357,16 +354,6 @@ public class AutoevaluacionHigieneSeguridadController {
     }
 
     private UUID resolverUsuarioAutenticadoId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() != null) {
-            String principal = auth.getPrincipal().toString();
-            Optional<User> userOpt = userRepository.findByEmail(principal);
-            if (userOpt.isPresent()) {
-                return userOpt.get().getId();
-            }
-        }
-        return userRepository.findByEmail("admin@undec.edu.ar")
-                .map(User::getId)
-                .orElse(UUID.fromString("b915837d-6a68-4ad1-95b9-5f6455e586ce"));
+        return authenticatedUserProvider.getAuthenticatedUserIdOrFallback();
     }
 }

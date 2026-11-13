@@ -111,7 +111,9 @@ public class PlanTrabajoPersistenceMapper {
             }
             try {
                 resultado.add(LocalDate.parse(fechaStr));
-            } catch (Exception ignored) {
+            } catch (Exception ex) {
+                org.slf4j.LoggerFactory.getLogger(PlanTrabajoPersistenceMapper.class)
+                        .warn("Fecha de plazo extendido inválida '{}': {}", fechaStr, ex.getMessage());
             }
         }
         return resultado;

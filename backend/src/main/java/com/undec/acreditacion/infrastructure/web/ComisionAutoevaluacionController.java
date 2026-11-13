@@ -40,7 +40,7 @@ public class ComisionAutoevaluacionController {
     private final ConfirmarRegistroMiembroCaUseCase confirmarRegistroMiembroCaUseCase;
     private final CancelarRegistroMiembroCaUseCase cancelarRegistroMiembroCaUseCase;
     private final DocumentStoragePort storagePort;
-    private final UserRepository userRepository;
+    private final com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider authenticatedUserProvider;
     private final ObjectMapper objectMapper;
 
     public ComisionAutoevaluacionController(
@@ -53,7 +53,7 @@ public class ComisionAutoevaluacionController {
             ConfirmarRegistroMiembroCaUseCase confirmarRegistroMiembroCaUseCase,
             CancelarRegistroMiembroCaUseCase cancelarRegistroMiembroCaUseCase,
             DocumentStoragePort storagePort,
-            UserRepository userRepository,
+            com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider authenticatedUserProvider,
             ObjectMapper objectMapper
     ) {
         this.consultarRegistroCaUseCase = consultarRegistroCaUseCase;
@@ -65,7 +65,7 @@ public class ComisionAutoevaluacionController {
         this.confirmarRegistroMiembroCaUseCase = confirmarRegistroMiembroCaUseCase;
         this.cancelarRegistroMiembroCaUseCase = cancelarRegistroMiembroCaUseCase;
         this.storagePort = storagePort;
-        this.userRepository = userRepository;
+        this.authenticatedUserProvider = authenticatedUserProvider;
         this.objectMapper = objectMapper;
     }
 
@@ -218,22 +218,7 @@ public class ComisionAutoevaluacionController {
                 .body(bytes);
     }
 
-    private Optional<User> resolverUsuarioAutenticado() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() != null) {
-            String principal = auth.getPrincipal().toString();
-            Optional<User> userOpt = userRepository.findByEmail(principal);
-            if (userOpt.isPresent()) {
-                return userOpt;
-            }
-        }
-        return userRepository.findByEmail("admin@undec.edu.ar");
-    }
-
     private UUID resolverUsuarioAutenticadoId() {
-        return resolverUsuarioAutenticado()
-                .map(User::getId)
-                .orElseGet(() -> userRepository.findAll().stream().findFirst().map(User::getId)
-                        .orElse(UUID.fromString("00000000-0000-0000-0000-000000000001")));
+        return authenticatedUserProvider.getAuthenticatedUserIdOrFallback();
     }
 }

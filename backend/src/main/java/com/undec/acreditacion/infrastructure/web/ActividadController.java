@@ -79,6 +79,9 @@ public class ActividadController {
     private RegistroConformacionCaRepositoryPort registroCaRepository;
     private RegistroUsuariosAteneaRepositoryPort registroUsuariosAteneaRepository;
 
+    @Autowired(required = false)
+    private com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider authenticatedUserProvider;
+
     public ActividadController(
             CompletarActividadInformarProcesoUseCase completarActividadUseCase,
             DocumentoAcreditacionRepositoryPort documentoRepository,
@@ -464,6 +467,9 @@ public class ActividadController {
     }
 
     private UUID resolverUsuarioAutenticadoId() {
+        if (authenticatedUserProvider != null) {
+            return authenticatedUserProvider.getAuthenticatedUserIdOrFallback();
+        }
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() != null) {
             String principal = auth.getPrincipal().toString();

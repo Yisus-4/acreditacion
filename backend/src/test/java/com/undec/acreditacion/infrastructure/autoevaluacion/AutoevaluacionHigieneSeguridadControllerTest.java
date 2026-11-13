@@ -76,7 +76,7 @@ class AutoevaluacionHigieneSeguridadControllerTest {
                 documentoRepository,
                 institucionRepository,
                 planTrabajoRepository,
-                userRepository,
+                new com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider(userRepository),
                 clonerService
         );
 

@@ -56,6 +56,9 @@ public class FormalizacionController {
     private final UnidadAcademicaRepositoryPort unidadAcademicaRepository;
     private final SedeLocalizacionRepositoryPort sedeRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider authenticatedUserProvider;
+
     public FormalizacionController(
             ProcesoAcreditacionRepositoryPort procesoRepository,
             CarreraRepositoryPort carreraRepository,
@@ -154,7 +157,9 @@ public class FormalizacionController {
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el documento con ID: " + documentoId));
         try {
             storagePort.deleteFile(doc.getStoragePath());
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            org.slf4j.LoggerFactory.getLogger(FormalizacionController.class)
+                    .warn("No se pudo eliminar el archivo '{}' del almacenamiento externo: {}", doc.getStoragePath(), ex.getMessage());
         }
         documentoRepository.deleteById(documentoId);
         return ResponseEntity.noContent().build();
@@ -817,6 +822,9 @@ public class FormalizacionController {
     }
 
     private UUID resolverUsuarioAutenticadoId() {
+        if (authenticatedUserProvider != null) {
+            return authenticatedUserProvider.getAuthenticatedUserIdOrFallback();
+        }
         return resolverUsuarioAutenticado()
                 .map(User::getId)
                 .orElseGet(() -> userRepository.findAll().stream().findFirst().map(User::getId)
