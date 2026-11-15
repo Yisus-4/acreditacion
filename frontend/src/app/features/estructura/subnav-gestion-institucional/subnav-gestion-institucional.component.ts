@@ -37,8 +37,11 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
         <a routerLink="/admin/unidades-academicas" routerLinkActive="active" class="subnav-tab">
           Escuelas
         </a>
-        <a routerLink="/admin/carreras" routerLinkActive="active" class="subnav-tab">
-          Carreras
+        <a routerLink="/admin/infraestructura" routerLinkActive="active" class="subnav-tab">
+          Infraestructura
+        </a>
+        <a routerLink="/admin/ambitos-practica" routerLinkActive="active" class="subnav-tab">
+          Ámbitos de práctica
         </a>
       </nav>
     </header>
@@ -128,8 +131,10 @@ export class SubnavGestionInstitucionalComponent {
         return '/admin/sedes';
       case 'Escuelas':
         return '/admin/unidades-academicas';
-      case 'Carreras':
-        return '/admin/carreras';
+      case 'Infraestructura':
+        return '/admin/infraestructura';
+      case 'Ámbitos de práctica':
+        return '/admin/ambitos-practica';
       default:
         return '/admin/instituciones';
     }

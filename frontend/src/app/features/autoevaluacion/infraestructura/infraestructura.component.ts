@@ -1462,7 +1462,7 @@ export class InfraestructuraComponent implements OnInit {
       },
       error: (err) => {
         this.copiandoDatosCentrales.set(false);
-        this.notif.mostrar(this.errorMessage, 'Error al copiar datos centrales: ' + (err.error?.message || err.message), 6000);
+        this.notif.mostrar(this.errorMessage, 'Error al copiar datos maestros: ' + (err.error?.message || err.message), 6000);
       },
     });
   }

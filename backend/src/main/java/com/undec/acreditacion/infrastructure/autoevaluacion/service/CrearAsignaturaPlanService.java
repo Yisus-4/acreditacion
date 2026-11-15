@@ -1,5 +1,6 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion.service;
 
+import com.undec.acreditacion.domain.entities.EstadoDictadoActividad;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.ActividadCurricularPlanDto;
@@ -79,6 +80,7 @@ public class CrearAsignaturaPlanService {
         asig.setCorrelativas(request.correlativas() != null && !request.correlativas().trim().isEmpty() ?
                 request.correlativas().trim() : "Sin correlativas previas");
         asig.setEsObligatoria(request.esObligatoria() != null ? request.esObligatoria() : true);
+        asig.setEstadoDictado(request.estadoDictado() != null ? request.estadoDictado() : EstadoDictadoActividad.SE_DICTA);
         asig.setCreadoEn(Instant.now());
 
         ActividadCurricularPlanJpaEntity guardada = asignaturaRepository.save(asig);
@@ -146,7 +148,8 @@ public class CrearAsignaturaPlanService {
                 a.getHorasPresenciales(),
                 a.getHorasNoPresenciales(),
                 a.getCorrelativas(),
-                a.getEsObligatoria()
+                a.getEsObligatoria(),
+                a.getEstadoDictado()
         );
     }
 }

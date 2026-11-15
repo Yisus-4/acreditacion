@@ -225,9 +225,9 @@
           class="btn-tabla-accion"
           style="padding: 9px 14px; font-size: 13.5px; background: #fdf2f8; color: #9d174d; border: 1px solid #fbcfe8; font-weight: 600;"
           (click)="abrirModalCopiarDatosCentrales()"
-          title="Copiar datos centrales (inmuebles, espacios, docentes, planes) al proceso de acreditación"
+          title="Copiar datos maestros de Gestión Institucional y Académica al proceso de acreditación"
         >
-          Copiar Datos Centrales
+          Copiar Datos Maestros
         </button>
         <button
           type="button"
@@ -1938,10 +1938,10 @@
     <div class="modal-backdrop-figma" (click)="cerrarModalCopiarDatosCentrales()"></div>
     <div class="modal-contenido-figma" style="max-width: 520px; width: 90%;">
       <h3 style="font-size: 16px; font-weight: 700; color: #831843; margin-top: 0; margin-bottom: 8px;">
-        Copiar Datos Centrales al Proceso
+        Copiar Datos Maestros al Proceso
       </h3>
       <p style="font-size: 13.5px; color: #374151; line-height: 1.5; margin-bottom: 14px;">
-        Esta acción creará un <strong>snapshot transaccional</strong> de los datos centrales de la institución (inmuebles, espacios físicos, docentes del cuerpo académico y planes de estudio maestros) copiándolos de manera aislada al proceso de autoevaluación actual.
+        Esta acción creará una <strong>copia aislada</strong> de los datos maestros cargados en Gestión Institucional y Académica (inmuebles, espacios físicos, cuerpo académico y planes de estudio vigentes convocados) para esta autoevaluación.
       </p>
       <div style="background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 6px; padding: 10px 14px; font-size: 12px; color: #9d174d; margin-bottom: 16px;">
         <strong>Nota:</strong> Los datos existentes no se eliminarán; se inicializarán o agregarán los registros maestros faltantes respetando la trazabilidad.
@@ -1964,7 +1964,7 @@
           [disabled]="copiandoDatosCentrales()"
         >
           @if (copiandoDatosCentrales()) {
-            Copiando datos centrales...
+            Copiando datos maestros...
           } @else {
             Confirmar Copia &rarr;
           }

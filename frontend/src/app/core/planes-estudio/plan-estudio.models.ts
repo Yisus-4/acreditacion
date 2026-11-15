@@ -1,3 +1,5 @@
+export type EstadoDictadoActividad = 'SE_DICTA' | 'NO_SE_DICTA';
+
 export interface ActividadCurricularPlan {
   id?: string;
   planEstudioId?: string;
@@ -11,6 +13,7 @@ export interface ActividadCurricularPlan {
   horasNoPresenciales?: number;
   correlativas?: string;
   esObligatoria?: boolean;
+  estadoDictado?: EstadoDictadoActividad;
 }
 
 export interface CrearAsignaturaRequest {
@@ -24,6 +27,7 @@ export interface CrearAsignaturaRequest {
   correlativas?: string;
   esObligatoria?: boolean;
   numeroOrden?: number;
+  estadoDictado?: EstadoDictadoActividad;
 }
 
 export interface ActualizarAsignaturaRequest {
@@ -38,6 +42,7 @@ export interface ActualizarAsignaturaRequest {
   correlativas?: string;
   esObligatoria?: boolean;
   numeroOrden?: number;
+  estadoDictado?: EstadoDictadoActividad;
 }
 
 export interface DocenteResumen {

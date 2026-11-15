@@ -4,6 +4,7 @@ import com.undec.acreditacion.application.ports.ModoClonacion;
 import com.undec.acreditacion.application.ports.ResultadoSincronizacionDto;
 import com.undec.acreditacion.application.ports.SeccionClonacion;
 import com.undec.acreditacion.application.ports.SincronizacionAutoevaluacionPort;
+import com.undec.acreditacion.domain.entities.EstadoDictadoActividad;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.*;
 import com.undec.acreditacion.infrastructure.datoscentrales.persistence.CuerpoAcademicoActividadMaestroJpaEntity;
@@ -359,6 +360,9 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
                 .findByPlanEstudioIdOrderByNumeroOrdenAsc(masterPlan.getId());
 
         for (ActividadCurricularPlanJpaEntity masterAct : masterActs) {
+            if (masterAct.getEstadoDictado() == EstadoDictadoActividad.NO_SE_DICTA) {
+                continue;
+            }
             ActividadCurricularPlanJpaEntity cloneAct = actividadRepository
                     .findByPlanEstudioIdAndOrigenMaestroId(clonePlan.getId(), masterAct.getId())
                     .orElse(null);
@@ -469,6 +473,7 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
         clone.setHorasNoPresenciales(master.getHorasNoPresenciales());
         clone.setCorrelativas(master.getCorrelativas());
         clone.setEsObligatoria(master.getEsObligatoria());
+        clone.setEstadoDictado(master.getEstadoDictado());
         clone.setOrigenMaestroId(master.getId());
         clone.setCreadoEn(Instant.now());
         return clone;

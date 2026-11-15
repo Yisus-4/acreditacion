@@ -54,4 +54,15 @@ export class PlanEstudioService {
   eliminarAsignatura(planId: string, asigId: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${planId}/asignaturas/${asigId}`);
   }
+
+  cambiarEstadoDictado(
+    planId: string,
+    asigId: string,
+    estadoDictado: 'SE_DICTA' | 'NO_SE_DICTA'
+  ): Observable<ActividadCurricularPlan> {
+    return this.http.patch<ActividadCurricularPlan>(
+      `${this.baseUrl}/${planId}/asignaturas/${asigId}/estado-dictado`,
+      { estadoDictado }
+    );
+  }
 }

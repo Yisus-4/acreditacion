@@ -26,11 +26,11 @@ import {
   UnidadAcademicaResponse,
 } from '../../../core/estructura/estructura.service';
 
-import { SubnavGestionInstitucionalComponent } from '../subnav-gestion-institucional/subnav-gestion-institucional.component';
+import { SubnavAcademicaComponent } from '../../academica/subnav-academica/subnav-academica.component';
 
 @Component({
   selector: 'app-carreras',
-  imports: [ReactiveFormsModule, SubnavGestionInstitucionalComponent],
+  imports: [ReactiveFormsModule, SubnavAcademicaComponent],
   templateUrl: './carreras.component.html',
   styleUrl: './carreras.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

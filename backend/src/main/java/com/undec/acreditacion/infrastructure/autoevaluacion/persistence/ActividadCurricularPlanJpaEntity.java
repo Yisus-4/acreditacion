@@ -1,5 +1,6 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion.persistence;
 
+import com.undec.acreditacion.domain.entities.EstadoDictadoActividad;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -47,6 +48,10 @@ public class ActividadCurricularPlanJpaEntity {
 
     @Column(name = "es_obligatoria", nullable = false)
     private Boolean esObligatoria = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_dictado", nullable = false, length = 20)
+    private EstadoDictadoActividad estadoDictado = EstadoDictadoActividad.SE_DICTA;
 
     @Column(name = "origen_maestro_id")
     private UUID origenMaestroId;
@@ -155,6 +160,14 @@ public class ActividadCurricularPlanJpaEntity {
 
     public UUID getOrigenMaestroId() {
         return origenMaestroId;
+    }
+
+    public EstadoDictadoActividad getEstadoDictado() {
+        return estadoDictado != null ? estadoDictado : EstadoDictadoActividad.SE_DICTA;
+    }
+
+    public void setEstadoDictado(EstadoDictadoActividad estadoDictado) {
+        this.estadoDictado = estadoDictado != null ? estadoDictado : EstadoDictadoActividad.SE_DICTA;
     }
 
     public void setOrigenMaestroId(UUID origenMaestroId) {

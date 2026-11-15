@@ -13,7 +13,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datos-centrales")
+@RequestMapping({"/api/datos-centrales", "/api/academica"})
 @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'INFRAESTRUCTURA', 'BEDELIA')")
 public class DatosCentralesController {
 
@@ -70,5 +70,32 @@ public class DatosCentralesController {
     ) {
         CuerpoAcademicoMaestroDto creado = datosCentralesService.crearCuerpoAcademicoMaestro(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
+    }
+
+    @PutMapping("/cuerpo-academico/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA')")
+    public ResponseEntity<CuerpoAcademicoMaestroDto> actualizarCuerpoAcademico(
+            @PathVariable UUID id,
+            @RequestBody CrearCuerpoAcademicoMaestroRequest request
+    ) {
+        return ResponseEntity.ok(datosCentralesService.actualizarCuerpoAcademicoMaestro(id, request));
+    }
+
+    @PostMapping("/cuerpo-academico/{id}/asignaciones")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA')")
+    public ResponseEntity<CuerpoAcademicoMaestroDto> agregarAsignacion(
+            @PathVariable UUID id,
+            @RequestBody CrearCuerpoAcademicoMaestroRequest.CrearAsignacionCatedraItem item
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(datosCentralesService.agregarAsignacionDocente(id, item));
+    }
+
+    @DeleteMapping("/cuerpo-academico/{id}/asignaciones/{asignacionId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA')")
+    public ResponseEntity<CuerpoAcademicoMaestroDto> eliminarAsignacion(
+            @PathVariable UUID id,
+            @PathVariable UUID asignacionId
+    ) {
+        return ResponseEntity.ok(datosCentralesService.eliminarAsignacionDocente(id, asignacionId));
     }
 }

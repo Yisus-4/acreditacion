@@ -85,6 +85,9 @@ public class ActualizarAsignaturaPlanService {
         if (request.esObligatoria() != null) {
             asig.setEsObligatoria(request.esObligatoria());
         }
+        if (request.estadoDictado() != null) {
+            asig.setEstadoDictado(request.estadoDictado());
+        }
         if (request.numeroOrden() != null) {
             asig.setNumeroOrden(request.numeroOrden());
         }
@@ -181,7 +184,8 @@ public class ActualizarAsignaturaPlanService {
                 a.getHorasPresenciales(),
                 a.getHorasNoPresenciales(),
                 a.getCorrelativas(),
-                a.getEsObligatoria()
+                a.getEsObligatoria(),
+                a.getEstadoDictado()
         );
     }
 }

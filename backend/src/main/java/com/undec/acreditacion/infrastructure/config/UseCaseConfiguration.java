@@ -574,28 +574,4 @@ public class UseCaseConfiguration {
                 registroUsuariosRepository, procesoRepository, carreraRepository,
                 registroConvocatoriaRepository, planTrabajoRepository, storagePort, documentoRepository);
     }
-
-    @Bean
-    @org.springframework.transaction.annotation.Transactional
-    public com.undec.acreditacion.application.ports.SincronizacionAutoevaluacionPort sincronizacionAutoevaluacionPort(
-            com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataProcesoAcreditacionRepository procesoRepository,
-            com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataConvocatoriaRepository convocatoriaRepository,
-            com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataConvocatoriaCarreraPlanRepository convocatoriaCarreraPlanRepository,
-            com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataPlanEstudioFt001Repository planEstudioRepository,
-            com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataActividadCurricularPlanRepository actividadRepository,
-            com.undec.acreditacion.infrastructure.datoscentrales.persistence.SpringDataCuerpoAcademicoMaestroRepository cuerpoAcademicoMaestroRepository,
-            com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataProcesoCuerpoAcademicoRepository procesoDocenteRepository,
-            com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataProcesoCuerpoAcademicoActividadRepository procesoDocenteActividadRepository,
-            com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataInmuebleRepository inmuebleRepository,
-            com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataEspacioFisicoRepository espacioFisicoRepository,
-            com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataEspacioFisicoActividadCurricularRepository espacioActividadRepository,
-            com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataAmbitoPracticaRepository ambitoPracticaRepository,
-            com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataAutoevaluacionCarreraAmbitoRepository autoevaluacionAmbitoRepository) {
-        return new com.undec.acreditacion.infrastructure.autoevaluacion.service.SincronizacionAutoevaluacionService(
-                procesoRepository, convocatoriaRepository, convocatoriaCarreraPlanRepository,
-                planEstudioRepository, actividadRepository, cuerpoAcademicoMaestroRepository,
-                procesoDocenteRepository, procesoDocenteActividadRepository, inmuebleRepository,
-                espacioFisicoRepository, espacioActividadRepository, ambitoPracticaRepository,
-                autoevaluacionAmbitoRepository);
-    }
 }

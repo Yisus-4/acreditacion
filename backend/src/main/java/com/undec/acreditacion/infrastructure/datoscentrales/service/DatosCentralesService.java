@@ -231,6 +231,82 @@ public class DatosCentralesService {
         return toDocenteDto(guardado);
     }
 
+    public CuerpoAcademicoMaestroDto actualizarCuerpoAcademicoMaestro(UUID id, CrearCuerpoAcademicoMaestroRequest req) {
+        if (id == null) {
+            throw new DomainValidationException("El ID del docente es requerido");
+        }
+        if (req == null) {
+            throw new DomainValidationException("La solicitud de actualización de docente es requerida");
+        }
+        CuerpoAcademicoMaestroJpaEntity docente = cuerpoAcademicoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el docente con ID: " + id));
+
+        if (req.dni() != null && !req.dni().isBlank()) {
+            String nuevoDni = req.dni().trim();
+            if (!nuevoDni.equals(docente.getDni()) && cuerpoAcademicoRepository.existsByDni(nuevoDni)) {
+                throw new DomainValidationException("Ya existe otro docente con DNI: " + nuevoDni);
+            }
+            docente.setDni(nuevoDni);
+        }
+        if (req.cuit() != null) docente.setCuit(req.cuit());
+        if (req.apellido() != null && !req.apellido().isBlank()) docente.setApellido(req.apellido().trim());
+        if (req.nombre() != null && !req.nombre().isBlank()) docente.setNombre(req.nombre().trim());
+        if (req.emailInstitucional() != null) docente.setEmailInstitucional(req.emailInstitucional());
+        if (req.emailPersonal() != null) docente.setEmailPersonal(req.emailPersonal());
+        if (req.telefono() != null) docente.setTelefono(req.telefono());
+        if (req.tituloGrado() != null) docente.setTituloGrado(req.tituloGrado());
+        if (req.maximoTituloPosgrado() != null) docente.setMaximoTituloPosgrado(req.maximoTituloPosgrado());
+        if (req.categoriaDocente() != null && !req.categoriaDocente().isBlank()) docente.setCategoriaDocente(req.categoriaDocente().trim());
+        if (req.caracterDesignacion() != null && !req.caracterDesignacion().isBlank()) docente.setCaracterDesignacion(req.caracterDesignacion().trim());
+        if (req.dedicacionDocente() != null && !req.dedicacionDocente().isBlank()) docente.setDedicacionDocente(req.dedicacionDocente().trim());
+        if (req.horasSemanales() != null) docente.setHorasSemanales(req.horasSemanales());
+        docente.setActualizadoEn(Instant.now());
+
+        return toDocenteDto(cuerpoAcademicoRepository.save(docente));
+    }
+
+    public CuerpoAcademicoMaestroDto agregarAsignacionDocente(
+            UUID docenteId,
+            CrearCuerpoAcademicoMaestroRequest.CrearAsignacionCatedraItem item
+    ) {
+        CuerpoAcademicoMaestroJpaEntity docente = cuerpoAcademicoRepository.findById(docenteId)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el docente con ID: " + docenteId));
+        if (item == null || item.planEstudioId() == null || item.actividadCurricularId() == null) {
+            throw new DomainValidationException("El plan de estudio y la actividad curricular son obligatorios");
+        }
+        PlanEstudioFt001JpaEntity plan = planRepository.findById(item.planEstudioId())
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el plan de estudio ID: " + item.planEstudioId()));
+        ActividadCurricularPlanJpaEntity act = actividadRepository.findById(item.actividadCurricularId())
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró la actividad curricular ID: " + item.actividadCurricularId()));
+
+        CuerpoAcademicoActividadMaestroJpaEntity asig = new CuerpoAcademicoActividadMaestroJpaEntity();
+        asig.setDocente(docente);
+        asig.setCarreraId(item.carreraId() != null ? item.carreraId() : plan.getCarrera().getId());
+        asig.setPlanEstudio(plan);
+        asig.setActividadCurricular(act);
+        asig.setRolEnCatedra(item.rolEnCatedra() != null && !item.rolEnCatedra().isBlank() ? item.rolEnCatedra() : "PROFESOR_A_CARGO");
+        asig.setCargaHorariaSemanal(item.cargaHorariaSemanal() != null ? item.cargaHorariaSemanal() : 4);
+        asig.setCreadoEn(Instant.now());
+
+        if (docente.getAsignaciones() == null) {
+            docente.setAsignaciones(new ArrayList<>());
+        }
+        docente.getAsignaciones().add(asig);
+        docente.setActualizadoEn(Instant.now());
+
+        return toDocenteDto(cuerpoAcademicoRepository.save(docente));
+    }
+
+    public CuerpoAcademicoMaestroDto eliminarAsignacionDocente(UUID docenteId, UUID asignacionId) {
+        CuerpoAcademicoMaestroJpaEntity docente = cuerpoAcademicoRepository.findById(docenteId)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el docente con ID: " + docenteId));
+        if (docente.getAsignaciones() != null) {
+            docente.getAsignaciones().removeIf(a -> asignacionId.equals(a.getId()));
+        }
+        docente.setActualizadoEn(Instant.now());
+        return toDocenteDto(cuerpoAcademicoRepository.save(docente));
+    }
+
     private PlanEstudioMaestroDto toPlanDto(PlanEstudioFt001JpaEntity p) {
         return new PlanEstudioMaestroDto(
                 p.getId(),

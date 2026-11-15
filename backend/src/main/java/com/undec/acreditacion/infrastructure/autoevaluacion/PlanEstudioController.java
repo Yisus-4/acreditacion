@@ -1,5 +1,6 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion;
 
+import com.undec.acreditacion.domain.entities.EstadoDictadoActividad;
 import com.undec.acreditacion.domain.entities.EstadoVigenciaPlan;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
@@ -151,7 +152,8 @@ public class PlanEstudioController {
                 a.getHorasPresenciales(),
                 a.getHorasNoPresenciales(),
                 a.getCorrelativas(),
-                a.getEsObligatoria()
+                a.getEsObligatoria(),
+                a.getEstadoDictado()
         )).collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
@@ -251,6 +253,46 @@ public class PlanEstudioController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{planId}/asignaturas/{asigId}/estado-dictado")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @Transactional
+    public ResponseEntity<ActividadCurricularPlanDto> cambiarEstadoDictado(
+            @PathVariable UUID planId,
+            @PathVariable UUID asigId,
+            @RequestBody java.util.Map<String, String> body
+    ) {
+        ActividadCurricularPlanJpaEntity asig = asignaturaRepository.findById(asigId)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró la asignatura con ID: " + asigId));
+        if (!asig.getPlanEstudio().getId().equals(planId)) {
+            throw new DomainValidationException("La asignatura no pertenece al plan de estudio indicado.");
+        }
+        String raw = body != null ? body.get("estadoDictado") : null;
+        if (raw == null || raw.isBlank()) {
+            throw new DomainValidationException("El estadoDictado es obligatorio (SE_DICTA o NO_SE_DICTA).");
+        }
+        try {
+            asig.setEstadoDictado(EstadoDictadoActividad.valueOf(raw.trim().toUpperCase()));
+        } catch (IllegalArgumentException ex) {
+            throw new DomainValidationException("Estado de dictado inválido: " + raw);
+        }
+        ActividadCurricularPlanJpaEntity guardada = asignaturaRepository.save(asig);
+        return ResponseEntity.ok(new ActividadCurricularPlanDto(
+                guardada.getId(),
+                planId,
+                guardada.getNumeroOrden(),
+                guardada.getCodigo(),
+                guardada.getNombre(),
+                guardada.getGrupo(),
+                guardada.getSubgrupo(),
+                guardada.getHorasReloj(),
+                guardada.getHorasPresenciales(),
+                guardada.getHorasNoPresenciales(),
+                guardada.getCorrelativas(),
+                guardada.getEsObligatoria(),
+                guardada.getEstadoDictado()
+        ));
+    }
+
     private void mapearDatosPlan(PlanEstudioFt001JpaEntity plan, PlanEstudioFt001Dto dto) {
         plan.setProcesoId(dto.procesoId());
         plan.setCodigoResolucion(dto.codigoResolucion());
@@ -305,7 +347,8 @@ public class PlanEstudioController {
                     a.getHorasPresenciales(),
                     a.getHorasNoPresenciales(),
                     a.getCorrelativas(),
-                    a.getEsObligatoria()
+                    a.getEsObligatoria(),
+                    a.getEstadoDictado()
             )).collect(Collectors.toList());
         }
 

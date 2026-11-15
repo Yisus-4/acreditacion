@@ -89,12 +89,58 @@ export const routes: Routes = [
   },
   {
     path: 'admin/carreras',
-    title: 'Carreras de Grado — Sistema de Acreditación UNdeC',
+    redirectTo: 'academica/carreras',
+    pathMatch: 'full',
+  },
+  {
+    path: 'admin/infraestructura',
+    title: 'Infraestructura Maestra — Gestión Institucional UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/estructura/admin-infraestructura/admin-infraestructura.component'
+      ).then((m) => m.AdminInfraestructuraComponent),
+  },
+  {
+    path: 'admin/ambitos-practica',
+    title: 'Ámbitos de Práctica y Convenios — Gestión Institucional UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/estructura/admin-ambitos-practica/admin-ambitos-practica.component'
+      ).then((m) => m.AdminAmbitosPracticaComponent),
+  },
+  {
+    path: 'academica',
+    redirectTo: 'academica/planes',
+    pathMatch: 'full',
+  },
+  {
+    path: 'academica/carreras',
+    title: 'Carreras de Grado — Gestión Académica UNdeC',
     canActivate: [authGuard],
     loadComponent: () =>
       import(
         './features/estructura/carreras/carreras.component'
       ).then((m) => m.CarrerasComponent),
+  },
+  {
+    path: 'academica/planes',
+    title: 'Planes de Estudio y Actividades Curriculares — Gestión Académica UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/academica/academica-planes/academica-planes.component'
+      ).then((m) => m.AcademicaPlanesComponent),
+  },
+  {
+    path: 'academica/cuerpo-academico',
+    title: 'Cuerpo Académico Troncal — Gestión Académica UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/academica/academica-cuerpo-academico/academica-cuerpo-academico.component'
+      ).then((m) => m.AcademicaCuerpoAcademicoComponent),
   },
   {
     path: 'admin/convenios',
@@ -189,12 +235,8 @@ export const routes: Routes = [
   },
   {
     path: 'datos-centrales',
-    title: 'Datos Centrales Institucionales — Sistema de Acreditación UNdeC',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import(
-        './features/datos-centrales/datos-centrales.component'
-      ).then((m) => m.DatosCentralesComponent),
+    redirectTo: 'academica/planes',
+    pathMatch: 'full',
   },
   { path: '**', redirectTo: 'dashboard' },
 ];
