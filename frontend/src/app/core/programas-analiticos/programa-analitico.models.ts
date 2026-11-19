@@ -13,4 +13,12 @@ export interface ProgramaAnaliticoAsignatura {
   fechaSubida?: string;
   observaciones?: string;
   estadoCarga?: 'CARGADO' | 'PENDIENTE';
+  docenteDesignadoId?: string;
+  docenteDesignadoNombre?: string;
+}
+
+export interface DocenteDisponibleDto {
+  id: string;
+  username: string;
+  email: string;
 }

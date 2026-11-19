@@ -26,4 +26,6 @@ public interface SpringDataAutoevaluacionCarreraAmbitoRepository extends JpaRepo
     List<AutoevaluacionCarreraAmbitoJpaEntity> findActiveUsagesBySubject(@Param("procesoId") UUID procesoId, @Param("subjectName") String subjectName);
 
     List<AutoevaluacionCarreraAmbitoJpaEntity> findByProcesoIdAndUtilizadoPorCarreraTrue(UUID procesoId);
+
+    List<AutoevaluacionCarreraAmbitoJpaEntity> findByAmbitoId(UUID ambitoId);
 }

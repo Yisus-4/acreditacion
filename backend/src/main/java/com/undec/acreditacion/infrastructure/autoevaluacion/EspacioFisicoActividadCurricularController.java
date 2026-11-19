@@ -36,7 +36,7 @@ public class EspacioFisicoActividadCurricularController {
 
     @GetMapping("/{espacioId}/actividades-curriculares")
     @Transactional(readOnly = true)
-    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'INFRAESTRUCTURA', 'BEDELIA', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'INFRAESTRUCTURA', 'BEDELIA', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     public ResponseEntity<List<EspacioFisicoActividadCurricularDto>> listarActividadesPorEspacio(@PathVariable UUID espacioId) {
         if (!espacioFisicoRepository.existsById(espacioId)) {
             throw new ResourceNotFoundException("No se encontró el espacio físico con ID: " + espacioId);
@@ -52,7 +52,7 @@ public class EspacioFisicoActividadCurricularController {
 
     @PutMapping("/{espacioId}/actividades-curriculares")
     @Transactional
-    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'INFRAESTRUCTURA')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'INFRAESTRUCTURA')")
     public ResponseEntity<List<EspacioFisicoActividadCurricularDto>> reemplazarActividadesPorEspacio(
             @PathVariable UUID espacioId,
             @RequestBody(required = false) List<AsignarActividadEspacioRequest> asignaciones

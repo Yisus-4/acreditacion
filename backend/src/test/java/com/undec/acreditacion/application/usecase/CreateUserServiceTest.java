@@ -40,18 +40,18 @@ class CreateUserServiceTest {
     @Test
     @DisplayName("Creates user with hashed password and assigned roles")
     void createsUserSuccessfully() {
-        Role role = Role.system(UUID.randomUUID(), "ADMINISTRATOR", "Admin", "Desc");
+        Role role = Role.system(UUID.randomUUID(), "AEA", "AEA", "Desc");
         when(userRepository.existsByUsername("newuser")).thenReturn(false);
         when(userRepository.existsByEmail("newuser@undec.edu.ar")).thenReturn(false);
         when(passwordHasher.hash("password123")).thenReturn("hashed123");
-        when(roleRepository.findByCode("ADMINISTRATOR")).thenReturn(Optional.of(role));
+        when(roleRepository.findByCode("AEA")).thenReturn(Optional.of(role));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         CreateUserCommand command = new CreateUserCommand(
                 "newuser",
                 "newuser@undec.edu.ar",
                 "password123",
-                List.of("ADMINISTRATOR")
+                List.of("AEA")
         );
 
         User created = service.createUser(command);

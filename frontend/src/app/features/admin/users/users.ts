@@ -306,12 +306,10 @@ export class UserManagement implements OnInit {
   getNombreRol(code: string): string {
     const found = this.roles().find((r) => r.code === code);
     if (found?.name) {
-      if (code === 'ADMIN' || code === 'ADMINISTRATOR') return 'Administrador AEA';
       return found.name;
     }
     const fallbackMap: Record<string, string> = {
-      ADMIN: 'Administrador AEA',
-      ADMINISTRATOR: 'Administrador AEA',
+      AEA: 'Área de Evaluación y Acreditación (Administrador)',
       CAREER_DIRECTOR: 'Director de Carrera',
       DIRECTOR_CARRERA: 'Director de Carrera',
       DIRECTOR_ESCUELA: 'Director de Escuela',
@@ -329,8 +327,7 @@ export class UserManagement implements OnInit {
     const found = this.roles().find((r) => r.code === code);
     if (found?.description) return found.description;
     const descMap: Record<string, string> = {
-      ADMIN: 'Acceso completo al sistema de acreditación · ADMIN',
-      ADMINISTRATOR: 'Acceso completo al sistema de acreditación · ADMINISTRATOR',
+      AEA: 'Administrador general del sistema de acreditación · AEA',
       CAREER_DIRECTOR: 'Gestiona la autoevaluación de su carrera · DIRECTOR_CARRERA',
       DIRECTOR_CARRERA: 'Gestiona la autoevaluación de su carrera · DIRECTOR_CARRERA',
       DIRECTOR_ESCUELA: 'Supervisa las carreras de su escuela · DIRECTOR_ESCUELA',

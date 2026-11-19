@@ -22,7 +22,7 @@ public class CatalogoMiembroComisionController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<List<CatalogoMiembroComisionDto>> consultar(
             @RequestParam(value = "busqueda", required = false) String busqueda
     ) {

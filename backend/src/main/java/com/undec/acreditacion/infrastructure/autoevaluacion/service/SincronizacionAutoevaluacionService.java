@@ -5,6 +5,7 @@ import com.undec.acreditacion.application.ports.ResultadoSincronizacionDto;
 import com.undec.acreditacion.application.ports.SeccionClonacion;
 import com.undec.acreditacion.application.ports.SincronizacionAutoevaluacionPort;
 import com.undec.acreditacion.domain.entities.EstadoDictadoActividad;
+import com.undec.acreditacion.domain.entities.EstadoVigenciaPlan;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.*;
 import com.undec.acreditacion.infrastructure.datoscentrales.persistence.CuerpoAcademicoActividadMaestroJpaEntity;
@@ -86,6 +87,7 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
         int inmueblesClonados = 0;
         int espaciosClonados = 0;
         int vinculacionesEspacioActividadClonadas = 0;
+        int ambitosPracticaClonados = 0;
 
         // Limpieza si el modo es REEMPLAZAR_COPIA
         if (modo == ModoClonacion.REEMPLAZAR_COPIA) {
@@ -103,7 +105,7 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
             if (ccpList.isEmpty()) {
                 // Fallback: buscar planes vigentes de la carrera
                 List<PlanEstudioFt001JpaEntity> masterPlanes = planEstudioRepository
-                        .findByCarreraIdAndEsMaestroTrueOrderByAnioAprobacionDesc(carreraId);
+                        .findByCarreraIdAndEstadoVigenciaAndEsMaestroTrueOrderByAnioAprobacionDesc(carreraId, EstadoVigenciaPlan.VIGENTE);
                 for (PlanEstudioFt001JpaEntity masterPlan : masterPlanes) {
                     PlanEstudioFt001JpaEntity clonePlan = planEstudioRepository
                             .findByProcesoIdAndOrigenMaestroId(procesoId, masterPlan.getId())
@@ -196,20 +198,13 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
             }
         }
 
+        Map<UUID, InmuebleJpaEntity> inmuebleMasterToCloneMap = new HashMap<>();
+
         // Paso 3: Infraestructura (Inmuebles y Espacios Físicos con Remapeo de Jerarquía y Vínculos)
         if (secs.contains(SeccionClonacion.INFRAESTRUCTURA_Y_ESPACIOS)) {
             List<InmuebleJpaEntity> masterInmuebles = inmuebleRepository.findMaestrosActivos();
-            Map<UUID, InmuebleJpaEntity> inmuebleMasterToCloneMap = new HashMap<>();
 
             for (InmuebleJpaEntity masterInm : masterInmuebles) {
-                // Verificar si vincula a la carrera del proceso o vincula todas las carreras
-                boolean vincula = masterInm.getVinculaTodasCarreras() || (masterInm.getCarreras() != null &&
-                        masterInm.getCarreras().stream().anyMatch(c -> c.getId().equals(carreraId)));
-
-                if (!vincula) {
-                    continue;
-                }
-
                 InmuebleJpaEntity cloneInm = inmuebleRepository
                         .findByProcesoIdAndOrigenMaestroId(procesoId, masterInm.getId())
                         .orElse(null);
@@ -315,23 +310,41 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
             }
         }
 
-        // Paso 4: Ámbitos de Práctica
+        // Paso 4: Ámbitos de Práctica (clonación aislada por proceso/carrera)
         if (secs.contains(SeccionClonacion.AMBITOS_PRACTICA)) {
-            List<AmbitoPracticaJpaEntity> ambitos = ambitoPracticaRepository.findByActivoTrueOrderByNumeroOrdenAsc();
-            for (AmbitoPracticaJpaEntity ambito : ambitos) {
-                Optional<AutoevaluacionCarreraAmbitoJpaEntity> existing = autoevaluacionAmbitoRepository
-                        .findByProcesoIdAndCarreraIdAndAmbitoId(procesoId, carreraId, ambito.getId());
+            List<AutoevaluacionCarreraAmbitoJpaEntity> vinculacionesExistentes =
+                    autoevaluacionAmbitoRepository.findByProcesoIdOrderByAmbitoNumeroOrdenAsc(procesoId);
+            if (vinculacionesExistentes != null && !vinculacionesExistentes.isEmpty()) {
+                List<AutoevaluacionCarreraAmbitoJpaEntity> huerfanas = vinculacionesExistentes.stream()
+                        .filter(v -> v.getAmbito() == null
+                                || Boolean.TRUE.equals(v.getAmbito().getEsMaestro())
+                                || !procesoId.equals(v.getAmbito().getProcesoId()))
+                        .toList();
+                if (!huerfanas.isEmpty()) {
+                    autoevaluacionAmbitoRepository.deleteAll(huerfanas);
+                }
+            }
 
-                if (existing.isEmpty()) {
-                    AutoevaluacionCarreraAmbitoJpaEntity nuevo = new AutoevaluacionCarreraAmbitoJpaEntity();
-                    nuevo.setId(UUID.randomUUID());
-                    nuevo.setProcesoId(procesoId);
-                    nuevo.setCarreraId(carreraId);
-                    nuevo.setAmbito(ambito);
-                    nuevo.setUtilizadoPorCarrera(true);
-                    nuevo.setCreadoEn(Instant.now());
-                    nuevo.setActualizadoEn(Instant.now());
-                    autoevaluacionAmbitoRepository.save(nuevo);
+            List<AmbitoPracticaJpaEntity> masterAmbitos = ambitoPracticaRepository.findByEsMaestroTrueAndActivoTrueOrderByNumeroOrdenAsc();
+            for (AmbitoPracticaJpaEntity masterAmbito : masterAmbitos) {
+                Optional<AmbitoPracticaJpaEntity> existingClone = ambitoPracticaRepository
+                        .findByProcesoIdAndOrigenMaestroId(procesoId, masterAmbito.getId());
+
+                if (existingClone.isEmpty()) {
+                    InmuebleJpaEntity clonedInmueble = null;
+                    if (masterAmbito.getInmueble() != null) {
+                        UUID masterInmId = masterAmbito.getInmueble().getId();
+                        clonedInmueble = inmuebleMasterToCloneMap.get(masterInmId);
+                        if (clonedInmueble == null) {
+                            clonedInmueble = inmuebleRepository
+                                    .findByProcesoIdAndOrigenMaestroId(procesoId, masterInmId)
+                                    .orElse(null);
+                        }
+                    }
+
+                    AmbitoPracticaJpaEntity clone = clonarAmbitoPractica(masterAmbito, procesoId, clonedInmueble);
+                    ambitoPracticaRepository.save(clone);
+                    ambitosPracticaClonados++;
                 }
             }
         }
@@ -345,6 +358,7 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
                 inmueblesClonados,
                 espaciosClonados,
                 vinculacionesEspacioActividadClonadas,
+                ambitosPracticaClonados,
                 modo,
                 Instant.now()
         );
@@ -424,6 +438,18 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
                 actividadRepository.deleteAll(acts);
             }
             planEstudioRepository.deleteAll(planes);
+        }
+
+        if (secs.contains(SeccionClonacion.AMBITOS_PRACTICA)) {
+            List<AutoevaluacionCarreraAmbitoJpaEntity> vinculaciones =
+                    autoevaluacionAmbitoRepository.findByProcesoIdOrderByAmbitoNumeroOrdenAsc(procesoId);
+            if (!vinculaciones.isEmpty()) {
+                autoevaluacionAmbitoRepository.deleteAll(vinculaciones);
+            }
+            List<AmbitoPracticaJpaEntity> copiasAmbitos = ambitoPracticaRepository.findByProcesoId(procesoId);
+            if (!copiasAmbitos.isEmpty()) {
+                ambitoPracticaRepository.deleteAll(copiasAmbitos);
+            }
         }
     }
 
@@ -565,6 +591,54 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
         clone.setProcesoId(procesoId);
         clone.setOrigenMaestroId(master.getId());
         clone.setCreadoEn(Instant.now());
+        return clone;
+    }
+
+    private AmbitoPracticaJpaEntity clonarAmbitoPractica(
+            AmbitoPracticaJpaEntity master,
+            UUID procesoId,
+            InmuebleJpaEntity clonedInmueble) {
+
+        Instant now = Instant.now();
+        AmbitoPracticaJpaEntity clone = new AmbitoPracticaJpaEntity();
+        clone.setId(UUID.randomUUID());
+        clone.setNumeroOrden(master.getNumeroOrden());
+        clone.setDenominacion(master.getDenominacion());
+        clone.setTipoCategoria(master.getTipoCategoria());
+        clone.setTipoAmbito(master.getTipoAmbito());
+        clone.setTipoEstablecimiento(master.getTipoEstablecimiento());
+        clone.setInmueble(clonedInmueble);
+
+        String inmRef = master.getInmuebleNombreReferencia();
+        if ((inmRef == null || inmRef.isBlank()) && master.getInmueble() != null) {
+            inmRef = master.getInmueble().getNombre();
+        }
+        clone.setInmuebleNombreReferencia(inmRef);
+
+        clone.setConvenio(master.getConvenio());
+        clone.setDescripcion(master.getDescripcion());
+        clone.setAnioConstruccion(master.getAnioConstruccion());
+        clone.setSuperficieM2(master.getSuperficieM2());
+        clone.setCapacidadAlumnos(master.getCapacidadAlumnos());
+        clone.setDisponibilidadHoraria(master.getDisponibilidadHoraria());
+        clone.setDireccion(master.getDireccion());
+        clone.setLocalidad(master.getLocalidad());
+        clone.setProvincia(master.getProvincia());
+        clone.setDepartamento(master.getDepartamento());
+        clone.setCodigoPostal(master.getCodigoPostal());
+        clone.setTipoDependencia(master.getTipoDependencia());
+        clone.setSector(master.getSector());
+        clone.setActividadAlumnoCam(master.getActividadAlumnoCam());
+        clone.setEspeciesAnimalesCultivos(master.getEspeciesAnimalesCultivos());
+        clone.setNumeroAnimales(master.getNumeroAnimales());
+        clone.setActividadesDemostrativas(master.getActividadesDemostrativas());
+        clone.setCarrerasQueLoUsan(master.getCarrerasQueLoUsan());
+        clone.setEsMaestro(false);
+        clone.setProcesoId(procesoId);
+        clone.setOrigenMaestroId(master.getId());
+        clone.setActivo(true);
+        clone.setCreadoEn(now);
+        clone.setActualizadoEn(now);
         return clone;
     }
 }

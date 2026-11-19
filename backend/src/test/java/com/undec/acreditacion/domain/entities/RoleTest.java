@@ -26,7 +26,7 @@ class RoleTest {
 
     @Test
     void systemRoleIsActiveAndCannotBeDeactivated() {
-        Role role = Role.system(UUID.randomUUID(), "ADMIN", "Administrator", "Manages the system");
+        Role role = Role.system(UUID.randomUUID(), "AEA", "Área de Evaluación y Acreditación", "Manages the system");
 
         assertTrue(role.isActive());
         assertTrue(role.isSystemRole());

@@ -57,6 +57,12 @@ public class ProgramaAnaliticoAsignaturaJpaEntity {
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
 
+    @Column(name = "docente_designado_id")
+    private UUID docenteDesignadoId;
+
+    @Column(name = "docente_designado_nombre", length = 200)
+    private String docenteDesignadoNombre;
+
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
 
@@ -184,6 +190,22 @@ public class ProgramaAnaliticoAsignaturaJpaEntity {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public UUID getDocenteDesignadoId() {
+        return docenteDesignadoId;
+    }
+
+    public void setDocenteDesignadoId(UUID docenteDesignadoId) {
+        this.docenteDesignadoId = docenteDesignadoId;
+    }
+
+    public String getDocenteDesignadoNombre() {
+        return docenteDesignadoNombre;
+    }
+
+    public void setDocenteDesignadoNombre(String docenteDesignadoNombre) {
+        this.docenteDesignadoNombre = docenteDesignadoNombre;
     }
 
     public Instant getCreadoEn() {

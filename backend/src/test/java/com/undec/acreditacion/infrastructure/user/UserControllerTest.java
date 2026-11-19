@@ -63,7 +63,7 @@ class UserControllerTest {
     @DisplayName("GET /api/users returns list of users with 200 OK")
     void listUsersReturns200() throws Exception {
         UUID userId = UUID.randomUUID();
-        Role role = Role.system(UUID.randomUUID(), "ADMINISTRATOR", "Admin", "Desc");
+        Role role = Role.system(UUID.randomUUID(), "AEA", "AEA", "Desc");
         User user = User.rehydrate(userId, "admin", "admin@undec.edu.ar", "pwd", true, true, Set.of(role));
 
         when(listUsersUseCase.listUsers()).thenReturn(List.of(user));
@@ -75,7 +75,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$[0].email").value("admin@undec.edu.ar"))
                 .andExpect(jsonPath("$[0].active").value(true))
                 .andExpect(jsonPath("$[0].systemUser").value(true))
-                .andExpect(jsonPath("$[0].roleCodes[0]").value("ADMINISTRATOR"));
+                .andExpect(jsonPath("$[0].roleCodes[0]").value("AEA"));
     }
 
     @Test

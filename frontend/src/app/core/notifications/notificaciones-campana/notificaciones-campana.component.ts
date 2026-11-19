@@ -48,7 +48,7 @@ export class NotificacionesCampanaComponent implements OnInit, OnDestroy {
 
   readonly puedeGestionar = computed(() => {
     const r = this.userRoles();
-    return r.includes('ADMINISTRATOR') || r.includes('AEA');
+    return r.includes('AEA');
   });
 
   constructor() {

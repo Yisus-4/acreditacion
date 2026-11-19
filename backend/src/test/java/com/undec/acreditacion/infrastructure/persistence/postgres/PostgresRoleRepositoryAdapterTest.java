@@ -31,7 +31,7 @@ class PostgresRoleRepositoryAdapterTest {
     @Test
     @DisplayName("findByCode delegates to springDataRoleRepository and maps to domain")
     void findByCodeDelegatesAndMaps() {
-        String code = "ADMINISTRATOR";
+        String code = "AEA";
         RoleJpaEntity entity = new RoleJpaEntity();
         Role domain = Role.rehydrate(UUID.randomUUID(), code, "Admin", "Desc", true, true, Set.of());
 
@@ -49,7 +49,7 @@ class PostgresRoleRepositoryAdapterTest {
     @Test
     @DisplayName("save delegates to mapper and springDataRoleRepository")
     void saveDelegates() {
-        Role domain = Role.rehydrate(UUID.randomUUID(), "ADMINISTRATOR", "Admin", "Desc", true, true, Set.of());
+        Role domain = Role.rehydrate(UUID.randomUUID(), "AEA", "AEA", "Desc", true, true, Set.of());
         RoleJpaEntity entity = new RoleJpaEntity();
 
         when(mapper.toEntityRole(domain)).thenReturn(entity);

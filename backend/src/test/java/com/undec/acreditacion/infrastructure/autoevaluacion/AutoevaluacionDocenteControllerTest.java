@@ -109,6 +109,6 @@ class AutoevaluacionDocenteControllerTest {
         String value = preAuth.value();
         assertTrue(value.contains("COMISION_AUTOEVALUACION"), "Debe permitir COMISION_AUTOEVALUACION");
         assertTrue(value.contains("DIRECTOR_CARRERA"), "Debe permitir DIRECTOR_CARRERA");
-        assertTrue(value.contains("ADMINISTRATOR") || value.contains("AEA"), "Debe permitir roles de gestión");
+        assertTrue(value.contains("AEA"), "Debe permitir roles de gestión");
     }
 }

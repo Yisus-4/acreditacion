@@ -37,7 +37,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/instituciones")
-@PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+@PreAuthorize("hasRole('AEA')")
 public class InstitucionController {
 
     private final RegistrarInstitucionUseCase registrarInstitucionUseCase;

@@ -12,7 +12,9 @@ import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { catchError, forkJoin, of, switchMap } from 'rxjs';
 import { SubnavAutoevaluacionComponent } from '../subnav-autoevaluacion/subnav-autoevaluacion.component';
+import { AutoevaluacionService } from '../../../core/autoevaluacion/autoevaluacion.service';
 import { PlanEstudioService } from '../../../core/planes-estudio/plan-estudio.service';
 import {
   ActividadCurricularPlan,
@@ -21,7 +23,8 @@ import {
   PlanEstudioFt001,
 } from '../../../core/planes-estudio/plan-estudio.models';
 import { ProgramaAnaliticoService } from '../../../core/programas-analiticos/programa-analitico.service';
-import { ProgramaAnaliticoAsignatura } from '../../../core/programas-analiticos/programa-analitico.models';
+import { DocenteDisponibleDto, ProgramaAnaliticoAsignatura } from '../../../core/programas-analiticos/programa-analitico.models';
+import { Auth } from '../../../core/auth/auth';
 import { EstructuraService } from '../../../core/estructura/estructura.service';
 import { CarreraResponse } from '../../../core/estructura/estructura.types';
 import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoevaluacion-context.service';
@@ -34,6 +37,16 @@ export type ActividadCurricularTipo =
   | 'PROGRAMAS_84'
   | 'FT_003'
   | 'GT_006';
+
+export interface OpcionCarreraPlan {
+  key: string;
+  carreraId: string;
+  carreraNombre: string;
+  procesoId: string | null;
+  planId: string | null;
+  label: string;
+  plan: PlanEstudioFt001 | null;
+}
 
 @Component({
   selector: 'app-estructura-curricular',
@@ -53,7 +66,9 @@ export class EstructuraCurricularComponent implements OnInit {
   private readonly planService = inject(PlanEstudioService);
   private readonly programaService = inject(ProgramaAnaliticoService);
   private readonly estructuraService = inject(EstructuraService);
+  private readonly autoevalService = inject(AutoevaluacionService);
   readonly contextService = inject(AutoevaluacionContextService);
+  private readonly auth = inject(Auth);
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
@@ -92,7 +107,30 @@ export class EstructuraCurricularComponent implements OnInit {
   readonly guardandoPlan = signal<boolean>(false);
   readonly inicializandoPlan = signal<boolean>(false);
 
+  // Filtro unificado de Carreras Convocadas + Plan de Estudio
+  readonly opcionesCarreraPlan = signal<OpcionCarreraPlan[]>([]);
+  readonly selectedCarreraPlanKey = signal<string>('');
+  readonly copiandoPlanesMaestros = signal<boolean>(false);
+  readonly actividad83Completada = signal<boolean>(false);
+  readonly completando83 = signal<boolean>(false);
+  private readonly procesosSincronizados = new Set<string>();
+
+  // Docentes designados para Programas Analíticos (8.4)
+  readonly docentesDisponibles = signal<DocenteDisponibleDto[]>([]);
+  readonly designandoDocenteId = signal<string | null>(null);
+  readonly puedeDesignarDocente = computed(() =>
+    this.auth.hasAnyRole(
+      'AEA',
+      'DIRECTOR_CARRERA',
+      'CAREER_DIRECTOR',
+      'DIRECTOR_ESCUELA',
+      'DIRECTOR_DEPARTAMENTO',
+      'COMISION_AUTOEVALUACION'
+    )
+  );
+
   readonly formPlan = this.fb.group({
+    nombrePlan: [''],
     codigoResolucion: ['', [Validators.required]],
     anioAprobacion: [2024],
     duracionAnios: [5],
@@ -200,8 +238,12 @@ export class EstructuraCurricularComponent implements OnInit {
         nombre: 'Gestionar información de planes de estudio',
         responsable: 'Secretaría Académica / Dirección de Carrera',
         instrumento: 'Resolución Ministerial / Ficha (FT-001)',
-        completada: tienePlan,
-        estado: tienePlan ? 'Completada' : 'Pendiente',
+        completada: this.actividad83Completada(),
+        estado: this.actividad83Completada()
+          ? 'Completada'
+          : this.asignaturas().length > 0
+            ? `Listo para completar (${this.asignaturas().length} act.)`
+            : 'Pendiente',
       },
       {
         id: 'PROGRAMAS_84' as const,
@@ -263,18 +305,15 @@ export class EstructuraCurricularComponent implements OnInit {
 
   constructor() {
     effect(() => {
+      const disp = this.contextService.carrerasDisponibles();
+      const detalle = this.contextService.convocatoriaDetalle();
       const ctxProcesoId = this.contextService.procesoIdActivo();
       if (ctxProcesoId && ctxProcesoId !== this.procesoId()) {
         this.procesoId.set(ctxProcesoId);
       }
-      const ctxCarreraId = this.contextService.carreraSeleccionadaId();
-      if (ctxCarreraId && ctxCarreraId !== this.carreraSeleccionadaId()) {
-        this.carreraSeleccionadaId.set(ctxCarreraId);
-        this.cargarPlan(ctxCarreraId);
-      }
-      const planActivoId = this.contextService.planConvocadoActivoId();
-      if (planActivoId && planActivoId !== this.planActivo()?.id) {
-        this.cargarPlanPorId(planActivoId);
+      if (disp.length > 0 && detalle) {
+        this.carreras.set(disp);
+        this.cargarOpcionesCarreraPlan();
       }
     });
   }
@@ -311,33 +350,53 @@ export class EstructuraCurricularComponent implements OnInit {
     });
 
     this.cargarCarreras();
+    if (this.puedeDesignarDocente()) {
+      this.programaService
+        .listarDocentesDisponibles()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (docs) => this.docentesDisponibles.set(docs || []),
+          error: () => {},
+        });
+    }
   }
 
   cargarCarreras(): void {
-    this.loading.set(true);
-    this.estructuraService.listarCarreras().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (data: CarreraResponse[]) => {
-        this.carreras.set(data);
-        if (data.length > 0) {
-          let id = this.carreraSeleccionadaId() || this.contextService.carreraSeleccionadaId();
-          if (!id || !data.some((c: CarreraResponse) => c.id === id)) {
-            id = data[0].id;
-          }
-          if (id !== this.carreraSeleccionadaId() || !this.planActivo()) {
-            this.carreraSeleccionadaId.set(id);
-            this.cargarPlan(id);
-          } else {
-            this.loading.set(false);
-          }
-        } else {
-          this.loading.set(false);
-        }
-      },
-      error: (err: any) => {
-        this.notif.mostrar(this.errorMessage, 'Error al cargar carreras: ' + (err.error?.message || err.message), 6000);
-        this.loading.set(false);
-      },
-    });
+    const disp = this.contextService.carrerasDisponibles();
+    if (disp.length > 0) {
+      this.carreras.set(disp);
+      this.cargarOpcionesCarreraPlan();
+      return;
+    }
+    this.loading.set(false);
+  }
+
+  onCarreraPlanChange(event: Event): void {
+    const key = (event.target as HTMLSelectElement).value;
+    const op = this.opcionesCarreraPlan().find((o) => o.key === key);
+    if (!op) return;
+    this.seleccionarOpcionCarreraPlan(op);
+  }
+
+  seleccionarOpcionCarreraPlan(op: OpcionCarreraPlan): void {
+    this.selectedCarreraPlanKey.set(op.key);
+    this.carreraSeleccionadaId.set(op.carreraId);
+    if (op.procesoId) {
+      this.procesoId.set(op.procesoId);
+    }
+    this.contextService.seleccionarCarrera(op.carreraId);
+
+    if (op.plan) {
+      this.planes.set([op.plan]);
+      this.aplicarPlanActivo(op.plan);
+    } else {
+      this.planes.set([]);
+      this.planActivo.set(null);
+      this.asignaturas.set([]);
+      this.programas.set([]);
+      this.actividad83Completada.set(false);
+      this.loading.set(false);
+    }
   }
 
   onCarreraChange(event: Event): void {
@@ -372,12 +431,13 @@ export class EstructuraCurricularComponent implements OnInit {
   private aplicarPlanActivo(p: PlanEstudioFt001): void {
     this.planActivo.set(p);
     this.formPlan.patchValue({
-      codigoResolucion: p.codigoResolucion,
-      anioAprobacion: p.anioAprobacion || 2024,
-      duracionAnios: p.duracionAnios || 5,
-      horasTotales: p.horasTotales || 3650,
-      horasPresenciales: p.horasPresenciales || 3650,
-      horasNoPresenciales: p.horasNoPresenciales || 0,
+      nombrePlan: p.nombrePlan || '',
+      codigoResolucion: p.codigoResolucion || '',
+      anioAprobacion: p.anioAprobacion ?? 2026,
+      duracionAnios: p.duracionAnios ?? 5,
+      horasTotales: p.horasTotales ?? 0,
+      horasPresenciales: p.horasPresenciales ?? p.horasTotales ?? 0,
+      horasNoPresenciales: p.horasNoPresenciales ?? 0,
       estructuraSintetica: p.estructuraSintetica || '',
       instanciaFinalGraduacion: p.instanciaFinalGraduacion || '',
       otraInformacion: p.otraInformacion || '',
@@ -403,6 +463,7 @@ export class EstructuraCurricularComponent implements OnInit {
           this.planActivo.set(null);
           this.asignaturas.set([]);
           this.programas.set([]);
+          this.actividad83Completada.set(false);
           this.loading.set(false);
         }
       },
@@ -451,7 +512,9 @@ export class EstructuraCurricularComponent implements OnInit {
   cargarAsignaturasYProgramas(planId: string): void {
     this.planService.listarAsignaturas(planId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (asigs) => {
-        this.asignaturas.set(asigs);
+        const activas = (asigs || []).filter((a) => a.estadoDictado !== 'NO_SE_DICTA');
+        this.asignaturas.set(activas);
+        this.cargarEstadoActividad83(planId);
         this.planService.obtenerPlan(planId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (p) => {
             if (p) this.planActivo.set(p);
@@ -468,6 +531,58 @@ export class EstructuraCurricularComponent implements OnInit {
       },
       error: () => this.loading.set(false),
     });
+  }
+
+  cargarEstadoActividad83(planId?: string): void {
+    const plan = this.planActivo();
+    const effectivePlanId = planId || plan?.id;
+    const effectiveProcesoId =
+      this.procesoId() || this.contextService.procesoIdActivo() || plan?.procesoId || undefined;
+    if (!effectivePlanId && !effectiveProcesoId) {
+      this.actividad83Completada.set(false);
+      return;
+    }
+
+    this.planService
+      .obtenerEstadoActividad83(effectiveProcesoId, effectivePlanId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => this.actividad83Completada.set(!!res?.completada),
+        error: () => this.actividad83Completada.set(false),
+      });
+  }
+
+  validarYCompletar83(): void {
+    const plan = this.planActivo();
+    if (!plan?.id || this.asignaturas().length === 0) {
+      this.notif.mostrar(
+        this.errorMessage,
+        'El plan de estudios debe tener al menos una actividad curricular cargada para completar la actividad 8.3.',
+        6000
+      );
+      return;
+    }
+
+    const effectiveProcesoId =
+      this.procesoId() || this.contextService.procesoIdActivo() || plan.procesoId || undefined;
+    this.completando83.set(true);
+
+    this.planService
+      .validarYCompletarActividad83(effectiveProcesoId, plan.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (resp) => {
+          this.completando83.set(false);
+          this.actividad83Completada.set(true);
+          this.notif.mostrar(this.successMessage, resp.mensaje, 6000);
+        },
+        error: (err) => {
+          this.completando83.set(false);
+          const msg =
+            err.error?.error || err.error?.mensaje || err.error?.message || 'Error al completar la actividad 8.3';
+          this.notif.mostrar(this.errorMessage, msg, 6000);
+        },
+      });
   }
 
   seleccionarActividad(tipo: ActividadCurricularTipo): void {
@@ -497,7 +612,8 @@ export class EstructuraCurricularComponent implements OnInit {
     const val = this.formPlan.value;
     const dto: PlanEstudioFt001 = {
       ...plan,
-      codigoResolucion: val.codigoResolucion || plan.codigoResolucion,
+      nombrePlan: val.nombrePlan || plan.nombrePlan,
+      codigoResolucion: val.codigoResolucion ?? plan.codigoResolucion,
       anioAprobacion: val.anioAprobacion || plan.anioAprobacion,
       duracionAnios: val.duracionAnios || plan.duracionAnios,
       horasTotales: val.horasTotales || plan.horasTotales,
@@ -511,6 +627,14 @@ export class EstructuraCurricularComponent implements OnInit {
     this.planService.actualizarPlan(plan.id, dto).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (actualizado) => {
         this.planActivo.set(actualizado);
+        const nombreDisplay = actualizado.nombrePlan || actualizado.codigoResolucion || ('Plan ' + (actualizado.anioAprobacion || ''));
+        this.opcionesCarreraPlan.update((ops) =>
+          ops.map((o) =>
+            o.planId === actualizado.id
+              ? { ...o, label: `${o.carreraNombre} [${nombreDisplay}]`, plan: actualizado }
+              : o
+          )
+        );
         this.guardandoPlan.set(false);
         this.mostrarEditorPlan.set(false);
         this.notif.mostrar(this.successMessage, 'Ficha de Plan de Estudios (FT-001) actualizada correctamente.', 6000);
@@ -853,5 +977,187 @@ export class EstructuraCurricularComponent implements OnInit {
         this.notif.mostrar(this.errorMessage, msg, 6000);
       },
     });
+  }
+
+  cargarOpcionesCarreraPlan(): void {
+    const carrerasDisp = this.contextService.carrerasDisponibles();
+    const detalle = this.contextService.convocatoriaDetalle();
+    if (carrerasDisp.length === 0) {
+      this.opcionesCarreraPlan.set([]);
+      this.loading.set(false);
+      return;
+    }
+
+    this.loading.set(true);
+    const procIdsPorSincronizar = Array.from(
+      new Set(
+        carrerasDisp
+          .map((car) => {
+            const match = detalle?.carrerasPropuestas?.find((cp) => cp.carreraId === car.id);
+            return match?.procesoId || (car.id === this.contextService.carreraSeleccionadaId() ? this.contextService.procesoIdActivo() : null);
+          })
+          .filter((id): id is string => !!id && !this.procesosSincronizados.has(id))
+      )
+    );
+
+    procIdsPorSincronizar.forEach((id) => this.procesosSincronizados.add(id));
+
+    const listarPlanesPorCarrera$ = forkJoin(
+      carrerasDisp.map((car) => {
+        const match = detalle?.carrerasPropuestas?.find((cp) => cp.carreraId === car.id);
+        const procId = match?.procesoId || (car.id === this.contextService.carreraSeleccionadaId() ? this.contextService.procesoIdActivo() : null);
+        return procId
+          ? this.planService.listarPlanes(car.id, procId).pipe(catchError(() => of([] as PlanEstudioFt001[])))
+          : of([] as PlanEstudioFt001[]);
+      })
+    );
+
+    const flujo$ = procIdsPorSincronizar.length > 0
+      ? forkJoin(
+          procIdsPorSincronizar.map((pId) =>
+            this.autoevalService
+              .copiarDatosCentrales(pId, {
+                modo: 'INICIALIZAR_O_AGREGAR_FALTANTES',
+                secciones: ['PLANES_Y_ASIGNATURAS'],
+              })
+              .pipe(catchError(() => of(null)))
+          )
+        ).pipe(switchMap(() => listarPlanesPorCarrera$))
+      : listarPlanesPorCarrera$;
+
+    flujo$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (planesPorCarreraLista) => {
+          const opciones: OpcionCarreraPlan[] = [];
+          carrerasDisp.forEach((car, idx) => {
+            const match = detalle?.carrerasPropuestas?.find((cp) => cp.carreraId === car.id);
+            const procId = match?.procesoId || (car.id === this.contextService.carreraSeleccionadaId() ? this.contextService.procesoIdActivo() : null);
+            const planes = (planesPorCarreraLista[idx] || []).filter((p) => !!p.procesoId);
+
+            if (planes.length === 0) {
+              opciones.push({
+                key: `${car.id}::NONE`,
+                carreraId: car.id,
+                carreraNombre: car.nombre,
+                procesoId: procId || null,
+                planId: null,
+                label: `${car.nombre} [Sin copia de plan en autoevaluación]`,
+                plan: null,
+              });
+            } else {
+              planes.forEach((p) => {
+                const nombrePlan = p.nombrePlan || p.codigoResolucion || ('Plan ' + (p.anioAprobacion || ''));
+                opciones.push({
+                  key: `${car.id}::${p.id}`,
+                  carreraId: car.id,
+                  carreraNombre: car.nombre,
+                  procesoId: procId || p.procesoId || null,
+                  planId: p.id || null,
+                  label: `${car.nombre} [${nombrePlan}]`,
+                  plan: p,
+                });
+              });
+            }
+          });
+
+          this.opcionesCarreraPlan.set(opciones);
+          const actual = opciones.find((o) => o.key === this.selectedCarreraPlanKey())
+            || opciones.find((o) => o.carreraId === this.carreraSeleccionadaId() && o.plan)
+            || opciones[0];
+
+          if (actual) {
+            this.seleccionarOpcionCarreraPlan(actual);
+          } else {
+            this.loading.set(false);
+          }
+        },
+        error: () => this.loading.set(false),
+      });
+  }
+
+  copiarPlanesMaestrosAConvocatoria(): void {
+    const detalle = this.contextService.convocatoriaDetalle();
+    const carrerasDisp = this.contextService.carrerasDisponibles();
+    const procIds = Array.from(
+      new Set(
+        carrerasDisp
+          .map((car) => {
+            const match = detalle?.carrerasPropuestas?.find((cp) => cp.carreraId === car.id);
+            return match?.procesoId || (car.id === this.contextService.carreraSeleccionadaId() ? this.contextService.procesoIdActivo() : null);
+          })
+          .filter((id): id is string => !!id)
+      )
+    );
+
+    if (procIds.length === 0) {
+      this.notif.mostrar(this.errorMessage, 'No hay procesos de acreditación activos en la convocatoria para copiar planes.', 5000);
+      return;
+    }
+
+    this.copiandoPlanesMaestros.set(true);
+    forkJoin(
+      procIds.map((pId) => this.autoevalService.copiarDatosCentrales(pId).pipe(catchError(() => of(null))))
+    )
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.copiandoPlanesMaestros.set(false);
+          this.notif.mostrar(
+            this.successMessage,
+            'Planes de estudio y actividades curriculares copiados desde Académica en copia aislada para esta autoevaluación.',
+            6000
+          );
+          this.cargarOpcionesCarreraPlan();
+        },
+        error: () => {
+          this.copiandoPlanesMaestros.set(false);
+          this.notif.mostrar(this.errorMessage, 'Error al copiar planes maestros.', 6000);
+        },
+      });
+  }
+
+  puedeSubirProgramaAsignatura(asignaturaId?: string): boolean {
+    if (this.puedeDesignarDocente()) {
+      return true;
+    }
+    const userId = this.auth.currentSession?.user?.id;
+    if (!userId || !asignaturaId) return false;
+    const prog = this.programas().find((p) => p.asignaturaPlanId === asignaturaId);
+    return !!prog?.docenteDesignadoId && prog.docenteDesignadoId === userId;
+  }
+
+  designarDocenteAsignatura(asignaturaId: string, event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const docenteId = select.value;
+    const docente = this.docentesDisponibles().find((d) => d.id === docenteId);
+    this.designandoDocenteId.set(asignaturaId);
+
+    this.programaService
+      .designarDocente(asignaturaId, docenteId || null, docente?.username)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updated) => {
+          this.designandoDocenteId.set(null);
+          const actuales = this.programas();
+          const idx = actuales.findIndex((p) => p.asignaturaPlanId === asignaturaId);
+          if (idx >= 0) {
+            const copia = [...actuales];
+            copia[idx] = updated;
+            this.programas.set(copia);
+          } else {
+            this.programas.set([...actuales, updated]);
+          }
+          this.notif.mostrar(
+            this.successMessage,
+            docente ? `Docente "${docente.username}" designado correctamente.` : 'Designación removida.',
+            4000
+          );
+        },
+        error: (err) => {
+          this.designandoDocenteId.set(null);
+          this.notif.mostrar(this.errorMessage, 'Error al designar docente: ' + (err.error?.message || err.message), 5000);
+        },
+      });
   }
 }

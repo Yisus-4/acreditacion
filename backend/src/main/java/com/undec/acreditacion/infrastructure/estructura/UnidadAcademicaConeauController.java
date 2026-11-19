@@ -76,7 +76,7 @@ public class UnidadAcademicaConeauController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<UnidadAcademicaConeauResponse> crear(@RequestBody GuardarUnidadAcademicaConeauRequest req) {
         if (req.denominacion() == null || req.denominacion().trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La denominación es obligatoria");
@@ -106,7 +106,7 @@ public class UnidadAcademicaConeauController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<UnidadAcademicaConeauResponse> actualizar(
             @PathVariable UUID id,
             @RequestBody GuardarUnidadAcademicaConeauRequest req
@@ -127,7 +127,7 @@ public class UnidadAcademicaConeauController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<Void> eliminar(@PathVariable UUID id) {
         UnidadAcademicaConeauJpaEntity entity = uaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unidad académica no encontrada"));

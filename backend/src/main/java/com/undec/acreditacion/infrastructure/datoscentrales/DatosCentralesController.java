@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping({"/api/datos-centrales", "/api/academica"})
-@PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'INFRAESTRUCTURA', 'BEDELIA')")
+@PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'INFRAESTRUCTURA', 'BEDELIA')")
 public class DatosCentralesController {
 
     private final DatosCentralesService datosCentralesService;
@@ -37,7 +37,7 @@ public class DatosCentralesController {
     }
 
     @PostMapping("/planes-estudio")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<PlanEstudioMaestroDto> crearPlanEstudio(
             @RequestBody CrearPlanEstudioMaestroRequest request
     ) {
@@ -46,13 +46,22 @@ public class DatosCentralesController {
     }
 
     @PatchMapping("/planes-estudio/{id}/estado-vigencia")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<PlanEstudioMaestroDto> cambiarEstadoVigencia(
             @PathVariable UUID id,
             @RequestBody CambiarVigenciaPlanRequest request
     ) {
         PlanEstudioMaestroDto actualizado = datosCentralesService.cambiarEstadoVigenciaPlan(id, request.estadoVigencia());
         return ResponseEntity.ok(actualizado);
+    }
+
+    @PutMapping("/planes-estudio/{id}")
+    @PreAuthorize("hasRole('AEA')")
+    public ResponseEntity<PlanEstudioMaestroDto> actualizarPlanEstudio(
+            @PathVariable UUID id,
+            @RequestBody CrearPlanEstudioMaestroRequest request
+    ) {
+        return ResponseEntity.ok(datosCentralesService.actualizarPlanEstudioMaestro(id, request));
     }
 
     @GetMapping("/cuerpo-academico")
@@ -64,7 +73,7 @@ public class DatosCentralesController {
     }
 
     @PostMapping("/cuerpo-academico")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<CuerpoAcademicoMaestroDto> crearCuerpoAcademico(
             @RequestBody CrearCuerpoAcademicoMaestroRequest request
     ) {
@@ -73,7 +82,7 @@ public class DatosCentralesController {
     }
 
     @PutMapping("/cuerpo-academico/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<CuerpoAcademicoMaestroDto> actualizarCuerpoAcademico(
             @PathVariable UUID id,
             @RequestBody CrearCuerpoAcademicoMaestroRequest request
@@ -82,7 +91,7 @@ public class DatosCentralesController {
     }
 
     @PostMapping("/cuerpo-academico/{id}/asignaciones")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<CuerpoAcademicoMaestroDto> agregarAsignacion(
             @PathVariable UUID id,
             @RequestBody CrearCuerpoAcademicoMaestroRequest.CrearAsignacionCatedraItem item
@@ -91,7 +100,7 @@ public class DatosCentralesController {
     }
 
     @DeleteMapping("/cuerpo-academico/{id}/asignaciones/{asignacionId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<CuerpoAcademicoMaestroDto> eliminarAsignacion(
             @PathVariable UUID id,
             @PathVariable UUID asignacionId

@@ -1,21 +1,29 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.undec.acreditacion.domain.entities.ActividadPlanTrabajo;
+import com.undec.acreditacion.domain.entities.EstadoActividad;
+import com.undec.acreditacion.domain.entities.EstadoDictadoActividad;
+import com.undec.acreditacion.domain.entities.PlanTrabajo;
 import com.undec.acreditacion.domain.exceptions.BusinessRuleConflictException;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
+import com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.ActividadCurricularPlanDto;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.ActualizarAsignaturaRequest;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.CrearAsignaturaRequest;
+import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.ActividadCurricularPlanJpaEntity;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.PlanEstudioFt001JpaEntity;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataActividadCurricularPlanRepository;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataPlanEstudioFt001Repository;
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.ActualizarAsignaturaPlanService;
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.CrearAsignaturaPlanService;
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.EliminarAsignaturaPlanService;
+import com.undec.acreditacion.infrastructure.autoevaluacion.service.SincronizacionBidireccionalPlanService;
 import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.ProcesoAcreditacionJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataCarreraRepository;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataProcesoAcreditacionRepository;
+import com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -67,6 +75,15 @@ class PlanEstudioControllerTest {
     @Mock
     private EliminarAsignaturaPlanService eliminarAsignaturaPlanService;
 
+    @Mock
+    private SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService;
+
+    @Mock
+    private PlanTrabajoRepositoryPort planTrabajoRepository;
+
+    @Mock
+    private AuthenticatedUserProvider authenticatedUserProvider;
+
     private PlanEstudioController controller;
     private MockMvc mockMvc;
 
@@ -79,7 +96,10 @@ class PlanEstudioControllerTest {
                 procesoRepository,
                 crearAsignaturaPlanService,
                 actualizarAsignaturaPlanService,
-                eliminarAsignaturaPlanService
+                eliminarAsignaturaPlanService,
+                sincronizacionBidireccionalPlanService,
+                planTrabajoRepository,
+                authenticatedUserProvider
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -88,81 +108,30 @@ class PlanEstudioControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/planes-estudio?procesoId={id}&carreraId={cId} hace fallback a carrera si proceso no tiene plan")
-    void deberiaHacerFallbackACarreraCuandoProcesoNoTienePlanYSePasaCarreraId() throws Exception {
+    @DisplayName("GET /api/planes-estudio?procesoId={id}&carreraId={cId} retorna vacío sin hacer fallback al maestro si el proceso no tiene copia")
+    void deberiaRetornarVacioSinFallbackAMaestroCuandoProcesoNoTienePlanYSePasaCarreraId() throws Exception {
         UUID procesoId = UUID.randomUUID();
         UUID carreraId = UUID.randomUUID();
 
-        CarreraJpaEntity carrera = new CarreraJpaEntity();
-        carrera.setId(carreraId);
-        carrera.setNombre("Ingeniería en Agrimensura");
-
-        PlanEstudioFt001JpaEntity planCarrera = new PlanEstudioFt001JpaEntity();
-        planCarrera.setId(UUID.randomUUID());
-        planCarrera.setCarrera(carrera);
-        planCarrera.setCodigoResolucion("RES-AGR-2018");
-        planCarrera.setActivo(true);
-        planCarrera.setCreadoEn(Instant.now());
-
         when(planRepository.findByProcesoIdAndActivoTrue(procesoId)).thenReturn(Collections.emptyList());
-        when(planRepository.findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(carreraId)).thenReturn(List.of(planCarrera));
 
         mockMvc.perform(get("/api/planes-estudio")
                         .param("procesoId", procesoId.toString())
                         .param("carreraId", carreraId.toString())
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].carreraId", is(carreraId.toString())))
-                .andExpect(jsonPath("$[0].codigoResolucion", is("RES-AGR-2018")));
+                .andExpect(jsonPath("$", hasSize(0)));
 
         verify(planRepository).findByProcesoIdAndActivoTrue(procesoId);
-        verify(planRepository).findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(carreraId);
+        verify(planRepository, never()).findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(any());
     }
 
     @Test
-    @DisplayName("GET /api/planes-estudio?procesoId={id} busca carrera en procesoRepository y hace fallback si no se pasó carreraId")
-    void deberiaHacerFallbackACarreraBuscandoProcesoCuandoNoSePasaCarreraId() throws Exception {
+    @DisplayName("GET /api/planes-estudio?procesoId={id} retorna vacío sin hacer fallback al maestro cuando no se pasa carreraId")
+    void deberiaRetornarVacioSinFallbackAMaestroCuandoNoSePasaCarreraId() throws Exception {
         UUID procesoId = UUID.randomUUID();
-        UUID carreraId = UUID.randomUUID();
-
-        ProcesoAcreditacionJpaEntity proceso = new ProcesoAcreditacionJpaEntity();
-        proceso.setId(procesoId);
-        proceso.setCarreraId(carreraId);
-
-        CarreraJpaEntity carrera = new CarreraJpaEntity();
-        carrera.setId(carreraId);
-        carrera.setNombre("Ingeniería en Agrimensura");
-
-        PlanEstudioFt001JpaEntity planCarrera = new PlanEstudioFt001JpaEntity();
-        planCarrera.setId(UUID.randomUUID());
-        planCarrera.setCarrera(carrera);
-        planCarrera.setCodigoResolucion("RES-AGR-2018");
-        planCarrera.setActivo(true);
-        planCarrera.setCreadoEn(Instant.now());
 
         when(planRepository.findByProcesoIdAndActivoTrue(procesoId)).thenReturn(Collections.emptyList());
-        when(procesoRepository.findById(procesoId)).thenReturn(Optional.of(proceso));
-        when(planRepository.findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(carreraId)).thenReturn(List.of(planCarrera));
-
-        mockMvc.perform(get("/api/planes-estudio")
-                        .param("procesoId", procesoId.toString())
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].codigoResolucion", is("RES-AGR-2018")));
-
-        verify(planRepository).findByProcesoIdAndActivoTrue(procesoId);
-        verify(procesoRepository).findById(procesoId);
-        verify(planRepository).findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(carreraId);
-    }
-
-    @Test
-    @DisplayName("GET /api/planes-estudio?procesoId={id} retorna vacío si proceso no tiene plan y no existe en procesoRepository")
-    void deberiaRetornarVacioSiProcesoNoTienePlanYNoExisteEnProcesoRepository() throws Exception {
-        UUID procesoId = UUID.randomUUID();
-        when(planRepository.findByProcesoIdAndActivoTrue(procesoId)).thenReturn(Collections.emptyList());
-        when(procesoRepository.findById(procesoId)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/planes-estudio")
                         .param("procesoId", procesoId.toString())
@@ -171,7 +140,22 @@ class PlanEstudioControllerTest {
                 .andExpect(jsonPath("$", hasSize(0)));
 
         verify(planRepository).findByProcesoIdAndActivoTrue(procesoId);
-        verify(procesoRepository).findById(procesoId);
+        verify(planRepository, never()).findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(any());
+    }
+
+    @Test
+    @DisplayName("GET /api/planes-estudio?procesoId={id} retorna vacío si proceso no tiene plan")
+    void deberiaRetornarVacioSiProcesoNoTienePlan() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        when(planRepository.findByProcesoIdAndActivoTrue(procesoId)).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/planes-estudio")
+                        .param("procesoId", procesoId.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+
+        verify(planRepository).findByProcesoIdAndActivoTrue(procesoId);
         verify(planRepository, never()).findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(any());
     }
 
@@ -346,5 +330,97 @@ class PlanEstudioControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status", is(409)))
                 .andExpect(jsonPath("$.error", is("No es posible eliminar la asignatura porque se encuentra vinculada a los ámbitos de práctica: Campo Escuela")));
+    }
+
+    @Test
+    @DisplayName("POST /api/planes-estudio/validar-completar-8-3 completa Actividad 8.3 cuando hay actividades curriculares activas")
+    void deberiaCompletarActividad83CuandoHayAsignaturasActivas() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        UUID usuarioId = UUID.randomUUID();
+
+        PlanEstudioFt001JpaEntity plan = new PlanEstudioFt001JpaEntity();
+        plan.setId(planId);
+        plan.setProcesoId(procesoId);
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+
+        ActividadCurricularPlanJpaEntity asig = new ActividadCurricularPlanJpaEntity();
+        asig.setId(UUID.randomUUID());
+        asig.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId)).thenReturn(List.of(asig));
+
+        ActividadPlanTrabajo act83 = mock(ActividadPlanTrabajo.class);
+        when(act83.getCodigoActividad()).thenReturn("8.3");
+        when(act83.getEstado()).thenReturn(EstadoActividad.PENDIENTE);
+        PlanTrabajo planTrabajo = mock(PlanTrabajo.class);
+        when(planTrabajo.getActividades()).thenReturn(List.of(act83));
+        when(planTrabajoRepository.findByProcesoId(procesoId)).thenReturn(Optional.of(planTrabajo));
+        when(authenticatedUserProvider.getAuthenticatedUserIdOrNull()).thenReturn(usuarioId);
+
+        mockMvc.perform(post("/api/planes-estudio/validar-completar-8-3")
+                        .param("procesoId", procesoId.toString())
+                        .param("planEstudioId", planId.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.completada", is(true)))
+                .andExpect(jsonPath("$.totalAsignaturas", is(1)));
+
+        verify(act83).completar(eq(usuarioId), contains("1 actividades curriculares"));
+        verify(planTrabajoRepository).saveActividad(act83);
+    }
+
+    @Test
+    @DisplayName("POST /api/planes-estudio/validar-completar-8-3 rechaza con 422 cuando el plan tiene 0 asignaturas activas")
+    void deberiaRechazarCompletarActividad83SinAsignaturas() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        PlanEstudioFt001JpaEntity plan = new PlanEstudioFt001JpaEntity();
+        plan.setId(planId);
+        plan.setProcesoId(procesoId);
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId)).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(post("/api/planes-estudio/validar-completar-8-3")
+                        .param("procesoId", procesoId.toString())
+                        .param("planEstudioId", planId.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.status", is(422)));
+
+        verify(planTrabajoRepository, never()).saveActividad(any());
+    }
+
+    @Test
+    @DisplayName("GET /api/planes-estudio/estado-actividad-8-3 retorna estado completado y conteo de asignaturas activas")
+    void deberiaRetornarEstadoActividad83() throws Exception {
+        UUID procesoId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        PlanEstudioFt001JpaEntity plan = new PlanEstudioFt001JpaEntity();
+        plan.setId(planId);
+        plan.setProcesoId(procesoId);
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+
+        ActividadCurricularPlanJpaEntity a1 = new ActividadCurricularPlanJpaEntity();
+        a1.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+        ActividadCurricularPlanJpaEntity a2 = new ActividadCurricularPlanJpaEntity();
+        a2.setEstadoDictado(EstadoDictadoActividad.NO_SE_DICTA);
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId)).thenReturn(List.of(a1, a2));
+
+        ActividadPlanTrabajo act83 = mock(ActividadPlanTrabajo.class);
+        when(act83.getCodigoActividad()).thenReturn("8.3");
+        when(act83.getEstado()).thenReturn(EstadoActividad.COMPLETADA);
+        PlanTrabajo planTrabajo = mock(PlanTrabajo.class);
+        when(planTrabajo.getActividades()).thenReturn(List.of(act83));
+        when(planTrabajoRepository.findByProcesoId(procesoId)).thenReturn(Optional.of(planTrabajo));
+
+        mockMvc.perform(get("/api/planes-estudio/estado-actividad-8-3")
+                        .param("procesoId", procesoId.toString())
+                        .param("planEstudioId", planId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.completada", is(true)))
+                .andExpect(jsonPath("$.totalAsignaturas", is(1)));
     }
 }

@@ -20,7 +20,7 @@ import java.util.Optional;
 public class AdminBootstrapRunner implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AdminBootstrapRunner.class);
-    private static final String ADMIN_ROLE_CODE = "ADMINISTRATOR";
+    private static final String ADMIN_ROLE_CODE = "AEA";
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;

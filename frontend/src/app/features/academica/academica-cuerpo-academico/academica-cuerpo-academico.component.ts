@@ -158,7 +158,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                   <label>Plan de Estudio
                     <select [ngModel]="asigPlanId()" (ngModelChange)="onAsigPlanChange($event)">
                       <option value="">Seleccione...</option>
-                      @for (p of asigPlanes(); track p.id) { <option [value]="p.id">{{ p.codigoResolucion || p.anioAprobacion }}</option> }
+                      @for (p of asigPlanes(); track p.id) { <option [value]="p.id">{{ p.nombrePlan || p.codigoResolucion || ('Plan ' + p.anioAprobacion) }}</option> }
                     </select>
                   </label>
                   <label>Actividad Curricular
@@ -253,7 +253,7 @@ export class AcademicaCuerpoAcademicoComponent implements OnInit {
 
   readonly canEdit = computed(() => {
     const roles = this.auth.currentSession?.user?.roleCodes ?? [];
-    return roles.some((r) => r === 'ADMIN' || r === 'ADMINISTRATOR' || r === 'AEA');
+    return roles.includes('AEA');
   });
 
   readonly docenteForm = this.fb.group({
@@ -345,7 +345,10 @@ export class AcademicaCuerpoAcademicoComponent implements OnInit {
       this.asigPlanes.set([]);
       return;
     }
-    this.planService.listarPlanes(carreraId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((ps) => this.asigPlanes.set(ps));
+    this.planService
+      .listarPlanes(carreraId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((ps) => this.asigPlanes.set(ps.filter((p) => !p.procesoId)));
   }
 
   onAsigPlanChange(planId: string): void {

@@ -1,7 +1,9 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion.service;
 
+import com.undec.acreditacion.domain.entities.EstadoDictadoActividad;
 import com.undec.acreditacion.domain.exceptions.BusinessRuleConflictException;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.*;
+import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,9 @@ class EliminarAsignaturaPlanServiceTest {
 
     @Mock
     private SpringDataAutoevaluacionCarreraAmbitoRepository autoevaluacionCarreraAmbitoRepository;
+
+    @Mock
+    private SpringDataAutoevaluacionAmbitoActividadRepository autoevaluacionAmbitoActividadRepository;
 
     @InjectMocks
     private EliminarAsignaturaPlanService service;
@@ -72,6 +77,9 @@ class EliminarAsignaturaPlanServiceTest {
         vinculo1.setAsignaturasVinculadas("Física II, Química Orgánica");
         AmbitoPracticaJpaEntity a1 = new AmbitoPracticaJpaEntity();
         a1.setDenominacion("Laboratorio de Física Avanzada");
+        a1.setEsMaestro(false);
+        a1.setProcesoId(procesoId);
+        a1.setActivo(true);
         vinculo1.setAmbito(a1);
 
         when(autoevaluacionCarreraAmbitoRepository.findByProcesoIdAndUtilizadoPorCarreraTrue(procesoId))
@@ -96,6 +104,9 @@ class EliminarAsignaturaPlanServiceTest {
         vinculo.setAsignaturasVinculadas("Química; Física; Análisis");
         AmbitoPracticaJpaEntity a = new AmbitoPracticaJpaEntity();
         a.setDenominacion("Laboratorio de Física y Química");
+        a.setEsMaestro(false);
+        a.setProcesoId(procesoId);
+        a.setActivo(true);
         vinculo.setAmbito(a);
 
         when(autoevaluacionCarreraAmbitoRepository.findByProcesoIdAndUtilizadoPorCarreraTrue(procesoId))
@@ -165,5 +176,175 @@ class EliminarAsignaturaPlanServiceTest {
                 p.getHorasNoPresenciales() == 0 &&
                 p.getHorasTotales() == 40
         ));
+    }
+
+    @Test
+    @DisplayName("deberiaIgnorarVinculacionHuerfanaAAmbitoMaestroYPermitirEliminar")
+    void deberiaIgnorarVinculacionHuerfanaAAmbitoMaestroYPermitirEliminar() {
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(asignaturaRepository.findById(asigId)).thenReturn(Optional.of(asignatura));
+
+        AmbitoPracticaJpaEntity ambitoMaestro = new AmbitoPracticaJpaEntity();
+        ambitoMaestro.setId(UUID.randomUUID());
+        ambitoMaestro.setDenominacion("Gabinete de Enfermería");
+        ambitoMaestro.setEsMaestro(true);
+        ambitoMaestro.setProcesoId(null);
+        ambitoMaestro.setActivo(true);
+
+        AutoevaluacionCarreraAmbitoJpaEntity vinculoHuerfano = new AutoevaluacionCarreraAmbitoJpaEntity();
+        vinculoHuerfano.setProcesoId(procesoId);
+        vinculoHuerfano.setUtilizadoPorCarrera(true);
+        vinculoHuerfano.setAsignaturasVinculadas("Física");
+        vinculoHuerfano.setAmbito(ambitoMaestro);
+
+        when(autoevaluacionCarreraAmbitoRepository.findByProcesoIdAndUtilizadoPorCarreraTrue(procesoId))
+                .thenReturn(List.of(vinculoHuerfano));
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId))
+                .thenReturn(List.of(asignatura));
+
+        assertDoesNotThrow(() -> service.eliminarAsignatura(planId, asigId));
+        verify(asignaturaRepository).delete(asignatura);
+    }
+
+    @Test
+    @DisplayName("deberiaBloquearPorVinculoRelacionalExactoSinAfectarAsignaturaHomonima")
+    void deberiaBloquearPorVinculoRelacionalExactoSinAfectarAsignaturaHomonima() {
+        UUID otraId = UUID.randomUUID();
+        ActividadCurricularPlanJpaEntity asigAcademica = new ActividadCurricularPlanJpaEntity();
+        asigAcademica.setId(asigId);
+        asigAcademica.setPlanEstudio(plan);
+        asigAcademica.setCodigo("101");
+        asigAcademica.setNombre("Analisis 1");
+        asigAcademica.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+
+        ActividadCurricularPlanJpaEntity asigHomonima = new ActividadCurricularPlanJpaEntity();
+        asigHomonima.setId(otraId);
+        asigHomonima.setPlanEstudio(plan);
+        asigHomonima.setCodigo("ASIG-01");
+        asigHomonima.setNombre("analisis 1");
+        asigHomonima.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+
+        AmbitoPracticaJpaEntity campo = new AmbitoPracticaJpaEntity();
+        campo.setId(UUID.randomUUID());
+        campo.setDenominacion("Campo Experimental");
+        campo.setEsMaestro(false);
+        campo.setProcesoId(procesoId);
+        campo.setActivo(true);
+
+        AutoevaluacionCarreraAmbitoJpaEntity vinculo = new AutoevaluacionCarreraAmbitoJpaEntity();
+        vinculo.setId(UUID.randomUUID());
+        vinculo.setProcesoId(procesoId);
+        vinculo.setUtilizadoPorCarrera(true);
+        vinculo.setAmbito(campo);
+
+        AutoevaluacionAmbitoActividadJpaEntity linkExacto =
+                new AutoevaluacionAmbitoActividadJpaEntity(UUID.randomUUID(), vinculo, asigHomonima);
+
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(asignaturaRepository.findById(asigId)).thenReturn(Optional.of(asigAcademica));
+        when(asignaturaRepository.findById(otraId)).thenReturn(Optional.of(asigHomonima));
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId))
+                .thenReturn(List.of(asigAcademica, asigHomonima));
+        when(autoevaluacionAmbitoActividadRepository.findActiveUsagesByActividadAndProceso(asigId, procesoId))
+                .thenReturn(List.of());
+        when(autoevaluacionAmbitoActividadRepository.findActiveUsagesByActividadAndProceso(otraId, procesoId))
+                .thenReturn(List.of(linkExacto));
+        when(autoevaluacionCarreraAmbitoRepository.findByProcesoIdAndUtilizadoPorCarreraTrue(procesoId))
+                .thenReturn(List.of(vinculo));
+
+        assertDoesNotThrow(() -> service.eliminarAsignatura(planId, asigId));
+        verify(asignaturaRepository).delete(asigAcademica);
+
+        BusinessRuleConflictException ex = assertThrows(
+                BusinessRuleConflictException.class,
+                () -> service.eliminarAsignatura(planId, otraId)
+        );
+        assertTrue(ex.getMessage().contains("Campo Experimental"));
+        verify(asignaturaRepository, never()).delete(asigHomonima);
+    }
+
+    @Test
+    @DisplayName("deberiaPermitirEliminarDuplicadoHomonimoConTextoLegadoYBloquearUltima")
+    void deberiaPermitirEliminarDuplicadoHomonimoConTextoLegadoYBloquearUltima() {
+        UUID otraId = UUID.randomUUID();
+        ActividadCurricularPlanJpaEntity duplicada = new ActividadCurricularPlanJpaEntity();
+        duplicada.setId(otraId);
+        duplicada.setPlanEstudio(plan);
+        duplicada.setCodigo("ASIG-01");
+        duplicada.setNombre("física");
+        duplicada.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+
+        AmbitoPracticaJpaEntity ambitoClon = new AmbitoPracticaJpaEntity();
+        ambitoClon.setId(UUID.randomUUID());
+        ambitoClon.setDenominacion("Laboratorio Central");
+        ambitoClon.setEsMaestro(false);
+        ambitoClon.setProcesoId(procesoId);
+        ambitoClon.setActivo(true);
+
+        AutoevaluacionCarreraAmbitoJpaEntity vinculoLegado = new AutoevaluacionCarreraAmbitoJpaEntity();
+        vinculoLegado.setId(UUID.randomUUID());
+        vinculoLegado.setProcesoId(procesoId);
+        vinculoLegado.setUtilizadoPorCarrera(true);
+        vinculoLegado.setAsignaturasVinculadas("física");
+        vinculoLegado.setAmbito(ambitoClon);
+
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(asignaturaRepository.findById(otraId)).thenReturn(Optional.of(duplicada));
+        when(asignaturaRepository.findById(asigId)).thenReturn(Optional.of(asignatura));
+        when(autoevaluacionCarreraAmbitoRepository.findByProcesoIdAndUtilizadoPorCarreraTrue(procesoId))
+                .thenReturn(List.of(vinculoLegado));
+
+        // Mientras existe otra homónima activa en el plan, permite eliminar el duplicado
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId))
+                .thenReturn(List.of(asignatura, duplicada))
+                .thenReturn(List.of(asignatura));
+
+        assertDoesNotThrow(() -> service.eliminarAsignatura(planId, otraId));
+        verify(asignaturaRepository).delete(duplicada);
+
+        // Cuando queda la última con ese nombre, el texto legado sí bloquea
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId))
+                .thenReturn(List.of(asignatura));
+
+        BusinessRuleConflictException ex = assertThrows(
+                BusinessRuleConflictException.class,
+                () -> service.eliminarAsignatura(planId, asigId)
+        );
+        assertTrue(ex.getMessage().contains("Laboratorio Central"));
+    }
+
+    @Test
+    @DisplayName("deberiaIgnorarVinculacionDeOtraCarreraEnMismoProceso")
+    void deberiaIgnorarVinculacionDeOtraCarreraEnMismoProceso() {
+        UUID carreraPlanId = UUID.randomUUID();
+        UUID otraCarreraId = UUID.randomUUID();
+        CarreraJpaEntity carreraPlan = new CarreraJpaEntity();
+        carreraPlan.setId(carreraPlanId);
+        plan.setCarrera(carreraPlan);
+
+        AmbitoPracticaJpaEntity ambitoClon = new AmbitoPracticaJpaEntity();
+        ambitoClon.setId(UUID.randomUUID());
+        ambitoClon.setDenominacion("Laboratorio Otra Carrera");
+        ambitoClon.setEsMaestro(false);
+        ambitoClon.setProcesoId(procesoId);
+        ambitoClon.setActivo(true);
+
+        AutoevaluacionCarreraAmbitoJpaEntity vinculoOtraCarrera = new AutoevaluacionCarreraAmbitoJpaEntity();
+        vinculoOtraCarrera.setId(UUID.randomUUID());
+        vinculoOtraCarrera.setProcesoId(procesoId);
+        vinculoOtraCarrera.setCarreraId(otraCarreraId);
+        vinculoOtraCarrera.setUtilizadoPorCarrera(true);
+        vinculoOtraCarrera.setAsignaturasVinculadas("Física");
+        vinculoOtraCarrera.setAmbito(ambitoClon);
+
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(asignaturaRepository.findById(asigId)).thenReturn(Optional.of(asignatura));
+        when(autoevaluacionCarreraAmbitoRepository.findByProcesoIdAndUtilizadoPorCarreraTrue(procesoId))
+                .thenReturn(List.of(vinculoOtraCarrera));
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId))
+                .thenReturn(List.of(asignatura));
+
+        assertDoesNotThrow(() -> service.eliminarAsignatura(planId, asigId));
+        verify(asignaturaRepository).delete(asignatura);
     }
 }

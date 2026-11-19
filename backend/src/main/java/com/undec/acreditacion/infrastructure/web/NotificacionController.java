@@ -31,7 +31,7 @@ public class NotificacionController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<List<SolicitudNotificacionDto>> listar(
             @RequestParam(value = "rol", required = false, defaultValue = "AEA") String rol,
             @RequestParam(value = "estado", required = false) String estado
@@ -41,7 +41,7 @@ public class NotificacionController {
     }
 
     @GetMapping("/conteo-pendientes")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<ConteoNotificacionesDto> conteoPendientes(
             @RequestParam(value = "rol", required = false, defaultValue = "AEA") String rol
     ) {
@@ -50,7 +50,7 @@ public class NotificacionController {
     }
 
     @PostMapping("/{id}/aceptar")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<SolicitudNotificacionDto> aceptar(@PathVariable UUID id) {
         UUID resolutorId = resolverUsuarioAutenticadoId();
         SolicitudNotificacionDto res = gestionarSolicitudNotificacionUseCase.aceptar(id, resolutorId);
@@ -58,7 +58,7 @@ public class NotificacionController {
     }
 
     @PostMapping("/{id}/rechazar")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<SolicitudNotificacionDto> rechazar(@PathVariable UUID id) {
         UUID resolutorId = resolverUsuarioAutenticadoId();
         SolicitudNotificacionDto res = gestionarSolicitudNotificacionUseCase.rechazar(id, resolutorId);
@@ -66,7 +66,7 @@ public class NotificacionController {
     }
 
     @PatchMapping("/{id}/marcar-leida")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<SolicitudNotificacionDto> marcarLeida(@PathVariable UUID id) {
         SolicitudNotificacionDto res = gestionarSolicitudNotificacionUseCase.marcarLeida(id);
         return ResponseEntity.ok(res);

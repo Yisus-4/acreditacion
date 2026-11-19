@@ -115,13 +115,19 @@ class SincronizacionAutoevaluacionServiceTest {
         when(procesoDocenteRepository.findByProcesoIdAndOrigenMaestroId(eq(procesoId), any())).thenReturn(Optional.empty());
         when(procesoDocenteRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        // Master Inmueble & Espacios (Jerarquía con espacio padre y subespacio)
+        // Master Inmueble & Espacios (Jerarquía con espacio padre y subespacio + inmueble no vinculado a carrera específica)
         InmuebleJpaEntity masterInmueble = new InmuebleJpaEntity();
         masterInmueble.setId(UUID.randomUUID());
         masterInmueble.setNombre("Sede Central");
         masterInmueble.setVinculaTodasCarreras(true);
-        when(inmuebleRepository.findMaestrosActivos()).thenReturn(List.of(masterInmueble));
-        when(inmuebleRepository.findByProcesoIdAndOrigenMaestroId(procesoId, masterInmueble.getId())).thenReturn(Optional.empty());
+
+        InmuebleJpaEntity masterInmuebleAdicional = new InmuebleJpaEntity();
+        masterInmuebleAdicional.setId(UUID.randomUUID());
+        masterInmuebleAdicional.setNombre("Edificio Anexo Sin Carrera");
+        masterInmuebleAdicional.setVinculaTodasCarreras(false);
+
+        when(inmuebleRepository.findMaestrosActivos()).thenReturn(List.of(masterInmueble, masterInmuebleAdicional));
+        when(inmuebleRepository.findByProcesoIdAndOrigenMaestroId(eq(procesoId), any())).thenReturn(Optional.empty());
         when(inmuebleRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         EspacioFisicoJpaEntity masterEspacioPadre = new EspacioFisicoJpaEntity();
@@ -140,6 +146,24 @@ class SincronizacionAutoevaluacionServiceTest {
         when(espacioFisicoRepository.findByProcesoIdAndOrigenMaestroId(eq(procesoId), any())).thenReturn(Optional.empty());
         when(espacioFisicoRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
+        // Master Ambito de Practica vinculado a masterInmueble
+        UUID masterAmbitoId = UUID.randomUUID();
+        AmbitoPracticaJpaEntity masterAmbito = new AmbitoPracticaJpaEntity();
+        masterAmbito.setId(masterAmbitoId);
+        masterAmbito.setNumeroOrden(1);
+        masterAmbito.setDenominacion("Laboratorio de Suelos");
+        masterAmbito.setTipoCategoria("INTERNO");
+        masterAmbito.setInmueble(masterInmueble);
+        masterAmbito.setEsMaestro(true);
+        masterAmbito.setActivo(true);
+
+        when(ambitoPracticaRepository.findByEsMaestroTrueAndActivoTrueOrderByNumeroOrdenAsc())
+                .thenReturn(List.of(masterAmbito));
+        when(ambitoPracticaRepository.findByProcesoIdAndOrigenMaestroId(procesoId, masterAmbitoId))
+                .thenReturn(Optional.empty());
+        when(ambitoPracticaRepository.save(any(AmbitoPracticaJpaEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
         ResultadoSincronizacionDto res = service.copiarDatosCentrales(
                 procesoId,
                 ModoClonacion.INICIALIZAR_O_AGREGAR_FALTANTES,
@@ -151,8 +175,9 @@ class SincronizacionAutoevaluacionServiceTest {
         assertEquals(1, res.planesClonados());
         assertEquals(1, res.actividadesCurricularesClonadas());
         assertEquals(1, res.docentesClonados());
-        assertEquals(1, res.inmueblesClonados());
+        assertEquals(2, res.inmueblesClonados());
         assertEquals(2, res.espaciosClonados());
+        assertEquals(1, res.ambitosPracticaClonados());
 
         // Verificar que los espacios clonados referencien al inmueble clonado
         verify(espacioFisicoRepository, atLeast(2)).save(argThat(e ->
@@ -160,6 +185,69 @@ class SincronizacionAutoevaluacionServiceTest {
                 procesoId.equals(e.getProcesoId()) &&
                 e.getInmueble() != null &&
                 !Boolean.TRUE.equals(e.getInmueble().getEsMaestro())
+        ));
+
+        // Verificar que el ambito clonado este aislado por proceso, remapeado al inmueble clonado y sin vinculaciones forzadas
+        verify(ambitoPracticaRepository).save(argThat(a ->
+                !Boolean.TRUE.equals(a.getEsMaestro()) &&
+                procesoId.equals(a.getProcesoId()) &&
+                masterAmbitoId.equals(a.getOrigenMaestroId()) &&
+                a.getInmueble() != null &&
+                !Boolean.TRUE.equals(a.getInmueble().getEsMaestro()) &&
+                masterInmueble.getId().equals(a.getInmueble().getOrigenMaestroId())
+        ));
+        verify(autoevaluacionAmbitoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Modo REEMPLAZAR_COPIA debe limpiar vinculaciones y copias previas de ambitos antes de clonar")
+    void debeLimpiarYReclonarAmbitosEnModoReemplazar() {
+        when(procesoRepository.findById(procesoId)).thenReturn(Optional.of(proceso));
+
+        AmbitoPracticaJpaEntity viejaCopia = new AmbitoPracticaJpaEntity();
+        viejaCopia.setId(UUID.randomUUID());
+        viejaCopia.setProcesoId(procesoId);
+        viejaCopia.setEsMaestro(false);
+
+        AutoevaluacionCarreraAmbitoJpaEntity viejoVinculo = new AutoevaluacionCarreraAmbitoJpaEntity();
+        viejoVinculo.setId(UUID.randomUUID());
+        viejoVinculo.setProcesoId(procesoId);
+        viejoVinculo.setAmbito(viejaCopia);
+
+        when(autoevaluacionAmbitoRepository.findByProcesoIdOrderByAmbitoNumeroOrdenAsc(procesoId))
+                .thenReturn(List.of(viejoVinculo));
+        when(ambitoPracticaRepository.findByProcesoId(procesoId))
+                .thenReturn(List.of(viejaCopia));
+
+        UUID masterAmbitoId = UUID.randomUUID();
+        AmbitoPracticaJpaEntity masterAmbito = new AmbitoPracticaJpaEntity();
+        masterAmbito.setId(masterAmbitoId);
+        masterAmbito.setDenominacion("Campo Experimental");
+        masterAmbito.setTipoCategoria("UNIDAD_DEMOSTRATIVA");
+        masterAmbito.setEsMaestro(true);
+        masterAmbito.setActivo(true);
+
+        when(ambitoPracticaRepository.findByEsMaestroTrueAndActivoTrueOrderByNumeroOrdenAsc())
+                .thenReturn(List.of(masterAmbito));
+        when(ambitoPracticaRepository.findByProcesoIdAndOrigenMaestroId(procesoId, masterAmbitoId))
+                .thenReturn(Optional.empty());
+        when(ambitoPracticaRepository.save(any(AmbitoPracticaJpaEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResultadoSincronizacionDto res = service.copiarDatosCentrales(
+                procesoId,
+                ModoClonacion.REEMPLAZAR_COPIA,
+                Set.of(SeccionClonacion.AMBITOS_PRACTICA)
+        );
+
+        assertNotNull(res);
+        assertEquals(1, res.ambitosPracticaClonados());
+        verify(autoevaluacionAmbitoRepository).deleteAll(List.of(viejoVinculo));
+        verify(ambitoPracticaRepository).deleteAll(List.of(viejaCopia));
+        verify(ambitoPracticaRepository).save(argThat(a ->
+                !Boolean.TRUE.equals(a.getEsMaestro()) &&
+                procesoId.equals(a.getProcesoId()) &&
+                masterAmbitoId.equals(a.getOrigenMaestroId())
         ));
     }
 
@@ -183,5 +271,64 @@ class SincronizacionAutoevaluacionServiceTest {
         assertNotNull(res);
         verify(espacioActividadRepository).deleteByEspacioFisicoId(viejoEspacio.getId());
         verify(espacioFisicoRepository).deleteAll(List.of(viejoEspacio));
+    }
+
+    @Test
+    @DisplayName("Modo INICIALIZAR_O_AGREGAR_FALTANTES limpia vinculaciones huérfanas al maestro y deja clones vacíos")
+    void debeLimpiarVinculacionesHuerfanasAlMaestroYDejarClonesVaciosAlCopiarAmbitos() {
+        when(procesoRepository.findById(procesoId)).thenReturn(Optional.of(proceso));
+
+        AmbitoPracticaJpaEntity maestro = new AmbitoPracticaJpaEntity();
+        maestro.setId(UUID.randomUUID());
+        maestro.setDenominacion("Gabinete de Enfermería");
+        maestro.setTipoCategoria("INTERNO");
+        maestro.setEsMaestro(true);
+        maestro.setProcesoId(null);
+        maestro.setActivo(true);
+
+        AutoevaluacionCarreraAmbitoJpaEntity huerfana = new AutoevaluacionCarreraAmbitoJpaEntity();
+        huerfana.setId(UUID.randomUUID());
+        huerfana.setProcesoId(procesoId);
+        huerfana.setAmbito(maestro);
+        huerfana.setUtilizadoPorCarrera(true);
+        huerfana.setAsignaturasVinculadas("analisis 1");
+
+        AmbitoPracticaJpaEntity clonExistente = new AmbitoPracticaJpaEntity();
+        clonExistente.setId(UUID.randomUUID());
+        clonExistente.setDenominacion("Campo Clon");
+        clonExistente.setTipoCategoria("UNIDAD_DEMOSTRATIVA");
+        clonExistente.setEsMaestro(false);
+        clonExistente.setProcesoId(procesoId);
+        clonExistente.setActivo(true);
+
+        AutoevaluacionCarreraAmbitoJpaEntity vinculoValido = new AutoevaluacionCarreraAmbitoJpaEntity();
+        vinculoValido.setId(UUID.randomUUID());
+        vinculoValido.setProcesoId(procesoId);
+        vinculoValido.setAmbito(clonExistente);
+        vinculoValido.setUtilizadoPorCarrera(true);
+
+        when(autoevaluacionAmbitoRepository.findByProcesoIdOrderByAmbitoNumeroOrdenAsc(procesoId))
+                .thenReturn(List.of(huerfana, vinculoValido));
+        when(ambitoPracticaRepository.findByEsMaestroTrueAndActivoTrueOrderByNumeroOrdenAsc())
+                .thenReturn(List.of(maestro));
+        when(ambitoPracticaRepository.findByProcesoIdAndOrigenMaestroId(procesoId, maestro.getId()))
+                .thenReturn(Optional.empty());
+        when(ambitoPracticaRepository.save(any(AmbitoPracticaJpaEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResultadoSincronizacionDto res = service.copiarDatosCentrales(
+                procesoId,
+                ModoClonacion.INICIALIZAR_O_AGREGAR_FALTANTES,
+                Set.of(SeccionClonacion.AMBITOS_PRACTICA)
+        );
+
+        assertEquals(1, res.ambitosPracticaClonados());
+        verify(autoevaluacionAmbitoRepository).deleteAll(List.of(huerfana));
+        verify(autoevaluacionAmbitoRepository, never()).save(any());
+        verify(ambitoPracticaRepository).save(argThat(a ->
+                !Boolean.TRUE.equals(a.getEsMaestro())
+                        && procesoId.equals(a.getProcesoId())
+                        && maestro.getId().equals(a.getOrigenMaestroId())
+        ));
     }
 }

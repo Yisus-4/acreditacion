@@ -94,6 +94,15 @@ public class AmbitoPracticaJpaEntity {
     @Column(name = "carreras_que_lo_usan", columnDefinition = "TEXT")
     private String carrerasQueLoUsan;
 
+    @Column(name = "es_maestro", nullable = false)
+    private Boolean esMaestro = true;
+
+    @Column(name = "proceso_id")
+    private UUID procesoId;
+
+    @Column(name = "origen_maestro_id")
+    private UUID origenMaestroId;
+
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
 
@@ -312,6 +321,30 @@ public class AmbitoPracticaJpaEntity {
 
     public void setCarrerasQueLoUsan(String carrerasQueLoUsan) {
         this.carrerasQueLoUsan = carrerasQueLoUsan;
+    }
+
+    public Boolean getEsMaestro() {
+        return esMaestro;
+    }
+
+    public void setEsMaestro(Boolean esMaestro) {
+        this.esMaestro = esMaestro;
+    }
+
+    public UUID getProcesoId() {
+        return procesoId;
+    }
+
+    public void setProcesoId(UUID procesoId) {
+        this.procesoId = procesoId;
+    }
+
+    public UUID getOrigenMaestroId() {
+        return origenMaestroId;
+    }
+
+    public void setOrigenMaestroId(UUID origenMaestroId) {
+        this.origenMaestroId = origenMaestroId;
     }
 
     public Boolean getActivo() {

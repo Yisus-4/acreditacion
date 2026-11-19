@@ -59,7 +59,7 @@ class TokenAuthenticationFilterTest {
         TokenPayload payload = new TokenPayload(
                 userId,
                 "admin@undec.edu.ar",
-                List.of("ADMINISTRATOR"),
+                List.of("AEA"),
                 Instant.now().plusSeconds(3600)
         );
 
@@ -70,7 +70,7 @@ class TokenAuthenticationFilterTest {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         assertNotNull(auth, "Authentication should be set in context");
         assertEquals("admin@undec.edu.ar", auth.getName());
-        assertTrue(auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRATOR")));
+        assertTrue(auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_AEA")));
 
         verify(filterChain).doFilter(request, response);
     }
@@ -99,7 +99,7 @@ class TokenAuthenticationFilterTest {
         TokenPayload payload = new TokenPayload(
                 UUID.randomUUID(),
                 "admin@undec.edu.ar",
-                List.of("ADMINISTRATOR"),
+                List.of("AEA"),
                 Instant.now().minusSeconds(10) // expired
         );
 

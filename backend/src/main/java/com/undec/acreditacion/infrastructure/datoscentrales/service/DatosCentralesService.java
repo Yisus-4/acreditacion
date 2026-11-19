@@ -8,8 +8,10 @@ import com.undec.acreditacion.infrastructure.datoscentrales.dto.*;
 import com.undec.acreditacion.infrastructure.datoscentrales.persistence.CuerpoAcademicoActividadMaestroJpaEntity;
 import com.undec.acreditacion.infrastructure.datoscentrales.persistence.CuerpoAcademicoMaestroJpaEntity;
 import com.undec.acreditacion.infrastructure.datoscentrales.persistence.SpringDataCuerpoAcademicoMaestroRepository;
+import com.undec.acreditacion.infrastructure.autoevaluacion.service.SincronizacionBidireccionalPlanService;
 import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataCarreraRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class DatosCentralesService {
     private final SpringDataAmbitoPracticaRepository ambitoPracticaRepository;
     private final SpringDataCarreraRepository carreraRepository;
     private final SpringDataActividadCurricularPlanRepository actividadRepository;
+    private final SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService;
 
     public DatosCentralesService(
             SpringDataPlanEstudioFt001Repository planRepository,
@@ -38,12 +41,26 @@ public class DatosCentralesService {
             SpringDataAmbitoPracticaRepository ambitoPracticaRepository,
             SpringDataCarreraRepository carreraRepository,
             SpringDataActividadCurricularPlanRepository actividadRepository) {
+        this(planRepository, cuerpoAcademicoRepository, espacioFisicoRepository,
+                ambitoPracticaRepository, carreraRepository, actividadRepository, null);
+    }
+
+    @Autowired
+    public DatosCentralesService(
+            SpringDataPlanEstudioFt001Repository planRepository,
+            SpringDataCuerpoAcademicoMaestroRepository cuerpoAcademicoRepository,
+            SpringDataEspacioFisicoRepository espacioFisicoRepository,
+            SpringDataAmbitoPracticaRepository ambitoPracticaRepository,
+            SpringDataCarreraRepository carreraRepository,
+            SpringDataActividadCurricularPlanRepository actividadRepository,
+            SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService) {
         this.planRepository = Objects.requireNonNull(planRepository);
         this.cuerpoAcademicoRepository = Objects.requireNonNull(cuerpoAcademicoRepository);
         this.espacioFisicoRepository = Objects.requireNonNull(espacioFisicoRepository);
         this.ambitoPracticaRepository = Objects.requireNonNull(ambitoPracticaRepository);
         this.carreraRepository = Objects.requireNonNull(carreraRepository);
         this.actividadRepository = Objects.requireNonNull(actividadRepository);
+        this.sincronizacionBidireccionalPlanService = sincronizacionBidireccionalPlanService;
     }
 
     @Transactional(readOnly = true)
@@ -51,7 +68,7 @@ public class DatosCentralesService {
         long planesVigentes = planRepository.countByEsMaestroTrueAndEstadoVigencia(EstadoVigenciaPlan.VIGENTE);
         long cuerpoActivo = cuerpoAcademicoRepository.countByActivoTrue();
         long espaciosFisicos = espacioFisicoRepository.countByEsMaestroTrue();
-        long ambitosPractica = ambitoPracticaRepository.countByActivoTrue();
+        long ambitosPractica = ambitoPracticaRepository.countByEsMaestroTrueAndActivoTrue();
 
         return new ResumenDatosCentralesDto(planesVigentes, cuerpoActivo, espaciosFisicos, ambitosPractica);
     }
@@ -138,6 +155,43 @@ public class DatosCentralesService {
         plan.setActualizadoEn(Instant.now());
 
         PlanEstudioFt001JpaEntity guardado = planRepository.save(plan);
+        if (sincronizacionBidireccionalPlanService != null) {
+            sincronizacionBidireccionalPlanService.propagarActualizacionPlan(guardado);
+        }
+        return toPlanDto(guardado);
+    }
+
+    public PlanEstudioMaestroDto actualizarPlanEstudioMaestro(UUID id, CrearPlanEstudioMaestroRequest req) {
+        if (id == null || req == null) {
+            throw new DomainValidationException("El ID y los datos del plan de estudio son requeridos");
+        }
+        if (req.nombrePlan() == null || req.nombrePlan().isBlank()) {
+            throw new DomainValidationException("El nombre del plan de estudio es obligatorio");
+        }
+
+        PlanEstudioFt001JpaEntity plan = planRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el plan de estudio ID: " + id));
+
+        if (!Boolean.TRUE.equals(plan.getEsMaestro())) {
+            throw new DomainValidationException("Solo se pueden editar planes maestros desde Gestión Académica");
+        }
+
+        if (req.carreraId() != null && (plan.getCarrera() == null || !req.carreraId().equals(plan.getCarrera().getId()))) {
+            CarreraJpaEntity carrera = carreraRepository.findById(req.carreraId())
+                    .orElseThrow(() -> new ResourceNotFoundException("No se encontró la carrera ID: " + req.carreraId()));
+            plan.setCarrera(carrera);
+        }
+
+        plan.setNombrePlan(req.nombrePlan().trim());
+        plan.setAnioAprobacion(req.anioAprobacion());
+        plan.setDuracionAnios(req.duracionAnios());
+        plan.setHorasTotales(req.horasTotales());
+        plan.setActualizadoEn(Instant.now());
+
+        PlanEstudioFt001JpaEntity guardado = planRepository.save(plan);
+        if (sincronizacionBidireccionalPlanService != null) {
+            sincronizacionBidireccionalPlanService.propagarActualizacionPlan(guardado);
+        }
         return toPlanDto(guardado);
     }
 

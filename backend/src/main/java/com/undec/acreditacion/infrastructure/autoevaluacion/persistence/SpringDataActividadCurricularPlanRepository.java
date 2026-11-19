@@ -22,4 +22,6 @@ public interface SpringDataActividadCurricularPlanRepository extends JpaReposito
     List<ActividadCurricularPlanJpaEntity> findCorrelativeDependents(@Param("planEstudioId") UUID planEstudioId, @Param("nombre") String nombre);
 
     java.util.Optional<ActividadCurricularPlanJpaEntity> findByPlanEstudioIdAndOrigenMaestroId(UUID planEstudioId, UUID origenMaestroId);
+
+    List<ActividadCurricularPlanJpaEntity> findByOrigenMaestroId(UUID origenMaestroId);
 }

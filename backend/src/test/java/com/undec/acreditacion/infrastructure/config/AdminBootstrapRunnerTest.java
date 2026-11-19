@@ -47,8 +47,8 @@ class AdminBootstrapRunnerTest {
     @DisplayName("creates initial admin user when none exists and role is found")
     void createsAdminWhenNoneExists() {
         when(userRepository.findByEmail(ADMIN_EMAIL)).thenReturn(Optional.empty());
-        Role adminRole = Role.system(UUID.randomUUID(), "ADMINISTRATOR", "Administrador", "Desc");
-        when(roleRepository.findByCode("ADMINISTRATOR")).thenReturn(Optional.of(adminRole));
+        Role adminRole = Role.system(UUID.randomUUID(), "AEA", "Área de Evaluación y Acreditación", "Desc");
+        when(roleRepository.findByCode("AEA")).thenReturn(Optional.of(adminRole));
         when(passwordHasher.hash(ADMIN_PASSWORD)).thenReturn("hashed_secret");
 
         runner.run();
@@ -69,10 +69,10 @@ class AdminBootstrapRunnerTest {
     }
 
     @Test
-    @DisplayName("skips creation if ADMINISTRATOR role is missing from DB")
+    @DisplayName("skips creation if AEA role is missing from DB")
     void skipsWhenRoleNotFound() {
         when(userRepository.findByEmail(ADMIN_EMAIL)).thenReturn(Optional.empty());
-        when(roleRepository.findByCode("ADMINISTRATOR")).thenReturn(Optional.empty());
+        when(roleRepository.findByCode("AEA")).thenReturn(Optional.empty());
 
         runner.run();
 

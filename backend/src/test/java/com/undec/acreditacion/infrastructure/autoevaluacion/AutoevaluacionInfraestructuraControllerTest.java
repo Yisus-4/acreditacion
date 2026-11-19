@@ -280,9 +280,9 @@ class AutoevaluacionInfraestructuraControllerTest {
     }
 
     @Test
-    @DisplayName("Debe consultar espacios por rango de metros cuadrados (m²)")
+    @DisplayName("Debe consultar espacios maestros por rango de metros cuadrados (m²) sin mezclar copias de proceso")
     void consultarEspaciosPorRangoM2() {
-        when(espacioFisicoRepository.consultarPorFiltros(isNull(), eq(new BigDecimal("30.00")), eq(new BigDecimal("100.00")), isNull()))
+        when(espacioFisicoRepository.consultarMaestrosPorFiltros(isNull(), eq(new BigDecimal("30.00")), eq(new BigDecimal("100.00")), isNull()))
                 .thenReturn(List.of(subespacio));
 
         ResponseEntity<ConsultaEspaciosResponse> resp = controller.consultarEspacios(
@@ -299,18 +299,44 @@ class AutoevaluacionInfraestructuraControllerTest {
         assertEquals(new BigDecimal("40.00"), resp.getBody().superficieTotalM2());
         assertTrue(resp.getBody().espacios().get(0).esSubespacio());
         assertEquals(espacioPadre.getId(), resp.getBody().espacios().get(0).espacioPadreId());
+        verify(espacioFisicoRepository, never()).consultarPorProcesoYFiltros(any(), any(), any(), any(), any());
     }
 
     @Test
-    @DisplayName("GET /procesos/{procesoId}/inmuebles debe mostrar el padrón general con verificado=false mientras la carrera no haya confirmado su copia")
+    @DisplayName("Debe consultar espacios únicamente de la autoevaluación indicada cuando se envía procesoId")
+    void consultarEspaciosEnProcesoFiltraUnicamentePorProceso() {
+        UUID procesoId = UUID.randomUUID();
+        espacioPadre.setEsMaestro(false);
+        espacioPadre.setProcesoId(procesoId);
+        when(espacioFisicoRepository.consultarPorProcesoYFiltros(eq(procesoId), isNull(), isNull(), isNull(), isNull()))
+                .thenReturn(List.of(espacioPadre));
+
+        ResponseEntity<ConsultaEspaciosResponse> resp = controller.consultarEspacios(
+                procesoId,
+                null,
+                null,
+                null,
+                null
+        );
+
+        assertEquals(HttpStatus.OK, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertEquals(1, resp.getBody().totalAulas());
+        verify(espacioFisicoRepository).consultarPorProcesoYFiltros(procesoId, null, null, null, null);
+        verify(espacioFisicoRepository, never()).consultarMaestrosPorFiltros(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("GET /procesos/{procesoId}/inmuebles debe devolver solo las copias aisladas del proceso y no el padrón maestro")
     void obtenerInmueblesProcesoSinSnapshotMuestraTroncoPendiente() {
         UUID procesoId = UUID.randomUUID();
-        inmueble.setEsMaestro(true);
-        inmueble.setVerificado(true); // Incluso si en BD maestro tuviera true, debe exponer false como pendiente
+        inmueble.setEsMaestro(false);
+        inmueble.setProcesoId(procesoId);
+        inmueble.setVerificado(true);
         inmueble.setActivo(true);
 
         when(documentacionRepository.findByTipoAnexoOrderByFechaSubidaDesc(anyString())).thenReturn(Collections.emptyList());
-        when(inmuebleRepository.findMaestrosActivos()).thenReturn(List.of(inmueble));
+        when(inmuebleRepository.findByProcesoIdActivos(procesoId)).thenReturn(List.of(inmueble));
 
         ResponseEntity<?> resp = controller.obtenerInmueblesProceso(procesoId);
 
@@ -319,10 +345,51 @@ class AutoevaluacionInfraestructuraControllerTest {
         List<InmuebleResponse> lista = (List<InmuebleResponse>) resp.getBody();
         assertNotNull(lista);
         assertEquals(1, lista.size());
-        assertTrue(lista.get(0).esMaestro());
+        assertFalse(lista.get(0).esMaestro());
         assertFalse(lista.get(0).verificado());
         assertEquals("CARGADO", lista.get(0).estadoConeau());
+        verify(inmuebleRepository, never()).findMaestrosActivos();
         verify(inmuebleRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("POST /inmuebles con esMaestro=false y procesoId guarda inmueble, espacio y subespacio aislados en el proceso")
+    void registrarInmuebleEnProcesoRespetaAislamientoYSubespacios() {
+        authenticateRole("INFRAESTRUCTURA");
+        UUID procesoId = UUID.randomUUID();
+        InstitucionJpaEntity inst = new InstitucionJpaEntity();
+        inst.setId(UUID.randomUUID());
+
+        when(institucionRepository.findAll()).thenReturn(List.of(inst));
+        when(inmuebleRepository.save(any(InmuebleJpaEntity.class))).thenAnswer(i -> i.getArgument(0));
+        when(espacioFisicoRepository.save(any(EspacioFisicoJpaEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        EspacioFisicoRequest subReq = new EspacioFisicoRequest(
+                null, null, "Cabina Audio", "Cabina", 1, 4, 4,
+                new BigDecimal("12.00"), "Consola", "CARGADO", false, null, Collections.emptyList()
+        );
+        EspacioFisicoRequest espReq = new EspacioFisicoRequest(
+                null, null, "Laboratorio Multimedia", "Lab", 1, 20, 20,
+                new BigDecimal("60.00"), "PCs", "CARGADO", true, null, List.of(subReq)
+        );
+        RegistrarInmuebleRequest req = new RegistrarInmuebleRequest(
+                1, "Edificio Anexo", "Av. Perón 100", "Av. Perón", "100",
+                null, null, null, null,
+                2020, 2020, true, "PROPIO", "Propiedad", false,
+                false, procesoId,
+                new BigDecimal("500.00"), new BigDecimal("800.00"),
+                null, "CARGADO", null, List.of(espReq), Collections.emptyList()
+        );
+
+        ResponseEntity<InmuebleResponse> resp = controller.registrarInmueble(req);
+
+        assertEquals(HttpStatus.CREATED, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertFalse(resp.getBody().esMaestro());
+        assertEquals(procesoId, resp.getBody().procesoId());
+        verify(espacioFisicoRepository, times(2)).save(argThat(esp ->
+                Boolean.FALSE.equals(esp.getEsMaestro()) && procesoId.equals(esp.getProcesoId())
+        ));
     }
 
     @Test

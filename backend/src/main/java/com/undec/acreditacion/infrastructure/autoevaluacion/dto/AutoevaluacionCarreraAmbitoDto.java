@@ -4,10 +4,13 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
 public class AutoevaluacionCarreraAmbitoDto {
+
+    public record ActividadVinculadaResumen(UUID id, String codigo, String nombre) {}
 
     private UUID id;
     private UUID procesoId;
@@ -19,6 +22,9 @@ public class AutoevaluacionCarreraAmbitoDto {
     private AmbitoPracticaDto ambito;
     private Boolean utilizadoPorCarrera;
     private String asignaturasVinculadas;
+    private List<UUID> actividadCurricularIds;
+    private List<ActividadVinculadaResumen> actividadesVinculadasDetalle;
+    private List<String> asignaturasManuales;
     private String responsablePractica;
     private String horariosUsoAnioAnterior;
 
@@ -110,6 +116,18 @@ public class AutoevaluacionCarreraAmbitoDto {
         return asignaturasVinculadas;
     }
 
+    public List<UUID> actividadCurricularIds() {
+        return actividadCurricularIds;
+    }
+
+    public List<ActividadVinculadaResumen> actividadesVinculadasDetalle() {
+        return actividadesVinculadasDetalle;
+    }
+
+    public List<String> asignaturasManuales() {
+        return asignaturasManuales;
+    }
+
     public String responsablePractica() {
         return responsablePractica;
     }
@@ -161,6 +179,18 @@ public class AutoevaluacionCarreraAmbitoDto {
 
     public String getAsignaturasVinculadas() {
         return asignaturasVinculadas;
+    }
+
+    public List<UUID> getActividadCurricularIds() {
+        return actividadCurricularIds;
+    }
+
+    public List<ActividadVinculadaResumen> getActividadesVinculadasDetalle() {
+        return actividadesVinculadasDetalle;
+    }
+
+    public List<String> getAsignaturasManuales() {
+        return asignaturasManuales;
     }
 
     public String getResponsablePractica() {
@@ -236,6 +266,18 @@ public class AutoevaluacionCarreraAmbitoDto {
 
     public void setAsignaturasVinculadas(String asignaturasVinculadas) {
         this.asignaturasVinculadas = asignaturasVinculadas;
+    }
+
+    public void setActividadCurricularIds(List<UUID> actividadCurricularIds) {
+        this.actividadCurricularIds = actividadCurricularIds;
+    }
+
+    public void setActividadesVinculadasDetalle(List<ActividadVinculadaResumen> actividadesVinculadasDetalle) {
+        this.actividadesVinculadasDetalle = actividadesVinculadasDetalle;
+    }
+
+    public void setAsignaturasManuales(List<String> asignaturasManuales) {
+        this.asignaturasManuales = asignaturasManuales;
     }
 
     public void setResponsablePractica(String responsablePractica) {

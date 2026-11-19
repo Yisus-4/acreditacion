@@ -12,13 +12,14 @@ public record ResultadoSincronizacionDto(
         int inmueblesClonados,
         int espaciosClonados,
         int vinculacionesEspacioActividadClonadas,
+        int ambitosPracticaClonados,
         ModoClonacion modoEjecutado,
         Instant timestamp
 ) {
     public static ResultadoSincronizacionDto vacio(UUID procesoId, ModoClonacion modo) {
         return new ResultadoSincronizacionDto(
                 procesoId,
-                0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
                 modo,
                 Instant.now()
         );

@@ -31,7 +31,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/sedes-localizaciones")
-@PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+@PreAuthorize("hasRole('AEA')")
 public class SedeLocalizacionController {
 
     private final RegistrarSedeLocalizacionUseCase registrarSedeLocalizacionUseCase;

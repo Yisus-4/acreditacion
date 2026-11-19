@@ -36,8 +36,8 @@ class UserPersistenceMapperTest {
 
         RoleJpaEntity roleEntity = new RoleJpaEntity(
                 roleId,
-                "ADMINISTRATOR",
-                "Administrador",
+                "AEA",
+                "Área de Evaluación y Acreditación",
                 "Administracion",
                 true,
                 true,
@@ -68,7 +68,7 @@ class UserPersistenceMapperTest {
         assertEquals(1, domainUser.getRoles().size());
 
         Role domainRole = domainUser.getRoles().iterator().next();
-        assertEquals("ADMINISTRATOR", domainRole.getCode());
+        assertEquals("AEA", domainRole.getCode());
         assertTrue(domainRole.isSystemRole());
         assertEquals(1, domainRole.getPermissions().size());
 
@@ -84,7 +84,7 @@ class UserPersistenceMapperTest {
         UUID permId = UUID.randomUUID();
 
         Permission permission = new Permission(permId, "SECURITY_USER_READ", "Consultar", "Desc");
-        Role role = Role.rehydrate(roleId, "ADMINISTRATOR", "Administrador", "Desc", true, true, Set.of(permission));
+        Role role = Role.rehydrate(roleId, "AEA", "Área de Evaluación y Acreditación", "Desc", true, true, Set.of(permission));
         User user = User.rehydrate(userId, "admin", "admin@undec.edu.ar", "hashed_pwd", true, true, Set.of(role));
 
         UserJpaEntity entity = mapper.toEntity(user);

@@ -31,7 +31,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/unidades-academicas")
-@PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+@PreAuthorize("hasRole('AEA')")
 public class UnidadAcademicaController {
 
     private final RegistrarUnidadAcademicaUseCase registrarUnidadAcademicaUseCase;

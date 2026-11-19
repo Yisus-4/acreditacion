@@ -53,7 +53,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/maestro")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION', 'AC_COORDINATOR', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION', 'AC_COORDINATOR', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<GuiaHigieneSeguridadResponse> obtenerGuiaMaestra() {
         return guiaRepository.findGuiaMaestraCompleta()
@@ -67,7 +67,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/procesos/{procesoId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION', 'AC_COORDINATOR', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION', 'AC_COORDINATOR', 'DOCENTE')")
     public ResponseEntity<GuiaHigieneSeguridadResponse> obtenerGuiaPorProceso(@PathVariable UUID procesoId) {
         Optional<GuiaHigieneSeguridadJpaEntity> opt = guiaRepository.findByProcesoIdCompleta(procesoId);
         if (opt.isPresent()) {
@@ -86,7 +86,7 @@ public class AutoevaluacionHigieneSeguridadController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('AEA', 'HIGIENE_SEGURIDAD')")
     @Transactional
     public ResponseEntity<GuiaHigieneSeguridadResponse> actualizarGuia(
             @PathVariable UUID id,
@@ -117,7 +117,7 @@ public class AutoevaluacionHigieneSeguridadController {
     }
 
     @PutMapping("/procesos/{procesoId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('AEA', 'HIGIENE_SEGURIDAD')")
     @Transactional
     public ResponseEntity<GuiaHigieneSeguridadResponse> actualizarGuiaPorProceso(
             @PathVariable UUID procesoId,
@@ -152,7 +152,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @PostMapping("/{id}/documentos")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('AEA', 'HIGIENE_SEGURIDAD')")
     @Transactional
     public ResponseEntity<GuiaHigieneDocumentoResponse> agregarOActualizarDocumento(
             @PathVariable UUID id,
@@ -200,7 +200,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @PostMapping("/procesos/{procesoId}/extender-plazo")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     @Transactional
     public ResponseEntity<Map<String, Object>> extenderPlazoActividad(
             @PathVariable UUID procesoId,
@@ -251,7 +251,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @PostMapping("/procesos/{procesoId}/verificar-y-remitir")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'HIGIENE_SEGURIDAD')")
+    @PreAuthorize("hasAnyRole('AEA', 'HIGIENE_SEGURIDAD')")
     @Transactional
     public ResponseEntity<VerificarInfraestructuraResponse> verificarYRemitirADea(
             @PathVariable UUID procesoId

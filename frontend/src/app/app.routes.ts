@@ -96,10 +96,11 @@ export const routes: Routes = [
     path: 'admin/infraestructura',
     title: 'Infraestructura Maestra — Gestión Institucional UNdeC',
     canActivate: [authGuard],
+    data: { modoMaestro: true },
     loadComponent: () =>
       import(
-        './features/estructura/admin-infraestructura/admin-infraestructura.component'
-      ).then((m) => m.AdminInfraestructuraComponent),
+        './features/autoevaluacion/infraestructura/infraestructura.component'
+      ).then((m) => m.InfraestructuraComponent),
   },
   {
     path: 'admin/ambitos-practica',
@@ -112,8 +113,12 @@ export const routes: Routes = [
   },
   {
     path: 'academica',
-    redirectTo: 'academica/planes',
-    pathMatch: 'full',
+    title: 'Gestión Académica — Sistema de Acreditación UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/academica/panel-academica/panel-academica.component'
+      ).then((m) => m.PanelAcademicaComponent),
   },
   {
     path: 'academica/carreras',
@@ -223,6 +228,15 @@ export const routes: Routes = [
       import(
         './features/autoevaluacion/estructura-curricular/estructura-curricular.component'
       ).then((m) => m.EstructuraCurricularComponent),
+  },
+  {
+    path: 'autoevaluacion/cuerpo-academico',
+    title: 'Cuerpo Académico (RG-010) — Autoevaluación UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/autoevaluacion/cuerpo-academico/autoevaluacion-cuerpo-academico.component'
+      ).then((m) => m.AutoevaluacionCuerpoAcademicoComponent),
   },
   {
     path: 'autoevaluacion/:dimension',

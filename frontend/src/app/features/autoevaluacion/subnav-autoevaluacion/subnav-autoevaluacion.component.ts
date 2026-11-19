@@ -9,100 +9,8 @@ import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoe
   imports: [RouterLink, RouterLinkActive],
   template: `
     <header class="autoeval-header">
-      <div class="autoeval-context-bar">
-        <div class="context-group">
-          <div class="context-field">
-            <label for="convocatoria-select" class="context-label">
-              Convocatoria en Evaluación:
-            </label>
-            <div class="select-wrapper">
-              <select
-                id="convocatoria-select"
-                class="context-select"
-                [value]="contextService.convocatoriaSeleccionadaId() || ''"
-                (change)="onConvocatoriaChange($event)"
-              >
-                <option value="" disabled>Seleccione una convocatoria...</option>
-                @for (c of contextService.convocatorias(); track c.id) {
-                  <option [value]="c.id">[{{ c.codigo }}] {{ c.titulo }}</option>
-                }
-              </select>
-            </div>
-          </div>
-
-          <div class="context-field">
-            <label for="carrera-select" class="context-label">
-              Carrera de Grado:
-            </label>
-            <div class="select-wrapper">
-              <select
-                id="carrera-select"
-                class="context-select"
-                [value]="contextService.carreraSeleccionadaId() || ''"
-                (change)="onCarreraChange($event)"
-              >
-                <option value="" disabled>Seleccione una carrera...</option>
-                @for (car of contextService.carrerasDisponibles(); track car.id) {
-                  <option [value]="car.id">
-                    {{ car.nombre }} ({{ car.sigla || 'UNdeC' }})
-                  </option>
-                }
-              </select>
-            </div>
-          </div>
-
-          @if (contextService.planesConvocados().length > 1) {
-            <div class="context-field plan-switcher-field">
-              <span class="context-label">Plan de Estudio:</span>
-              <div class="plan-switcher-pills" role="radiogroup" aria-label="Selector de plan de estudio">
-                @for (plan of contextService.planesConvocados(); track plan.id) {
-                  <button
-                    type="button"
-                    class="plan-pill-btn"
-                    [class.active]="plan.id === contextService.planConvocadoActivoId()"
-                    (click)="seleccionarPlan(plan.id!)"
-                    [title]="'Cambiar a ' + (plan.codigoResolucion || 'Plan ' + plan.anioAprobacion)"
-                  >
-                    {{ plan.codigoResolucion || ('Plan ' + plan.anioAprobacion) }}
-                  </button>
-                }
-              </div>
-            </div>
-          }
-        </div>
-
-        @if (esAeaOAdmin() && procesoIdCarrera()) {
-          <div class="context-actions">
-            <a
-              [routerLink]="['/acreditacion/convocatorias', procesoIdCarrera()]"
-              [queryParams]="{ tab: 'PLAN_TRABAJO' }"
-              class="btn-pt001"
-              title="Ver Plan de Trabajo y Cronograma PT-001 de la carrera convocada"
-            >
-              <svg
-                class="icon-pt"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
-              </svg>
-              <span>Ver Plan de Trabajo (PT-001)</span>
-            </a>
-          </div>
-        }
-      </div>
-
-      <nav class="subnav-tabs-bar" aria-label="Navegación Dimensiones Autoevaluación">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid #e5e7eb; padding-bottom: 0;">
+        <nav class="subnav-tabs-bar" style="border-bottom: none; flex: 1;" aria-label="Navegación Dimensiones Autoevaluación">
         <a
           routerLink="/autoevaluacion/infraestructura"
           routerLinkActive="active"
@@ -152,6 +60,36 @@ import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoe
           Cuerpo académico
         </a>
       </nav>
+
+      @if (esAeaOAdmin() && procesoIdCarrera()) {
+        <a
+          [routerLink]="['/acreditacion/convocatorias', procesoIdCarrera()]"
+          [queryParams]="{ tab: 'PLAN_TRABAJO' }"
+          class="btn-pt001"
+          style="margin-bottom: 6px; white-space: nowrap;"
+          title="Ver Plan de Trabajo y Cronograma PT-001"
+        >
+          <svg
+            class="icon-pt"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span>Ver Plan de Trabajo (PT-001)</span>
+        </a>
+      }
+      </div>
     </header>
   `,
   styles: [`
@@ -344,7 +282,7 @@ export class SubnavAutoevaluacionComponent implements OnInit {
   private readonly auth = inject(Auth);
 
   readonly esAeaOAdmin = computed(() => {
-    return this.auth.hasAnyRole('AEA', 'ADMINISTRATOR', 'ADMIN');
+    return this.auth.hasAnyRole('AEA');
   });
 
   readonly procesoIdCarrera = computed(() => {

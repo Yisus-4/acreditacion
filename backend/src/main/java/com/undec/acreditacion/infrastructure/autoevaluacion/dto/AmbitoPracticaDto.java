@@ -34,6 +34,9 @@ public record AmbitoPracticaDto(
         String carrerasQueLoUsan,
         Boolean activo,
         Instant creadoEn,
-        Instant actualizadoEn
+        Instant actualizadoEn,
+        Boolean esMaestro,
+        UUID procesoId,
+        UUID origenMaestroId
 ) {
 }

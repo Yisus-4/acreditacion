@@ -9,6 +9,7 @@ public record PlanEstudioFt001Dto(
         UUID carreraId,
         String carreraNombre,
         UUID procesoId,
+        String nombrePlan,
         String codigoResolucion,
         Integer anioAprobacion,
         Integer anioInicio,

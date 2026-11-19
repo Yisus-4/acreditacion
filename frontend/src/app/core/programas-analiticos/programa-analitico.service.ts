@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ProgramaAnaliticoAsignatura } from './programa-analitico.models';
+import { DocenteDisponibleDto, ProgramaAnaliticoAsignatura } from './programa-analitico.models';
 
 @Injectable({
   providedIn: 'root',
@@ -40,6 +40,21 @@ export class ProgramaAnaliticoService {
 
   descargarUrl(id: string): string {
     return `${this.baseUrl}/${id}/descargar`;
+  }
+
+  listarDocentesDisponibles(): Observable<DocenteDisponibleDto[]> {
+    return this.http.get<DocenteDisponibleDto[]>(`${this.baseUrl}/docentes-disponibles`);
+  }
+
+  designarDocente(
+    asignaturaPlanId: string,
+    docenteUsuarioId: string | null,
+    docenteNombre?: string
+  ): Observable<ProgramaAnaliticoAsignatura> {
+    return this.http.patch<ProgramaAnaliticoAsignatura>(
+      `${this.baseUrl}/asignatura/${asignaturaPlanId}/designar-docente`,
+      { docenteUsuarioId: docenteUsuarioId || '', docenteNombre: docenteNombre || '' }
+    );
   }
 
   validarYCompletarActividad84(procesoId?: string, planId?: string): Observable<{ success: boolean; mensaje: string; programasCargados: number; totalAsignaturas: number }> {

@@ -173,7 +173,7 @@
                                   [checked]="estaPlanSeleccionadoDe(item.carreraId, plan.id)"
                                   (change)="togglePlanCarreraDe(item.carreraId, plan.id)"
                                 />
-                                <span>{{ plan.codigoResolucion || ('Plan ' + plan.anioAprobacion) }}</span>
+                                <span>{{ plan.nombrePlan || plan.codigoResolucion || ('Plan ' + plan.anioAprobacion) }}</span>
                               </label>
                             }
                           </div>
@@ -254,7 +254,7 @@
                     <div style="display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 8px 0;">
                       @for (p of obtenerPlanesDeCarrera(carrera.carreraId); track p.id) {
                         <span style="font-size: 11px; font-weight: 600; background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 12px;">
-                          {{ p.codigoResolucion || ('Plan ' + p.anioAprobacion) }}
+                          {{ p.nombrePlan || p.codigoResolucion || ('Plan ' + p.anioAprobacion) }}
                         </span>
                       }
                     </div>

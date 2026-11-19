@@ -12,7 +12,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
           Dashboard
         </a>
         <span class="breadcrumb-separator">/</span>
-        <a routerLink="/academica/planes" class="breadcrumb-link" title="Ir a Gestión Académica">
+        <a routerLink="/academica" class="breadcrumb-link" title="Ir a Gestión Académica">
           Académica
         </a>
         <span class="breadcrumb-separator">/</span>

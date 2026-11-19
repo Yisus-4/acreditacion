@@ -1,9 +1,13 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion;
 
+import com.undec.acreditacion.domain.entities.ActividadPlanTrabajo;
+import com.undec.acreditacion.domain.entities.EstadoActividad;
 import com.undec.acreditacion.domain.entities.EstadoDictadoActividad;
 import com.undec.acreditacion.domain.entities.EstadoVigenciaPlan;
+import com.undec.acreditacion.domain.entities.PlanTrabajo;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
+import com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort;
 import com.undec.acreditacion.infrastructure.datoscentrales.dto.PlanEstudioVigenteDto;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.ActividadCurricularPlanDto;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.ActualizarAsignaturaRequest;
@@ -16,10 +20,13 @@ import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDa
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.ActualizarAsignaturaPlanService;
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.CrearAsignaturaPlanService;
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.EliminarAsignaturaPlanService;
+import com.undec.acreditacion.infrastructure.autoevaluacion.service.SincronizacionBidireccionalPlanService;
 import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.ProcesoAcreditacionJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataCarreraRepository;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataProcesoAcreditacionRepository;
+import com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,6 +36,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -43,6 +52,9 @@ public class PlanEstudioController {
     private final CrearAsignaturaPlanService crearAsignaturaPlanService;
     private final ActualizarAsignaturaPlanService actualizarAsignaturaPlanService;
     private final EliminarAsignaturaPlanService eliminarAsignaturaPlanService;
+    private final SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService;
+    private final PlanTrabajoRepositoryPort planTrabajoRepository;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
     public PlanEstudioController(
             SpringDataPlanEstudioFt001Repository planRepository,
@@ -53,6 +65,24 @@ public class PlanEstudioController {
             ActualizarAsignaturaPlanService actualizarAsignaturaPlanService,
             EliminarAsignaturaPlanService eliminarAsignaturaPlanService
     ) {
+        this(planRepository, asignaturaRepository, carreraRepository, procesoRepository,
+                crearAsignaturaPlanService, actualizarAsignaturaPlanService, eliminarAsignaturaPlanService,
+                null, null, null);
+    }
+
+    @Autowired
+    public PlanEstudioController(
+            SpringDataPlanEstudioFt001Repository planRepository,
+            SpringDataActividadCurricularPlanRepository asignaturaRepository,
+            SpringDataCarreraRepository carreraRepository,
+            SpringDataProcesoAcreditacionRepository procesoRepository,
+            CrearAsignaturaPlanService crearAsignaturaPlanService,
+            ActualizarAsignaturaPlanService actualizarAsignaturaPlanService,
+            EliminarAsignaturaPlanService eliminarAsignaturaPlanService,
+            SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            AuthenticatedUserProvider authenticatedUserProvider
+    ) {
         this.planRepository = planRepository;
         this.asignaturaRepository = asignaturaRepository;
         this.carreraRepository = carreraRepository;
@@ -60,6 +90,9 @@ public class PlanEstudioController {
         this.crearAsignaturaPlanService = crearAsignaturaPlanService;
         this.actualizarAsignaturaPlanService = actualizarAsignaturaPlanService;
         this.eliminarAsignaturaPlanService = eliminarAsignaturaPlanService;
+        this.sincronizacionBidireccionalPlanService = sincronizacionBidireccionalPlanService;
+        this.planTrabajoRepository = planTrabajoRepository;
+        this.authenticatedUserProvider = authenticatedUserProvider;
     }
 
     @GetMapping
@@ -73,17 +106,6 @@ public class PlanEstudioController {
                 planes = planes.stream()
                         .filter(p -> p.getCarrera() != null && carreraId.equals(p.getCarrera().getId()))
                         .collect(Collectors.toList());
-            }
-            if (planes.isEmpty()) {
-                UUID targetCarreraId = carreraId;
-                if (targetCarreraId == null) {
-                    targetCarreraId = procesoRepository.findById(procesoId)
-                            .map(ProcesoAcreditacionJpaEntity::getCarreraId)
-                            .orElse(null);
-                }
-                if (targetCarreraId != null) {
-                    planes = planRepository.findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(targetCarreraId);
-                }
             }
             List<PlanEstudioFt001Dto> dtos = planes.stream()
                     .map(this::toDto)
@@ -128,6 +150,69 @@ public class PlanEstudioController {
         return ResponseEntity.ok(dtos);
     }
 
+    @GetMapping("/estado-actividad-8-3")
+    @Transactional(readOnly = true)
+    public ResponseEntity<Map<String, Object>> estadoActividad83(
+            @RequestParam(required = false) UUID procesoId,
+            @RequestParam(required = false) UUID planEstudioId
+    ) {
+        PlanYProcesoResuelto resuelto = resolverPlanYProceso(procesoId, planEstudioId);
+        boolean completada = resuelto.planTrabajoOpt()
+                .flatMap(pt -> pt.getActividades().stream()
+                        .filter(a -> "8.3".equals(a.getCodigoActividad()))
+                        .findFirst())
+                .map(a -> a.getEstado() == EstadoActividad.COMPLETADA)
+                .orElse(false);
+
+        return ResponseEntity.ok(Map.of(
+                "completada", completada,
+                "totalAsignaturas", resuelto.totalActivas()
+        ));
+    }
+
+    @PostMapping("/validar-completar-8-3")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_ESCUELA', 'SCHOOL_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> validarYCompletar83(
+            @RequestParam(required = false) UUID procesoId,
+            @RequestParam(required = false) UUID planEstudioId
+    ) {
+        PlanYProcesoResuelto resuelto = resolverPlanYProceso(procesoId, planEstudioId);
+        if (resuelto.planEntidad() == null || resuelto.totalActivas() == 0) {
+            throw new DomainValidationException(
+                    "No se puede completar la actividad 8.3: el plan de estudios no tiene actividades curriculares activas cargadas."
+            );
+        }
+
+        if (resuelto.planTrabajoOpt().isPresent() && planTrabajoRepository != null) {
+            Optional<ActividadPlanTrabajo> act83Opt = resuelto.planTrabajoOpt().get().getActividades().stream()
+                    .filter(a -> "8.3".equals(a.getCodigoActividad()))
+                    .findFirst();
+
+            if (act83Opt.isPresent()) {
+                ActividadPlanTrabajo act83 = act83Opt.get();
+                if (act83.getEstado() != EstadoActividad.COMPLETADA) {
+                    UUID usuarioId = authenticatedUserProvider != null
+                            ? authenticatedUserProvider.getAuthenticatedUserIdOrNull()
+                            : null;
+                    act83.completar(
+                            usuarioId,
+                            "Plan de estudios FT-001 y " + resuelto.totalActivas()
+                                    + " actividades curriculares verificadas y sincronizadas con Académica"
+                    );
+                    planTrabajoRepository.saveActividad(act83);
+                }
+            }
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "completada", true,
+                "totalAsignaturas", resuelto.totalActivas(),
+                "mensaje", "Actividad 8.3 (Plan de Estudios FT-001) marcada como completada exitosamente."
+        ));
+    }
+
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
     public ResponseEntity<PlanEstudioFt001Dto> obtenerPorId(@PathVariable UUID id) {
@@ -159,7 +244,7 @@ public class PlanEstudioController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<PlanEstudioFt001Dto> crear(@RequestBody PlanEstudioFt001Dto dto) {
         if (dto.carreraId() == null) {
@@ -172,12 +257,15 @@ public class PlanEstudioController {
         plan.setId(dto.id() != null ? dto.id() : UUID.randomUUID());
         plan.setCarrera(carrera);
         mapearDatosPlan(plan, dto);
-        if (plan.getProcesoId() != null && procesoRepository.findById(plan.getProcesoId()).isEmpty()) {
-            UUID resolvedProcesoId = procesoRepository.findByCarreraIdAndEstadoIn(
-                    carrera.getId(),
-                    List.of("EN_PREPARACION", "INICIADO", "CONFIRMADA", "PENDIENTE_DIRECTOR_ESCUELA", "EN_CURSO", "EN_FUNCIONAMIENTO")
-            ).map(ProcesoAcreditacionJpaEntity::getId).orElse(null);
-            plan.setProcesoId(resolvedProcesoId);
+        if (plan.getProcesoId() != null) {
+            plan.setEsMaestro(false);
+            if (procesoRepository.findById(plan.getProcesoId()).isEmpty()) {
+                UUID resolvedProcesoId = procesoRepository.findByCarreraIdAndEstadoIn(
+                        carrera.getId(),
+                        List.of("EN_PREPARACION", "INICIADO", "CONFIRMADA", "PENDIENTE_DIRECTOR_ESCUELA", "EN_CURSO", "EN_FUNCIONAMIENTO")
+                ).map(ProcesoAcreditacionJpaEntity::getId).orElse(null);
+                plan.setProcesoId(resolvedProcesoId);
+            }
         }
         Instant now = Instant.now();
         plan.setCreadoEn(now);
@@ -197,11 +285,14 @@ public class PlanEstudioController {
         }
 
         PlanEstudioFt001JpaEntity guardado = planRepository.save(plan);
+        if (guardado.getProcesoId() != null && sincronizacionBidireccionalPlanService != null) {
+            sincronizacionBidireccionalPlanService.vincularOCrearMaestroParaPlanDeProceso(guardado);
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(toDto(guardado));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<PlanEstudioFt001Dto> actualizar(@PathVariable UUID id, @RequestBody PlanEstudioFt001Dto dto) {
         PlanEstudioFt001JpaEntity plan = planRepository.findById(id)
@@ -219,11 +310,14 @@ public class PlanEstudioController {
         plan.setActualizadoEn(Instant.now());
 
         PlanEstudioFt001JpaEntity actualizado = planRepository.save(plan);
+        if (sincronizacionBidireccionalPlanService != null) {
+            sincronizacionBidireccionalPlanService.propagarActualizacionPlan(actualizado);
+        }
         return ResponseEntity.ok(toDto(actualizado));
     }
 
     @PostMapping("/{planId}/asignaturas")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     public ResponseEntity<ActividadCurricularPlanDto> crearAsignatura(
             @PathVariable UUID planId,
             @RequestBody CrearAsignaturaRequest request
@@ -233,7 +327,7 @@ public class PlanEstudioController {
     }
 
     @PutMapping("/{planId}/asignaturas/{asigId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     public ResponseEntity<ActividadCurricularPlanDto> actualizarAsignatura(
             @PathVariable UUID planId,
             @PathVariable UUID asigId,
@@ -244,7 +338,7 @@ public class PlanEstudioController {
     }
 
     @DeleteMapping("/{planId}/asignaturas/{asigId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     public ResponseEntity<Void> eliminarAsignatura(
             @PathVariable UUID planId,
             @PathVariable UUID asigId
@@ -254,7 +348,7 @@ public class PlanEstudioController {
     }
 
     @PatchMapping("/{planId}/asignaturas/{asigId}/estado-dictado")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<ActividadCurricularPlanDto> cambiarEstadoDictado(
             @PathVariable UUID planId,
@@ -276,6 +370,9 @@ public class PlanEstudioController {
             throw new DomainValidationException("Estado de dictado inválido: " + raw);
         }
         ActividadCurricularPlanJpaEntity guardada = asignaturaRepository.save(asig);
+        if (sincronizacionBidireccionalPlanService != null) {
+            sincronizacionBidireccionalPlanService.propagarActualizacionAsignatura(asig.getPlanEstudio(), guardada);
+        }
         return ResponseEntity.ok(new ActividadCurricularPlanDto(
                 guardada.getId(),
                 planId,
@@ -293,7 +390,79 @@ public class PlanEstudioController {
         ));
     }
 
+    private record PlanYProcesoResuelto(
+            PlanEstudioFt001JpaEntity planEntidad,
+            UUID effectiveProcesoId,
+            long totalActivas,
+            Optional<PlanTrabajo> planTrabajoOpt
+    ) {
+    }
+
+    private PlanYProcesoResuelto resolverPlanYProceso(UUID procesoId, UUID planEstudioId) {
+        UUID effectiveProcesoId = procesoId;
+        PlanEstudioFt001JpaEntity planEntidad = planEstudioId != null
+                ? planRepository.findById(planEstudioId).orElse(null)
+                : null;
+
+        if (effectiveProcesoId == null && planEntidad != null) {
+            if (planEntidad.getProcesoId() != null) {
+                effectiveProcesoId = planEntidad.getProcesoId();
+            } else if (planEntidad.getCarrera() != null) {
+                effectiveProcesoId = procesoRepository.findByCarreraIdAndEstadoIn(
+                        planEntidad.getCarrera().getId(),
+                        List.of("EN_PREPARACION", "INICIADO", "CONFIRMADA", "PENDIENTE_DIRECTOR_ESCUELA", "EN_CURSO", "EN_FUNCIONAMIENTO")
+                ).map(ProcesoAcreditacionJpaEntity::getId).orElse(null);
+            }
+        }
+
+        if (planEntidad == null && effectiveProcesoId != null) {
+            List<PlanEstudioFt001JpaEntity> porProceso = planRepository.findByProcesoIdAndActivoTrue(effectiveProcesoId);
+            if (!porProceso.isEmpty()) {
+                planEntidad = porProceso.get(0);
+            } else {
+                ProcesoAcreditacionJpaEntity proc = procesoRepository.findById(effectiveProcesoId).orElse(null);
+                if (proc != null && proc.getCarreraId() != null) {
+                    planEntidad = planRepository.findFirstByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(proc.getCarreraId()).orElse(null);
+                }
+            }
+        }
+
+        long totalActivas = 0;
+        if (planEntidad != null) {
+            totalActivas = asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planEntidad.getId()).stream()
+                    .filter(a -> a.getEstadoDictado() != EstadoDictadoActividad.NO_SE_DICTA)
+                    .count();
+        }
+
+        Optional<PlanTrabajo> planTrabajoOpt = Optional.empty();
+        if (planTrabajoRepository != null) {
+            if (effectiveProcesoId != null) {
+                planTrabajoOpt = planTrabajoRepository.findByProcesoId(effectiveProcesoId);
+            }
+            if (planTrabajoOpt.isEmpty() && planEntidad != null && planEntidad.getCarrera() != null) {
+                UUID resolved = procesoRepository.findByCarreraIdAndEstadoIn(
+                        planEntidad.getCarrera().getId(),
+                        List.of("EN_PREPARACION", "INICIADO", "CONFIRMADA", "PENDIENTE_DIRECTOR_ESCUELA", "EN_CURSO", "EN_FUNCIONAMIENTO")
+                ).map(ProcesoAcreditacionJpaEntity::getId).orElse(null);
+                if (resolved != null) {
+                    effectiveProcesoId = resolved;
+                    planTrabajoOpt = planTrabajoRepository.findByProcesoId(resolved);
+                }
+            }
+        }
+
+        return new PlanYProcesoResuelto(planEntidad, effectiveProcesoId, totalActivas, planTrabajoOpt);
+    }
+
     private void mapearDatosPlan(PlanEstudioFt001JpaEntity plan, PlanEstudioFt001Dto dto) {
+        if (dto.nombrePlan() != null && !dto.nombrePlan().isBlank()) {
+            plan.setNombrePlan(dto.nombrePlan().trim());
+        } else if (plan.getNombrePlan() == null || plan.getNombrePlan().isBlank()) {
+            String fallback = (dto.codigoResolucion() != null && !dto.codigoResolucion().isBlank())
+                    ? dto.codigoResolucion().trim()
+                    : "Plan " + (dto.anioAprobacion() != null ? dto.anioAprobacion() : 2026);
+            plan.setNombrePlan(fallback);
+        }
         plan.setProcesoId(dto.procesoId());
         plan.setCodigoResolucion(dto.codigoResolucion());
         plan.setAnioAprobacion(dto.anioAprobacion());
@@ -360,6 +529,7 @@ public class PlanEstudioController {
                 carreraId,
                 carreraNombre,
                 plan.getProcesoId(),
+                plan.getNombrePlan(),
                 plan.getCodigoResolucion(),
                 plan.getAnioAprobacion(),
                 plan.getAnioInicio(),

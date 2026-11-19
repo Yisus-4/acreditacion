@@ -39,19 +39,15 @@ export class Dashboard implements OnInit {
   }
 
   get isAdmin(): boolean {
-    return this.user?.roleCodes?.includes('ADMINISTRATOR') ?? false;
+    return this.user?.roleCodes?.includes('AEA') ?? false;
   }
 
   get canManageInstitutions(): boolean {
-    return (
-      this.user?.roleCodes?.some(
-        (role) => role === 'ADMINISTRATOR' || role === 'AEA'
-      ) ?? false
-    );
+    return this.user?.roleCodes?.includes('AEA') ?? false;
   }
 
   get canAccessDatosCentrales(): boolean {
-    const allowed = ['ADMIN', 'ADMINISTRATOR', 'AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'INFRAESTRUCTURA', 'BEDELIA'];
+    const allowed = ['AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'INFRAESTRUCTURA', 'BEDELIA'];
     return this.user?.roleCodes?.some((role) => allowed.includes(role)) ?? false;
   }
 

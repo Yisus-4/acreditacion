@@ -39,6 +39,10 @@ export class DatosCentralesService {
     return this.http.post<PlanEstudioMaestro>(`${this.baseUrl}/planes-estudio`, req);
   }
 
+  actualizarPlanEstudio(id: string, req: CrearPlanEstudioMaestroRequest): Observable<PlanEstudioMaestro> {
+    return this.http.put<PlanEstudioMaestro>(`${this.baseUrl}/planes-estudio/${id}`, req);
+  }
+
   cambiarEstadoVigencia(id: string, req: CambiarVigenciaPlanRequest): Observable<PlanEstudioMaestro> {
     return this.http.patch<PlanEstudioMaestro>(`${this.baseUrl}/planes-estudio/${id}/estado-vigencia`, req);
   }

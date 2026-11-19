@@ -55,7 +55,7 @@
                 <span>Autoevaluación Institucional</span>
               </a>
 
-              @if (user()?.roleCodes?.includes('ADMINISTRATOR')) {
+              @if (user()?.roleCodes?.includes('AEA')) {
                 <a routerLink="/admin/users" class="user-panel-item" (click)="cerrarMenuUsuario()">
                   <span>Administración de usuarios</span>
                 </a>

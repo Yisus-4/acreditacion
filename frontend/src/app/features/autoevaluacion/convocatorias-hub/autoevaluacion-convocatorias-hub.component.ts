@@ -39,8 +39,8 @@ interface CarreraConvocadaItem {
         <div class="hub-header-text">
           <h1 class="hub-title">Autoevaluación Institucional por Convocatoria</h1>
           <p class="hub-subtitle">
-            Seleccione una convocatoria y la carrera convocada correspondiente para acceder a su espacio de trabajo aislado.
-            Cada carrera recopila sus propios datos de infraestructura, ámbitos de práctica, planes de estudio y programas analíticos según los roles asignados.
+            Seleccione una convocatoria para acceder directamente a su espacio de trabajo de autoevaluación y gestionar
+            la infraestructura, los planes de estudio por carrera y los programas analíticos en copia aislada del padrón maestro.
           </p>
         </div>
         <div class="user-role-badge">
@@ -87,104 +87,20 @@ interface CarreraConvocadaItem {
                   </p>
                 </div>
 
-                <div class="convocatoria-actions">
+                <div class="convocatoria-actions" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                   <button
                     type="button"
-                    class="btn-toggle-convocatoria"
-                    (click)="toggleConvocatoria(conv.id)"
-                    [attr.aria-expanded]="convocatoriaAbiertaId() === conv.id"
+                    class="btn-acceder-carrera"
+                    (click)="ingresarAutoevaluacionConvocatoria(conv.id)"
                   >
-                    @if (convocatoriaAbiertaId() === conv.id) {
-                      <span>Ocultar Carreras</span>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="18 15 12 9 6 15"></polyline>
-                      </svg>
-                    } @else {
-                      <span>Acceder y Ver Carreras</span>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
-                    }
+                    <span>Acceder a Autoevaluación</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
                   </button>
                 </div>
               </header>
-
-              <!-- Panel Desplegable: Carreras Convocadas -->
-              @if (convocatoriaAbiertaId() === conv.id) {
-                <section class="carreras-section">
-                  <div class="carreras-section-header">
-                    <h3 class="carreras-title">
-                      Carreras Convocadas en {{ conv.codigo }}
-                    </h3>
-                    <span class="carreras-count">
-                      {{ obtenerCarrerasDeConvocatoria(conv.id).length }} carrera(s) vinculada(s)
-                    </span>
-                  </div>
-
-                  @if (cargandoDetalleConvocatoriaId() === conv.id) {
-                    <div class="carreras-loading">
-                      <div class="spinner-small"></div>
-                      <span>Obteniendo carreras convocadas...</span>
-                    </div>
-                  } @else if (obtenerCarrerasDeConvocatoria(conv.id).length === 0) {
-                    <div class="carreras-empty">
-                      <p>Esta convocatoria no posee carreras asignadas aún.</p>
-                    </div>
-                  } @else {
-                    <div class="carreras-grid">
-                      @for (carrera of obtenerCarrerasDeConvocatoria(conv.id); track carrera.id) {
-                        <div class="carrera-card">
-                          <div class="carrera-card-body">
-                            <div class="carrera-header">
-                              <span class="badge-carrera-sigla">{{ carrera.sigla || 'CARRERA' }}</span>
-                              @if (carrera.rolEdicionDisponible) {
-                                <span class="badge-permiso editor">Rol con Carga Habilitada</span>
-                              } @else {
-                                <span class="badge-permiso lector">Solo Consulta</span>
-                              }
-                            </div>
-
-                            <h4 class="carrera-nombre">{{ carrera.nombre }}</h4>
-
-                            @if (carrera.planes && carrera.planes.length > 0) {
-                              <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;">
-                                @for (p of carrera.planes; track p.id) {
-                                  <span style="font-size: 11px; font-weight: 600; background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 12px;">
-                                    {{ p.codigoResolucion || ('Plan ' + p.anioAprobacion) }}
-                                  </span>
-                                }
-                              </div>
-                            }
-
-                            <div class="actividades-permitidas">
-                              <span class="actividades-label">Actividades según rol asignado:</span>
-                              <div class="chips-container">
-                                @for (act of carrera.actividadesPermitidas; track act) {
-                                  <span class="chip-actividad">{{ act }}</span>
-                                }
-                              </div>
-                            </div>
-                          </div>
-
-                          <div class="carrera-card-footer">
-                            <button
-                              type="button"
-                              class="btn-acceder-carrera"
-                              (click)="ingresarAutoevaluacionCarrera(conv.id, carrera.id)"
-                            >
-                              <span>Acceder a Autoevaluación</span>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                <polyline points="12 5 19 12 12 19"></polyline>
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      }
-                    </div>
-                  }
-                </section>
-              }
             </article>
           }
         </div>
@@ -768,6 +684,13 @@ export class AutoevaluacionConvocatoriasHubComponent implements OnInit {
         this.planesPorCarreraMap.set(mapa);
       },
       error: () => {},
+    });
+  }
+
+  ingresarAutoevaluacionConvocatoria(convocatoriaId: string): void {
+    this.contextService.seleccionarConvocatoria(convocatoriaId);
+    this.router.navigate(['/autoevaluacion/infraestructura'], {
+      queryParams: { convocatoriaId },
     });
   }
 

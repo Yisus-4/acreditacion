@@ -11,7 +11,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { finalize } from 'rxjs';
+import { catchError, finalize, forkJoin, of } from 'rxjs';
 
 import { Auth } from '../../../core/auth/auth';
 import {
@@ -37,6 +37,7 @@ import {
   Provincia,
 } from '../../../core/geografia/geografia.service';
 import { SubnavAutoevaluacionComponent } from '../subnav-autoevaluacion/subnav-autoevaluacion.component';
+import { SubnavGestionInstitucionalComponent } from '../../estructura/subnav-gestion-institucional/subnav-gestion-institucional.component';
 import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoevaluacion-context.service';
 import { NotificationState } from '../../../core/autoevaluacion/notification-state.helper';
 import { PlanEstudioService } from '../../../core/planes-estudio/plan-estudio.service';
@@ -52,7 +53,12 @@ import {
 @Component({
   selector: 'app-infraestructura',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterModule, SubnavAutoevaluacionComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterModule,
+    SubnavAutoevaluacionComponent,
+    SubnavGestionInstitucionalComponent,
+  ],
   templateUrl: './infraestructura.component.html',
   styleUrl: './infraestructura.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -86,6 +92,7 @@ export class InfraestructuraComponent implements OnInit {
   readonly actividadSeleccionada = signal<'INFRAESTRUCTURA' | 'HIGIENE_SEGURIDAD' | 'EQUIPAMIENTO_BIBLIOTECA' | null>(null);
   readonly filtroActividadesTexto = signal<string>('');
   readonly modoVista = signal<'MAESTRO' | 'PROCESO'>('MAESTRO');
+  readonly esRutaMaestra = signal<boolean>(false);
   readonly procesoId = signal<string | null>(null);
   readonly infraestructuraConfirmadaCarrera = signal<boolean>(false);
   readonly rutaCarpetaCarrera = signal<string | null>(null);
@@ -98,8 +105,8 @@ export class InfraestructuraComponent implements OnInit {
   readonly espacioExpandidoId = signal<string | null>(null);
 
   // Permisos y Roles (Strict Granular Roles)
-  readonly esAdmin = computed(() => this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN'));
-  readonly puedeExtenderPlazo = computed(() => this.esAdmin() || this.auth.hasAnyRole('AEA'));
+  readonly esAdmin = computed(() => this.auth.hasAnyRole('AEA'));
+  readonly puedeExtenderPlazo = computed(() => this.esAdmin());
   readonly puedeEditarInfraestructura = computed(() => this.esAdmin() || this.auth.hasAnyRole('INFRAESTRUCTURA'));
   readonly puedeEditarBedelia = computed(() => this.esAdmin() || this.auth.hasAnyRole('BEDELIA'));
   readonly puedeModificarHigieneSeguridad = computed(() => this.esAdmin() || this.auth.hasAnyRole('HIGIENE_SEGURIDAD'));
@@ -301,8 +308,12 @@ export class InfraestructuraComponent implements OnInit {
       },
     ];
 
-    if (!query) return actividades;
-    return actividades.filter(
+    const visibles = this.esRutaMaestra()
+      ? actividades.filter((a) => a.id !== 'EQUIPAMIENTO_BIBLIOTECA')
+      : actividades;
+
+    if (!query) return visibles;
+    return visibles.filter(
       (a) =>
         a.nombre.toLowerCase().includes(query) ||
         a.responsable.toLowerCase().includes(query) ||
@@ -313,6 +324,7 @@ export class InfraestructuraComponent implements OnInit {
   private ultimoContextoClave = '';
 
   constructor() {
+    this.esRutaMaestra.set(this.route.snapshot.data['modoMaestro'] === true);
     effect(() => {
       const convId = this.contextService.convocatoriaSeleccionadaId() || '';
       const carId = this.contextService.carreraSeleccionadaId() || '';
@@ -322,8 +334,13 @@ export class InfraestructuraComponent implements OnInit {
       if (clave !== this.ultimoContextoClave) {
         const cambioCarreraOConvocatoria = this.ultimoContextoClave !== '';
         this.ultimoContextoClave = clave;
-        this.procesoId.set(ctxProcesoId || null);
-        this.modoVista.set('MAESTRO');
+        if (this.esRutaMaestra()) {
+          this.procesoId.set(null);
+          this.modoVista.set('MAESTRO');
+        } else {
+          this.procesoId.set(ctxProcesoId || null);
+          this.modoVista.set(ctxProcesoId ? 'PROCESO' : 'MAESTRO');
+        }
 
         if (cambioCarreraOConvocatoria) {
           this.notif.limpiar(this.errorMessage);
@@ -356,10 +373,19 @@ export class InfraestructuraComponent implements OnInit {
           procIdParam && procIdParam !== convIdParam
             ? procIdParam
             : this.contextService.procesoIdActivo();
-        this.procesoId.set(validProcId || null);
-        this.modoVista.set('MAESTRO');
+        if (this.esRutaMaestra()) {
+          this.procesoId.set(null);
+          this.modoVista.set('MAESTRO');
+        } else {
+          this.procesoId.set(validProcId || null);
+          this.modoVista.set(validProcId ? 'PROCESO' : 'MAESTRO');
+        }
         const act = params.get('actividad');
-        if (act === 'INFRAESTRUCTURA' || act === 'HIGIENE_SEGURIDAD' || act === 'EQUIPAMIENTO_BIBLIOTECA') {
+        if (
+          act === 'INFRAESTRUCTURA' ||
+          act === 'HIGIENE_SEGURIDAD' ||
+          (!this.esRutaMaestra() && act === 'EQUIPAMIENTO_BIBLIOTECA')
+        ) {
           this.actividadSeleccionada.set(act);
         }
         this.cargarDatosIniciales();
@@ -369,9 +395,9 @@ export class InfraestructuraComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
         const id = params.get('id');
-        if (id) {
+        if (id && !this.esRutaMaestra()) {
           this.procesoId.set(id);
-          this.modoVista.set('MAESTRO');
+          this.modoVista.set('PROCESO');
           this.cargarDatosIniciales();
         }
       });
@@ -424,10 +450,20 @@ export class InfraestructuraComponent implements OnInit {
 
   cargarInmuebles(): void {
     this.loading.set(true);
-    this.cargarEstadoInfraestructuraCarrera();
+    if (!this.esRutaMaestra()) {
+      this.cargarEstadoInfraestructuraCarrera();
+    }
 
-    this.autoevalService
-      .listarInmueblesMaestros()
+    const pId = this.contextService.procesoIdActivo() || this.procesoId();
+    const convId = this.contextService.convocatoriaSeleccionadaId();
+    const carId = this.contextService.carreraSeleccionadaId();
+
+    const obs$ =
+      !this.esRutaMaestra() && this.modoVista() === 'PROCESO' && pId
+        ? this.autoevalService.obtenerInmueblesPorProceso(pId, convId, carId)
+        : this.autoevalService.listarInmueblesMaestros();
+
+    obs$
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loading.set(false))
@@ -863,11 +899,23 @@ export class InfraestructuraComponent implements OnInit {
   }
 
   ejecutarConsultaM2(): void {
+    const pId = this.esRutaMaestra() ? undefined : (this.contextService.procesoIdActivo() || this.procesoId() || undefined);
+    if (!this.esRutaMaestra() && !pId) {
+      this.resultadoConsultaM2.set({
+        totalAulas: 0,
+        capacidadTotalPersonas: 0,
+        superficieTotalM2: 0,
+        espacios: [],
+      });
+      return;
+    }
+
     this.cargandoConsultaM2.set(true);
     const min = this.consultaMinM2();
     const max = this.consultaModo() === 'RANGO' ? this.consultaMaxM2() : null;
 
     this.autoevalService.consultarEspaciosPorM2({
+      procesoId: pId,
       minM2: min !== null ? min : undefined,
       maxM2: max !== null ? max : undefined,
       tipoEspacioId: this.consultaTipoEspacioId() || undefined,
@@ -985,8 +1033,11 @@ export class InfraestructuraComponent implements OnInit {
       condicionTenencia: val.condicionTenencia,
       situacion: val.situacion,
       vinculaTodasCarreras: val.vinculaTodasCarreras,
-      esMaestro: true,
-      procesoId: undefined,
+      esMaestro: !(!this.esRutaMaestra() && this.modoVista() === 'PROCESO' && (this.contextService.procesoIdActivo() || this.procesoId())),
+      procesoId:
+        !this.esRutaMaestra() && this.modoVista() === 'PROCESO'
+          ? (this.contextService.procesoIdActivo() || this.procesoId() || undefined)
+          : undefined,
       superficieCubiertaM2: val.superficieCubiertaM2,
       superficieTotalM2: val.superficieTotalM2,
       observaciones: val.observaciones,
@@ -1143,7 +1194,7 @@ export class InfraestructuraComponent implements OnInit {
 
   cargarGuiaHigiene(): void {
     const pId = this.contextService.procesoIdActivo() || this.procesoId();
-    if (!pId) {
+    if (!this.esRutaMaestra() && !pId) {
       return;
     }
     if (this.loadingHigiene()) {
@@ -1151,7 +1202,12 @@ export class InfraestructuraComponent implements OnInit {
     }
     this.loadingHigiene.set(true);
 
-    this.autoevalService.obtenerGuiaHigienePorProceso(pId)
+    const obs$ =
+      this.esRutaMaestra() || !pId
+        ? this.autoevalService.obtenerGuiaHigieneMaestra()
+        : this.autoevalService.obtenerGuiaHigienePorProceso(pId);
+
+    obs$
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loadingHigiene.set(false))
@@ -1338,11 +1394,20 @@ export class InfraestructuraComponent implements OnInit {
     this.cascadaAsignaturasDisponibles.set([]);
 
     if (carId) {
-      const procId = this.contextService.procesoIdActivo() || undefined;
-      this.planEstudioService.listarPlanes(carId, procId).subscribe({
-        next: (planes) => this.cascadaPlanesDisponibles.set(planes || []),
-        error: () => this.cascadaPlanesDisponibles.set([]),
-      });
+      if (this.esRutaMaestra()) {
+        this.planEstudioService.listarPlanes(carId).subscribe({
+          next: (planes) => this.cascadaPlanesDisponibles.set((planes || []).filter((p) => !p.procesoId)),
+          error: () => this.cascadaPlanesDisponibles.set([]),
+        });
+      } else {
+        const detalle = this.contextService.convocatoriaDetalle();
+        const match = detalle?.carrerasPropuestas?.find((cp) => cp.carreraId === carId);
+        const procId = match?.procesoId || this.contextService.procesoIdActivo() || undefined;
+        this.planEstudioService.listarPlanes(carId, procId).subscribe({
+          next: (planes) => this.cascadaPlanesDisponibles.set(planes || []),
+          error: () => this.cascadaPlanesDisponibles.set([]),
+        });
+      }
     }
   }
 
@@ -1382,7 +1447,7 @@ export class InfraestructuraComponent implements OnInit {
       carreraId: carId,
       carreraNombre: car?.nombre,
       planEstudioId: planId,
-      planEstudioNombre: plan?.codigoResolucion || ('Plan ' + plan?.anioAprobacion),
+      planEstudioNombre: plan?.nombrePlan || plan?.codigoResolucion || ('Plan ' + plan?.anioAprobacion),
       actividadCurricularId: asigId,
       actividadCodigo: asig?.codigo,
       actividadNombre: asig?.nombre,
@@ -1443,27 +1508,71 @@ export class InfraestructuraComponent implements OnInit {
   }
 
   confirmarCopiarDatosCentrales(): void {
-    const pId = this.contextService.procesoIdActivo() || this.procesoId();
-    if (!pId) {
+    const detalle = this.contextService.convocatoriaDetalle();
+    const carrerasDisp = this.contextService.carrerasDisponibles();
+    const carrerasSet = new Set(carrerasDisp.map((c) => c.id));
+    let procIds = Array.from(
+      new Set(
+        (detalle?.carrerasPropuestas || [])
+          .filter((cp) => (carrerasSet.size === 0 || carrerasSet.has(cp.carreraId)) && !!cp.procesoId)
+          .map((cp) => cp.procesoId!)
+      )
+    );
+    if (procIds.length === 0) {
+      const fallback = this.contextService.procesoIdActivo() || this.procesoId();
+      if (fallback) procIds = [fallback];
+    }
+
+    if (procIds.length === 0) {
       alert('Debe seleccionar un proceso de acreditación activo.');
       return;
     }
+
     this.copiandoDatosCentrales.set(true);
-    this.autoevalService.copiarDatosCentrales(pId).subscribe({
-      next: (res) => {
-        this.copiandoDatosCentrales.set(false);
-        this.cerrarModalCopiarDatosCentrales();
-        this.notif.mostrar(
-          this.successMessage,
-          `¡Datos centrales copiados exitosamente! (${res.espaciosFisicosClonados} espacios, ${res.planesClonados} planes, ${res.cuerpoAcademicoClonado} docentes)`,
-          7000
-        );
-        this.cargarInmuebles();
-      },
-      error: (err) => {
-        this.copiandoDatosCentrales.set(false);
-        this.notif.mostrar(this.errorMessage, 'Error al copiar datos maestros: ' + (err.error?.message || err.message), 6000);
-      },
-    });
+    forkJoin(
+      procIds.map((id) => this.autoevalService.copiarDatosCentrales(id).pipe(catchError(() => of(null))))
+    )
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (resultados) => {
+          this.copiandoDatosCentrales.set(false);
+          this.cerrarModalCopiarDatosCentrales();
+          const validos = resultados.filter((r): r is NonNullable<typeof r> => !!r);
+          const espacios = validos.reduce((acc, r) => acc + (r.espaciosFisicosClonados || 0), 0);
+          const planes = validos.reduce((acc, r) => acc + (r.planesClonados || 0), 0);
+          const docentes = validos.reduce((acc, r) => acc + (r.cuerpoAcademicoClonado || 0), 0);
+          this.notif.mostrar(
+            this.successMessage,
+            `¡Datos maestros copiados en copia aislada! (${espacios} espacios, ${planes} planes, ${docentes} docentes)`,
+            7000
+          );
+          this.cargarInmuebles();
+        },
+        error: (err) => {
+          this.copiandoDatosCentrales.set(false);
+          this.notif.mostrar(this.errorMessage, 'Error al copiar datos maestros: ' + (err.error?.message || err.message), 6000);
+        },
+      });
+  }
+
+  eliminarInmueble(inm: Inmueble): void {
+    if (!inm?.id) return;
+    const msg = this.esRutaMaestra()
+      ? `¿Está seguro de eliminar el inmueble maestro "${inm.nombre}"?`
+      : `¿Eliminar "${inm.nombre}" de esta autoevaluación? (No afectará el padrón maestro en Gestión Institucional).`;
+    if (!window.confirm(msg)) return;
+
+    this.autoevalService
+      .eliminarInmueble(inm.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.notif.mostrar(this.successMessage, `Inmueble "${inm.nombre}" eliminado correctamente.`, 5000);
+          this.cargarInmuebles();
+        },
+        error: (err) => {
+          this.notif.mostrar(this.errorMessage, 'Error al eliminar inmueble: ' + (err.error?.message || err.message), 6000);
+        },
+      });
   }
 }

@@ -11,13 +11,20 @@ export class AmbitoPracticaService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/ambitos-practica';
 
-  listarAmbitos(categoria?: TipoCategoriaAmbito, buscar?: string): Observable<AmbitoPractica[]> {
+  listarAmbitos(
+    categoria?: TipoCategoriaAmbito,
+    buscar?: string,
+    procesoId?: string
+  ): Observable<AmbitoPractica[]> {
     let params = new HttpParams();
     if (categoria) {
       params = params.set('categoria', categoria);
     }
     if (buscar && buscar.trim()) {
       params = params.set('q', buscar.trim());
+    }
+    if (procesoId) {
+      params = params.set('procesoId', procesoId);
     }
     return this.http.get<AmbitoPractica[]>(this.baseUrl, { params });
   }

@@ -110,7 +110,7 @@ public class ActividadController {
     }
 
     @PostMapping(value = "/{id}/completar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
     public ResponseEntity<ActividadDetalleResponse> completarActividad(
             @PathVariable UUID id,
             @RequestParam(value = "areasInformadas", required = false) List<String> areasInformadasStr,
@@ -214,7 +214,7 @@ public class ActividadController {
     }
 
     @PostMapping(value = {"/{id}/plazo", "/{id}/extender-plazo"})
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
     public ResponseEntity<ActividadDetalleResponse> extenderPlazo(
             @PathVariable UUID id,
             @RequestParam(value = "fecha", required = false) String fechaStr,
@@ -300,7 +300,7 @@ public class ActividadController {
     }
 
     @PostMapping("/{id}/completar-simple")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
     public ResponseEntity<ActividadDetalleResponse> completarSimple(@PathVariable UUID id) {
         if (planTrabajoRepository == null) {
             throw new IllegalStateException("planTrabajoRepository no está inicializado");

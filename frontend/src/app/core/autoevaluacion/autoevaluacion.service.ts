@@ -131,13 +131,14 @@ export class AutoevaluacionService {
   }
 
   consultarEspaciosPorM2(
-    optionsOrTipoId?: string | { minM2?: number; m2Min?: number; maxM2?: number; m2Max?: number; tipoEspacioId?: string; sedeId?: string },
+    optionsOrTipoId?: string | { procesoId?: string; minM2?: number; m2Min?: number; maxM2?: number; m2Max?: number; tipoEspacioId?: string; sedeId?: string },
     m2Min?: number,
     m2Max?: number,
     sedeId?: string
   ): Observable<ConsultaEspaciosResponse> {
     let params = new HttpParams();
     if (typeof optionsOrTipoId === 'object' && optionsOrTipoId !== null) {
+      if (optionsOrTipoId.procesoId) params = params.set('procesoId', optionsOrTipoId.procesoId);
       if (optionsOrTipoId.tipoEspacioId) params = params.set('tipoEspacioId', optionsOrTipoId.tipoEspacioId);
       const min = optionsOrTipoId.m2Min ?? optionsOrTipoId.minM2;
       if (min !== undefined && min !== null) params = params.set('m2Min', min.toString());

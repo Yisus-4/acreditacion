@@ -30,4 +30,6 @@ public interface SpringDataPlanEstudioFt001Repository extends JpaRepository<Plan
     long countByEsMaestroTrueAndEstadoVigencia(EstadoVigenciaPlan estadoVigencia);
 
     Optional<PlanEstudioFt001JpaEntity> findByProcesoIdAndOrigenMaestroId(UUID procesoId, UUID origenMaestroId);
+
+    List<PlanEstudioFt001JpaEntity> findByOrigenMaestroIdAndActivoTrue(UUID origenMaestroId);
 }

@@ -70,6 +70,7 @@ export interface PlanEstudioFt001 {
   carreraId: string;
   carreraNombre?: string;
   procesoId?: string;
+  nombrePlan?: string;
   codigoResolucion: string;
   anioAprobacion?: number;
   anioInicio?: number;

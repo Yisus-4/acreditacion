@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -110,5 +111,36 @@ class AutoevaluacionCarreraAmbitoDtoTest {
         assertEquals("Actividades de laboratorio", node.get("actividadesPrevistas").asText());
         assertEquals("Observación canónica", node.get("observacionesCarrera").asText());
         assertEquals("Observación canónica", node.get("observaciones").asText());
+    }
+
+    @Test
+    @DisplayName("DTO serializa y deserializa actividadCurricularIds, actividadesVinculadasDetalle y asignaturasManuales")
+    void deberiaSerializarYDeserializarCamposRelacionalesYManuales() throws Exception {
+        UUID actId = UUID.randomUUID();
+        UUID ambitoId = UUID.randomUUID();
+
+        String json = """
+                {
+                  "ambitoId": "%s",
+                  "utilizadoPorCarrera": true,
+                  "actividadCurricularIds": ["%s"],
+                  "asignaturasManuales": ["Taller Optativo"]
+                }
+                """.formatted(ambitoId, actId);
+
+        AutoevaluacionCarreraAmbitoDto dto = objectMapper.readValue(json, AutoevaluacionCarreraAmbitoDto.class);
+        assertEquals(List.of(actId), dto.getActividadCurricularIds());
+        assertEquals(List.of("Taller Optativo"), dto.getAsignaturasManuales());
+
+        dto.setActividadesVinculadasDetalle(List.of(
+                new AutoevaluacionCarreraAmbitoDto.ActividadVinculadaResumen(actId, "101", "Análisis 1")
+        ));
+
+        String serialized = objectMapper.writeValueAsString(dto);
+        JsonNode node = objectMapper.readTree(serialized);
+        assertEquals(actId.toString(), node.get("actividadCurricularIds").get(0).asText());
+        assertEquals("101", node.get("actividadesVinculadasDetalle").get(0).get("codigo").asText());
+        assertEquals("Análisis 1", node.get("actividadesVinculadasDetalle").get(0).get("nombre").asText());
+        assertEquals("Taller Optativo", node.get("asignaturasManuales").get(0).asText());
     }
 }

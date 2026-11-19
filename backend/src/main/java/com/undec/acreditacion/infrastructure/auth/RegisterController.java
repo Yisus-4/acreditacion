@@ -40,7 +40,7 @@ public class RegisterController {
     }
 
     @PostMapping("/register")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<RegisterResponse> register(@RequestBody RegisterRequest request) {
         String passwordHash = passwordHasher.hash(request.password());
         User user = registerUserUseCase.register(request.username(), request.email(), passwordHash);

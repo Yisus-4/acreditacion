@@ -768,7 +768,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
 
   readonly puedeEditarFt012 = computed(() => {
     if (this.esFt012Enviada()) {
-      return this.canManage(); // Solo AEA o ADMINISTRATOR pueden editar una vez remitida
+      return this.canManage(); // Solo AEA puede editar una vez remitida
     }
     return true; // DC y otros pueden editar mientras esté en borrador
   });
@@ -844,20 +844,19 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly canManage = computed(() => {
     const session = this.auth.currentSession;
     if (!session?.user?.roleCodes) return false;
-    return session.user.roleCodes.includes('ADMINISTRATOR') || session.user.roleCodes.includes('AEA');
+    return session.user.roleCodes.includes('AEA');
   });
 
   readonly esAdminOAEA = this.canManage;
 
   readonly isAeaOrDev = computed(() => {
-    return this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA', 'AC_COORDINATOR', 'DEV', 'DEVELOPER');
+    return this.auth.hasAnyRole('AEA', 'AC_COORDINATOR', 'DEV', 'DEVELOPER');
   });
 
   readonly canConfirmarDe = computed(() => {
     const session = this.auth.currentSession;
     if (!session?.user?.roleCodes) return false;
     return (
-      session.user.roleCodes.includes('ADMINISTRATOR') ||
       session.user.roleCodes.includes('AEA') ||
       session.user.roleCodes.includes('SCHOOL_DIRECTOR')
     );

@@ -70,7 +70,7 @@ public class CarreraController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<CarreraResponse> registrar(
             @RequestBody RegistrarCarreraRequest request
     ) {
@@ -95,7 +95,7 @@ public class CarreraController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<CarreraResponse> actualizar(
             @PathVariable UUID id,
             @RequestBody ActualizarCarreraRequest request
@@ -122,7 +122,7 @@ public class CarreraController {
     }
 
     @PatchMapping("/{id}/estado")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<CarreraResponse> cambiarEstado(
             @PathVariable UUID id,
             @RequestBody CambiarEstadoRequest request
@@ -132,7 +132,7 @@ public class CarreraController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA')")
+    @PreAuthorize("hasRole('AEA')")
     public ResponseEntity<Void> eliminar(@PathVariable UUID id) {
         eliminarCarreraUseCase.eliminar(id);
         return ResponseEntity.noContent().build();

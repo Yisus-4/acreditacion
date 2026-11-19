@@ -43,20 +43,20 @@ class UpdateUserServiceTest {
     void updatesUserSuccessfully() {
         UUID userId = UUID.randomUUID();
         User existingUser = User.rehydrate(userId, "old_user", "old@undec.edu.ar", "old_hash", true, false, Set.of());
-        Role role = Role.system(UUID.randomUUID(), "ADMINISTRATOR", "Admin", "Desc");
+        Role role = Role.system(UUID.randomUUID(), "AEA", "AEA", "Desc");
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
         when(userRepository.existsByUsername("new_user")).thenReturn(false);
         when(userRepository.existsByEmail("new@undec.edu.ar")).thenReturn(false);
         when(passwordHasher.hash("new_secret_pwd")).thenReturn("new_hash");
-        when(roleRepository.findByCode("ADMINISTRATOR")).thenReturn(Optional.of(role));
+        when(roleRepository.findByCode("AEA")).thenReturn(Optional.of(role));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateUserCommand command = new UpdateUserCommand(
                 userId,
                 "new_user",
                 "new@undec.edu.ar",
-                List.of("ADMINISTRATOR"),
+                List.of("AEA"),
                 "new_secret_pwd"
         );
 

@@ -38,4 +38,41 @@ public interface SpringDataEspacioFisicoRepository extends JpaRepository<Espacio
             @Param("m2Max") BigDecimal m2Max,
             @Param("sedeId") UUID sedeId
     );
+
+    @Query("SELECT e FROM EspacioFisicoJpaEntity e " +
+           "JOIN e.inmueble i " +
+           "LEFT JOIN i.sede s " +
+           "WHERE e.activo = true " +
+           "AND i.activo = true " +
+           "AND i.esMaestro = true " +
+           "AND e.esMaestro = true " +
+           "AND (:tipoEspacioId IS NULL OR e.tipoEspacio.id = :tipoEspacioId) " +
+           "AND (:m2Min IS NULL OR e.superficieM2 >= :m2Min) " +
+           "AND (:m2Max IS NULL OR e.superficieM2 <= :m2Max) " +
+           "AND (:sedeId IS NULL OR s.id = :sedeId)")
+    List<EspacioFisicoJpaEntity> consultarMaestrosPorFiltros(
+            @Param("tipoEspacioId") UUID tipoEspacioId,
+            @Param("m2Min") BigDecimal m2Min,
+            @Param("m2Max") BigDecimal m2Max,
+            @Param("sedeId") UUID sedeId
+    );
+
+    @Query("SELECT e FROM EspacioFisicoJpaEntity e " +
+           "JOIN e.inmueble i " +
+           "LEFT JOIN i.sede s " +
+           "WHERE e.activo = true " +
+           "AND i.activo = true " +
+           "AND i.procesoId = :procesoId " +
+           "AND e.procesoId = :procesoId " +
+           "AND (:tipoEspacioId IS NULL OR e.tipoEspacio.id = :tipoEspacioId) " +
+           "AND (:m2Min IS NULL OR e.superficieM2 >= :m2Min) " +
+           "AND (:m2Max IS NULL OR e.superficieM2 <= :m2Max) " +
+           "AND (:sedeId IS NULL OR s.id = :sedeId)")
+    List<EspacioFisicoJpaEntity> consultarPorProcesoYFiltros(
+            @Param("procesoId") UUID procesoId,
+            @Param("tipoEspacioId") UUID tipoEspacioId,
+            @Param("m2Min") BigDecimal m2Min,
+            @Param("m2Max") BigDecimal m2Max,
+            @Param("sedeId") UUID sedeId
+    );
 }

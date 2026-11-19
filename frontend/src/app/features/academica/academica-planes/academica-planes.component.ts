@@ -46,14 +46,14 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
             </select>
           </div>
           @if (canEdit()) {
-            <button type="button" class="btn-pri" (click)="modalPlan.set(true)">+ Nuevo Plan de Estudio</button>
+            <button type="button" class="btn-pri" (click)="abrirModalPlan()">+ Nuevo Plan de Estudio</button>
           }
         </div>
 
         <table class="tabla">
           <thead>
             <tr>
-              <th>Carrera</th><th>Plan</th><th>Resolución</th><th>Año</th><th>Actividades</th><th>Estado</th><th>Acciones</th>
+              <th>Carrera</th><th>Plan</th><th>Año</th><th>Actividades</th><th>Estado</th><th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -61,7 +61,6 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
               <tr [class.sel]="planSeleccionado()?.id === p.id">
                 <td>{{ p.carreraNombre || 'Carrera' }}</td>
                 <td><strong>{{ p.nombrePlan }}</strong></td>
-                <td>{{ p.codigoResolucion || '—' }}</td>
                 <td>{{ p.anioAprobacion || '—' }}</td>
                 <td>{{ p.cantidadAsignaturas ?? 0 }}</td>
                 <td>
@@ -71,6 +70,9 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                 </td>
                 <td class="acciones">
                   <button type="button" class="btn-sec" (click)="seleccionarPlan(p)">Ver Actividades Curriculares</button>
+                  @if (isAea()) {
+                    <button type="button" class="btn-sec" (click)="abrirModalPlan(p)">Editar Plan</button>
+                  }
                   @if (canEdit()) {
                     <button type="button" class="btn-xs" (click)="cambiarVigencia(p, p.estadoVigencia === 'VIGENTE' ? 'NO_VIGENTE' : 'VIGENTE')">
                       {{ p.estadoVigencia === 'VIGENTE' ? 'Marcar No Vigente' : 'Marcar Vigente' }}
@@ -78,7 +80,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                   }
                 </td>
               </tr>
-            } @empty { <tr><td colspan="7" class="empty">Sin planes registrados.</td></tr> }
+            } @empty { <tr><td colspan="6" class="empty">Sin planes registrados.</td></tr> }
           </tbody>
         </table>
       </section>
@@ -131,7 +133,10 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
       @if (modalPlan()) {
         <div class="modal-bg">
           <div class="modal-box">
-            <h3>Nuevo Plan de Estudio</h3>
+            <h3>{{ planEditando() ? 'Editar Plan de Estudio' : 'Nuevo Plan de Estudio' }}</h3>
+            @if (planError()) {
+              <div class="alert error"><span>{{ planError() }}</span><button type="button" (click)="planError.set(null)">✕</button></div>
+            }
             <form [formGroup]="planForm" (ngSubmit)="guardarPlan()">
               <label>Carrera *
                 <select formControlName="carreraId">
@@ -140,17 +145,16 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                 </select>
               </label>
               <label>Nombre Plan *<input type="text" formControlName="nombrePlan" placeholder="Plan 2026" /></label>
-              <div class="grid2">
-                <label>Resolución<input type="text" formControlName="codigoResolucion" placeholder="Res. CS 10/26" /></label>
-                <label>Año *<input type="number" formControlName="anioAprobacion" /></label>
-              </div>
+              <label>Año *<input type="number" formControlName="anioAprobacion" /></label>
               <div class="grid2">
                 <label>Duración (años)<input type="number" formControlName="duracionAnios" /></label>
                 <label>Horas Totales<input type="number" formControlName="horasTotales" /></label>
               </div>
               <div class="m-actions">
-                <button type="button" class="btn-sec" (click)="modalPlan.set(false)">Cancelar</button>
-                <button type="submit" class="btn-pri" [disabled]="planForm.invalid">Guardar</button>
+                <button type="button" class="btn-sec" (click)="modalPlan.set(false)" [disabled]="guardandoPlan()">Cancelar</button>
+                <button type="submit" class="btn-pri" [disabled]="guardandoPlan()">
+                  {{ guardandoPlan() ? 'Guardando...' : 'Guardar' }}
+                </button>
               </div>
             </form>
           </div>
@@ -198,20 +202,25 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
     .sub { margin: 4px 0 0; color: #6b7280; font-size: 13px; }
     h3 { margin: 0; font-size: 17px; }
     .tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .tabla th, .tabla td { padding: 9px 10px; border-bottom: 1px solid #f3f4f6; text-align: left; }
-    .tabla tr.sel { background: #fdf2f8; }
+    .tabla thead th { background: #f7f3f5; color: #5a4a53; font-weight: 600; font-size: 13px; border-bottom: 1px solid #e5dde1; padding: 10px 10px; text-align: left; }
+    .tabla td { padding: 9px 10px; border-bottom: 1px solid #f3f4f6; text-align: left; }
+    .tabla tr.sel { background: #faf4f7; box-shadow: inset 3px 0 0 #6b4c5b; }
     .badge { padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
-    .badge.vigente { background: #d1fae5; color: #065f46; }
-    .badge.no-vigente { background: #fee2e2; color: #991b1b; }
+    .badge.vigente { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .badge.no-vigente { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
     .acciones { display: flex; gap: 6px; flex-wrap: wrap; }
-    .btn-pri { background: #6b2442; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-    .btn-sec { background: #f3f4f6; color: #1f2937; border: 1px solid #d1d5db; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
-    .btn-xs { background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
-    .btn-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .btn-pri { background: #6b4c5b; color: #ffffff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background-color 0.15s ease; }
+    .btn-pri:hover { background: #553c48; }
+    .btn-sec { background: #ffffff; color: #5a4a53; border: 1px solid #d1d5db; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s ease; }
+    .btn-sec:hover { background: #fdfafb; border-color: #d9c5ce; color: #6b4c5b; }
+    .btn-xs { background: #fdfafb; color: #6b4c5b; border: 1px solid #d9c5ce; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s ease; }
+    .btn-xs:hover { background: #f5eef1; border-color: #6b4c5b; }
+    .btn-danger { background: #fff5f5; color: #991b1b; border: 1px solid #fecaca; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background-color 0.15s ease; }
+    .btn-danger:hover { background: #fee2e2; }
     .empty { text-align: center; padding: 24px; color: #6b7280; }
     .alert { display: flex; justify-content: space-between; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; }
-    .alert.error { background: #fef2f2; color: #991b1b; }
-    .alert.success { background: #ecfdf5; color: #065f46; }
+    .alert.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .alert.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
     .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
     .modal-box { background: #fff; border-radius: 10px; padding: 20px; width: 100%; max-width: 560px; }
     label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
@@ -238,12 +247,16 @@ export class AcademicaPlanesComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly modalPlan = signal(false);
+  readonly planEditando = signal<PlanEstudioMaestro | null>(null);
+  readonly planError = signal<string | null>(null);
+  readonly guardandoPlan = signal(false);
   readonly modalAsignatura = signal(false);
   readonly asigEditando = signal<ActividadCurricularPlan | null>(null);
 
+  readonly isAea = computed(() => this.auth.hasAnyRole('AEA'));
   readonly canEdit = computed(() => {
     const roles = this.auth.currentSession?.user?.roleCodes ?? [];
-    return roles.some((r) => r === 'ADMIN' || r === 'ADMINISTRATOR' || r === 'AEA' || r === 'DIRECTOR_ESCUELA' || r === 'DIRECTOR_CARRERA');
+    return roles.includes('AEA');
   });
 
   readonly countSeDicta = computed(() => this.asignaturas().filter((a) => a.estadoDictado !== 'NO_SE_DICTA').length);
@@ -251,7 +264,6 @@ export class AcademicaPlanesComponent implements OnInit {
   readonly planForm = this.fb.group({
     carreraId: ['', Validators.required],
     nombrePlan: ['', [Validators.required, Validators.minLength(3)]],
-    codigoResolucion: [''],
     anioAprobacion: [new Date().getFullYear(), [Validators.required, Validators.min(1970)]],
     duracionAnios: [5, [Validators.required, Validators.min(1)]],
     horasTotales: [3000, [Validators.required, Validators.min(100)]],
@@ -289,24 +301,67 @@ export class AcademicaPlanesComponent implements OnInit {
       });
   }
 
+  abrirModalPlan(plan?: PlanEstudioMaestro): void {
+    this.planError.set(null);
+    this.planEditando.set(plan || null);
+    this.planForm.reset({
+      carreraId: plan?.carreraId || this.carreraId() || '',
+      nombrePlan: plan?.nombrePlan || '',
+      anioAprobacion: plan?.anioAprobacion || new Date().getFullYear(),
+      duracionAnios: plan?.duracionAnios || 5,
+      horasTotales: plan?.horasTotales || 3000,
+    });
+    this.modalPlan.set(true);
+  }
+
   guardarPlan(): void {
-    if (this.planForm.invalid) return;
+    this.planError.set(null);
+    if (this.planForm.invalid) {
+      this.planForm.markAllAsTouched();
+      const c = this.planForm.controls;
+      if (c.carreraId.invalid) {
+        this.planError.set('Debe seleccionar una Carrera.');
+      } else if (c.nombrePlan.invalid) {
+        this.planError.set('El nombre del plan es obligatorio (mínimo 3 caracteres).');
+      } else if (c.anioAprobacion.invalid) {
+        this.planError.set('Ingrese un año válido (1970 o posterior).');
+      } else if (c.duracionAnios.invalid) {
+        this.planError.set('La duración debe ser al menos 1 año.');
+      } else if (c.horasTotales.invalid) {
+        this.planError.set('Las horas totales deben ser al menos 100.');
+      } else {
+        this.planError.set('Revise los campos obligatorios del formulario.');
+      }
+      return;
+    }
     const v = this.planForm.value;
-    this.datos.crearPlanEstudio({
+    const payload = {
       carreraId: v.carreraId!,
       nombrePlan: v.nombrePlan!,
-      codigoResolucion: v.codigoResolucion || undefined,
       anioAprobacion: Number(v.anioAprobacion),
       duracionAnios: Number(v.duracionAnios),
       horasTotales: Number(v.horasTotales),
-    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    };
+    const editando = this.planEditando();
+    this.guardandoPlan.set(true);
+    const obs$ = editando
+      ? this.datos.actualizarPlanEstudio(editando.id, payload)
+      : this.datos.crearPlanEstudio(payload);
+
+    obs$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
+        this.guardandoPlan.set(false);
         this.modalPlan.set(false);
-        this.planForm.reset({ carreraId: '', nombrePlan: '', codigoResolucion: '', anioAprobacion: new Date().getFullYear(), duracionAnios: 5, horasTotales: 3000 });
-        this.successMessage.set('Plan de estudio creado.');
+        this.planEditando.set(null);
+        this.planForm.reset({ carreraId: '', nombrePlan: '', anioAprobacion: new Date().getFullYear(), duracionAnios: 5, horasTotales: 3000 });
+        this.successMessage.set(editando ? 'Plan de estudio actualizado.' : 'Plan de estudio creado.');
         this.cargarPlanes();
       },
-      error: (err) => this.errorMessage.set('Error al crear plan: ' + (err.error?.message || err.message)),
+      error: (err) => {
+        this.guardandoPlan.set(false);
+        const msg = err.error?.message || (err.status === 403 ? 'Solo usuarios con rol AEA pueden editar planes de estudio.' : err.message);
+        this.planError.set('Error al guardar plan: ' + msg);
+      },
     });
   }
 

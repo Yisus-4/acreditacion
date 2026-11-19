@@ -64,7 +64,7 @@ export class NormativaDetalleComponent implements OnInit, OnChanges {
 
   readonly esAeaOAdmin = computed(() => {
     const roles = this.auth.currentSession?.user?.roleCodes ?? [];
-    return roles.includes('ADMINISTRATOR') || roles.includes('AEA');
+    return roles.includes('AEA');
   });
 
   readonly puedeEditarBorradores = computed(() => {

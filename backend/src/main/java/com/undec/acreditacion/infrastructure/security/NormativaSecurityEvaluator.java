@@ -20,7 +20,7 @@ public class NormativaSecurityEvaluator {
         if (auth == null || !auth.isAuthenticated()) {
             return false;
         }
-        if (hasRole(auth, "ADMINISTRATOR") || hasRole(auth, "AEA")) {
+        if (hasRole(auth, "AEA")) {
             return true;
         }
         return hasRole(auth, "CAREER_DIRECTOR")
@@ -35,7 +35,7 @@ public class NormativaSecurityEvaluator {
         if (auth == null || !auth.isAuthenticated()) {
             return false;
         }
-        if (hasRole(auth, "ADMINISTRATOR") || hasRole(auth, "AEA")) {
+        if (hasRole(auth, "AEA")) {
             return true;
         }
         return hasRole(auth, "CAREER_DIRECTOR")
@@ -48,8 +48,7 @@ public class NormativaSecurityEvaluator {
         if (auth == null || !auth.isAuthenticated()) {
             return false;
         }
-        return hasRole(auth, "ADMINISTRATOR")
-                || hasRole(auth, "AEA")
+        return hasRole(auth, "AEA")
                 || hasAuthority(auth, "NORMATIVA_REVISAR");
     }
 
@@ -57,8 +56,7 @@ public class NormativaSecurityEvaluator {
         if (auth == null || !auth.isAuthenticated()) {
             return false;
         }
-        return hasRole(auth, "ADMINISTRATOR")
-                || hasRole(auth, "AEA")
+        return hasRole(auth, "AEA")
                 || hasRole(auth, "CAREER_DIRECTOR")
                 || hasAuthority(auth, "NORMATIVA_EXPORT_INFO");
     }

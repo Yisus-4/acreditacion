@@ -89,7 +89,7 @@ public class FormalizacionController {
     // =========================================================================
 
     @GetMapping("/actividades/{actividadId}/documentos")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<List<DocumentoAcreditacionResponse>> listarDocumentosActividad(
             @PathVariable UUID procesoId,
             @PathVariable UUID actividadId
@@ -102,7 +102,7 @@ public class FormalizacionController {
     }
 
     @PostMapping(value = "/actividades/{actividadId}/documentos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
     @Transactional
     public ResponseEntity<DocumentoAcreditacionResponse> subirDocumentoInteres(
             @PathVariable UUID procesoId,
@@ -146,7 +146,7 @@ public class FormalizacionController {
     }
 
     @DeleteMapping("/actividades/{actividadId}/documentos/{documentoId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
     @Transactional
     public ResponseEntity<Void> eliminarDocumentoInteres(
             @PathVariable UUID procesoId,
@@ -166,7 +166,7 @@ public class FormalizacionController {
     }
 
     @GetMapping("/actividades/{actividadId}/documentos/{documentoId}/descargar")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<byte[]> descargarDocumentoInteres(
             @PathVariable UUID procesoId,
             @PathVariable UUID actividadId,
@@ -183,7 +183,7 @@ public class FormalizacionController {
     }
 
     @PostMapping("/actividades/{actividadId}/completar-documentacion-interes")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
     @Transactional
     public ResponseEntity<ActividadDetalleResponse> completarDocumentacionInteres(
             @PathVariable UUID procesoId,
@@ -223,7 +223,7 @@ public class FormalizacionController {
     // =========================================================================
 
     @GetMapping("/formalizacion")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     @Transactional
     public ResponseEntity<FichaFormalizacionFt012Response> obtenerFormalizacion(@PathVariable UUID procesoId) {
         Optional<FichaFormalizacionFt012JpaEntity> fichaOpt = fichaRepository.findByProcesoId(procesoId);
@@ -243,7 +243,7 @@ public class FormalizacionController {
     }
 
     @PostMapping("/formalizacion/solicitar")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
     @Transactional
     public ResponseEntity<FichaFormalizacionFt012Response> solicitarFichaFormalizacion(@PathVariable UUID procesoId) {
         UUID usuarioId = resolverUsuarioAutenticadoId();
@@ -273,7 +273,7 @@ public class FormalizacionController {
     }
 
     @PutMapping("/formalizacion/ficha")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     @Transactional
     public ResponseEntity<FichaFormalizacionFt012Response> guardarFichaFormalizacion(
             @PathVariable UUID procesoId,
@@ -321,7 +321,7 @@ public class FormalizacionController {
     }
 
     @PostMapping(value = "/formalizacion/formalizar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('ACTIVIDAD_MANAGE')")
     @Transactional
     public ResponseEntity<FichaFormalizacionFt012Response> formalizarEnConeau(
             @PathVariable UUID procesoId,
@@ -397,7 +397,7 @@ public class FormalizacionController {
     }
 
     @GetMapping("/formalizacion/comprobante")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<byte[]> descargarComprobanteFormalizacion(@PathVariable UUID procesoId) {
         FichaFormalizacionFt012JpaEntity ficha = fichaRepository.findByProcesoId(procesoId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró la ficha de formalización FT-012 para el proceso: " + procesoId));
@@ -812,12 +812,11 @@ public class FormalizacionController {
             return true;
         }
         if (auth.getAuthorities() != null && auth.getAuthorities().stream().anyMatch(a ->
-                a.getAuthority().equals("ROLE_ADMINISTRATOR") || a.getAuthority().equals("ROLE_AEA")
-                        || a.getAuthority().equals("ADMINISTRATOR") || a.getAuthority().equals("AEA"))) {
+                a.getAuthority().equals("ROLE_AEA") || a.getAuthority().equals("AEA"))) {
             return true;
         }
         return userOpt.map(u -> u.getRoles().stream()
-                .anyMatch(r -> "ADMINISTRATOR".equals(r.getCode()) || "AEA".equals(r.getCode())))
+                .anyMatch(r -> "AEA".equals(r.getCode())))
                 .orElse(false);
     }
 

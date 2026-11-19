@@ -52,7 +52,7 @@ public class ConvenioController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('CONVOCATORIA_MANAGE')")
     public ResponseEntity<ConvenioInstitucionalDto> crear(@RequestBody ConvenioInstitucionalDto dto) {
         if (dto.contraparte() == null || dto.contraparte().isBlank()) {
             throw new DomainValidationException("La contraparte del convenio es obligatoria");
@@ -70,7 +70,7 @@ public class ConvenioController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('CONVOCATORIA_MANAGE')")
     public ResponseEntity<ConvenioInstitucionalDto> actualizar(@PathVariable UUID id, @RequestBody ConvenioInstitucionalDto dto) {
         ConvenioInstitucionalJpaEntity entity = convenioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el convenio con ID: " + id));
@@ -87,7 +87,7 @@ public class ConvenioController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('CONVOCATORIA_MANAGE')")
     public ResponseEntity<Void> eliminar(@PathVariable UUID id) {
         if (!convenioRepository.existsById(id)) {
             throw new ResourceNotFoundException("No se encontró el convenio con ID: " + id);

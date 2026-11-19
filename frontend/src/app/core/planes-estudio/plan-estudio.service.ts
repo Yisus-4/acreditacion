@@ -65,4 +65,31 @@ export class PlanEstudioService {
       { estadoDictado }
     );
   }
+
+  obtenerEstadoActividad83(
+    procesoId?: string,
+    planEstudioId?: string
+  ): Observable<{ completada: boolean; totalAsignaturas: number }> {
+    let params = new HttpParams();
+    if (procesoId) params = params.set('procesoId', procesoId);
+    if (planEstudioId) params = params.set('planEstudioId', planEstudioId);
+    return this.http.get<{ completada: boolean; totalAsignaturas: number }>(
+      `${this.baseUrl}/estado-actividad-8-3`,
+      { params }
+    );
+  }
+
+  validarYCompletarActividad83(
+    procesoId?: string,
+    planEstudioId?: string
+  ): Observable<{ success: boolean; completada: boolean; totalAsignaturas: number; mensaje: string }> {
+    let params = new HttpParams();
+    if (procesoId) params = params.set('procesoId', procesoId);
+    if (planEstudioId) params = params.set('planEstudioId', planEstudioId);
+    return this.http.post<{ success: boolean; completada: boolean; totalAsignaturas: number; mensaje: string }>(
+      `${this.baseUrl}/validar-completar-8-3`,
+      {},
+      { params }
+    );
+  }
 }

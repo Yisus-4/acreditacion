@@ -83,7 +83,7 @@ class SecurityConfigurationTest {
         TokenPayload payload = new TokenPayload(
                 UUID.randomUUID(),
                 "admin@undec.edu.ar",
-                List.of("ADMINISTRATOR"),
+                List.of("AEA"),
                 Instant.now().plusSeconds(3600)
         );
         when(tokenService.validateToken(token)).thenReturn(Optional.of(payload));

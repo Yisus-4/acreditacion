@@ -31,7 +31,7 @@ class JwtTokenServiceTest {
     void generatesAndDecodesToken() {
         UUID userId = UUID.randomUUID();
         String email = "admin@undec.edu.ar";
-        List<String> roles = List.of("ADMINISTRATOR", "AC_COORDINATOR");
+        List<String> roles = List.of("AEA", "AC_COORDINATOR");
 
         String token = jwtTokenService.generateToken(userId, email, roles);
 
@@ -55,7 +55,7 @@ class JwtTokenServiceTest {
         JwtTokenService expiredService = new JwtTokenService(SECRET_256_BIT, -1000); // expired 1 sec ago
         UUID userId = UUID.randomUUID();
 
-        String token = expiredService.generateToken(userId, "admin@undec.edu.ar", List.of("ADMIN"));
+        String token = expiredService.generateToken(userId, "admin@undec.edu.ar", List.of("AEA"));
 
         Optional<TokenPayload> payload = jwtTokenService.validateToken(token);
 

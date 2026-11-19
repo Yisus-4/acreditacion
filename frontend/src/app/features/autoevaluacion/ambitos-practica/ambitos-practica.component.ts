@@ -15,6 +15,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angu
 import { SubnavAutoevaluacionComponent } from '../subnav-autoevaluacion/subnav-autoevaluacion.component';
 import { AmbitoPracticaService } from '../../../core/ambitos-practica/ambito-practica.service';
 import {
+  ActividadVinculadaResumen,
   AmbitoPractica,
   AutoevaluacionCarreraAmbito,
   TipoCategoriaAmbito,
@@ -87,22 +88,44 @@ export class AmbitosPracticaComponent implements OnInit {
   readonly actividadSeleccionada = signal<ActividadAmbitoTipo | null>(null);
   readonly procesoId = signal<string | null>(null);
   readonly filtroActividadesTexto = signal<string>('');
+  private lastLoadedKey = '';
 
-  // Tabs de categoría en el modo Maestro RG-006
+  // Tabs de categoría en la gestión aislada RG-006
   readonly tabCategoriaMaestro = signal<TipoCategoriaAmbito>('INTERNO');
   readonly searchQuery = signal<string>('');
 
-  // Selector de carrera para las fichas específicas
+  // Selector de carrera para la autoevaluación de ámbitos
   readonly carreraSeleccionadaId = signal<string>('');
+
+  readonly procesoIdEfectivo = computed<string | null>(() => {
+    const cId = this.carreraSeleccionadaId();
+    const detalle = this.contextService.convocatoriaDetalle();
+    if (cId && detalle?.carrerasPropuestas?.length) {
+      const match = detalle.carrerasPropuestas.find((cp) => cp.carreraId === cId);
+      if (match?.procesoId) {
+        return match.procesoId;
+      }
+    }
+    return this.contextService.procesoIdActivo() || this.procesoId();
+  });
+
+  readonly nombreCarreraActiva = computed<string>(() => {
+    const cId = this.carreraSeleccionadaId();
+    return (
+      this.carreras().find((c) => c.id === cId)?.nombre ||
+      this.contextService.carreraActiva()?.nombre ||
+      'Carrera seleccionada'
+    );
+  });
 
   // Precedencia PRG-002: Plan debe tener asignaturas cargadas
   readonly tieneAsignaturas = computed(() => this.asignaturasDelPlan().length > 0);
   readonly puedeCompletarActividadesPractica = computed(() => this.tieneAsignaturas());
 
   // Permisos y Roles (Strict Granular Roles PRG-002 / CONEAU)
-  readonly esAdmin = computed(() => this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN'));
+  readonly esAdmin = computed(() => this.auth.hasAnyRole('AEA'));
   readonly puedeGestionarPadronMaestroRg006 = computed(() =>
-    this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA')
+    this.auth.hasAnyRole('AEA')
   );
 
   readonly perteneceACarreraActiva = computed(() => {
@@ -110,8 +133,8 @@ export class AmbitosPracticaComponent implements OnInit {
     const user = this.auth.currentSession?.user;
     const carreraId = this.carreraSeleccionadaId() || this.contextService.carreraSeleccionadaId();
     const carrera =
-      this.contextService.carreraActiva() ||
-      this.carreras().find((c) => c.id === carreraId);
+      this.carreras().find((c) => c.id === carreraId) ||
+      this.contextService.carreraActiva();
     if (!user?.unidadAcademicaId || !carrera) return false;
     return carrera.unidadAcademicaId === user.unidadAcademicaId;
   });
@@ -131,6 +154,10 @@ export class AmbitosPracticaComponent implements OnInit {
     );
   });
 
+  readonly puedeGestionarAmbitosCarrera = computed(() =>
+    this.puedeGestionarPadronMaestroRg006() || this.puedeEditarFichasAmbitos()
+  );
+
   readonly puedeCompletarActividadAmbito = computed(() => {
     if (!this.puedeEditarFichasAmbitos()) return false;
     if (!this.tieneAsignaturas()) return false;
@@ -143,20 +170,56 @@ export class AmbitosPracticaComponent implements OnInit {
     return this.tieneVinculacionTipo(tipo);
   });
 
-  // Modal Alta / Modificación Maestro
+  // Modal Alta / Modificación en copia de la carrera
   readonly modalAbierto = signal<boolean>(false);
   readonly ambitoSeleccionadoId = signal<string | null>(null);
   readonly guardando = signal<boolean>(false);
+
+  // Modal Copiar Datos Maestros (RG-006) para la carrera activa
+  readonly modalCopiarAbierto = signal<boolean>(false);
+  readonly copiandoMaestros = signal<boolean>(false);
+  readonly modoCopiaMaestros = signal<'INICIALIZAR_O_AGREGAR_FALTANTES' | 'REEMPLAZAR_COPIA'>(
+    'INICIALIZAR_O_AGREGAR_FALTANTES'
+  );
 
   // Modal Vinculación Carrera (Snapshot)
   readonly modalVinculacionAbierto = signal<boolean>(false);
   readonly ambitoParaVincular = signal<AmbitoPractica | null>(null);
 
   // Modal Vinculación Chips & Filtros
-  readonly asignaturasSeleccionadasChips = signal<string[]>([]);
+  readonly actividadesSeleccionadasIds = signal<string[]>([]);
+  readonly actividadesDetallePrevio = signal<ActividadVinculadaResumen[]>([]);
+  readonly asignaturasManualesChips = signal<string[]>([]);
   readonly filtroAsignaturasTexto = signal<string>('');
   readonly docentesSeleccionadosChips = signal<string[]>([]);
   readonly filtroDocentesTexto = signal<string>('');
+
+  readonly chipsAsignaturasSeleccionadas = computed(() => {
+    const asigsPlan = this.asignaturasDelPlan();
+    const detallePrevio = this.actividadesDetallePrevio();
+    const chips: Array<{
+      tipo: 'actividad' | 'manual';
+      key: string;
+      id?: string;
+      manualValue?: string;
+      label: string;
+    }> = [];
+
+    for (const id of this.actividadesSeleccionadasIds()) {
+      const asig = asigsPlan.find((a) => a.id === id);
+      const det = detallePrevio.find((d) => d.id === id);
+      const nombre = asig?.nombre ?? det?.nombre ?? id;
+      const codigo = (asig?.codigo ?? det?.codigo)?.trim();
+      const label = codigo ? `${nombre} [${codigo}]` : nombre;
+      chips.push({ tipo: 'actividad', key: `act:${id}`, id, label });
+    }
+
+    for (const manual of this.asignaturasManualesChips()) {
+      chips.push({ tipo: 'manual', key: `man:${manual}`, manualValue: manual, label: manual });
+    }
+
+    return chips;
+  });
 
   readonly asignaturasFiltradasParaModal = computed(() => {
     const q = this.filtroAsignaturasTexto().toLowerCase().trim();
@@ -216,12 +279,12 @@ export class AmbitosPracticaComponent implements OnInit {
     const actividades = [
       {
         id: 'MAESTRO_RG006' as const,
-        nombre: 'Gestionar información sobre ámbitos de formación práctica y unidades demostrativas',
-        responsable: 'Comisión de Carrera / AEA / SGA',
-        instrumento: 'Formulario CONEAU (RG-006)',
-        dependencia: '',
+        nombre: 'Gestionar ámbitos de formación práctica de la carrera (Copia RG-006)',
+        responsable: 'Dirección de Carrera / Comisión de Autoevaluación / AEA',
+        instrumento: 'Registro RG-006: Copia aislada desde maestro (Alta, Baja y Modificación)',
+        dependencia: 'Copia los ámbitos maestros institucionales y los adapta a la carrera',
         completada: tieneAmbitos,
-        estado: tieneAmbitos ? 'Completada' : 'Pendiente',
+        estado: tieneAmbitos ? `Copiado (${this.ambitos().length})` : 'Sin copiar',
         tipoFicha: undefined as TipoCategoriaAmbito | undefined,
       },
       {
@@ -314,17 +377,44 @@ export class AmbitosPracticaComponent implements OnInit {
 
   constructor() {
     effect(() => {
-      const ctxProcesoId = this.contextService.procesoIdActivo();
-      if (ctxProcesoId && ctxProcesoId !== this.procesoId()) {
-        this.procesoId.set(ctxProcesoId);
+      const disp = this.contextService.carrerasDisponibles();
+      if (disp.length > 0) {
+        this.carreras.set(disp);
+        if (!this.carreraSeleccionadaId() || !disp.some((c) => c.id === this.carreraSeleccionadaId())) {
+          const ctxCarId = this.contextService.carreraSeleccionadaId() || disp[0].id;
+          this.carreraSeleccionadaId.set(ctxCarId);
+        }
       }
+
       const ctxCarreraId = this.contextService.carreraSeleccionadaId();
-      if (ctxCarreraId && ctxCarreraId !== this.carreraSeleccionadaId()) {
+      if (ctxCarreraId && !this.carreraSeleccionadaId()) {
         this.carreraSeleccionadaId.set(ctxCarreraId);
-        this.cargarAutoevaluaciones();
-        this.cargarAsignaturasDelPlan();
       }
+
+      this.cargarDatosDeCarreraActiva();
     });
+  }
+
+  private cargarDatosDeCarreraActiva(force = false): void {
+    const pId = this.procesoIdEfectivo();
+    const cId = this.carreraSeleccionadaId();
+    const loadKey = `${pId || ''}|${cId || ''}`;
+    if (loadKey === '|') {
+      return;
+    }
+    if (!force && loadKey === this.lastLoadedKey) {
+      return;
+    }
+    this.lastLoadedKey = loadKey;
+
+    if (pId !== this.procesoId()) {
+      this.procesoId.set(pId);
+    }
+    this.actividadesCompletadas.set(new Set());
+    this.cargarAmbitos();
+    this.cargarAutoevaluaciones();
+    this.cargarAsignaturasDelPlan();
+    this.cargarInmueblesProceso();
   }
 
   ngOnInit(): void {
@@ -354,41 +444,57 @@ export class AmbitosPracticaComponent implements OnInit {
       ) {
         this.actividadSeleccionada.set(act);
       }
-      this.cargarAutoevaluaciones();
-      this.cargarAsignaturasDelPlan();
+      this.cargarDatosDeCarreraActiva(true);
     });
 
     this.cargarDatosIniciales();
   }
 
   cargarDatosIniciales(): void {
-    this.loading.set(true);
-
-    this.estructuraService.listarCarreras().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (data: CarreraResponse[]) => {
-        this.carreras.set(data);
-        if (data.length > 0 && !this.carreraSeleccionadaId()) {
-          const fallbackId = this.contextService.carreraSeleccionadaId() || data[0].id;
-          this.carreraSeleccionadaId.set(fallbackId);
-        }
-        this.cargarAutoevaluaciones();
-        this.cargarAsignaturasDelPlan();
-      },
-      error: () => {},
-    });
+    const convDisp = this.contextService.carrerasDisponibles();
+    if (convDisp.length > 0) {
+      this.carreras.set(convDisp);
+      if (!this.carreraSeleccionadaId() || !convDisp.some((c) => c.id === this.carreraSeleccionadaId())) {
+        const fallbackId = this.contextService.carreraSeleccionadaId() || convDisp[0].id;
+        this.carreraSeleccionadaId.set(fallbackId);
+      }
+      this.cargarDatosDeCarreraActiva();
+    } else {
+      this.estructuraService.listarCarreras().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: (data: CarreraResponse[]) => {
+          this.carreras.set(data);
+          if (data.length > 0 && !this.carreraSeleccionadaId()) {
+            const fallbackId = this.contextService.carreraSeleccionadaId() || data[0].id;
+            this.carreraSeleccionadaId.set(fallbackId);
+          }
+          this.cargarDatosDeCarreraActiva();
+        },
+        error: () => {},
+      });
+    }
 
     this.convenioService.listarConvenios().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => this.convenios.set(data),
       error: () => {},
     });
 
-    this.autoevaluacionService.listarInmueblesMaestros().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (data: Inmueble[]) => this.inmuebles.set(data),
-      error: () => {},
-    });
-
     this.cargarDocentes();
-    this.cargarAmbitos();
+    this.cargarDatosDeCarreraActiva();
+  }
+
+  cargarInmueblesProceso(): void {
+    const pId = this.procesoIdEfectivo();
+    if (!pId) {
+      this.inmuebles.set([]);
+      return;
+    }
+    this.autoevaluacionService
+      .obtenerInmueblesPorProceso(pId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data: Inmueble[]) => this.inmuebles.set(data),
+        error: () => this.inmuebles.set([]),
+      });
   }
 
   cargarDocentes(): void {
@@ -400,7 +506,7 @@ export class AmbitosPracticaComponent implements OnInit {
 
   cargarAsignaturasDelPlan(): void {
     const carreraId = this.carreraSeleccionadaId() || this.contextService.carreraSeleccionadaId();
-    const procesoId = this.procesoId() || this.contextService.procesoIdActivo();
+    const procesoId = this.procesoIdEfectivo();
     if (!carreraId && !procesoId) {
       this.asignaturasDelPlan.set([]);
       return;
@@ -410,7 +516,7 @@ export class AmbitosPracticaComponent implements OnInit {
       next: (planes) => {
         if (planes && planes.length > 0 && planes[0].id) {
           this.planService.listarAsignaturas(planes[0].id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-            next: (asigs) => this.asignaturasDelPlan.set(asigs),
+            next: (asigs) => this.asignaturasDelPlan.set(asigs.filter((a) => a.estadoDictado !== 'NO_SE_DICTA')),
             error: () => this.asignaturasDelPlan.set([]),
           });
         } else {
@@ -422,7 +528,14 @@ export class AmbitosPracticaComponent implements OnInit {
   }
 
   cargarAmbitos(): void {
-    this.ambitoService.listarAmbitos().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    const pId = this.procesoIdEfectivo();
+    if (!pId) {
+      this.ambitos.set([]);
+      this.loading.set(false);
+      return;
+    }
+    this.loading.set(true);
+    this.ambitoService.listarAmbitos(undefined, undefined, pId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => {
         this.ambitos.set(data);
         this.loading.set(false);
@@ -436,10 +549,13 @@ export class AmbitosPracticaComponent implements OnInit {
 
   cargarAutoevaluaciones(): void {
     const carreraId = this.carreraSeleccionadaId() || this.contextService.carreraSeleccionadaId();
-    if (!carreraId) return;
-    const procesoId = this.procesoId() || this.contextService.procesoIdActivo();
+    const procesoId = this.procesoIdEfectivo();
+    if (!carreraId && !procesoId) {
+      this.autoevaluaciones.set([]);
+      return;
+    }
 
-    this.ambitoService.listarAutoevaluaciones(carreraId, procesoId || undefined).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.ambitoService.listarAutoevaluaciones(carreraId || undefined, procesoId || undefined).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => this.autoevaluaciones.set(data),
       error: () => {},
     });
@@ -481,8 +597,7 @@ export class AmbitosPracticaComponent implements OnInit {
     const select = event.target as HTMLSelectElement;
     this.carreraSeleccionadaId.set(select.value);
     this.contextService.seleccionarCarrera(select.value);
-    this.cargarAutoevaluaciones();
-    this.cargarAsignaturasDelPlan();
+    this.cargarDatosDeCarreraActiva(true);
   }
 
   seleccionarTabMaestro(tipo: TipoCategoriaAmbito): void {
@@ -546,9 +661,67 @@ export class AmbitosPracticaComponent implements OnInit {
     this.ambitoSeleccionadoId.set(null);
   }
 
+  abrirModalCopiarMaestros(): void {
+    this.modoCopiaMaestros.set('INICIALIZAR_O_AGREGAR_FALTANTES');
+    this.modalCopiarAbierto.set(true);
+  }
+
+  cerrarModalCopiarMaestros(): void {
+    if (this.copiandoMaestros()) return;
+    this.modalCopiarAbierto.set(false);
+  }
+
+  confirmarCopiarMaestros(): void {
+    if (!this.puedeGestionarAmbitosCarrera()) {
+      this.notif.mostrar(this.errorMessage, 'No posee permisos para copiar ámbitos maestros a esta carrera.', 6000);
+      return;
+    }
+    const pId = this.procesoIdEfectivo();
+    if (!pId) {
+      this.notif.mostrar(this.errorMessage, 'Debe seleccionar una carrera con proceso de autoevaluación activo.', 6000);
+      return;
+    }
+
+    this.copiandoMaestros.set(true);
+    this.autoevaluacionService
+      .copiarDatosCentrales(pId, {
+        modo: this.modoCopiaMaestros(),
+        secciones: ['AMBITOS_PRACTICA'],
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.copiandoMaestros.set(false);
+          this.modalCopiarAbierto.set(false);
+          const cant = res?.ambitosPracticaClonados ?? 0;
+          this.notif.mostrar(
+            this.successMessage,
+            `Copia completada para ${this.nombreCarreraActiva()}: ${cant} ámbitos de práctica copiados desde el Padrón Maestro (RG-006).`,
+            7000
+          );
+          this.cargarAmbitos();
+          this.cargarAutoevaluaciones();
+        },
+        error: (err) => {
+          this.copiandoMaestros.set(false);
+          this.notif.mostrar(
+            this.errorMessage,
+            'Error al copiar ámbitos maestros: ' + (err.error?.message || err.message),
+            6000
+          );
+        },
+      });
+  }
+
   guardar(): void {
-    if (!this.puedeGestionarPadronMaestroRg006()) {
-      this.notif.mostrar(this.errorMessage, 'No posee permisos para gestionar el padrón maestro de ámbitos de práctica.', 6000);
+    if (!this.puedeGestionarAmbitosCarrera()) {
+      this.notif.mostrar(this.errorMessage, 'No posee permisos para gestionar los ámbitos de práctica de esta carrera.', 6000);
+      return;
+    }
+
+    const pId = this.procesoIdEfectivo();
+    if (!pId) {
+      this.notif.mostrar(this.errorMessage, 'Debe seleccionar una carrera con proceso de autoevaluación activo.', 6000);
       return;
     }
 
@@ -574,6 +747,8 @@ export class AmbitosPracticaComponent implements OnInit {
       especiesAnimalesCultivos: formVal.especiesAnimalesCultivos || undefined,
       numeroAnimales: formVal.numeroAnimales ? Number(formVal.numeroAnimales) : undefined,
       actividadAlumnoCam: formVal.actividadAlumnoCam || undefined,
+      esMaestro: false,
+      procesoId: pId,
       activo: formVal.activo ?? true,
     };
 
@@ -581,7 +756,7 @@ export class AmbitosPracticaComponent implements OnInit {
     if (id) {
       this.ambitoService.actualizarAmbito(id, dto).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
-          this.notif.mostrar(this.successMessage, 'Ámbito de práctica actualizado.', 6000);
+          this.notif.mostrar(this.successMessage, 'Ámbito de práctica actualizado en la carrera.', 6000);
           this.guardando.set(false);
           this.cerrarModal();
           this.cargarAmbitos();
@@ -594,7 +769,7 @@ export class AmbitosPracticaComponent implements OnInit {
     } else {
       this.ambitoService.crearAmbito(dto).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
-          this.notif.mostrar(this.successMessage, 'Ámbito de práctica registrado en el padrón maestro.', 6000);
+          this.notif.mostrar(this.successMessage, `Ámbito de práctica registrado en la autoevaluación de ${this.nombreCarreraActiva()}.`, 6000);
           this.guardando.set(false);
           this.cerrarModal();
           this.cargarAmbitos();
@@ -608,17 +783,18 @@ export class AmbitosPracticaComponent implements OnInit {
   }
 
   eliminar(ambito: AmbitoPractica): void {
-    if (!this.puedeGestionarPadronMaestroRg006()) {
-      this.notif.mostrar(this.errorMessage, 'No posee permisos para eliminar ámbitos del padrón maestro.', 6000);
+    if (!this.puedeGestionarAmbitosCarrera()) {
+      this.notif.mostrar(this.errorMessage, 'No posee permisos para eliminar ámbitos de práctica de esta carrera.', 6000);
       return;
     }
     if (!ambito.id) return;
-    if (!confirm(`¿Eliminar el ámbito "${ambito.denominacion}"?`)) return;
+    if (!confirm(`¿Eliminar el ámbito "${ambito.denominacion}" de la autoevaluación de ${this.nombreCarreraActiva()}?\n\nEsto no afectará el Padrón Maestro Institucional (RG-006) ni otras carreras.`)) return;
 
     this.ambitoService.eliminarAmbito(ambito.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
-        this.notif.mostrar(this.successMessage, 'Ámbito eliminado.', 6000);
+        this.notif.mostrar(this.successMessage, 'Ámbito eliminado de la copia de la carrera.', 6000);
         this.cargarAmbitos();
+        this.cargarAutoevaluaciones();
       },
       error: (err) => {
         this.notif.mostrar(this.errorMessage, 'No se pudo eliminar el ámbito: ' + (err.error?.message || err.message), 6000);
@@ -642,10 +818,43 @@ export class AmbitosPracticaComponent implements OnInit {
         observaciones: evaluacionExistente.observaciones || '',
       });
 
-      const asigTokens = evaluacionExistente.asignaturasVinculadas
-        ? evaluacionExistente.asignaturasVinculadas.split(/[,;]/).map((s) => s.trim()).filter((s) => s.length > 0)
-        : [];
-      this.asignaturasSeleccionadasChips.set(asigTokens);
+      const idsRelacionados = (evaluacionExistente.actividadCurricularIds ?? []).filter(
+        (id): id is string => !!id
+      );
+      this.actividadesDetallePrevio.set(evaluacionExistente.actividadesVinculadasDetalle ?? []);
+
+      const rawManuales =
+        evaluacionExistente.asignaturasManuales !== undefined
+          ? evaluacionExistente.asignaturasManuales
+          : evaluacionExistente.asignaturasVinculadas
+            ? evaluacionExistente.asignaturasVinculadas
+                .split(/[,;]/)
+                .map((s) => s.trim())
+                .filter((s) => s.length > 0)
+            : [];
+
+      const resolvedIds = [...idsRelacionados];
+      const manualesRestantes: string[] = [];
+
+      if (resolvedIds.length === 0 && rawManuales.length > 0) {
+        const asigsPlan = this.asignaturasDelPlan();
+        for (const token of rawManuales) {
+          const matches = this.buscarCoincidenciasUnicasAsignatura(token, asigsPlan);
+          if (matches.length === 1 && matches[0].id) {
+            if (!resolvedIds.includes(matches[0].id)) {
+              resolvedIds.push(matches[0].id);
+            }
+          } else {
+            manualesRestantes.push(token);
+          }
+        }
+      } else {
+        manualesRestantes.push(...rawManuales);
+      }
+
+      this.actividadesSeleccionadasIds.set(resolvedIds);
+      this.asignaturasManualesChips.set(manualesRestantes);
+      this.sincronizarCampoAsignaturasVinculadas();
 
       const docTokens = evaluacionExistente.responsablePractica
         ? evaluacionExistente.responsablePractica.split(/[,;]/).map((s) => s.trim()).filter((s) => s.length > 0)
@@ -659,10 +868,43 @@ export class AmbitosPracticaComponent implements OnInit {
         responsablePractica: '',
         observaciones: '',
       });
-      this.asignaturasSeleccionadasChips.set([]);
+      this.actividadesSeleccionadasIds.set([]);
+      this.actividadesDetallePrevio.set([]);
+      this.asignaturasManualesChips.set([]);
       this.docentesSeleccionadosChips.set([]);
     }
     this.modalVinculacionAbierto.set(true);
+  }
+
+  private buscarCoincidenciasUnicasAsignatura(
+    token: string,
+    asigs: ActividadCurricularPlan[]
+  ): ActividadCurricularPlan[] {
+    const trimmed = token.trim();
+    if (!trimmed) return [];
+    const tLower = trimmed.toLowerCase();
+
+    if (trimmed.endsWith(']')) {
+      const openIdx = trimmed.lastIndexOf('[');
+      if (openIdx > 0) {
+        const bracketCode = trimmed.slice(openIdx + 1, -1).trim().toLowerCase();
+        if (bracketCode) {
+          return asigs.filter((a) => a.codigo && a.codigo.trim().toLowerCase() === bracketCode);
+        }
+      }
+    }
+
+    return asigs.filter(
+      (a) =>
+        (a.id && a.id.toLowerCase() === tLower) ||
+        (a.codigo && a.codigo.trim().toLowerCase() === tLower) ||
+        a.nombre.trim().toLowerCase() === tLower
+    );
+  }
+
+  private sincronizarCampoAsignaturasVinculadas(): void {
+    const labels = this.chipsAsignaturasSeleccionadas().map((c) => c.label);
+    this.formVinculacion.patchValue({ asignaturasVinculadas: labels.join('; ') });
   }
 
   cerrarModalVinculacion(): void {
@@ -670,35 +912,43 @@ export class AmbitosPracticaComponent implements OnInit {
     this.ambitoParaVincular.set(null);
   }
 
-  isAsignaturaSeleccionada(nombre: string): boolean {
-    return this.asignaturasSeleccionadasChips().includes(nombre);
+  isAsignaturaSeleccionada(asigId?: string): boolean {
+    return !!asigId && this.actividadesSeleccionadasIds().includes(asigId);
   }
 
-  toggleAsignaturaVinculada(nombre: string): void {
-    const current = this.asignaturasSeleccionadasChips();
-    let updated: string[];
-    if (current.includes(nombre)) {
-      updated = current.filter((s) => s !== nombre);
-    } else {
-      updated = [...current, nombre];
+  toggleAsignaturaVinculada(asigId?: string): void {
+    if (!asigId) return;
+    const current = this.actividadesSeleccionadasIds();
+    const updated = current.includes(asigId)
+      ? current.filter((id) => id !== asigId)
+      : [...current, asigId];
+    this.actividadesSeleccionadasIds.set(updated);
+    this.sincronizarCampoAsignaturasVinculadas();
+  }
+
+  removerAsignaturaSeleccionada(chip: {
+    tipo: 'actividad' | 'manual';
+    id?: string;
+    manualValue?: string;
+  }): void {
+    if (chip.tipo === 'actividad' && chip.id) {
+      this.actividadesSeleccionadasIds.set(
+        this.actividadesSeleccionadasIds().filter((id) => id !== chip.id)
+      );
+    } else if (chip.tipo === 'manual' && chip.manualValue) {
+      this.asignaturasManualesChips.set(
+        this.asignaturasManualesChips().filter((m) => m !== chip.manualValue)
+      );
     }
-    this.asignaturasSeleccionadasChips.set(updated);
-    this.formVinculacion.patchValue({ asignaturasVinculadas: updated.join('; ') });
-  }
-
-  removerAsignaturaChip(nombre: string): void {
-    const updated = this.asignaturasSeleccionadasChips().filter((s) => s !== nombre);
-    this.asignaturasSeleccionadasChips.set(updated);
-    this.formVinculacion.patchValue({ asignaturasVinculadas: updated.join('; ') });
+    this.sincronizarCampoAsignaturasVinculadas();
   }
 
   agregarAsignaturaManual(nombreInput: HTMLInputElement): void {
     const val = nombreInput.value.trim();
     if (!val) return;
-    if (!this.asignaturasSeleccionadasChips().includes(val)) {
-      const updated = [...this.asignaturasSeleccionadasChips(), val];
-      this.asignaturasSeleccionadasChips.set(updated);
-      this.formVinculacion.patchValue({ asignaturasVinculadas: updated.join('; ') });
+    if (!this.asignaturasManualesChips().includes(val)) {
+      this.asignaturasManualesChips.set([...this.asignaturasManualesChips(), val]);
+      this.sincronizarCampoAsignaturasVinculadas();
     }
     nombreInput.value = '';
   }
@@ -743,18 +993,29 @@ export class AmbitosPracticaComponent implements OnInit {
     }
     const ambito = this.ambitoParaVincular();
     const carreraId = this.carreraSeleccionadaId() || this.contextService.carreraSeleccionadaId();
-    if (!ambito?.id || !carreraId) return;
+    const pId = this.procesoIdEfectivo();
+    if (!ambito?.id || !carreraId || !pId) {
+      this.notif.mostrar(this.errorMessage, 'Debe seleccionar una carrera con proceso de autoevaluación activo.', 6000);
+      return;
+    }
 
     const val = this.formVinculacion.value;
-    const asignaturasStr = val.asignaturasVinculadas || this.asignaturasSeleccionadasChips().join('; ');
+    const ids = this.actividadesSeleccionadasIds();
+    const manuales = this.asignaturasManualesChips();
+    const asignaturasStr =
+      this.chipsAsignaturasSeleccionadas().map((c) => c.label).join('; ') ||
+      val.asignaturasVinculadas ||
+      '';
     const responsablesStr = val.responsablePractica || this.docentesSeleccionadosChips().join('; ');
 
     const dto: AutoevaluacionCarreraAmbito = {
       carreraId: carreraId,
-      procesoId: this.procesoId() || this.contextService.procesoIdActivo() || undefined,
+      procesoId: pId,
       ambitoPracticaId: ambito.id,
       ambitoId: ambito.id,
       utilizadoPorCarrera: val.utilizadoPorCarrera ?? true,
+      actividadCurricularIds: ids,
+      asignaturasManuales: manuales,
       asignaturasVinculadas: asignaturasStr || undefined,
       actividadesPrevistas: val.actividadesPrevistas || undefined,
       responsablePractica: responsablesStr || undefined,
@@ -778,7 +1039,7 @@ export class AmbitosPracticaComponent implements OnInit {
   }
 
   completarActividad(actividadCodigo?: string): void {
-    const pId = this.procesoId() || this.contextService.procesoIdActivo();
+    const pId = this.procesoIdEfectivo();
     const act = actividadCodigo || this.actividadSeleccionada();
     const carreraId = this.carreraSeleccionadaId() || this.contextService.carreraSeleccionadaId() || undefined;
 

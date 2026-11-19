@@ -22,7 +22,7 @@ public class AutoevaluacionDocenteController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<List<DocenteResumenResponse>> listarDocentes(
             @RequestParam(value = "query", required = false) String query,
             @RequestParam(value = "q", required = false) String q

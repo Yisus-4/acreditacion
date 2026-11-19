@@ -8,6 +8,7 @@ import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.Activida
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.PlanEstudioFt001JpaEntity;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataActividadCurricularPlanRepository;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataPlanEstudioFt001Repository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,13 +21,24 @@ public class ActualizarAsignaturaPlanService {
 
     private final SpringDataPlanEstudioFt001Repository planRepository;
     private final SpringDataActividadCurricularPlanRepository asignaturaRepository;
+    private final SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService;
 
     public ActualizarAsignaturaPlanService(
             SpringDataPlanEstudioFt001Repository planRepository,
             SpringDataActividadCurricularPlanRepository asignaturaRepository
     ) {
+        this(planRepository, asignaturaRepository, null);
+    }
+
+    @Autowired
+    public ActualizarAsignaturaPlanService(
+            SpringDataPlanEstudioFt001Repository planRepository,
+            SpringDataActividadCurricularPlanRepository asignaturaRepository,
+            SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService
+    ) {
         this.planRepository = planRepository;
         this.asignaturaRepository = asignaturaRepository;
+        this.sincronizacionBidireccionalPlanService = sincronizacionBidireccionalPlanService;
     }
 
     @Transactional
@@ -95,6 +107,10 @@ public class ActualizarAsignaturaPlanService {
         ActividadCurricularPlanJpaEntity guardada = asignaturaRepository.save(asig);
 
         recalcularHorasPlan(plan);
+
+        if (sincronizacionBidireccionalPlanService != null) {
+            sincronizacionBidireccionalPlanService.propagarActualizacionAsignatura(plan, guardada);
+        }
 
         return toDto(guardada);
     }

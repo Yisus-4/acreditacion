@@ -1,0 +1,59 @@
+<div class="panel-layout">
+  <header class="panel-header">
+    <div class="panel-header__content">
+      <div class="panel-header__left">
+        <a class="back-link" routerLink="/dashboard">Volver al Panel Principal</a>
+        <h1 class="panel-header__title">Gestión Académica</h1>
+      </div>
+    </div>
+  </header>
+
+  <main class="panel-container">
+    <div class="panel-surface">
+      <!-- Carreras -->
+      <section class="admin-section">
+        <h2 class="section-heading">Carreras</h2>
+        <div class="section-content">
+          <div class="section-item">
+            <p class="section-desc">
+              Gestione las carreras de grado que dependen de cada escuela de la institución.
+            </p>
+            <a class="btn btn--primary" routerLink="/academica/carreras">
+              Administrar carreras
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Planes de estudio y actividades curriculares -->
+      <section class="admin-section">
+        <h2 class="section-heading">Planes de estudio y actividades curriculares</h2>
+        <div class="section-content">
+          <div class="section-item">
+            <p class="section-desc">
+              Administre los planes de estudio por carrera (vigente / no vigente) y sus actividades curriculares (se dicta / no se dicta).
+            </p>
+            <a class="btn btn--primary" routerLink="/academica/planes">
+              Administrar planes y actividades curriculares
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cuerpo académico troncal -->
+      <section class="admin-section">
+        <h2 class="section-heading">Cuerpo académico troncal</h2>
+        <div class="section-content">
+          <div class="section-item">
+            <p class="section-desc">
+              Gestione la designación de docentes independiente de la carrera y su asignación a actividades curriculares de cada plan.
+            </p>
+            <a class="btn btn--primary" routerLink="/academica/cuerpo-academico">
+              Administrar cuerpo académico
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>

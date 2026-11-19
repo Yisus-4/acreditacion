@@ -16,7 +16,7 @@ class UserTest {
     @Test
     void startsActiveAndAssignsEachRoleOnlyOnce() {
         User user = User.register("user", "user@example.org", "encoded-password");
-        Role role = Role.system(UUID.randomUUID(), "ADMIN", "Administrator", "Manages the system");
+        Role role = Role.system(UUID.randomUUID(), "AEA", "Área de Evaluación y Acreditación", "Manages the system");
 
         user.assignRole(role);
 

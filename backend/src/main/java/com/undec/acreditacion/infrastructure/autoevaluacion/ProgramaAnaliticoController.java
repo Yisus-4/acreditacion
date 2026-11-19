@@ -1,7 +1,9 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion;
 
+import com.undec.acreditacion.application.output.UserRepository;
 import com.undec.acreditacion.domain.entities.ActividadPlanTrabajo;
 import com.undec.acreditacion.domain.entities.PlanTrabajo;
+import com.undec.acreditacion.domain.entities.User;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.domain.ports.DocumentStoragePort;
@@ -13,11 +15,13 @@ import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataProc
 import com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -41,6 +45,7 @@ public class ProgramaAnaliticoController {
     private final PlanTrabajoRepositoryPort planTrabajoRepository;
     private final DocumentStoragePort storagePort;
     private final AuthenticatedUserProvider authenticatedUserProvider;
+    private final UserRepository userRepository;
 
     public ProgramaAnaliticoController(
             SpringDataProgramaAnaliticoAsignaturaRepository programaRepository,
@@ -51,6 +56,21 @@ public class ProgramaAnaliticoController {
             DocumentStoragePort storagePort,
             AuthenticatedUserProvider authenticatedUserProvider
     ) {
+        this(programaRepository, planEstudioRepository, asignaturaRepository, procesoRepository,
+                planTrabajoRepository, storagePort, authenticatedUserProvider, null);
+    }
+
+    @Autowired
+    public ProgramaAnaliticoController(
+            SpringDataProgramaAnaliticoAsignaturaRepository programaRepository,
+            SpringDataPlanEstudioFt001Repository planEstudioRepository,
+            SpringDataActividadCurricularPlanRepository asignaturaRepository,
+            SpringDataProcesoAcreditacionRepository procesoRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            DocumentStoragePort storagePort,
+            AuthenticatedUserProvider authenticatedUserProvider,
+            UserRepository userRepository
+    ) {
         this.programaRepository = programaRepository;
         this.planEstudioRepository = planEstudioRepository;
         this.asignaturaRepository = asignaturaRepository;
@@ -58,6 +78,7 @@ public class ProgramaAnaliticoController {
         this.planTrabajoRepository = planTrabajoRepository;
         this.storagePort = storagePort;
         this.authenticatedUserProvider = authenticatedUserProvider;
+        this.userRepository = userRepository;
     }
 
     @GetMapping
@@ -87,7 +108,7 @@ public class ProgramaAnaliticoController {
     }
 
     @PostMapping("/proceso/{procesoId}/inicializar")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<List<ProgramaAnaliticoAsignaturaDto>> inicializarDesdePlan(@PathVariable UUID procesoId) {
         ProcesoAcreditacionJpaEntity proceso = procesoRepository.findById(procesoId)
@@ -129,7 +150,7 @@ public class ProgramaAnaliticoController {
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<ProgramaAnaliticoAsignaturaDto> subirPrograma(
             @RequestParam("archivo") MultipartFile archivo,
@@ -174,6 +195,7 @@ public class ProgramaAnaliticoController {
         }
 
         ProgramaAnaliticoAsignaturaJpaEntity entity = progOpt.orElseGet(ProgramaAnaliticoAsignaturaJpaEntity::new);
+        validarPermisoDocenteDesignado(entity);
         Instant now = Instant.now();
         if (entity.getId() == null) {
             entity.setId(UUID.randomUUID());
@@ -214,7 +236,7 @@ public class ProgramaAnaliticoController {
     }
 
     @PostMapping(value = "/proceso/{procesoId}/cargar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<ProgramaAnaliticoAsignaturaDto> cargarPrograma(
             @PathVariable UUID procesoId,
@@ -287,7 +309,7 @@ public class ProgramaAnaliticoController {
     }
 
     @PostMapping("/validar-completar-8-4")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<Map<String, Object>> validarYCompletar84(
             @RequestParam(required = false) UUID procesoId,
@@ -375,7 +397,7 @@ public class ProgramaAnaliticoController {
     }
 
     @PostMapping("/proceso/{procesoId}/completar-actividad-8-4")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<Map<String, Object>> completarActividad84(@PathVariable UUID procesoId) {
         long total = programaRepository.countByProcesoId(procesoId);
@@ -410,6 +432,99 @@ public class ProgramaAnaliticoController {
         ));
     }
 
+    @GetMapping("/docentes-disponibles")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_ESCUELA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION')")
+    public ResponseEntity<List<Map<String, Object>>> listarDocentesDisponibles() {
+        if (userRepository == null) {
+            return ResponseEntity.ok(List.of());
+        }
+        List<User> activos = userRepository.findAll().stream()
+                .filter(User::isActive)
+                .toList();
+        List<User> docentes = activos.stream()
+                .filter(u -> u.getRoles().stream().anyMatch(r -> "DOCENTE".equalsIgnoreCase(r.getCode())))
+                .toList();
+        List<User> fuente = docentes.isEmpty() ? activos : docentes;
+        List<Map<String, Object>> result = fuente.stream()
+                .sorted(Comparator.comparing(User::getUsername, String.CASE_INSENSITIVE_ORDER))
+                .map(u -> Map.<String, Object>of(
+                        "id", u.getId(),
+                        "username", u.getUsername(),
+                        "email", u.getEmail() != null ? u.getEmail() : ""
+                ))
+                .toList();
+        return ResponseEntity.ok(result);
+    }
+
+    @PatchMapping("/asignatura/{asignaturaPlanId}/designar-docente")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_ESCUELA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION')")
+    @Transactional
+    public ResponseEntity<ProgramaAnaliticoAsignaturaDto> designarDocente(
+            @PathVariable UUID asignaturaPlanId,
+            @RequestBody Map<String, String> body
+    ) {
+        ActividadCurricularPlanJpaEntity asig = asignaturaRepository.findById(asignaturaPlanId)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró la asignatura con ID: " + asignaturaPlanId));
+
+        String docenteIdStr = body != null ? body.get("docenteUsuarioId") : null;
+        UUID docenteId = (docenteIdStr != null && !docenteIdStr.isBlank()) ? UUID.fromString(docenteIdStr) : null;
+        String docenteNombre = body != null ? body.get("docenteNombre") : null;
+
+        if (docenteId != null && (docenteNombre == null || docenteNombre.isBlank()) && userRepository != null) {
+            docenteNombre = userRepository.findById(docenteId)
+                    .map(User::getUsername)
+                    .orElse(null);
+        }
+
+        UUID effectiveProcesoId = asig.getPlanEstudio() != null ? asig.getPlanEstudio().getProcesoId() : null;
+        Optional<ProgramaAnaliticoAsignaturaJpaEntity> progOpt = programaRepository.findByActividadCurricularId(asig.getId());
+        if (progOpt.isEmpty() && effectiveProcesoId != null) {
+            progOpt = programaRepository.findByProcesoIdAndNombreAsignatura(effectiveProcesoId, asig.getNombre().trim());
+        }
+
+        ProgramaAnaliticoAsignaturaJpaEntity entity = progOpt.orElseGet(ProgramaAnaliticoAsignaturaJpaEntity::new);
+        Instant now = Instant.now();
+        if (entity.getId() == null) {
+            entity.setId(UUID.randomUUID());
+            entity.setCreadoEn(now);
+            entity.setEstado("PENDIENTE");
+        }
+        entity.setProcesoId(effectiveProcesoId);
+        entity.setActividadCurricular(asig);
+        entity.setNombreAsignatura(asig.getNombre().trim());
+        entity.setAnioCursada(asig.getSubgrupo());
+        entity.setDocenteDesignadoId(docenteId);
+        entity.setDocenteDesignadoNombre(docenteNombre != null ? docenteNombre.trim() : null);
+        entity.setActualizadoEn(now);
+
+        return ResponseEntity.ok(toDto(programaRepository.save(entity)));
+    }
+
+    private void validarPermisoDocenteDesignado(ProgramaAnaliticoAsignaturaJpaEntity entity) {
+        Optional<User> currentUserOpt = authenticatedUserProvider.getAuthenticatedUser();
+        if (currentUserOpt.isEmpty()) {
+            return;
+        }
+        User user = currentUserOpt.get();
+        boolean esGestor = user.getRoles().stream().anyMatch(r -> {
+            String c = r.getCode();
+            return "AEA".equalsIgnoreCase(c)
+                    || "DIRECTOR_CARRERA".equalsIgnoreCase(c)
+                    || "CAREER_DIRECTOR".equalsIgnoreCase(c)
+                    || "DIRECTOR_ESCUELA".equalsIgnoreCase(c)
+                    || "DIRECTOR_DEPARTAMENTO".equalsIgnoreCase(c)
+                    || "COMISION_AUTOEVALUACION".equalsIgnoreCase(c);
+        });
+        if (esGestor) {
+            return;
+        }
+        if (entity.getDocenteDesignadoId() == null || !entity.getDocenteDesignadoId().equals(user.getId())) {
+            throw new AccessDeniedException(
+                    "Solo el docente designado para esta actividad curricular puede subir el programa analítico."
+            );
+        }
+    }
+
     private UUID resolverUsuarioAutenticadoId() {
         return authenticatedUserProvider.getAuthenticatedUserIdOrNull();
     }
@@ -440,6 +555,8 @@ public class ProgramaAnaliticoController {
                 entity.getEstado(),
                 entity.getEstado(), // estadoCarga alias ('CARGADO' / 'PENDIENTE')
                 entity.getObservaciones(),
+                entity.getDocenteDesignadoId(),
+                entity.getDocenteDesignadoNombre(),
                 entity.getCreadoEn(),
                 entity.getActualizadoEn()
         );

@@ -32,11 +32,11 @@ export class ConvocatoriaListComponent implements OnInit {
   readonly canCreate = computed(() => {
     const session = this.auth.currentSession;
     if (!session?.user?.roleCodes) return false;
-    return session.user.roleCodes.includes('ADMINISTRATOR') || session.user.roleCodes.includes('AEA');
+    return session.user.roleCodes.includes('AEA');
   });
 
   readonly canDeleteDev = computed(() => {
-    return this.auth.hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA', 'AC_COORDINATOR', 'DEV', 'DEVELOPER');
+    return this.auth.hasAnyRole('AEA', 'AC_COORDINATOR', 'DEV', 'DEVELOPER');
   });
 
   ngOnInit(): void {

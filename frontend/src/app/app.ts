@@ -5,8 +5,7 @@ import { Auth } from './core/auth/auth';
 import { NotificacionesCampanaComponent } from './core/notifications/notificaciones-campana/notificaciones-campana.component';
 
 const ROL_LABELS: Record<string, string> = {
-  ADMINISTRATOR: 'Administrador',
-  AEA: 'Área de Evaluación y Acreditación',
+  AEA: 'Área de Evaluación y Acreditación (Admin)',
   CAREER_DIRECTOR: 'Director de Carrera',
   SCHOOL_DIRECTOR: 'Director de Escuela',
   TEACHER: 'Docente',

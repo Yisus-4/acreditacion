@@ -28,7 +28,16 @@ export interface AmbitoPractica {
   numeroAnimales?: number;
   actividadesDemostrativas?: string;
   carrerasQueLoUsan?: string;
+  esMaestro?: boolean;
+  procesoId?: string;
+  origenMaestroId?: string;
   activo?: boolean;
+}
+
+export interface ActividadVinculadaResumen {
+  id: string;
+  codigo?: string;
+  nombre: string;
 }
 
 export interface AutoevaluacionCarreraAmbito {
@@ -39,6 +48,9 @@ export interface AutoevaluacionCarreraAmbito {
   ambitoId?: string;
   utilizadoPorCarrera: boolean;
   asignaturasVinculadas?: string;
+  actividadCurricularIds?: string[];
+  actividadesVinculadasDetalle?: ActividadVinculadaResumen[];
+  asignaturasManuales?: string[];
   actividadesPrevistas?: string;
   responsablePractica?: string;
   observaciones?: string;

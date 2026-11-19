@@ -24,6 +24,8 @@ public record ProgramaAnaliticoAsignaturaDto(
         String estado,
         String estadoCarga,
         String observaciones,
+        UUID docenteDesignadoId,
+        String docenteDesignadoNombre,
         Instant creadoEn,
         Instant actualizadoEn
 ) {

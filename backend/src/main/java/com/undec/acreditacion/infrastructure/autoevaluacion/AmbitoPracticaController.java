@@ -12,18 +12,28 @@ import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEnti
 import com.undec.acreditacion.infrastructure.persistence.postgres.ProcesoAcreditacionJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataCarreraRepository;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataProcesoAcreditacionRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -39,6 +49,8 @@ public class AmbitoPracticaController {
     private final SpringDataCarreraRepository carreraRepository;
     private final SpringDataProcesoAcreditacionRepository procesoRepository;
     private final UserRepository userRepository;
+    private final SpringDataAutoevaluacionAmbitoActividadRepository autoevaluacionAmbitoActividadRepository;
+    private final SpringDataActividadCurricularPlanRepository actividadCurricularRepository;
 
     public AmbitoPracticaController(
             SpringDataAmbitoPracticaRepository ambitoRepository,
@@ -50,6 +62,33 @@ public class AmbitoPracticaController {
             SpringDataProcesoAcreditacionRepository procesoRepository,
             UserRepository userRepository
     ) {
+        this(
+                ambitoRepository,
+                autoevaluacionAmbitoRepository,
+                inmuebleRepository,
+                convenioRepository,
+                validarPrecedenciaAmbitosService,
+                carreraRepository,
+                procesoRepository,
+                userRepository,
+                null,
+                null
+        );
+    }
+
+    @Autowired
+    public AmbitoPracticaController(
+            SpringDataAmbitoPracticaRepository ambitoRepository,
+            SpringDataAutoevaluacionCarreraAmbitoRepository autoevaluacionAmbitoRepository,
+            SpringDataInmuebleRepository inmuebleRepository,
+            SpringDataConvenioInstitucionalRepository convenioRepository,
+            ValidarPrecedenciaAmbitosService validarPrecedenciaAmbitosService,
+            SpringDataCarreraRepository carreraRepository,
+            SpringDataProcesoAcreditacionRepository procesoRepository,
+            UserRepository userRepository,
+            SpringDataAutoevaluacionAmbitoActividadRepository autoevaluacionAmbitoActividadRepository,
+            SpringDataActividadCurricularPlanRepository actividadCurricularRepository
+    ) {
         this.ambitoRepository = ambitoRepository;
         this.autoevaluacionAmbitoRepository = autoevaluacionAmbitoRepository;
         this.inmuebleRepository = inmuebleRepository;
@@ -58,20 +97,35 @@ public class AmbitoPracticaController {
         this.carreraRepository = carreraRepository;
         this.procesoRepository = procesoRepository;
         this.userRepository = userRepository;
+        this.autoevaluacionAmbitoActividadRepository = autoevaluacionAmbitoActividadRepository;
+        this.actividadCurricularRepository = actividadCurricularRepository;
     }
 
     @GetMapping
     public ResponseEntity<List<AmbitoPracticaDto>> listar(
             @RequestParam(value = "categoria", required = false) String categoria,
-            @RequestParam(value = "q", required = false) String query
+            @RequestParam(value = "q", required = false) String query,
+            @RequestParam(value = "procesoId", required = false) UUID procesoId
     ) {
         List<AmbitoPracticaJpaEntity> entities;
-        if (query != null && !query.isBlank()) {
-            entities = ambitoRepository.buscarPorTexto(query.trim());
-        } else if (categoria != null && !categoria.isBlank()) {
-            entities = ambitoRepository.findByTipoCategoriaAndActivoTrueOrderByNumeroOrdenAsc(categoria.trim().toUpperCase());
+        if (procesoId != null) {
+            if (query != null && !query.isBlank()) {
+                entities = ambitoRepository.buscarPorProcesoYTexto(procesoId, query.trim());
+            } else if (categoria != null && !categoria.isBlank()) {
+                entities = ambitoRepository.findByProcesoIdAndTipoCategoriaAndActivoTrueOrderByNumeroOrdenAsc(
+                        procesoId, categoria.trim().toUpperCase());
+            } else {
+                entities = ambitoRepository.findByProcesoIdAndActivoTrueOrderByNumeroOrdenAsc(procesoId);
+            }
         } else {
-            entities = ambitoRepository.findByActivoTrueOrderByNumeroOrdenAsc();
+            if (query != null && !query.isBlank()) {
+                entities = ambitoRepository.buscarMaestrosPorTexto(query.trim());
+            } else if (categoria != null && !categoria.isBlank()) {
+                entities = ambitoRepository.findByEsMaestroTrueAndTipoCategoriaAndActivoTrueOrderByNumeroOrdenAsc(
+                        categoria.trim().toUpperCase());
+            } else {
+                entities = ambitoRepository.findByEsMaestroTrueAndActivoTrueOrderByNumeroOrdenAsc();
+            }
         }
 
         List<AmbitoPracticaDto> dtos = entities.stream()
@@ -88,7 +142,7 @@ public class AmbitoPracticaController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA')")
+    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<AmbitoPracticaDto> crear(@RequestBody AmbitoPracticaDto dto) {
         if (dto.denominacion() == null || dto.denominacion().isBlank()) {
             throw new DomainValidationException("La denominación del ámbito es obligatoria");
@@ -97,8 +151,14 @@ public class AmbitoPracticaController {
             throw new DomainValidationException("La categoría del ámbito (INTERNO, EXTERNO, UNIDAD_DEMOSTRATIVA, CAM) es obligatoria");
         }
 
+        boolean esCopiaProceso = dto.procesoId() != null && Boolean.FALSE.equals(dto.esMaestro());
+        validarPermisoGestionAmbito(!esCopiaProceso, dto.procesoId());
+
         AmbitoPracticaJpaEntity entity = new AmbitoPracticaJpaEntity();
         entity.setId(dto.id() != null ? dto.id() : UUID.randomUUID());
+        entity.setEsMaestro(!esCopiaProceso);
+        entity.setProcesoId(esCopiaProceso ? dto.procesoId() : null);
+        entity.setOrigenMaestroId(esCopiaProceso ? dto.origenMaestroId() : null);
         mapearDatos(entity, dto);
         Instant now = Instant.now();
         entity.setCreadoEn(now);
@@ -109,7 +169,7 @@ public class AmbitoPracticaController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA')")
+    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<AmbitoPracticaDto> actualizar(@PathVariable UUID id, @RequestBody AmbitoPracticaDto dto) {
         AmbitoPracticaJpaEntity entity = ambitoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el ámbito con ID: " + id));
@@ -117,6 +177,9 @@ public class AmbitoPracticaController {
         if (dto.denominacion() == null || dto.denominacion().isBlank()) {
             throw new DomainValidationException("La denominación del ámbito es obligatoria");
         }
+
+        boolean esMaestro = Boolean.TRUE.equals(entity.getEsMaestro());
+        validarPermisoGestionAmbito(esMaestro, entity.getProcesoId());
 
         mapearDatos(entity, dto);
         entity.setActualizadoEn(Instant.now());
@@ -126,13 +189,24 @@ public class AmbitoPracticaController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'AEA')")
+    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<Void> eliminar(@PathVariable UUID id) {
         AmbitoPracticaJpaEntity entity = ambitoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el ámbito con ID: " + id));
+
+        boolean esMaestro = Boolean.TRUE.equals(entity.getEsMaestro());
+        validarPermisoGestionAmbito(esMaestro, entity.getProcesoId());
+
         entity.setActivo(false);
         entity.setActualizadoEn(Instant.now());
         ambitoRepository.save(entity);
+
+        if (!esMaestro) {
+            List<AutoevaluacionCarreraAmbitoJpaEntity> vinculaciones = autoevaluacionAmbitoRepository.findByAmbitoId(entity.getId());
+            if (!vinculaciones.isEmpty()) {
+                autoevaluacionAmbitoRepository.deleteAll(vinculaciones);
+            }
+        }
         return ResponseEntity.noContent().build();
     }
 
@@ -162,14 +236,23 @@ public class AmbitoPracticaController {
             return ResponseEntity.ok(List.of());
         }
 
-        List<AutoevaluacionCarreraAmbitoDto> dtos = vinculaciones.stream()
-                .map(this::toAutoevaluacionDto)
+        List<AutoevaluacionCarreraAmbitoJpaEntity> filtradas = vinculaciones.stream()
+                .filter(v -> esVinculacionValidaParaProceso(v, effectiveProcesoId))
+                .filter(v -> carreraId == null || v.getCarreraId() == null || carreraId.equals(v.getCarreraId()))
+                .toList();
+
+        Map<UUID, List<AutoevaluacionAmbitoActividadJpaEntity>> actividadesPorVinculo =
+                cargarActividadesPorVinculo(filtradas);
+
+        List<AutoevaluacionCarreraAmbitoDto> dtos = filtradas.stream()
+                .map(v -> toAutoevaluacionDto(v, actividadesPorVinculo.getOrDefault(v.getId(), List.of())))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
 
     @PostMapping({"/carrera/{procesoId}", "/autoevaluacion"})
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION')")
+    @Transactional
     public ResponseEntity<AutoevaluacionCarreraAmbitoDto> guardarVinculacionCarrera(
             @PathVariable(required = false) UUID procesoId,
             @RequestParam(value = "carreraId", required = false) UUID queryCarreraId,
@@ -191,11 +274,23 @@ public class AmbitoPracticaController {
         AmbitoPracticaJpaEntity ambito = ambitoRepository.findById(dto.ambitoId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el ámbito con ID: " + dto.ambitoId()));
 
-        Optional<AutoevaluacionCarreraAmbitoJpaEntity> existenteOpt = Optional.empty();
-        if (effectiveCarreraId != null) {
-            existenteOpt = autoevaluacionAmbitoRepository.findByProcesoIdAndCarreraIdAndAmbitoId(effectiveProcesoId, effectiveCarreraId, dto.ambitoId());
+        if (Boolean.TRUE.equals(ambito.getEsMaestro())
+                || ambito.getProcesoId() == null
+                || !effectiveProcesoId.equals(ambito.getProcesoId())) {
+            throw new DomainValidationException(
+                    "Solo se pueden vincular ámbitos clonados o propios del proceso de autoevaluación."
+            );
         }
-        if (existenteOpt.isEmpty()) {
+
+        Optional<AutoevaluacionCarreraAmbitoJpaEntity> existenteOpt;
+        if (effectiveCarreraId != null) {
+            existenteOpt = autoevaluacionAmbitoRepository.findByProcesoIdAndCarreraIdAndAmbitoId(
+                    effectiveProcesoId, effectiveCarreraId, dto.ambitoId());
+            if (existenteOpt.isEmpty()) {
+                existenteOpt = autoevaluacionAmbitoRepository.findByProcesoIdAndAmbitoId(effectiveProcesoId, dto.ambitoId())
+                        .filter(e -> e.getCarreraId() == null);
+            }
+        } else {
             existenteOpt = autoevaluacionAmbitoRepository.findByProcesoIdAndAmbitoId(effectiveProcesoId, dto.ambitoId());
         }
 
@@ -210,7 +305,12 @@ public class AmbitoPracticaController {
 
         entity.setCarreraId(effectiveCarreraId);
         entity.setUtilizadoPorCarrera(dto.utilizadoPorCarrera() != null ? dto.utilizadoPorCarrera() : true);
-        entity.setAsignaturasVinculadas(dto.asignaturasVinculadas());
+        if (dto.getActividadCurricularIds() != null) {
+            List<String> manualesLimpias = limpiarListaStrings(dto.getAsignaturasManuales());
+            entity.setAsignaturasVinculadas(manualesLimpias.isEmpty() ? null : String.join("; ", manualesLimpias));
+        } else {
+            entity.setAsignaturasVinculadas(dto.asignaturasVinculadas());
+        }
         entity.setResponsablePractica(dto.responsablePractica());
         entity.setHorariosUsoAnioAnterior(dto.horariosUsoAnioAnterior());
         entity.setTipoPracticaEstudiantes(dto.tipoPracticaEstudiantes());
@@ -218,11 +318,23 @@ public class AmbitoPracticaController {
         entity.setActualizadoEn(Instant.now());
 
         AutoevaluacionCarreraAmbitoJpaEntity guardado = autoevaluacionAmbitoRepository.save(entity);
-        return ResponseEntity.ok(toAutoevaluacionDto(guardado));
+
+        List<AutoevaluacionAmbitoActividadJpaEntity> linksFinales;
+        if (dto.getActividadCurricularIds() != null) {
+            linksFinales = sincronizarActividadesVinculadas(guardado, dto.getActividadCurricularIds(), effectiveProcesoId);
+        } else if (autoevaluacionAmbitoActividadRepository != null && guardado.getId() != null) {
+            List<AutoevaluacionAmbitoActividadJpaEntity> existentes =
+                    autoevaluacionAmbitoActividadRepository.findByAutoevaluacionAmbitoId(guardado.getId());
+            linksFinales = existentes != null ? existentes : List.of();
+        } else {
+            linksFinales = List.of();
+        }
+
+        return ResponseEntity.ok(toAutoevaluacionDto(guardado, linksFinales));
     }
 
     @PostMapping({"/carrera/{procesoId}/completar", "/autoevaluacion/completar"})
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<Map<String, Object>> completarActividadAmbitos(
             @PathVariable(required = false) UUID procesoId,
             @RequestParam(value = "procesoId", required = false) UUID queryProcesoId,
@@ -257,7 +369,8 @@ public class AmbitoPracticaController {
                 }
 
                 boolean tieneVinculacionValida = vinculaciones.stream()
-                        .anyMatch(v -> v.getAmbito() != null
+                        .anyMatch(v -> esVinculacionValidaParaProceso(v, effectiveProcesoId)
+                                && (carreraId == null || v.getCarreraId() == null || carreraId.equals(v.getCarreraId()))
                                 && targetCategoria.equalsIgnoreCase(v.getAmbito().getTipoCategoria())
                                 && Boolean.TRUE.equals(v.getUtilizadoPorCarrera()));
 
@@ -276,16 +389,39 @@ public class AmbitoPracticaController {
         ));
     }
 
+    private void validarPermisoGestionAmbito(boolean esMaestro, UUID procesoId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getAuthorities() == null) {
+            return;
+        }
+
+        boolean esAea = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_AEA".equals(a.getAuthority()));
+
+        if (esMaestro) {
+            if (!esAea) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Solo usuarios con rol AEA pueden gestionar el Padrón Maestro Institucional (RG-006)."
+                );
+            }
+            return;
+        }
+
+        if (!esAea) {
+            validarPertenenciaUnidadAcademica(null, procesoId);
+        }
+    }
+
     private void validarPertenenciaUnidadAcademica(UUID carreraId, UUID effectiveProcesoId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || auth.getAuthorities() == null) {
             return;
         }
 
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a ->
-                "ROLE_ADMINISTRATOR".equals(a.getAuthority()) || "ROLE_ADMIN".equals(a.getAuthority())
-        );
-        if (isAdmin) {
+        boolean isAea = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_AEA".equals(a.getAuthority()));
+        if (isAea) {
             return;
         }
 
@@ -408,20 +544,219 @@ public class AmbitoPracticaController {
                 entity.getCarrerasQueLoUsan(),
                 entity.getActivo(),
                 entity.getCreadoEn(),
-                entity.getActualizadoEn()
+                entity.getActualizadoEn(),
+                entity.getEsMaestro(),
+                entity.getProcesoId(),
+                entity.getOrigenMaestroId()
         );
     }
 
-    private AutoevaluacionCarreraAmbitoDto toAutoevaluacionDto(AutoevaluacionCarreraAmbitoJpaEntity entity) {
+    private boolean esVinculacionValidaParaProceso(AutoevaluacionCarreraAmbitoJpaEntity v, UUID effectiveProcesoId) {
+        if (v == null || v.getAmbito() == null) {
+            return false;
+        }
+        AmbitoPracticaJpaEntity ambito = v.getAmbito();
+        if (!Boolean.TRUE.equals(ambito.getActivo())) {
+            return false;
+        }
+        if (effectiveProcesoId != null) {
+            return !Boolean.TRUE.equals(ambito.getEsMaestro())
+                    && effectiveProcesoId.equals(ambito.getProcesoId());
+        }
+        return true;
+    }
+
+    private Map<UUID, List<AutoevaluacionAmbitoActividadJpaEntity>> cargarActividadesPorVinculo(
+            List<AutoevaluacionCarreraAmbitoJpaEntity> vinculaciones
+    ) {
+        if (autoevaluacionAmbitoActividadRepository == null || vinculaciones == null || vinculaciones.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> ids = vinculaciones.stream()
+                .map(AutoevaluacionCarreraAmbitoJpaEntity::getId)
+                .filter(Objects::nonNull)
+                .toList();
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        List<AutoevaluacionAmbitoActividadJpaEntity> links =
+                autoevaluacionAmbitoActividadRepository.findByAutoevaluacionAmbitoIdIn(ids);
+        if (links == null || links.isEmpty()) {
+            return Map.of();
+        }
+        return links.stream()
+                .filter(l -> l.getAutoevaluacionAmbito() != null && l.getAutoevaluacionAmbito().getId() != null)
+                .collect(Collectors.groupingBy(l -> l.getAutoevaluacionAmbito().getId()));
+    }
+
+    private List<AutoevaluacionAmbitoActividadJpaEntity> sincronizarActividadesVinculadas(
+            AutoevaluacionCarreraAmbitoJpaEntity guardado,
+            List<UUID> actividadCurricularIds,
+            UUID effectiveProcesoId
+    ) {
+        if (autoevaluacionAmbitoActividadRepository == null || actividadCurricularRepository == null) {
+            return List.of();
+        }
+
+        Set<UUID> requestedIds = new LinkedHashSet<>();
+        for (UUID actId : actividadCurricularIds) {
+            if (actId != null) {
+                requestedIds.add(actId);
+            }
+        }
+
+        Map<UUID, ActividadCurricularPlanJpaEntity> actividadesValidas = new LinkedHashMap<>();
+        if (!requestedIds.isEmpty()) {
+            List<ActividadCurricularPlanJpaEntity> encontradas = actividadCurricularRepository.findAllById(requestedIds);
+            if (encontradas != null) {
+                Map<UUID, ActividadCurricularPlanJpaEntity> porId = new HashMap<>();
+                for (ActividadCurricularPlanJpaEntity act : encontradas) {
+                    if (act.getPlanEstudio() != null
+                            && act.getPlanEstudio().getProcesoId() != null
+                            && !effectiveProcesoId.equals(act.getPlanEstudio().getProcesoId())) {
+                        continue;
+                    }
+                    porId.put(act.getId(), act);
+                }
+                for (UUID id : requestedIds) {
+                    ActividadCurricularPlanJpaEntity act = porId.get(id);
+                    if (act != null) {
+                        actividadesValidas.put(id, act);
+                    }
+                }
+            }
+        }
+
+        List<AutoevaluacionAmbitoActividadJpaEntity> existentes =
+                autoevaluacionAmbitoActividadRepository.findByAutoevaluacionAmbitoId(guardado.getId());
+        if (existentes == null) {
+            existentes = List.of();
+        }
+
+        List<AutoevaluacionAmbitoActividadJpaEntity> paraEliminar = new ArrayList<>();
+        List<AutoevaluacionAmbitoActividadJpaEntity> conservadas = new ArrayList<>();
+        Set<UUID> existentesIds = new HashSet<>();
+
+        for (AutoevaluacionAmbitoActividadJpaEntity ex : existentes) {
+            UUID actId = ex.getActividadCurricular() != null ? ex.getActividadCurricular().getId() : null;
+            if (actId != null && actividadesValidas.containsKey(actId)) {
+                conservadas.add(ex);
+                existentesIds.add(actId);
+            } else {
+                paraEliminar.add(ex);
+            }
+        }
+
+        if (!paraEliminar.isEmpty()) {
+            autoevaluacionAmbitoActividadRepository.deleteAll(paraEliminar);
+            autoevaluacionAmbitoActividadRepository.flush();
+        }
+
+        List<AutoevaluacionAmbitoActividadJpaEntity> nuevas = new ArrayList<>();
+        for (Map.Entry<UUID, ActividadCurricularPlanJpaEntity> entry : actividadesValidas.entrySet()) {
+            if (!existentesIds.contains(entry.getKey())) {
+                nuevas.add(new AutoevaluacionAmbitoActividadJpaEntity(null, guardado, entry.getValue()));
+            }
+        }
+        if (!nuevas.isEmpty()) {
+            List<AutoevaluacionAmbitoActividadJpaEntity> guardadas =
+                    autoevaluacionAmbitoActividadRepository.saveAll(nuevas);
+            if (guardadas != null && !guardadas.isEmpty()) {
+                conservadas.addAll(guardadas);
+            } else {
+                conservadas.addAll(nuevas);
+            }
+        }
+
+        return conservadas;
+    }
+
+    private List<String> limpiarListaStrings(List<String> items) {
+        if (items == null || items.isEmpty()) {
+            return List.of();
+        }
+        Set<String> result = new LinkedHashSet<>();
+        for (String item : items) {
+            if (item != null) {
+                String trimmed = item.trim();
+                if (!trimmed.isEmpty()) {
+                    result.add(trimmed);
+                }
+            }
+        }
+        return new ArrayList<>(result);
+    }
+
+    private List<String> parsearTokensManuales(String asignaturasTexto) {
+        if (asignaturasTexto == null || asignaturasTexto.isBlank()) {
+            return List.of();
+        }
+        Set<String> result = new LinkedHashSet<>();
+        for (String raw : asignaturasTexto.split("[,;]")) {
+            String trimmed = raw.trim();
+            if (!trimmed.isEmpty()) {
+                result.add(trimmed);
+            }
+        }
+        return new ArrayList<>(result);
+    }
+
+    private AutoevaluacionCarreraAmbitoDto toAutoevaluacionDto(
+            AutoevaluacionCarreraAmbitoJpaEntity entity,
+            List<AutoevaluacionAmbitoActividadJpaEntity> actividadesRelacionadas
+    ) {
         AmbitoPracticaDto ambitoDto = entity.getAmbito() != null ? toDto(entity.getAmbito()) : null;
-        return new AutoevaluacionCarreraAmbitoDto(
+
+        List<ActividadCurricularPlanJpaEntity> actividadesOrdenadas = actividadesRelacionadas == null
+                ? List.of()
+                : actividadesRelacionadas.stream()
+                        .map(AutoevaluacionAmbitoActividadJpaEntity::getActividadCurricular)
+                        .filter(Objects::nonNull)
+                        .sorted(Comparator.comparing(
+                                ActividadCurricularPlanJpaEntity::getNumeroOrden,
+                                Comparator.nullsLast(Integer::compareTo)
+                        ).thenComparing(
+                                a -> a.getNombre() != null ? a.getNombre() : "",
+                                String.CASE_INSENSITIVE_ORDER
+                        ))
+                        .toList();
+
+        List<UUID> actividadIds = actividadesOrdenadas.stream()
+                .map(ActividadCurricularPlanJpaEntity::getId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        List<AutoevaluacionCarreraAmbitoDto.ActividadVinculadaResumen> detalle = actividadesOrdenadas.stream()
+                .map(a -> new AutoevaluacionCarreraAmbitoDto.ActividadVinculadaResumen(
+                        a.getId(), a.getCodigo(), a.getNombre()))
+                .toList();
+
+        List<String> manuales = parsearTokensManuales(entity.getAsignaturasVinculadas());
+
+        List<String> labelsDisplay = new ArrayList<>();
+        for (AutoevaluacionCarreraAmbitoDto.ActividadVinculadaResumen d : detalle) {
+            String nombre = d.nombre() != null ? d.nombre().trim() : "";
+            String codigo = d.codigo() != null ? d.codigo().trim() : "";
+            if (!codigo.isEmpty()) {
+                labelsDisplay.add(nombre + " [" + codigo + "]");
+            } else if (!nombre.isEmpty()) {
+                labelsDisplay.add(nombre);
+            }
+        }
+        labelsDisplay.addAll(manuales);
+
+        String asignaturasDisplay = labelsDisplay.isEmpty()
+                ? entity.getAsignaturasVinculadas()
+                : String.join("; ", labelsDisplay);
+
+        AutoevaluacionCarreraAmbitoDto dto = new AutoevaluacionCarreraAmbitoDto(
                 entity.getId(),
                 entity.getProcesoId(),
                 entity.getCarreraId(),
                 entity.getAmbito() != null ? entity.getAmbito().getId() : null,
                 ambitoDto,
                 entity.getUtilizadoPorCarrera(),
-                entity.getAsignaturasVinculadas(),
+                asignaturasDisplay,
                 entity.getResponsablePractica(),
                 entity.getHorariosUsoAnioAnterior(),
                 entity.getTipoPracticaEstudiantes(),
@@ -429,5 +764,9 @@ public class AmbitoPracticaController {
                 entity.getCreadoEn(),
                 entity.getActualizadoEn()
         );
+        dto.setActividadCurricularIds(actividadIds);
+        dto.setActividadesVinculadasDetalle(detalle);
+        dto.setAsignaturasManuales(manuales);
+        return dto;
     }
 }

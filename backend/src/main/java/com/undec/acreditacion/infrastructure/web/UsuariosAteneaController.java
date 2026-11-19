@@ -41,14 +41,14 @@ public class UsuariosAteneaController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'COORDINADOR_AEA', 'DIRECTOR_ESCUELA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'COORDINADOR_AEA', 'DIRECTOR_ESCUELA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<RegistroUsuariosAteneaDto> consultar(@PathVariable UUID procesoId) {
         RegistroUsuariosAteneaDto dto = consultarUseCase.consultarPorProcesoId(procesoId);
         return ResponseEntity.ok(dto);
     }
 
     @PutMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<RegistroUsuariosAteneaDto> guardar(
             @PathVariable UUID procesoId,
             @RequestBody GuardarUsuariosAteneaRequest request
@@ -59,7 +59,7 @@ public class UsuariosAteneaController {
     }
 
     @PostMapping("/plazo")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<RegistroUsuariosAteneaDto> actualizarPlazo(
             @PathVariable UUID procesoId,
             @RequestParam(value = "diasHabiles", required = false) Integer diasHabiles,
@@ -75,7 +75,7 @@ public class UsuariosAteneaController {
     }
 
     @PostMapping("/finalizar")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasRole('AEA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<RegistroUsuariosAteneaDto> finalizar(@PathVariable UUID procesoId) {
         UUID usuarioId = resolverUsuarioAutenticadoId();
         RegistroUsuariosAteneaDto dto = finalizarUseCase.finalizar(procesoId, usuarioId);
@@ -83,7 +83,7 @@ public class UsuariosAteneaController {
     }
 
     @GetMapping("/descargar")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'AEA', 'COORDINADOR_AEA', 'DIRECTOR_ESCUELA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'COORDINADOR_AEA', 'DIRECTOR_ESCUELA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<byte[]> descargar(@PathVariable UUID procesoId) {
         RegistroUsuariosAteneaDto dto = consultarUseCase.consultarPorProcesoId(procesoId);
         if (dto.rutaDocumento() == null || dto.rutaDocumento().isBlank()) {

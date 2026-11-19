@@ -33,15 +33,15 @@ class RoleControllerTest {
     @DisplayName("GET /api/roles returns list of roles with 200 OK")
     void listRolesReturns200() throws Exception {
         UUID roleId = UUID.randomUUID();
-        Role role = Role.system(roleId, "ADMINISTRATOR", "Administrador", "Desc");
+        Role role = Role.system(roleId, "AEA", "Área de Evaluación y Acreditación", "Desc");
 
         when(listRolesUseCase.listRoles()).thenReturn(List.of(role));
 
         mockMvc.perform(get("/api/roles"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(roleId.toString()))
-                .andExpect(jsonPath("$[0].code").value("ADMINISTRATOR"))
-                .andExpect(jsonPath("$[0].name").value("Administrador"))
+                .andExpect(jsonPath("$[0].code").value("AEA"))
+                .andExpect(jsonPath("$[0].name").value("Área de Evaluación y Acreditación"))
                 .andExpect(jsonPath("$[0].description").value("Desc"));
     }
 }

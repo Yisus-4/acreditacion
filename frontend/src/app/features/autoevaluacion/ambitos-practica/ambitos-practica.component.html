@@ -27,10 +27,10 @@
       }
     </div>
 
-    @if (procesoId()) {
+    @if (procesoIdEfectivo()) {
       <div>
         <a
-          [routerLink]="['/acreditacion/convocatorias', procesoId()]"
+          [routerLink]="['/acreditacion/convocatorias', procesoIdEfectivo()]"
           style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px; font-weight: 500; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; text-decoration: none;"
         >
           <span>Ir al Plan de Trabajo de la Carrera (PT-001) &rarr;</span>
@@ -81,6 +81,49 @@
 
   <!-- NIVEL 1: Listado Oficial de Actividades de la Dimensión -->
   @if (!actividadSeleccionada()) {
+    <!-- Contexto de Carrera + Copia aislada desde Padrón Maestro -->
+    <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <label for="carreraSelectNivel1" style="font-size: 13px; font-weight: 600; color: #374151;">Carrera en Evaluación:</label>
+        <select
+          id="carreraSelectNivel1"
+          [value]="carreraSeleccionadaId()"
+          (change)="onCarreraChange($event)"
+          style="padding: 8px 12px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13.5px; background: #ffffff; color: #1f2937; font-weight: 500;"
+        >
+          @for (c of carreras(); track c.id) {
+            <option [value]="c.id">{{ c.nombre }}</option>
+          }
+        </select>
+        <span style="font-size: 12.5px; font-weight: 600; color: #6b4c5b; background: #fdfafb; border: 1px solid #ebdbe2; padding: 4px 10px; border-radius: 999px;">
+          {{ ambitos().length }} {{ ambitos().length === 1 ? 'ámbito' : 'ámbitos' }} en la copia de esta carrera
+        </span>
+      </div>
+
+      @if (puedeGestionarAmbitosCarrera()) {
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <button
+            type="button"
+            class="btn-tabla-accion"
+            style="padding: 8px 14px; font-size: 13px; background: #fdfafb; color: #6b4c5b; border: 1px solid #d9c5ce; font-weight: 600;"
+            [disabled]="!procesoIdEfectivo()"
+            (click)="abrirModalCopiarMaestros()"
+            title="Copiar los ámbitos del Padrón Maestro RG-006 en una copia aislada para esta carrera"
+          >
+            Copiar Ámbitos Maestros
+          </button>
+          <button
+            type="button"
+            class="btn-nuevo-figma"
+            style="padding: 8px 14px; font-size: 13px; background: #6b4c5b;"
+            (click)="seleccionarActividad('MAESTRO_RG006')"
+          >
+            Gestionar Ámbitos (RG-006)
+          </button>
+        </div>
+      }
+    </div>
+
     <!-- Toolbar de Búsqueda de Actividades -->
     <div class="vista-toolbar">
       <div class="search-box-figma" style="flex: 1 1 360px;">
@@ -111,7 +154,7 @@
             <th style="min-width: 220px;">Responsable Sugerido</th>
             <th style="min-width: 200px;">Normativa / Instrumento</th>
             <th style="width: 130px;">Estado</th>
-            <th class="col-acciones" style="width: 190px;">Acción</th>
+            <th class="col-acciones" style="width: 120px;">Acción</th>
           </tr>
         </thead>
         <tbody>
@@ -144,17 +187,6 @@
                   >
                     Gestionar
                   </button>
-                  @if (act.id !== 'MAESTRO_RG006') {
-                    <button
-                      type="button"
-                      class="btn-completar-mini"
-                      [disabled]="!tieneAsignaturas() || completandoActividad() || act.completada || !puedeCompletarActividadTipo(act.tipoFicha)"
-                      (click)="completarActividad(act.id)"
-                      [title]="!tieneAsignaturas() ? 'Bloqueado: Plan de estudios sin asignaturas (PRG-002)' : (!puedeEditarFichasAmbitos() ? 'Sin permisos para completar actividad' : (!puedeCompletarActividadTipo(act.tipoFicha) ? 'Debe vincular al menos un ámbito de práctica a esta actividad para poder completarla' : 'Marcar actividad como completada'))"
-                    >
-                      {{ act.completada ? '✓' : 'Completar' }}
-                    </button>
-                  }
                 </div>
               </td>
             </tr>
@@ -164,27 +196,41 @@
     </div>
   }
 
-  <!-- NIVEL 2A: Padrón Maestro Institucional de Ámbitos (RG-006) -->
+  <!-- NIVEL 2A: Gestión Aislada de Ámbitos de la Carrera (Copia RG-006) -->
   @if (actividadSeleccionada() === 'MAESTRO_RG006') {
     <div class="banner-actividad-header">
-      <div>
+      <div style="flex: 1 1 440px;">
         <h2 style="font-size: 18px; font-weight: 700; color: #1f1a1d; margin: 0 0 4px 0;">
-          Padrón Maestro Institucional de Ámbitos de Formación Práctica (RG-006)
+          Ámbitos de Formación Práctica de la Carrera (Copia RG-006)
         </h2>
         <p style="margin: 0; font-size: 13.5px; color: #5a4a53;">
-          Relevamiento transversal administrado por SGA y AEA. Contiene todos los talleres, laboratorios, centros de simulación, predios demostrativos y convenios asistenciales de la UNdeC.
+          Copia aislada para <strong>{{ nombreCarreraActiva() }}</strong>. Puede copiar desde el Padrón Maestro Institucional y crear, modificar o eliminar ámbitos propios de esta carrera sin afectar el maestro ni otras carreras.
         </p>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <label for="carreraSelectRg006" style="font-size: 13px; font-weight: 600; color: #374151;">Carrera en Evaluación:</label>
+        <select
+          id="carreraSelectRg006"
+          [value]="carreraSeleccionadaId()"
+          (change)="onCarreraChange($event)"
+          style="padding: 8px 12px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13.5px; background: #ffffff; color: #1f2937; font-weight: 500;"
+        >
+          @for (c of carreras(); track c.id) {
+            <option [value]="c.id">{{ c.nombre }}</option>
+          }
+        </select>
       </div>
     </div>
 
     <!-- Banner Informativo de Consulta en Modo Lectura -->
-    @if (!puedeGestionarPadronMaestroRg006()) {
+    @if (!puedeGestionarAmbitosCarrera()) {
       <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 12px 18px; margin-bottom: 16px;">
         <div style="font-weight: 700; color: #1e40af; font-size: 13.5px; margin-bottom: 2px;">
           Modo Consulta (Solo Lectura)
         </div>
         <p style="margin: 0; font-size: 13px; color: #1d4ed8; line-height: 1.4;">
-          El Padrón Maestro Institucional (RG-006) es de administración transversal reservado a la Autoridad de Evaluación y Acreditación (AEA) y Administradores.
+          Solo la Dirección de Carrera, la Comisión de Autoevaluación de la carrera o AEA pueden modificar esta copia de ámbitos de práctica.
         </p>
       </div>
     }
@@ -233,7 +279,7 @@
         </svg>
         <input
           type="text"
-          placeholder="Buscar en el padrón maestro por denominación, dirección o convenio..."
+          placeholder="Buscar en los ámbitos de la carrera por denominación, dirección o convenio..."
           [value]="searchQuery()"
           (input)="searchQuery.set($any($event.target).value)"
         />
@@ -243,18 +289,56 @@
         <span class="stats-count-figma">
           {{ ambitosMaestroFiltrados().length }} ámbitos registrados
         </span>
-        @if (puedeGestionarPadronMaestroRg006()) {
-          <button class="btn-nuevo-figma" type="button" (click)="abrirModalNuevo()">
+        @if (puedeGestionarAmbitosCarrera()) {
+          <button
+            class="btn-tabla-accion"
+            style="padding: 9px 14px; font-size: 13.5px; background: #fdfafb; color: #6b4c5b; border: 1px solid #d9c5ce; font-weight: 600;"
+            type="button"
+            [disabled]="!procesoIdEfectivo()"
+            (click)="abrirModalCopiarMaestros()"
+            title="Copiar los ámbitos del Padrón Maestro RG-006 para esta carrera"
+          >
+            Copiar Ámbitos Maestros
+          </button>
+          <button class="btn-nuevo-figma" type="button" [disabled]="!procesoIdEfectivo()" (click)="abrirModalNuevo()">
             + Nuevo Ámbito
           </button>
         }
       </div>
     </div>
 
-    <!-- Tabla Oficial del Padrón Maestro usando tabla-figma -->
+    <!-- Tabla Oficial de Ámbitos de la Carrera usando tabla-figma -->
     @if (ambitosMaestroFiltrados().length === 0) {
       <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
-        No se encontraron ámbitos registrados en esta categoría del padrón maestro.
+        @if (ambitos().length === 0) {
+          <p style="margin: 0 0 14px 0; font-size: 14px; color: #374151;">
+            Aún no se han copiado ámbitos de formación práctica para <strong>{{ nombreCarreraActiva() }}</strong>.
+          </p>
+          @if (puedeGestionarAmbitosCarrera()) {
+            <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+              <button
+                type="button"
+                class="btn-nuevo-figma"
+                style="background: #6b4c5b;"
+                [disabled]="!procesoIdEfectivo()"
+                (click)="abrirModalCopiarMaestros()"
+              >
+                Copiar Ámbitos Maestros para {{ nombreCarreraActiva() }}
+              </button>
+              <button
+                type="button"
+                class="btn-tabla-accion"
+                style="padding: 8px 14px; font-size: 13.5px; background: #fdfafb; color: #6b4c5b; border: 1px solid #d9c5ce;"
+                [disabled]="!procesoIdEfectivo()"
+                (click)="abrirModalNuevo()"
+              >
+                + Nuevo Ámbito
+              </button>
+            </div>
+          }
+        } @else {
+          No se encontraron ámbitos registrados en esta categoría para {{ nombreCarreraActiva() }}.
+        }
       </div>
     } @else {
       <div class="tabla-figma-wrapper">
@@ -311,12 +395,12 @@
                   </span>
                 </td>
                 <td class="col-acciones">
-                  @if (puedeGestionarPadronMaestroRg006()) {
+                  @if (puedeGestionarAmbitosCarrera()) {
                     <button
                       type="button"
                       class="btn-accion-icono"
                       (click)="abrirModalEditar(a)"
-                      title="Modificar ámbito"
+                      title="Modificar ámbito de esta carrera"
                     >
                       Editar
                     </button>
@@ -324,7 +408,7 @@
                       type="button"
                       class="btn-accion-icono btn-peligro"
                       (click)="eliminar(a)"
-                      title="Eliminar ámbito"
+                      title="Eliminar ámbito de esta carrera"
                     >
                       Eliminar
                     </button>
@@ -412,18 +496,6 @@
       </div>
     }
 
-    <!-- Advertencia de control crítico de convenios para Externos y CAM -->
-    @if (actividadSeleccionada() === 'EXTERNOS_FT009' || actividadSeleccionada() === 'CAM_FT011') {
-      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; border-radius: 8px; padding: 12px 18px; margin-bottom: 16px;">
-        <div style="font-weight: 700; color: #166534; font-size: 13.5px; margin-bottom: 2px;">
-          Control Crítico de Convenios (PRG-002 / RG-007)
-        </div>
-        <p style="margin: 0; font-size: 13px; color: #15803d; line-height: 1.4;">
-          Todo ámbito externo o centro médico asistencial debe contar con un convenio institucional vigente en el Registro de Convenios (RG-007) para ser computado en la acreditación de la carrera.
-        </p>
-      </div>
-    }
-
     <!-- Toolbar de Búsqueda -->
     <div class="vista-toolbar">
       <div class="search-box-figma" style="flex: 1 1 360px;">
@@ -448,7 +520,34 @@
     <!-- Tabla Oficial de la Carrera usando tabla-figma -->
     @if (ambitosCarreraFiltrados().length === 0) {
       <div class="tabla-figma-wrapper" style="padding: 32px; text-align: center; color: var(--color-text-muted);">
-        No se encontraron ámbitos en esta categoría para vincular.
+        @if (ambitos().length === 0) {
+          <p style="margin: 0 0 14px 0; font-size: 14px; color: #374151;">
+            No hay ámbitos copiados todavía para <strong>{{ nombreCarreraActiva() }}</strong>. Copiá el Padrón Maestro o creá ámbitos propios de la carrera antes de vincular esta ficha.
+          </p>
+          @if (puedeGestionarAmbitosCarrera()) {
+            <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+              <button
+                type="button"
+                class="btn-nuevo-figma"
+                style="background: #6b4c5b;"
+                [disabled]="!procesoIdEfectivo()"
+                (click)="abrirModalCopiarMaestros()"
+              >
+                Copiar Ámbitos Maestros
+              </button>
+              <button
+                type="button"
+                class="btn-tabla-accion"
+                style="padding: 8px 14px; font-size: 13.5px; background: #fdfafb; color: #6b4c5b; border: 1px solid #d9c5ce;"
+                (click)="seleccionarActividad('MAESTRO_RG006')"
+              >
+                Gestionar ámbitos de la carrera (RG-006)
+              </button>
+            </div>
+          }
+        } @else {
+          No se encontraron ámbitos en esta categoría para vincular en {{ nombreCarreraActiva() }}.
+        }
       </div>
     } @else {
       <div class="tabla-figma-wrapper">
@@ -524,12 +623,12 @@
   }
 </div>
 
-<!-- Modal de Alta / Modificación de Ámbito Maestro -->
+<!-- Modal de Alta / Modificación de Ámbito de la Carrera -->
 @if (modalAbierto()) {
   <div class="modal-backdrop-figma">
     <div class="modal-card-figma">
       <div class="modal-header">
-        <h3>{{ ambitoSeleccionadoId() ? 'Modificar Ámbito de Formación Práctica' : 'Nuevo Ámbito de Formación Práctica (RG-006)' }}</h3>
+        <h3>{{ ambitoSeleccionadoId() ? 'Modificar Ámbito de la Carrera' : 'Nuevo Ámbito para ' + nombreCarreraActiva() }}</h3>
         <button type="button" class="btn-accion-icono" (click)="cerrarModal()">✕</button>
       </div>
 
@@ -625,7 +724,7 @@
         <div class="modal-footer">
           <button type="button" class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
           <button type="submit" class="btn-guardar" [disabled]="guardando()">
-            {{ guardando() ? 'Guardando...' : (ambitoSeleccionadoId() ? 'Actualizar Ámbito' : 'Guardar en Padrón') }}
+            {{ guardando() ? 'Guardando...' : (ambitoSeleccionadoId() ? 'Actualizar Ámbito' : 'Guardar en Carrera') }}
           </button>
         </div>
       </form>
@@ -685,12 +784,12 @@
             </div>
 
             <div class="multiselect-scroll-container">
-              @for (asig of asignaturasFiltradasParaModal(); track asig.id || asig.codigo) {
+              @for (asig of asignaturasFiltradasParaModal(); track asig.id || asig.codigo || $index) {
                 <label class="multiselect-item-label">
                   <input
                     type="checkbox"
-                    [checked]="isAsignaturaSeleccionada(asig.nombre)"
-                    (change)="toggleAsignaturaVinculada(asig.nombre)"
+                    [checked]="isAsignaturaSeleccionada(asig.id)"
+                    (change)="toggleAsignaturaVinculada(asig.id)"
                   />
                   <span class="item-code">{{ asig.codigo || ('#' + asig.numeroOrden) }}</span>
                   <span class="item-name">{{ asig.nombre }}</span>
@@ -715,12 +814,12 @@
           </div>
 
           <!-- Badges de asignaturas seleccionadas -->
-          @if (asignaturasSeleccionadasChips().length > 0) {
+          @if (chipsAsignaturasSeleccionadas().length > 0) {
             <div class="chips-container">
-              @for (chip of asignaturasSeleccionadasChips(); track chip) {
+              @for (chip of chipsAsignaturasSeleccionadas(); track chip.key) {
                 <span class="badge-asig-chip">
-                  {{ chip }}
-                  <button type="button" (click)="removerAsignaturaChip(chip)" title="Quitar">✕</button>
+                  {{ chip.label }}
+                  <button type="button" (click)="removerAsignaturaSeleccionada(chip)" title="Quitar">✕</button>
                 </span>
               }
             </div>
@@ -806,6 +905,67 @@
           <button type="submit" class="btn-guardar">Guardar Vinculación</button>
         </div>
       </form>
+    </div>
+  </div>
+}
+
+<!-- Modal de Confirmación: Copiar Ámbitos Maestros (RG-006) -->
+@if (modalCopiarAbierto()) {
+  <div class="modal-backdrop-figma">
+    <div class="modal-card-figma" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3>Copiar Ámbitos Maestros (RG-006)</h3>
+        <button type="button" class="btn-accion-icono" [disabled]="copiandoMaestros()" (click)="cerrarModalCopiarMaestros()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div style="background: #fdfafb; border: 1px solid #ebdbe2; border-radius: 6px; padding: 12px 14px; font-size: 13.5px; color: #374151;">
+          <strong>Carrera destino:</strong> {{ nombreCarreraActiva() }}
+          <div style="font-size: 12.5px; color: #5a4a53; margin-top: 4px;">
+            Se generará una copia independiente desde el Padrón Maestro Institucional. Luego podrá crear, modificar o eliminar ámbitos sin afectar al maestro ni a otras carreras.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Modo de copia *</label>
+          <label style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; background: #ffffff; font-weight: 400;">
+            <input
+              type="radio"
+              name="modoCopiaAmbitos"
+              [checked]="modoCopiaMaestros() === 'INICIALIZAR_O_AGREGAR_FALTANTES'"
+              (change)="modoCopiaMaestros.set('INICIALIZAR_O_AGREGAR_FALTANTES')"
+              style="margin-top: 3px;"
+            />
+            <span>
+              <strong style="display: block; color: #1f1a1d; font-size: 13.5px;">Agregar ámbitos faltantes</strong>
+              <span style="font-size: 12.5px; color: #5a4a53;">Copia solo los ámbitos del maestro que todavía no existen en esta carrera y conserva tus cambios y eliminaciones previas.</span>
+            </span>
+          </label>
+
+          <label style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; background: #ffffff; font-weight: 400;">
+            <input
+              type="radio"
+              name="modoCopiaAmbitos"
+              [checked]="modoCopiaMaestros() === 'REEMPLAZAR_COPIA'"
+              (change)="modoCopiaMaestros.set('REEMPLAZAR_COPIA')"
+              style="margin-top: 3px;"
+            />
+            <span>
+              <strong style="display: block; color: #1f1a1d; font-size: 13.5px;">Reemplazar copia actual</strong>
+              <span style="font-size: 12.5px; color: #5a4a53;">Reinicia por completo los ámbitos y vinculaciones de {{ nombreCarreraActiva() }} a partir del Padrón Maestro.</span>
+            </span>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancelar" [disabled]="copiandoMaestros()" (click)="cerrarModalCopiarMaestros()">
+            Cancelar
+          </button>
+          <button type="button" class="btn-guardar" [disabled]="copiandoMaestros()" (click)="confirmarCopiarMaestros()">
+            {{ copiandoMaestros() ? 'Copiando ámbitos...' : 'Confirmar Copia' }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 }
