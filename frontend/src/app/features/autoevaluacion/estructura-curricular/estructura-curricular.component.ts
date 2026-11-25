@@ -30,6 +30,7 @@ import { CarreraResponse } from '../../../core/estructura/estructura.types';
 import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoevaluacion-context.service';
 import { NotificationState } from '../../../core/autoevaluacion/notification-state.helper';
 import { ActividadEstandarModalComponent } from './actividad-estandar-modal.component';
+import { PlanCumplimientoEstandarPanelComponent } from './plan-cumplimiento-estandar-panel.component';
 
 export type ActividadCurricularTipo =
   | 'GT_007A'
@@ -59,6 +60,7 @@ export interface OpcionCarreraPlan {
     ReactiveFormsModule,
     SubnavAutoevaluacionComponent,
     ActividadEstandarModalComponent,
+    PlanCumplimientoEstandarPanelComponent,
   ],
   templateUrl: './estructura-curricular.component.html',
   styleUrls: ['../infraestructura/infraestructura.component.scss', './estructura-curricular.component.scss'],
@@ -122,6 +124,7 @@ export class EstructuraCurricularComponent implements OnInit {
   readonly designandoDocenteId = signal<string | null>(null);
   readonly designandoResponsableId = signal<string | null>(null);
   readonly modalFichaActividadId = signal<string | null>(null);
+  readonly cumplimientoRefreshTick = signal<number>(0);
   readonly puedeDesignarDocente = computed(() =>
     this.auth.hasAnyRole(
       'AEA',
@@ -1244,6 +1247,7 @@ export class EstructuraCurricularComponent implements OnInit {
     this.notif.mostrar(this.successMessage, 'Ficha del estándar (Sección 2.2 y 3) guardada exitosamente.', 5000);
     if (planId) {
       this.cargarAsignaturasYProgramas(planId);
+      this.cumplimientoRefreshTick.update((n) => n + 1);
     }
   }
 

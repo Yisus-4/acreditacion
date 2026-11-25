@@ -9,6 +9,7 @@ import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDa
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataPlanEstudioFt001Repository;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataProgramaAnaliticoAsignaturaRepository;
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.SincronizacionBidireccionalPlanService;
+import com.undec.acreditacion.infrastructure.estandares.dto.CumplimientoCargaHorariaPlanDto;
 import com.undec.acreditacion.infrastructure.estandares.dto.EstandarDetalleDto;
 import com.undec.acreditacion.infrastructure.estandares.dto.FichaEstandarActividadDto;
 import com.undec.acreditacion.infrastructure.estandares.dto.GuardarFichaEstandarRequest;
@@ -528,6 +529,104 @@ class ActividadEstandarFichaServiceTest {
         lenient().when(areaRepository.findByEstandarIdOrderByOrdenAsc(f.estandar.getId()))
                 .thenReturn(List.of(f.areaHabilitada, f.areaPracticaHabilitada, f.areaDeshabilitada));
         return f;
+    }
+
+    @Test
+    @DisplayName("calcularCumplimientoHorarioPlan suma solo asignaturas SE_DICTA, excluye NO_SE_DICTA y evalúa mínimos globales de carrera")
+    void calcularCumplimientoHorarioPlanSumaSoloSeDicta() {
+        Fixture f = crearFixture(TipoSeccionEstandar22.EJES, TipoEvaluacionEstandar22.ESCALA_UNICA, 100);
+        f.estandar.setHabilitar311(true);
+        f.estandar.setModo311(ModoSeccion311.BLOQUES_CURRICULARES);
+        f.estandar.setHorasMinimasTotal311(300);
+        f.estandar.setHabilitar312(true);
+        f.estandar.setModo312(ModoSeccion312.MODALIDADES_PRACTICAS);
+        f.estandar.setHorasMinimasTotal312(100);
+        f.areaHabilitada.setHorasMinimasCarrera(250);
+        f.areaPracticaHabilitada.setHorasMinimasCarrera(120);
+
+        ActividadCurricularPlanJpaEntity asig2 = new ActividadCurricularPlanJpaEntity();
+        asig2.setId(UUID.randomUUID());
+        asig2.setPlanEstudio(f.plan);
+        asig2.setCodigo("FIS101");
+        asig2.setNombre("Física I");
+        asig2.setHorasReloj(160);
+        asig2.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+
+        ActividadCurricularPlanJpaEntity asigNoSeDicta = new ActividadCurricularPlanJpaEntity();
+        asigNoSeDicta.setId(UUID.randomUUID());
+        asigNoSeDicta.setPlanEstudio(f.plan);
+        asigNoSeDicta.setCodigo("OPT999");
+        asigNoSeDicta.setNombre("Optativa inactiva");
+        asigNoSeDicta.setHorasReloj(500);
+        asigNoSeDicta.setEstadoDictado(EstadoDictadoActividad.NO_SE_DICTA);
+
+        f.asig.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(f.plan.getId()))
+                .thenReturn(List.of(f.asig, asig2, asigNoSeDicta));
+
+        ActividadCurricularCargaHorariaAreaJpaEntity c1 = new ActividadCurricularCargaHorariaAreaJpaEntity();
+        c1.setActividadCurricular(f.asig);
+        c1.setAreaCargaHoraria(f.areaHabilitada);
+        c1.setHorasTotalPresencial(80);
+        c1.setHorasTotalDistancia(20);
+
+        ActividadCurricularCargaHorariaAreaJpaEntity c2 = new ActividadCurricularCargaHorariaAreaJpaEntity();
+        c2.setActividadCurricular(asig2);
+        c2.setAreaCargaHoraria(f.areaHabilitada);
+        c2.setHorasTotalPresencial(160);
+        c2.setHorasTotalDistancia(0);
+
+        ActividadCurricularCargaHorariaAreaJpaEntity p1 = new ActividadCurricularCargaHorariaAreaJpaEntity();
+        p1.setActividadCurricular(f.asig);
+        p1.setAreaCargaHoraria(f.areaPracticaHabilitada);
+        p1.setHorasPracticaPresencial(40);
+        p1.setHorasPracticaDistancia(10);
+
+        when(cargaAreaRepository.findByActividadCurricularIdIn(anyCollection()))
+                .thenReturn(List.of(c1, c2, p1));
+        when(cargaResumenRepository.findByActividadCurricularIdIn(anyCollection()))
+                .thenReturn(List.of());
+
+        CumplimientoCargaHorariaPlanDto res = service.calcularCumplimientoHorarioPlan(f.plan.getId());
+
+        assertEquals(2, res.totalAsignaturasSeDicta());
+        // 3.1.1: 80+20 + 160 = 260 >= 250 (cumple fila), pero 260 < 300 (no cumple total global 3.1.1)
+        assertEquals(260, res.horasAcumuladasTotal311());
+        assertEquals(300, res.horasMinimasTotal311());
+        assertEquals(-40, res.diferenciaTotal311());
+        assertFalse(res.cumpleTotal311());
+        assertEquals(1, res.filas311().size());
+        assertTrue(res.filas311().get(0).cumple());
+        assertEquals(10, res.filas311().get(0).diferencia());
+
+        // 3.1.2: 40+10 = 50 < 120 (fila) y 50 < 100 (total)
+        assertEquals(50, res.horasAcumuladasTotal312());
+        assertFalse(res.cumpleTotal312());
+        assertFalse(res.filas312().get(0).cumple());
+        assertEquals(-70, res.filas312().get(0).diferencia());
+        assertFalse(res.cumpleGlobal());
+    }
+
+    @Test
+    @DisplayName("Una asignatura individual puede guardar 0 h en un área aunque la carrera exija mínimo global")
+    void asignaturaIndividualPermiteCeroHorasAunqueExistaMinimoCarrera() {
+        Fixture f = crearFixture(TipoSeccionEstandar22.COMPETENCIAS, TipoEvaluacionEstandar22.MATRIZ_MULTIPLE, 80);
+        f.areaHabilitada.setHorasMinimasCarrera(750);
+        f.areaPracticaHabilitada.setHorasMinimasCarrera(200);
+        when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(Optional.of(user(UUID.randomUUID(), "AEA")));
+        when(cargaResumenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(estandarService.toDetalleDto(f.estandar)).thenReturn(f.detalleDto);
+
+        GuardarFichaEstandarRequest req = new GuardarFichaEstandarRequest(
+                List.of(new FichaEstandarActividadDto.Respuesta22Dto(f.itemHabilitado.getId(), f.escala1.getId())),
+                List.of(
+                        new FichaEstandarActividadDto.CargaAreaDto(f.areaHabilitada.getId(), 80, 0, 0, 0),
+                        new FichaEstandarActividadDto.CargaAreaDto(f.areaPracticaHabilitada.getId(), 0, 0, 0, 0)
+                ),
+                new FichaEstandarActividadDto.ResumenCargaDto(null, 5, 0, 0, 0)
+        );
+        assertDoesNotThrow(() -> service.guardarFicha(f.plan.getId(), f.asig.getId(), req));
     }
 
     private User user(UUID id, String roleCode) {

@@ -1,6 +1,8 @@
 package com.undec.acreditacion.infrastructure.estandares.persistence;
 
 import com.undec.acreditacion.domain.entities.EstadoVigenciaEstandar;
+import com.undec.acreditacion.domain.entities.ModoSeccion311;
+import com.undec.acreditacion.domain.entities.ModoSeccion312;
 import com.undec.acreditacion.domain.entities.TipoEvaluacionEstandar22;
 import com.undec.acreditacion.domain.entities.TipoSeccionEstandar22;
 import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEntity;
@@ -48,6 +50,26 @@ public class EstandarJpaEntity {
 
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
+
+    @Column(name = "habilitar_311", nullable = false)
+    private Boolean habilitar311 = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "modo_311", nullable = false, length = 30)
+    private ModoSeccion311 modo311 = ModoSeccion311.AREAS_TEMATICAS;
+
+    @Column(name = "horas_minimas_total_311")
+    private Integer horasMinimasTotal311;
+
+    @Column(name = "habilitar_312", nullable = false)
+    private Boolean habilitar312 = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "modo_312", nullable = false, length = 30)
+    private ModoSeccion312 modo312 = ModoSeccion312.AREAS_PRACTICAS;
+
+    @Column(name = "horas_minimas_total_312")
+    private Integer horasMinimasTotal312;
 
     @Column(name = "creado_por")
     private UUID creadoPor;
@@ -139,6 +161,54 @@ public class EstandarJpaEntity {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public Boolean getHabilitar311() {
+        return habilitar311;
+    }
+
+    public void setHabilitar311(Boolean habilitar311) {
+        this.habilitar311 = habilitar311 != null ? habilitar311 : true;
+    }
+
+    public ModoSeccion311 getModo311() {
+        return modo311;
+    }
+
+    public void setModo311(ModoSeccion311 modo311) {
+        this.modo311 = modo311 != null ? modo311 : ModoSeccion311.AREAS_TEMATICAS;
+    }
+
+    public Integer getHorasMinimasTotal311() {
+        return horasMinimasTotal311;
+    }
+
+    public void setHorasMinimasTotal311(Integer horasMinimasTotal311) {
+        this.horasMinimasTotal311 = horasMinimasTotal311;
+    }
+
+    public Boolean getHabilitar312() {
+        return habilitar312;
+    }
+
+    public void setHabilitar312(Boolean habilitar312) {
+        this.habilitar312 = habilitar312 != null ? habilitar312 : true;
+    }
+
+    public ModoSeccion312 getModo312() {
+        return modo312;
+    }
+
+    public void setModo312(ModoSeccion312 modo312) {
+        this.modo312 = modo312 != null ? modo312 : ModoSeccion312.AREAS_PRACTICAS;
+    }
+
+    public Integer getHorasMinimasTotal312() {
+        return horasMinimasTotal312;
+    }
+
+    public void setHorasMinimasTotal312(Integer horasMinimasTotal312) {
+        this.horasMinimasTotal312 = horasMinimasTotal312;
     }
 
     public UUID getCreadoPor() {

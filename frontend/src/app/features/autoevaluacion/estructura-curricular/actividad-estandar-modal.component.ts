@@ -161,69 +161,71 @@ interface CargaDraftRow {
               </div>
 
               @if (filas311().length === 0 && filas312().length === 0) {
-                <p class="muted">No hay filas temáticas o bloques habilitados en este estándar.</p>
+                <p class="muted">No hay bloques ni modalidades de carga horaria habilitados en este estándar.</p>
               } @else {
                 <!-- 3.1.1 -->
-                <div class="subsec">
-                  <h5>3.1.1. Clasificación de la carga horaria total de la asignatura según sus contenidos</h5>
-                  <p class="muted">
-                    La suma de cargas horarias parciales debe coincidir con la carga horaria total de la asignatura
-                    (<strong>{{ f.asignaturaHorasReloj ?? 0 }} h reloj</strong>).
-                  </p>
-                  <table class="coneau-table">
-                    <thead>
-                      <tr>
-                        <th rowspan="2">{{ f.estandar.tipoSeccion22 === 'EJES' ? 'Bloques' : 'Área temática / otra formación' }}</th>
-                        <th colspan="2" class="col-center">Carga horaria</th>
-                      </tr>
-                      <tr>
-                        <th class="col-center" style="width: 130px;">Presencial</th>
-                        <th class="col-center" style="width: 130px;">A distancia</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (area of filas311(); track area.id) {
+                @if (filas311().length > 0) {
+                  <div class="subsec">
+                    <h5>3.1.1. Clasificación de la carga horaria total de la asignatura según sus contenidos</h5>
+                    <p class="muted">
+                      La suma de cargas horarias parciales debe coincidir con la carga horaria total de la asignatura
+                      (<strong>{{ f.asignaturaHorasReloj ?? 0 }} h reloj</strong>).
+                    </p>
+                    <table class="coneau-table">
+                      <thead>
                         <tr>
-                          <td>{{ area.nombre }}</td>
-                          <td class="col-center">
-                            <input
-                              type="number"
-                              min="0"
-                              class="num-input"
-                              [disabled]="!f.puedeEditar"
-                              [ngModel]="getCarga(area.id!).tp"
-                              (ngModelChange)="updateCarga(area.id!, 'tp', $event)"
-                            />
-                          </td>
-                          <td class="col-center">
-                            <input
-                              type="number"
-                              min="0"
-                              class="num-input"
-                              [disabled]="!f.puedeEditar"
-                              [ngModel]="getCarga(area.id!).td"
-                              (ngModelChange)="updateCarga(area.id!, 'td', $event)"
-                            />
-                          </td>
+                          <th rowspan="2">{{ f.estandar.modo311 === 'BLOQUES_CURRICULARES' ? 'Bloques curriculares' : 'Área temática / otra formación' }}</th>
+                          <th colspan="2" class="col-center">Carga horaria</th>
                         </tr>
-                      }
-                      <tr class="total-row">
-                        <td>
-                          <strong>Carga horaria total</strong> (Suma Presencial + Distancia: <strong>{{ total311Sum() }} h</strong>)
-                          @if ((f.asignaturaHorasReloj ?? 0) > 0) {
-                            @if (diferenciaHorasReloj() === 0) {
-                              <span class="match-ok">· Coincide con {{ f.asignaturaHorasReloj }} h</span>
-                            } @else {
-                              <span class="match-bad">· Diferencia: {{ diferenciaHorasReloj() }} h respecto de {{ f.asignaturaHorasReloj }} h</span>
+                        <tr>
+                          <th class="col-center" style="width: 130px;">Presencial</th>
+                          <th class="col-center" style="width: 130px;">A distancia</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (area of filas311(); track area.id) {
+                          <tr>
+                            <td>{{ area.nombre }}</td>
+                            <td class="col-center">
+                              <input
+                                type="number"
+                                min="0"
+                                class="num-input"
+                                [disabled]="!f.puedeEditar"
+                                [ngModel]="getCarga(area.id!).tp"
+                                (ngModelChange)="updateCarga(area.id!, 'tp', $event)"
+                              />
+                            </td>
+                            <td class="col-center">
+                              <input
+                                type="number"
+                                min="0"
+                                class="num-input"
+                                [disabled]="!f.puedeEditar"
+                                [ngModel]="getCarga(area.id!).td"
+                                (ngModelChange)="updateCarga(area.id!, 'td', $event)"
+                              />
+                            </td>
+                          </tr>
+                        }
+                        <tr class="total-row">
+                          <td>
+                            <strong>Carga horaria total</strong> (Suma Presencial + Distancia: <strong>{{ total311Sum() }} h</strong>)
+                            @if ((f.asignaturaHorasReloj ?? 0) > 0) {
+                              @if (diferenciaHorasReloj() === 0) {
+                                <span class="match-ok">· Coincide con {{ f.asignaturaHorasReloj }} h</span>
+                              } @else {
+                                <span class="match-bad">· Diferencia: {{ diferenciaHorasReloj() }} h respecto de {{ f.asignaturaHorasReloj }} h</span>
+                              }
                             }
-                          }
-                        </td>
-                        <td class="col-center"><strong>{{ total311Pres() }}</strong></td>
-                        <td class="col-center"><strong>{{ total311Dist() }}</strong></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                          </td>
+                          <td class="col-center"><strong>{{ total311Pres() }}</strong></td>
+                          <td class="col-center"><strong>{{ total311Dist() }}</strong></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                }
 
                 <!-- 3.1.2 -->
                 @if (filas312().length > 0) {
@@ -234,7 +236,7 @@ interface CargaDraftRow {
                     <table class="coneau-table">
                       <thead>
                         <tr>
-                          <th rowspan="2">{{ f.estandar.tipoSeccion22 === 'EJES' ? 'Modalidad de formación práctica' : 'Área temática' }}</th>
+                          <th rowspan="2">{{ f.estandar.modo312 === 'MODALIDADES_PRACTICAS' ? 'Modalidad de formación práctica' : 'Área de formación práctica' }}</th>
                           <th colspan="2" class="col-center">Carga horaria</th>
                         </tr>
                         <tr>
@@ -276,32 +278,32 @@ interface CargaDraftRow {
                       </tbody>
                     </table>
                   </div>
-                }
 
-                <!-- 3.1.3 -->
-                <div class="subsec">
-                  <p class="green-hint">
-                    @if (total312Sum() === 0) {
-                      Si no se incluyen actividades de formación práctica en el punto 3.1.2, no es obligatorio completar el punto 3.1.3.
-                    } @else {
-                      Se declararon {{ total312Sum() }} h de formación práctica en 3.1.2: es obligatorio especificar los ámbitos en 3.1.3.
-                    }
-                  </p>
-                  <h5>
-                    3.1.3. Especifique los ámbitos donde se desarrollan las actividades de formación práctica
-                    @if (total312Sum() > 0) {
-                      <span style="color:#991b1b;">*</span>
-                    }
-                  </h5>
-                  <textarea
-                    rows="4"
-                    class="ambitos-box"
-                    [disabled]="!f.puedeEditar"
-                    [ngModel]="ambitos()"
-                    (ngModelChange)="ambitos.set($event)"
-                    placeholder="Ejemplo: laboratorio - unidad de enseñanza práctica, taller, aula..."
-                  ></textarea>
-                </div>
+                  <!-- 3.1.3 -->
+                  <div class="subsec">
+                    <p class="green-hint">
+                      @if (total312Sum() === 0) {
+                        Si no se incluyen actividades de formación práctica en el punto 3.1.2, no es obligatorio completar el punto 3.1.3.
+                      } @else {
+                        Se declararon {{ total312Sum() }} h de formación práctica en 3.1.2: es obligatorio especificar los ámbitos en 3.1.3.
+                      }
+                    </p>
+                    <h5>
+                      3.1.3. Especifique los ámbitos donde se desarrollan las actividades de formación práctica
+                      @if (total312Sum() > 0) {
+                        <span style="color:#991b1b;">*</span>
+                      }
+                    </h5>
+                    <textarea
+                      rows="4"
+                      class="ambitos-box"
+                      [disabled]="!f.puedeEditar"
+                      [ngModel]="ambitos()"
+                      (ngModelChange)="ambitos.set($event)"
+                      placeholder="Ejemplo: laboratorio - unidad de enseñanza práctica, taller, aula..."
+                    ></textarea>
+                  </div>
+                }
 
                 <!-- 3.2 -->
                 <div class="subsec">
@@ -436,17 +438,21 @@ export class ActividadEstandarModalComponent implements OnInit {
     (this.ficha()?.estandar.grupos22 || []).filter((g) => g.habilitado)
   );
 
-  readonly filas311 = computed<AreaCargaHorariaEstandar[]>(() =>
-    (this.ficha()?.estandar.areasCargaHoraria || []).filter(
+  readonly filas311 = computed<AreaCargaHorariaEstandar[]>(() => {
+    const est = this.ficha()?.estandar;
+    if (!est || est.habilitar311 === false) return [];
+    return (est.areasCargaHoraria || []).filter(
       (a) => a.habilitada && (a.tipoSeccion || 'CARGA_TOTAL_311') === 'CARGA_TOTAL_311'
-    )
-  );
+    );
+  });
 
-  readonly filas312 = computed<AreaCargaHorariaEstandar[]>(() =>
-    (this.ficha()?.estandar.areasCargaHoraria || []).filter(
+  readonly filas312 = computed<AreaCargaHorariaEstandar[]>(() => {
+    const est = this.ficha()?.estandar;
+    if (!est || est.habilitar312 === false) return [];
+    return (est.areasCargaHoraria || []).filter(
       (a) => a.habilitada && a.tipoSeccion === 'PRACTICA_312'
-    )
-  );
+    );
+  });
 
   readonly total311Pres = computed(() =>
     this.filas311().reduce((acc, a) => acc + this.getCarga(a.id!).tp, 0)

@@ -19,6 +19,8 @@ import {
   EstandarResumen,
   Grupo22Estandar,
   GuardarEstandarRequest,
+  ModoSeccion311,
+  ModoSeccion312,
   TipoEvaluacionEstandar22,
   TipoSeccionCargaHoraria,
   TipoSeccionEstandar22,
@@ -51,6 +53,7 @@ interface AreaDraft {
   codigo: string;
   nombre: string;
   habilitada: boolean;
+  horasMinimasCarrera: number | null;
 }
 
 @Component({
@@ -349,56 +352,132 @@ interface AreaDraft {
               <fieldset class="card-block" [disabled]="soloLectura()">
                 <legend>3. Sección 3 — Clasificación y Carga Horaria</legend>
                 <p class="meta">
-                  Configure las filas habilitadas para <strong>3.1.1</strong> y <strong>3.1.2</strong>. Los puntos
-                  <strong>3.1.3</strong> (ámbitos de formación práctica) y <strong>3.2</strong> (carga horaria semanal)
-                  se solicitan en todas las asignaturas.
+                  Active o desactive de forma independiente <strong>3.1.1</strong> y <strong>3.1.2</strong>, elija si trabaja por
+                  <strong>Áreas temáticas</strong> o <strong>Bloques / Modalidades</strong>, y configure las
+                  <strong>horas mínimas globales de la carrera</strong> (se verifican sumando todas las asignaturas activas del plan, nunca por materia individual).
                 </p>
 
                 <!-- 3.1.1 -->
-                <div class="subcard">
+                <div class="subcard" [class.grupo-disabled]="!draftHabilitar311">
                   <div class="subcard-head">
-                    <strong>
-                      3.1.1 — {{ draftTipo22 === 'EJES' ? 'Bloques curriculares (carga horaria total)' : 'Áreas temáticas / otra formación (carga horaria total)' }}
-                    </strong>
-                    @if (!soloLectura()) {
-                      <button type="button" class="btn-xs" (click)="agregarArea311()">+ Agregar fila a 3.1.1</button>
+                    <label class="chk-inline">
+                      <input type="checkbox" [(ngModel)]="draftHabilitar311" />
+                      <strong>3.1.1 — Carga horaria total</strong>
+                    </label>
+                    @if (draftHabilitar311) {
+                      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <select [(ngModel)]="draftModo311" style="padding:4px 8px; font-size:12px;">
+                          <option value="AREAS_TEMATICAS">Áreas temáticas / otra formación</option>
+                          <option value="BLOQUES_CURRICULARES">Bloques curriculares</option>
+                        </select>
+                        @if (!soloLectura()) {
+                          <button type="button" class="btn-xs" (click)="cargarPlantilla311()">Cargar plantilla</button>
+                          <button type="button" class="btn-xs" (click)="agregarArea311()">+ Agregar fila a 3.1.1</button>
+                        }
+                      </div>
                     }
                   </div>
-                  @for (area of draftAreas311; track $index; let aIdx = $index) {
-                    <div class="area-row">
-                      <label class="chk-inline">
-                        <input type="checkbox" [(ngModel)]="area.habilitada" />
-                        <span>Habilitada</span>
+
+                  @if (draftHabilitar311) {
+                    <div class="min-global-bar">
+                      <label class="min-global-label">
+                        <span>Mínimo global Total Carrera 3.1.1 (hs reloj, opcional):</span>
+                        <input
+                          type="number"
+                          min="0"
+                          class="num-min-input"
+                          [(ngModel)]="draftHorasMinimasTotal311"
+                          placeholder="Ej: 3600"
+                        />
                       </label>
-                      <input type="text" [(ngModel)]="area.nombre" placeholder="Nombre del bloque o área temática" />
-                      @if (!soloLectura()) {
-                        <button type="button" class="btn-danger-xs" (click)="eliminarArea311(aIdx)">✕</button>
-                      }
                     </div>
+                    @for (area of draftAreas311; track $index; let aIdx = $index) {
+                      <div class="area-row-min">
+                        <label class="chk-inline">
+                          <input type="checkbox" [(ngModel)]="area.habilitada" />
+                          <span>Habilitada</span>
+                        </label>
+                        <input type="text" [(ngModel)]="area.nombre" placeholder="Nombre del bloque o área temática" />
+                        <div class="min-cell" title="Horas mínimas globales de carrera (suma de todas las asignaturas SE DICTA)">
+                          <span class="min-tag">Mín. carrera (h)</span>
+                          <input
+                            type="number"
+                            min="0"
+                            class="num-min-input"
+                            [disabled]="!area.habilitada || soloLectura()"
+                            [(ngModel)]="area.horasMinimasCarrera"
+                            placeholder="Opcional"
+                          />
+                        </div>
+                        @if (!soloLectura()) {
+                          <button type="button" class="btn-danger-xs" (click)="eliminarArea311(aIdx)">✕</button>
+                        }
+                      </div>
+                    }
+                  } @else {
+                    <div class="meta">Subsección 3.1.1 desactivada: no se solicitará clasificación de carga horaria total en las asignaturas.</div>
                   }
                 </div>
 
                 <!-- 3.1.2 -->
-                <div class="subcard">
+                <div class="subcard" [class.grupo-disabled]="!draftHabilitar312">
                   <div class="subcard-head">
-                    <strong>
-                      3.1.2 — {{ draftTipo22 === 'EJES' ? 'Modalidades de formación práctica (Anexo III)' : 'Áreas de formación práctica (Anexo III)' }}
-                    </strong>
-                    @if (!soloLectura()) {
-                      <button type="button" class="btn-xs" (click)="agregarArea312()">+ Agregar fila a 3.1.2</button>
+                    <label class="chk-inline">
+                      <input type="checkbox" [(ngModel)]="draftHabilitar312" />
+                      <strong>3.1.2 — Formación práctica (Anexo III)</strong>
+                    </label>
+                    @if (draftHabilitar312) {
+                      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <select [(ngModel)]="draftModo312" style="padding:4px 8px; font-size:12px;">
+                          <option value="AREAS_PRACTICAS">Áreas de formación práctica</option>
+                          <option value="MODALIDADES_PRACTICAS">Modalidades de formación práctica</option>
+                        </select>
+                        @if (!soloLectura()) {
+                          <button type="button" class="btn-xs" (click)="cargarPlantilla312()">Cargar plantilla</button>
+                          <button type="button" class="btn-xs" (click)="agregarArea312()">+ Agregar fila a 3.1.2</button>
+                        }
+                      </div>
                     }
                   </div>
-                  @for (area of draftAreas312; track $index; let aIdx = $index) {
-                    <div class="area-row">
-                      <label class="chk-inline">
-                        <input type="checkbox" [(ngModel)]="area.habilitada" />
-                        <span>Habilitada</span>
+
+                  @if (draftHabilitar312) {
+                    <div class="min-global-bar">
+                      <label class="min-global-label">
+                        <span>Mínimo global Total Formación Práctica 3.1.2 (hs reloj, opcional):</span>
+                        <input
+                          type="number"
+                          min="0"
+                          class="num-min-input"
+                          [(ngModel)]="draftHorasMinimasTotal312"
+                          placeholder="Ej: 750"
+                        />
                       </label>
-                      <input type="text" [(ngModel)]="area.nombre" placeholder="Nombre de la modalidad o área práctica" />
-                      @if (!soloLectura()) {
-                        <button type="button" class="btn-danger-xs" (click)="eliminarArea312(aIdx)">✕</button>
-                      }
                     </div>
+                    @for (area of draftAreas312; track $index; let aIdx = $index) {
+                      <div class="area-row-min">
+                        <label class="chk-inline">
+                          <input type="checkbox" [(ngModel)]="area.habilitada" />
+                          <span>Habilitada</span>
+                        </label>
+                        <input type="text" [(ngModel)]="area.nombre" placeholder="Nombre de la modalidad o área práctica" />
+                        <div class="min-cell" title="Horas mínimas globales de carrera (suma de todas las asignaturas SE DICTA)">
+                          <span class="min-tag">Mín. carrera (h)</span>
+                          <input
+                            type="number"
+                            min="0"
+                            class="num-min-input"
+                            [disabled]="!area.habilitada || soloLectura()"
+                            [(ngModel)]="area.horasMinimasCarrera"
+                            placeholder="Opcional"
+                          />
+                        </div>
+                        @if (!soloLectura()) {
+                          <button type="button" class="btn-danger-xs" (click)="eliminarArea312(aIdx)">✕</button>
+                        }
+                      </div>
+                    }
+                  } @else {
+                    <div class="meta">Subsección 3.1.2 desactivada: no se solicitarán modalidades/áreas de formación práctica ni ámbitos (3.1.3).</div>
                   }
                 </div>
               </fieldset>
@@ -474,6 +553,12 @@ interface AreaDraft {
     .pegado-box { display: flex; flex-direction: column; gap: 6px; background: #f9fafb; padding: 8px; border-radius: 6px; border: 1px dashed #d1d5db; }
     .pegado-actions { display: flex; justify-content: flex-end; }
     .area-row { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+    .area-row-min { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; }
+    .min-global-bar { background: #f7f3f5; border: 1px dashed #d9c5ce; border-radius: 6px; padding: 8px 10px; }
+    .min-global-label { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: #5a4a53; }
+    .min-cell { display: flex; align-items: center; gap: 5px; }
+    .min-tag { font-size: 11px; color: #6b7280; white-space: nowrap; }
+    .num-min-input { width: 92px; text-align: center; padding: 5px 6px !important; }
     .m-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; border-top: 1px solid #f3f4f6; padding-top: 12px; }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -520,6 +605,12 @@ export class AcademicaEstandaresComponent implements OnInit {
   draftEval22: TipoEvaluacionEstandar22 = 'MATRIZ_MULTIPLE';
   draftInstrucciones22 = '';
   draftObservaciones = '';
+  draftHabilitar311 = true;
+  draftModo311: ModoSeccion311 = 'AREAS_TEMATICAS';
+  draftHorasMinimasTotal311: number | null = null;
+  draftHabilitar312 = true;
+  draftModo312: ModoSeccion312 = 'AREAS_PRACTICAS';
+  draftHorasMinimasTotal312: number | null = null;
   draftEscalas: EscalaDraft[] = [];
   draftGrupos: GrupoDraft[] = [];
   draftAreas311: AreaDraft[] = [];
@@ -598,6 +689,12 @@ export class AcademicaEstandaresComponent implements OnInit {
     this.draftEval22 = det.tipoEvaluacion22;
     this.draftInstrucciones22 = det.instrucciones22 || '';
     this.draftObservaciones = det.observaciones || '';
+    this.draftHabilitar311 = det.habilitar311 !== false;
+    this.draftModo311 = det.modo311 || (det.tipoSeccion22 === 'EJES' ? 'BLOQUES_CURRICULARES' : 'AREAS_TEMATICAS');
+    this.draftHorasMinimasTotal311 = det.horasMinimasTotal311 ?? null;
+    this.draftHabilitar312 = det.habilitar312 !== false;
+    this.draftModo312 = det.modo312 || (det.tipoSeccion22 === 'EJES' ? 'MODALIDADES_PRACTICAS' : 'AREAS_PRACTICAS');
+    this.draftHorasMinimasTotal312 = det.horasMinimasTotal312 ?? null;
     this.draftEscalas = (det.escalas || []).map((e: EscalaEstandar) => ({
       codigo: e.codigo || '',
       etiqueta: e.etiqueta,
@@ -620,6 +717,7 @@ export class AcademicaEstandaresComponent implements OnInit {
         codigo: a.codigo || '',
         nombre: a.nombre,
         habilitada: !!a.habilitada,
+        horasMinimasCarrera: a.horasMinimasCarrera ?? null,
       }));
     this.draftAreas312 = todasAreas
       .filter((a: AreaCargaHorariaEstandar) => a.tipoSeccion === 'PRACTICA_312')
@@ -627,6 +725,7 @@ export class AcademicaEstandaresComponent implements OnInit {
         codigo: a.codigo || '',
         nombre: a.etiquetaPractica || a.nombre,
         habilitada: !!a.habilitada,
+        horasMinimasCarrera: a.horasMinimasCarrera ?? null,
       }));
   }
 
@@ -687,19 +786,14 @@ export class AcademicaEstandaresComponent implements OnInit {
       { codigo: 'FORMACION_PROFESIONAL', titulo: 'Formación Profesional', descripcion: '', habilitado: true, items: [{ enunciado: '' }], pegadoMasivo: '', mostrarPegado: false },
       { codigo: 'FORMACION_COMPLEMENTARIA', titulo: 'Formación Complementaria', descripcion: '', habilitado: false, items: [], pegadoMasivo: '', mostrarPegado: false },
     ];
-    this.draftAreas311 = [
-      { codigo: 'FORMACION_BASICA', nombre: 'Formación Básica', habilitada: true },
-      { codigo: 'FORMACION_APLICADA', nombre: 'Formación Aplicada', habilitada: true },
-      { codigo: 'FORMACION_PROFESIONAL', nombre: 'Formación Profesional', habilitada: true },
-      { codigo: 'FORMACION_COMPLEMENTARIA', nombre: 'Formación Complementaria', habilitada: true },
-      { codigo: 'OTROS_CONTENIDOS', nombre: 'Otros contenidos', habilitada: true },
-    ];
-    this.draftAreas312 = [
-      { codigo: 'FORMACION_BASICA', nombre: 'Formación Básica', habilitada: true },
-      { codigo: 'FORMACION_APLICADA', nombre: 'Formación Aplicada', habilitada: true },
-      { codigo: 'FORMACION_PROFESIONAL', nombre: 'Formación Profesional', habilitada: true },
-      { codigo: 'FORMACION_COMPLEMENTARIA', nombre: 'Carga horaria asignada a formación complementaria', habilitada: true },
-    ];
+    this.draftHabilitar311 = true;
+    this.draftModo311 = 'AREAS_TEMATICAS';
+    this.draftHorasMinimasTotal311 = null;
+    this.draftHabilitar312 = true;
+    this.draftModo312 = 'AREAS_PRACTICAS';
+    this.draftHorasMinimasTotal312 = null;
+    this.cargarPlantilla311();
+    this.cargarPlantilla312();
   }
 
   cargarPresetEjes(): void {
@@ -724,22 +818,56 @@ export class AcademicaEstandaresComponent implements OnInit {
         mostrarPegado: false,
       },
     ];
-    this.draftAreas311 = [
-      { codigo: 'CIENCIAS_BASICAS_INGENIERIA', nombre: 'Ciencias Básicas de la Ingeniería', habilitada: true },
-      { codigo: 'TECNOLOGIAS_BASICAS', nombre: 'Tecnologías Básicas', habilitada: true },
-      { codigo: 'TECNOLOGIAS_APLICADAS', nombre: 'Tecnologías Aplicadas', habilitada: true },
-      { codigo: 'CIENCIAS_TECNOLOGIAS_COMPLEMENTARIAS', nombre: 'Ciencias y Tecnologías Complementarias', habilitada: true },
-      { codigo: 'OTROS_CONTENIDOS', nombre: 'Otros contenidos', habilitada: true },
-    ];
-    this.draftAreas312 = [
-      {
-        codigo: 'INSTANCIAS_SUPERVISADAS_PRACTICA',
-        nombre: 'Instancias supervisadas de formación práctica (prácticas en diferentes ámbitos tales como aula, laboratorios, campo u otros)',
-        habilitada: true,
-      },
-      { codigo: 'PROYECTO_INTEGRADOR', nombre: 'Proyecto Integrador', habilitada: true },
-      { codigo: 'PRACTICA_PROFESIONAL_SUPERVISADA', nombre: 'Práctica profesional supervisada', habilitada: true },
-    ];
+    this.draftHabilitar311 = true;
+    this.draftModo311 = 'BLOQUES_CURRICULARES';
+    this.draftHorasMinimasTotal311 = null;
+    this.draftHabilitar312 = true;
+    this.draftModo312 = 'MODALIDADES_PRACTICAS';
+    this.draftHorasMinimasTotal312 = null;
+    this.cargarPlantilla311();
+    this.cargarPlantilla312();
+  }
+
+  cargarPlantilla311(): void {
+    if (this.draftModo311 === 'BLOQUES_CURRICULARES') {
+      this.draftAreas311 = [
+        { codigo: 'CIENCIAS_BASICAS_INGENIERIA', nombre: 'Ciencias Básicas de la Ingeniería', habilitada: true, horasMinimasCarrera: null },
+        { codigo: 'TECNOLOGIAS_BASICAS', nombre: 'Tecnologías Básicas', habilitada: true, horasMinimasCarrera: null },
+        { codigo: 'TECNOLOGIAS_APLICADAS', nombre: 'Tecnologías Aplicadas', habilitada: true, horasMinimasCarrera: null },
+        { codigo: 'CIENCIAS_TECNOLOGIAS_COMPLEMENTARIAS', nombre: 'Ciencias y Tecnologías Complementarias', habilitada: true, horasMinimasCarrera: null },
+        { codigo: 'OTROS_CONTENIDOS', nombre: 'Otros contenidos', habilitada: true, horasMinimasCarrera: null },
+      ];
+    } else {
+      this.draftAreas311 = [
+        { codigo: 'FORMACION_BASICA', nombre: 'Formación Básica', habilitada: true, horasMinimasCarrera: null },
+        { codigo: 'FORMACION_APLICADA', nombre: 'Formación Aplicada', habilitada: true, horasMinimasCarrera: null },
+        { codigo: 'FORMACION_PROFESIONAL', nombre: 'Formación Profesional', habilitada: true, horasMinimasCarrera: null },
+        { codigo: 'FORMACION_COMPLEMENTARIA', nombre: 'Formación Complementaria', habilitada: true, horasMinimasCarrera: null },
+        { codigo: 'OTROS_CONTENIDOS', nombre: 'Otros contenidos', habilitada: true, horasMinimasCarrera: null },
+      ];
+    }
+  }
+
+  cargarPlantilla312(): void {
+    if (this.draftModo312 === 'MODALIDADES_PRACTICAS') {
+      this.draftAreas312 = [
+        {
+          codigo: 'INSTANCIAS_SUPERVISADAS_PRACTICA',
+          nombre: 'Instancias supervisadas de formación práctica (prácticas en diferentes ámbitos tales como aula, laboratorios, campo u otros)',
+          habilitada: true,
+          horasMinimasCarrera: null,
+        },
+        { codigo: 'PROYECTO_INTEGRADOR', nombre: 'Proyecto Integrador', habilitada: true, horasMinimasCarrera: null },
+        { codigo: 'PRACTICA_PROFESIONAL_SUPERVISADA', nombre: 'Práctica profesional supervisada', habilitada: true, horasMinimasCarrera: null },
+      ];
+    } else {
+      this.draftAreas312 = [
+        { codigo: 'FORMACION_BASICA', nombre: 'Formación Básica', habilitada: true, horasMinimasCarrera: null },
+        { codigo: 'FORMACION_APLICADA', nombre: 'Formación Aplicada', habilitada: true, horasMinimasCarrera: null },
+        { codigo: 'FORMACION_PROFESIONAL', nombre: 'Formación Profesional', habilitada: true, horasMinimasCarrera: null },
+        { codigo: 'FORMACION_COMPLEMENTARIA', nombre: 'Carga horaria asignada a formación complementaria', habilitada: true, horasMinimasCarrera: null },
+      ];
+    }
   }
 
   agregarEscala(): void {
@@ -789,7 +917,7 @@ export class AcademicaEstandaresComponent implements OnInit {
   }
 
   agregarArea311(): void {
-    this.draftAreas311 = [...this.draftAreas311, { codigo: '', nombre: '', habilitada: true }];
+    this.draftAreas311 = [...this.draftAreas311, { codigo: '', nombre: '', habilitada: true, horasMinimasCarrera: null }];
   }
 
   eliminarArea311(idx: number): void {
@@ -797,11 +925,17 @@ export class AcademicaEstandaresComponent implements OnInit {
   }
 
   agregarArea312(): void {
-    this.draftAreas312 = [...this.draftAreas312, { codigo: '', nombre: '', habilitada: true }];
+    this.draftAreas312 = [...this.draftAreas312, { codigo: '', nombre: '', habilitada: true, horasMinimasCarrera: null }];
   }
 
   eliminarArea312(idx: number): void {
     this.draftAreas312 = this.draftAreas312.filter((_, i) => i !== idx);
+  }
+
+  private normMin(val: number | null | undefined): number | null {
+    if (val === null || val === undefined || val === ('' as unknown)) return null;
+    const n = Number(val);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
   }
 
   guardar(): void {
@@ -809,11 +943,19 @@ export class AcademicaEstandaresComponent implements OnInit {
       this.errorMessage.set('Debe seleccionar la carrera e ingresar el nombre del estándar.');
       return;
     }
-    const areas311Validas = this.draftAreas311
-      .filter((a) => a.nombre.trim().length > 0 && a.habilitada);
-    if (areas311Validas.length === 0) {
-      this.errorMessage.set('La Sección 3 (punto 3.1.1) debe tener al menos una fila habilitada.');
-      return;
+    if (this.draftHabilitar311) {
+      const areas311Validas = this.draftAreas311.filter((a) => a.nombre.trim().length > 0 && a.habilitada);
+      if (areas311Validas.length === 0) {
+        this.errorMessage.set('La Sección 3.1.1 está habilitada y debe tener al menos un bloque o área activa.');
+        return;
+      }
+    }
+    if (this.draftHabilitar312) {
+      const areas312Validas = this.draftAreas312.filter((a) => a.nombre.trim().length > 0 && a.habilitada);
+      if (areas312Validas.length === 0) {
+        this.errorMessage.set('La Sección 3.1.2 está habilitada y debe tener al menos una modalidad o área práctica activa.');
+        return;
+      }
     }
 
     const mapAreas = (lista: AreaDraft[], tipoSeccion: TipoSeccionCargaHoraria) =>
@@ -826,6 +968,7 @@ export class AcademicaEstandaresComponent implements OnInit {
           nombre: a.nombre.trim(),
           etiquetaPractica: a.nombre.trim(),
           habilitada: !!a.habilitada,
+          horasMinimasCarrera: a.habilitada ? this.normMin(a.horasMinimasCarrera) : null,
         }));
 
     const payload: GuardarEstandarRequest = {
@@ -838,6 +981,12 @@ export class AcademicaEstandaresComponent implements OnInit {
       tipoEvaluacion22: this.draftTipo22 === 'NINGUNA' ? 'NINGUNA' : this.draftEval22,
       instrucciones22: this.draftInstrucciones22.trim() || null,
       observaciones: this.draftObservaciones.trim() || null,
+      habilitar311: !!this.draftHabilitar311,
+      modo311: this.draftModo311,
+      horasMinimasTotal311: this.draftHabilitar311 ? this.normMin(this.draftHorasMinimasTotal311) : null,
+      habilitar312: !!this.draftHabilitar312,
+      modo312: this.draftModo312,
+      horasMinimasTotal312: this.draftHabilitar312 ? this.normMin(this.draftHorasMinimasTotal312) : null,
       escalas: this.draftEscalas
         .filter((e) => e.etiqueta.trim().length > 0)
         .map((e, idx) => ({

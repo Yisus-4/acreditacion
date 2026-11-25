@@ -1,5 +1,8 @@
 package com.undec.acreditacion.infrastructure.estandares.service;
 
+import com.undec.acreditacion.domain.entities.EstadoDictadoActividad;
+import com.undec.acreditacion.domain.entities.ModoSeccion311;
+import com.undec.acreditacion.domain.entities.ModoSeccion312;
 import com.undec.acreditacion.domain.entities.TipoEvaluacionEstandar22;
 import com.undec.acreditacion.domain.entities.TipoSeccionCargaHoraria;
 import com.undec.acreditacion.domain.entities.TipoSeccionEstandar22;
@@ -12,6 +15,7 @@ import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDa
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataPlanEstudioFt001Repository;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataProgramaAnaliticoAsignaturaRepository;
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.SincronizacionBidireccionalPlanService;
+import com.undec.acreditacion.infrastructure.estandares.dto.CumplimientoCargaHorariaPlanDto;
 import com.undec.acreditacion.infrastructure.estandares.dto.EstandarDetalleDto;
 import com.undec.acreditacion.infrastructure.estandares.dto.FichaEstandarActividadDto;
 import com.undec.acreditacion.infrastructure.estandares.dto.GuardarFichaEstandarRequest;
@@ -213,9 +217,18 @@ public class ActividadEstandarFichaService {
                 .map(EstandarEscalaEvaluacionJpaEntity::getId)
                 .collect(Collectors.toSet());
         Set<UUID> itemsHabilitados = resolveEnabledItemIds(estandar.getId());
+        boolean hab311 = esHabilitado311(estandar);
+        boolean hab312 = esHabilitado312(estandar);
         List<AreaMeta> areasHabilitadasMeta =
                 areaRepository.findByEstandarIdOrderByOrdenAsc(estandar.getId()).stream()
                         .filter(a -> Boolean.TRUE.equals(a.getHabilitada()))
+                        .filter(a -> {
+                            TipoSeccionCargaHoraria t = a.getTipoSeccion() != null
+                                    ? a.getTipoSeccion()
+                                    : TipoSeccionCargaHoraria.CARGA_TOTAL_311;
+                            return (t == TipoSeccionCargaHoraria.CARGA_TOTAL_311 && hab311)
+                                    || (t == TipoSeccionCargaHoraria.PRACTICA_312 && hab312);
+                        })
                         .map(a -> new AreaMeta(
                                 a.getId(),
                                 a.getTipoSeccion() != null ? a.getTipoSeccion() : TipoSeccionCargaHoraria.CARGA_TOTAL_311,
@@ -247,6 +260,210 @@ public class ActividadEstandarFichaService {
             result.put(asig.getId(), new CompletitudEstado(sec22, sec3));
         }
         return result;
+    }
+
+    @Transactional(readOnly = true)
+    public CumplimientoCargaHorariaPlanDto calcularCumplimientoHorarioPlan(UUID planId) {
+        PlanEstudioFt001JpaEntity plan = findPlanOrThrow(planId);
+        EstandarJpaEntity estandar = requireEstandar(plan);
+
+        boolean hab311 = esHabilitado311(estandar);
+        ModoSeccion311 modo311 = resolverModo311(estandar);
+        boolean hab312 = esHabilitado312(estandar);
+        ModoSeccion312 modo312 = resolverModo312(estandar);
+
+        List<ActividadCurricularPlanJpaEntity> asignaturasSeDicta =
+                asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId).stream()
+                        .filter(a -> a.getEstadoDictado() != EstadoDictadoActividad.NO_SE_DICTA)
+                        .toList();
+
+        List<EstandarAreaCargaHorariaJpaEntity> todasAreas =
+                areaRepository.findByEstandarIdOrderByOrdenAsc(estandar.getId());
+
+        List<EstandarAreaCargaHorariaJpaEntity> areas311 = hab311
+                ? todasAreas.stream()
+                        .filter(a -> Boolean.TRUE.equals(a.getHabilitada()))
+                        .filter(a -> a.getTipoSeccion() == null || a.getTipoSeccion() == TipoSeccionCargaHoraria.CARGA_TOTAL_311)
+                        .toList()
+                : List.of();
+        List<EstandarAreaCargaHorariaJpaEntity> areas312 = hab312
+                ? todasAreas.stream()
+                        .filter(a -> Boolean.TRUE.equals(a.getHabilitada()))
+                        .filter(a -> a.getTipoSeccion() == TipoSeccionCargaHoraria.PRACTICA_312)
+                        .toList()
+                : List.of();
+
+        List<UUID> asigIds = asignaturasSeDicta.stream()
+                .map(ActividadCurricularPlanJpaEntity::getId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        List<ActividadCurricularCargaHorariaAreaJpaEntity> cargas = asigIds.isEmpty()
+                ? List.of()
+                : cargaAreaRepository.findByActividadCurricularIdIn(asigIds);
+        Map<UUID, ActividadCurricularCargaHorariaResumenJpaEntity> resumenByAsig = asigIds.isEmpty()
+                ? Map.of()
+                : cargaResumenRepository.findByActividadCurricularIdIn(asigIds).stream()
+                        .collect(Collectors.toMap(
+                                ActividadCurricularCargaHorariaResumenJpaEntity::getActividadCurricularId,
+                                Function.identity(),
+                                (a, b) -> a));
+
+        Map<UUID, List<ActividadCurricularCargaHorariaAreaJpaEntity>> cargaByAsig = cargas.stream()
+                .filter(c -> c.getActividadCurricular() != null && c.getActividadCurricular().getId() != null)
+                .collect(Collectors.groupingBy(c -> c.getActividadCurricular().getId()));
+
+        List<AreaMeta> areasMeta = new ArrayList<>();
+        for (EstandarAreaCargaHorariaJpaEntity a : areas311) {
+            areasMeta.add(new AreaMeta(a.getId(), TipoSeccionCargaHoraria.CARGA_TOTAL_311, a.getCodigo()));
+        }
+        for (EstandarAreaCargaHorariaJpaEntity a : areas312) {
+            areasMeta.add(new AreaMeta(a.getId(), TipoSeccionCargaHoraria.PRACTICA_312, a.getCodigo()));
+        }
+
+        int asignaturasConSec3 = 0;
+        for (ActividadCurricularPlanJpaEntity asig : asignaturasSeDicta) {
+            if (evaluarSeccion3Completa(
+                    asig,
+                    areasMeta,
+                    cargaByAsig.getOrDefault(asig.getId(), List.of()),
+                    resumenByAsig.get(asig.getId()))) {
+                asignaturasConSec3++;
+            }
+        }
+
+        Map<UUID, int[]> suma311PorArea = new HashMap<>();
+        Map<UUID, int[]> suma312PorArea = new HashMap<>();
+        for (ActividadCurricularCargaHorariaAreaJpaEntity c : cargas) {
+            if (c.getAreaCargaHoraria() == null || c.getAreaCargaHoraria().getId() == null) {
+                continue;
+            }
+            UUID areaId = c.getAreaCargaHoraria().getId();
+            int[] acc311 = suma311PorArea.computeIfAbsent(areaId, k -> new int[2]);
+            acc311[0] += safeZero(c.getHorasTotalPresencial());
+            acc311[1] += safeZero(c.getHorasTotalDistancia());
+
+            int[] acc312 = suma312PorArea.computeIfAbsent(areaId, k -> new int[2]);
+            acc312[0] += safeZero(c.getHorasPracticaPresencial());
+            acc312[1] += safeZero(c.getHorasPracticaDistancia());
+        }
+
+        int totalPres311 = 0;
+        int totalDist311 = 0;
+        boolean cumpleGlobal = true;
+        List<CumplimientoCargaHorariaPlanDto.FilaCumplimientoDto> filas311 = new ArrayList<>();
+        for (EstandarAreaCargaHorariaJpaEntity area : areas311) {
+            int[] acc = suma311PorArea.getOrDefault(area.getId(), new int[2]);
+            int pres = acc[0];
+            int dist = acc[1];
+            int total = pres + dist;
+            totalPres311 += pres;
+            totalDist311 += dist;
+
+            Integer min = area.getHorasMinimasCarrera();
+            boolean tieneMin = min != null && min > 0;
+            Integer dif = tieneMin ? (total - min) : null;
+            boolean cumple = !tieneMin || total >= min;
+            if (!cumple) {
+                cumpleGlobal = false;
+            }
+            filas311.add(new CumplimientoCargaHorariaPlanDto.FilaCumplimientoDto(
+                    area.getId(),
+                    area.getCodigo(),
+                    area.getNombre(),
+                    pres,
+                    dist,
+                    total,
+                    tieneMin ? min : null,
+                    dif,
+                    tieneMin,
+                    cumple
+            ));
+        }
+        int totalAcum311 = totalPres311 + totalDist311;
+        Integer minTotal311 = hab311 && estandar.getHorasMinimasTotal311() != null && estandar.getHorasMinimasTotal311() > 0
+                ? estandar.getHorasMinimasTotal311()
+                : null;
+        boolean tieneMinTotal311 = minTotal311 != null;
+        Integer difTotal311 = tieneMinTotal311 ? (totalAcum311 - minTotal311) : null;
+        boolean cumpleTotal311 = !tieneMinTotal311 || totalAcum311 >= minTotal311;
+        if (!cumpleTotal311) {
+            cumpleGlobal = false;
+        }
+
+        int totalPres312 = 0;
+        int totalDist312 = 0;
+        List<CumplimientoCargaHorariaPlanDto.FilaCumplimientoDto> filas312 = new ArrayList<>();
+        for (EstandarAreaCargaHorariaJpaEntity area : areas312) {
+            int[] acc = suma312PorArea.getOrDefault(area.getId(), new int[2]);
+            int pres = acc[0];
+            int dist = acc[1];
+            int total = pres + dist;
+            totalPres312 += pres;
+            totalDist312 += dist;
+
+            Integer min = area.getHorasMinimasCarrera();
+            boolean tieneMin = min != null && min > 0;
+            Integer dif = tieneMin ? (total - min) : null;
+            boolean cumple = !tieneMin || total >= min;
+            if (!cumple) {
+                cumpleGlobal = false;
+            }
+            filas312.add(new CumplimientoCargaHorariaPlanDto.FilaCumplimientoDto(
+                    area.getId(),
+                    area.getCodigo(),
+                    area.getEtiquetaPractica() != null && !area.getEtiquetaPractica().isBlank()
+                            ? area.getEtiquetaPractica()
+                            : area.getNombre(),
+                    pres,
+                    dist,
+                    total,
+                    tieneMin ? min : null,
+                    dif,
+                    tieneMin,
+                    cumple
+            ));
+        }
+        int totalAcum312 = totalPres312 + totalDist312;
+        Integer minTotal312 = hab312 && estandar.getHorasMinimasTotal312() != null && estandar.getHorasMinimasTotal312() > 0
+                ? estandar.getHorasMinimasTotal312()
+                : null;
+        boolean tieneMinTotal312 = minTotal312 != null;
+        Integer difTotal312 = tieneMinTotal312 ? (totalAcum312 - minTotal312) : null;
+        boolean cumpleTotal312 = !tieneMinTotal312 || totalAcum312 >= minTotal312;
+        if (!cumpleTotal312) {
+            cumpleGlobal = false;
+        }
+
+        return new CumplimientoCargaHorariaPlanDto(
+                plan.getId(),
+                plan.getNombrePlan(),
+                estandar.getId(),
+                estandar.getNombre(),
+                asignaturasSeDicta.size(),
+                asignaturasConSec3,
+                hab311,
+                modo311,
+                totalPres311,
+                totalDist311,
+                totalAcum311,
+                minTotal311,
+                difTotal311,
+                tieneMinTotal311,
+                cumpleTotal311,
+                filas311,
+                hab312,
+                modo312,
+                totalPres312,
+                totalDist312,
+                totalAcum312,
+                minTotal312,
+                difTotal312,
+                tieneMinTotal312,
+                cumpleTotal312,
+                filas312,
+                cumpleGlobal
+        );
     }
 
     private void guardarEvaluacion22(
@@ -333,9 +550,18 @@ public class ActividadEstandarFichaService {
             List<FichaEstandarActividadDto.CargaAreaDto> cargasReq,
             FichaEstandarActividadDto.ResumenCargaDto resumenReq
     ) {
+        boolean hab311 = esHabilitado311(estandar);
+        boolean hab312 = esHabilitado312(estandar);
         List<EstandarAreaCargaHorariaJpaEntity> areasHabilitadas =
                 areaRepository.findByEstandarIdOrderByOrdenAsc(estandar.getId()).stream()
                         .filter(a -> Boolean.TRUE.equals(a.getHabilitada()))
+                        .filter(a -> {
+                            TipoSeccionCargaHoraria t = a.getTipoSeccion() != null
+                                    ? a.getTipoSeccion()
+                                    : TipoSeccionCargaHoraria.CARGA_TOTAL_311;
+                            return (t == TipoSeccionCargaHoraria.CARGA_TOTAL_311 && hab311)
+                                    || (t == TipoSeccionCargaHoraria.PRACTICA_312 && hab312);
+                        })
                         .toList();
         Map<UUID, EstandarAreaCargaHorariaJpaEntity> areasById = areasHabilitadas.stream()
                 .collect(Collectors.toMap(EstandarAreaCargaHorariaJpaEntity::getId, Function.identity()));
@@ -538,8 +764,17 @@ public class ActividadEstandarFichaService {
         Set<UUID> escalasValidas = estandarDetalle.escalas().stream()
                 .map(EstandarDetalleDto.EscalaDto::id)
                 .collect(Collectors.toSet());
+        boolean hab311 = esHabilitado311(estandar);
+        boolean hab312 = esHabilitado312(estandar);
         List<AreaMeta> areasHabilitadasMeta = estandarDetalle.areasCargaHoraria().stream()
                 .filter(EstandarDetalleDto.AreaCargaHorariaDto::habilitada)
+                .filter(a -> {
+                    TipoSeccionCargaHoraria t = a.tipoSeccion() != null
+                            ? a.tipoSeccion()
+                            : TipoSeccionCargaHoraria.CARGA_TOTAL_311;
+                    return (t == TipoSeccionCargaHoraria.CARGA_TOTAL_311 && hab311)
+                            || (t == TipoSeccionCargaHoraria.PRACTICA_312 && hab312);
+                })
                 .map(a -> new AreaMeta(
                         a.id(),
                         a.tipoSeccion() != null ? a.tipoSeccion() : TipoSeccionCargaHoraria.CARGA_TOTAL_311,
@@ -749,6 +984,32 @@ public class ActividadEstandarFichaService {
                     "El plan de estudio '" + plan.getNombrePlan() + "' no tiene un estándar asignado.");
         }
         return plan.getEstandar();
+    }
+
+    private boolean esHabilitado311(EstandarJpaEntity estandar) {
+        return estandar.getHabilitar311() == null || Boolean.TRUE.equals(estandar.getHabilitar311());
+    }
+
+    private boolean esHabilitado312(EstandarJpaEntity estandar) {
+        return estandar.getHabilitar312() == null || Boolean.TRUE.equals(estandar.getHabilitar312());
+    }
+
+    private ModoSeccion311 resolverModo311(EstandarJpaEntity estandar) {
+        if (estandar.getModo311() != null) {
+            return estandar.getModo311();
+        }
+        return estandar.getTipoSeccion22() == TipoSeccionEstandar22.EJES
+                ? ModoSeccion311.BLOQUES_CURRICULARES
+                : ModoSeccion311.AREAS_TEMATICAS;
+    }
+
+    private ModoSeccion312 resolverModo312(EstandarJpaEntity estandar) {
+        if (estandar.getModo312() != null) {
+            return estandar.getModo312();
+        }
+        return estandar.getTipoSeccion22() == TipoSeccionEstandar22.EJES
+                ? ModoSeccion312.MODALIDADES_PRACTICAS
+                : ModoSeccion312.AREAS_PRACTICAS;
     }
 
     private int nonNegativeInt(Integer val, String fieldLabel) {

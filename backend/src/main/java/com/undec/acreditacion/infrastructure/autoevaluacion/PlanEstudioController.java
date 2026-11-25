@@ -452,6 +452,17 @@ public class PlanEstudioController {
         return ResponseEntity.ok(toActividadDto(guardada, planId, estado));
     }
 
+    @GetMapping("/{planId}/cumplimiento-estandar")
+    @Transactional(readOnly = true)
+    public ResponseEntity<com.undec.acreditacion.infrastructure.estandares.dto.CumplimientoCargaHorariaPlanDto> obtenerCumplimientoEstandar(
+            @PathVariable UUID planId
+    ) {
+        if (actividadEstandarFichaService == null) {
+            throw new DomainValidationException("El servicio de fichas de estándar no está disponible.");
+        }
+        return ResponseEntity.ok(actividadEstandarFichaService.calcularCumplimientoHorarioPlan(planId));
+    }
+
     @GetMapping("/{planId}/asignaturas/{asigId}/ficha-estandar")
     @Transactional(readOnly = true)
     public ResponseEntity<FichaEstandarActividadDto> obtenerFichaEstandar(

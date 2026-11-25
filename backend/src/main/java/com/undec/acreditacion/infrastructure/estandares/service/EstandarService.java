@@ -1,6 +1,8 @@
 package com.undec.acreditacion.infrastructure.estandares.service;
 
 import com.undec.acreditacion.domain.entities.EstadoVigenciaEstandar;
+import com.undec.acreditacion.domain.entities.ModoSeccion311;
+import com.undec.acreditacion.domain.entities.ModoSeccion312;
 import com.undec.acreditacion.domain.entities.TipoEvaluacionEstandar22;
 import com.undec.acreditacion.domain.entities.TipoSeccionCargaHoraria;
 import com.undec.acreditacion.domain.entities.TipoSeccionEstandar22;
@@ -227,6 +229,12 @@ public class EstandarService {
         nuevo.setTipoEvaluacion22(origen.getTipoEvaluacion22());
         nuevo.setInstrucciones22(origen.getInstrucciones22());
         nuevo.setObservaciones(origen.getObservaciones());
+        nuevo.setHabilitar311(origen.getHabilitar311());
+        nuevo.setModo311(origen.getModo311());
+        nuevo.setHorasMinimasTotal311(origen.getHorasMinimasTotal311());
+        nuevo.setHabilitar312(origen.getHabilitar312());
+        nuevo.setModo312(origen.getModo312());
+        nuevo.setHorasMinimasTotal312(origen.getHorasMinimasTotal312());
         nuevo.setCreadoPor(authenticatedUserProvider != null
                 ? authenticatedUserProvider.getAuthenticatedUserIdOrNull()
                 : null);
@@ -245,6 +253,12 @@ public class EstandarService {
                 guardado.getTipoEvaluacion22(),
                 guardado.getInstrucciones22(),
                 guardado.getObservaciones(),
+                guardado.getHabilitar311(),
+                guardado.getModo311(),
+                guardado.getHorasMinimasTotal311(),
+                guardado.getHabilitar312(),
+                guardado.getModo312(),
+                guardado.getHorasMinimasTotal312(),
                 detalleOrigen.escalas().stream()
                         .map(e -> new GuardarEstandarRequest.EscalaItemRequest(
                                 e.orden(), e.codigo(), e.etiqueta(), e.descripcionReferencia(), e.esValorPorDefecto()))
@@ -262,7 +276,7 @@ public class EstandarService {
                         .toList(),
                 detalleOrigen.areasCargaHoraria().stream()
                         .map(a -> new GuardarEstandarRequest.AreaCargaHorariaRequest(
-                                a.tipoSeccion(), a.orden(), a.codigo(), a.nombre(), a.etiquetaPractica(), a.habilitada()))
+                                a.tipoSeccion(), a.orden(), a.codigo(), a.nombre(), a.etiquetaPractica(), a.habilitada(), a.horasMinimasCarrera()))
                         .toList()
         );
 
@@ -328,8 +342,22 @@ public class EstandarService {
                         a.getCodigo(),
                         a.getNombre(),
                         a.getEtiquetaPractica(),
-                        Boolean.TRUE.equals(a.getHabilitada())))
+                        Boolean.TRUE.equals(a.getHabilitada()),
+                        a.getHorasMinimasCarrera()))
                 .toList();
+
+        boolean hab311 = estandar.getHabilitar311() == null || Boolean.TRUE.equals(estandar.getHabilitar311());
+        ModoSeccion311 m311 = estandar.getModo311() != null
+                ? estandar.getModo311()
+                : (estandar.getTipoSeccion22() == TipoSeccionEstandar22.EJES
+                        ? ModoSeccion311.BLOQUES_CURRICULARES
+                        : ModoSeccion311.AREAS_TEMATICAS);
+        boolean hab312 = estandar.getHabilitar312() == null || Boolean.TRUE.equals(estandar.getHabilitar312());
+        ModoSeccion312 m312 = estandar.getModo312() != null
+                ? estandar.getModo312()
+                : (estandar.getTipoSeccion22() == TipoSeccionEstandar22.EJES
+                        ? ModoSeccion312.MODALIDADES_PRACTICAS
+                        : ModoSeccion312.AREAS_PRACTICAS);
 
         return new EstandarDetalleDto(
                 estandar.getId(),
@@ -344,6 +372,12 @@ public class EstandarService {
                 estandar.getTipoEvaluacion22(),
                 estandar.getInstrucciones22(),
                 estandar.getObservaciones(),
+                hab311,
+                m311,
+                estandar.getHorasMinimasTotal311(),
+                hab312,
+                m312,
+                estandar.getHorasMinimasTotal312(),
                 planesAsociados,
                 editable,
                 escalas,
@@ -419,6 +453,26 @@ public class EstandarService {
         estandar.setTipoEvaluacion22(eval22);
         estandar.setInstrucciones22(req.instrucciones22() != null ? req.instrucciones22().trim() : null);
         estandar.setObservaciones(req.observaciones() != null ? req.observaciones().trim() : null);
+
+        boolean hab311 = req.habilitar311() == null || Boolean.TRUE.equals(req.habilitar311());
+        ModoSeccion311 m311 = req.modo311() != null
+                ? req.modo311()
+                : (tipo22 == TipoSeccionEstandar22.EJES
+                        ? ModoSeccion311.BLOQUES_CURRICULARES
+                        : ModoSeccion311.AREAS_TEMATICAS);
+        boolean hab312 = req.habilitar312() == null || Boolean.TRUE.equals(req.habilitar312());
+        ModoSeccion312 m312 = req.modo312() != null
+                ? req.modo312()
+                : (tipo22 == TipoSeccionEstandar22.EJES
+                        ? ModoSeccion312.MODALIDADES_PRACTICAS
+                        : ModoSeccion312.AREAS_PRACTICAS);
+
+        estandar.setHabilitar311(hab311);
+        estandar.setModo311(m311);
+        estandar.setHorasMinimasTotal311(hab311 ? normalizarHorasMinimas(req.horasMinimasTotal311()) : null);
+        estandar.setHabilitar312(hab312);
+        estandar.setModo312(m312);
+        estandar.setHorasMinimasTotal312(hab312 ? normalizarHorasMinimas(req.horasMinimasTotal312()) : null);
     }
 
     private void guardarEstructuraHija(EstandarJpaEntity estandar, GuardarEstandarRequest req) {
@@ -499,33 +553,37 @@ public class EstandarService {
         Map<TipoSeccionCargaHoraria, Set<String>> codigosPorSeccion = new EnumMap<>(TipoSeccionCargaHoraria.class);
         Map<TipoSeccionCargaHoraria, Integer> ordenPorSeccion = new EnumMap<>(TipoSeccionCargaHoraria.class);
         List<EstandarAreaCargaHorariaJpaEntity> areasAGuardar = new ArrayList<>();
-        for (GuardarEstandarRequest.AreaCargaHorariaRequest aReq : req.areasCargaHoraria()) {
-            if (aReq.nombre() == null || aReq.nombre().isBlank()) {
-                continue;
-            }
-            TipoSeccionCargaHoraria tipoSec = aReq.tipoSeccion() != null
-                    ? aReq.tipoSeccion()
-                    : TipoSeccionCargaHoraria.CARGA_TOTAL_311;
-            Set<String> codigosUsados = codigosPorSeccion.computeIfAbsent(tipoSec, k -> new HashSet<>());
-            int nextOrden = ordenPorSeccion.getOrDefault(tipoSec, 1);
-            String baseCod = aReq.codigo() != null && !aReq.codigo().isBlank()
-                    ? normalizarCodigo(aReq.codigo())
-                    : normalizarCodigo(aReq.nombre());
-            String cod = hacerCodigoUnico(baseCod, codigosUsados);
+        if (req.areasCargaHoraria() != null) {
+            for (GuardarEstandarRequest.AreaCargaHorariaRequest aReq : req.areasCargaHoraria()) {
+                if (aReq.nombre() == null || aReq.nombre().isBlank()) {
+                    continue;
+                }
+                TipoSeccionCargaHoraria tipoSec = aReq.tipoSeccion() != null
+                        ? aReq.tipoSeccion()
+                        : TipoSeccionCargaHoraria.CARGA_TOTAL_311;
+                Set<String> codigosUsados = codigosPorSeccion.computeIfAbsent(tipoSec, k -> new HashSet<>());
+                int nextOrden = ordenPorSeccion.getOrDefault(tipoSec, 1);
+                String baseCod = aReq.codigo() != null && !aReq.codigo().isBlank()
+                        ? normalizarCodigo(aReq.codigo())
+                        : normalizarCodigo(aReq.nombre());
+                String cod = hacerCodigoUnico(baseCod, codigosUsados);
 
-            EstandarAreaCargaHorariaJpaEntity area = new EstandarAreaCargaHorariaJpaEntity();
-            area.setId(UUID.randomUUID());
-            area.setEstandar(estandar);
-            area.setTipoSeccion(tipoSec);
-            area.setOrden(aReq.orden() != null ? aReq.orden() : nextOrden);
-            area.setCodigo(cod);
-            area.setNombre(aReq.nombre().trim());
-            area.setEtiquetaPractica(aReq.etiquetaPractica() != null && !aReq.etiquetaPractica().isBlank()
-                    ? aReq.etiquetaPractica().trim()
-                    : aReq.nombre().trim());
-            area.setHabilitada(aReq.habilitada() == null || Boolean.TRUE.equals(aReq.habilitada()));
-            areasAGuardar.add(area);
-            ordenPorSeccion.put(tipoSec, nextOrden + 1);
+                boolean filaHabilitada = aReq.habilitada() == null || Boolean.TRUE.equals(aReq.habilitada());
+                EstandarAreaCargaHorariaJpaEntity area = new EstandarAreaCargaHorariaJpaEntity();
+                area.setId(UUID.randomUUID());
+                area.setEstandar(estandar);
+                area.setTipoSeccion(tipoSec);
+                area.setOrden(aReq.orden() != null ? aReq.orden() : nextOrden);
+                area.setCodigo(cod);
+                area.setNombre(aReq.nombre().trim());
+                area.setEtiquetaPractica(aReq.etiquetaPractica() != null && !aReq.etiquetaPractica().isBlank()
+                        ? aReq.etiquetaPractica().trim()
+                        : aReq.nombre().trim());
+                area.setHabilitada(filaHabilitada);
+                area.setHorasMinimasCarrera(filaHabilitada ? normalizarHorasMinimas(aReq.horasMinimasCarrera()) : null);
+                areasAGuardar.add(area);
+                ordenPorSeccion.put(tipoSec, nextOrden + 1);
+            }
         }
         if (!areasAGuardar.isEmpty()) {
             areaRepository.saveAll(areasAGuardar);
@@ -578,15 +636,54 @@ public class EstandarService {
             }
         }
 
-        long areasHabilitadas = req.areasCargaHoraria() == null ? 0 : req.areasCargaHoraria().stream()
-                .filter(a -> a.nombre() != null && !a.nombre().isBlank())
-                .filter(a -> a.habilitada() == null || Boolean.TRUE.equals(a.habilitada()))
-                .filter(a -> a.tipoSeccion() == null || a.tipoSeccion() == TipoSeccionCargaHoraria.CARGA_TOTAL_311)
-                .count();
-        if (areasHabilitadas == 0) {
-            throw new DomainValidationException(
-                    "La Sección 3 (Carga Horaria) requiere al menos una fila habilitada en el punto 3.1.1.");
+        boolean hab311 = req.habilitar311() == null || Boolean.TRUE.equals(req.habilitar311());
+        boolean hab312 = req.habilitar312() == null || Boolean.TRUE.equals(req.habilitar312());
+
+        if (req.horasMinimasTotal311() != null && req.horasMinimasTotal311() < 0) {
+            throw new DomainValidationException("Las horas mínimas globales del punto 3.1.1 no pueden ser negativas.");
         }
+        if (req.horasMinimasTotal312() != null && req.horasMinimasTotal312() < 0) {
+            throw new DomainValidationException("Las horas mínimas globales del punto 3.1.2 no pueden ser negativas.");
+        }
+        if (req.areasCargaHoraria() != null) {
+            for (GuardarEstandarRequest.AreaCargaHorariaRequest a : req.areasCargaHoraria()) {
+                if (a != null && a.horasMinimasCarrera() != null && a.horasMinimasCarrera() < 0) {
+                    throw new DomainValidationException(
+                            "Las horas mínimas de carrera no pueden ser negativas (" + (a.nombre() != null ? a.nombre() : "fila") + ").");
+                }
+            }
+        }
+
+        if (hab311) {
+            long areasHabilitadas311 = req.areasCargaHoraria() == null ? 0 : req.areasCargaHoraria().stream()
+                    .filter(a -> a.nombre() != null && !a.nombre().isBlank())
+                    .filter(a -> a.habilitada() == null || Boolean.TRUE.equals(a.habilitada()))
+                    .filter(a -> a.tipoSeccion() == null || a.tipoSeccion() == TipoSeccionCargaHoraria.CARGA_TOTAL_311)
+                    .count();
+            if (areasHabilitadas311 == 0) {
+                throw new DomainValidationException(
+                        "La Sección 3.1.1 está habilitada y requiere al menos un bloque o área temática activa.");
+            }
+        }
+        if (hab312) {
+            long areasHabilitadas312 = req.areasCargaHoraria() == null ? 0 : req.areasCargaHoraria().stream()
+                    .filter(a -> a.nombre() != null && !a.nombre().isBlank())
+                    .filter(a -> a.habilitada() == null || Boolean.TRUE.equals(a.habilitada()))
+                    .filter(a -> a.tipoSeccion() == TipoSeccionCargaHoraria.PRACTICA_312)
+                    .count();
+            if (areasHabilitadas312 == 0 && req.areasCargaHoraria() != null && req.areasCargaHoraria().stream()
+                    .anyMatch(a -> a.tipoSeccion() == TipoSeccionCargaHoraria.PRACTICA_312)) {
+                throw new DomainValidationException(
+                        "La Sección 3.1.2 está habilitada y requiere al menos una modalidad o área práctica activa.");
+            }
+        }
+    }
+
+    private Integer normalizarHorasMinimas(Integer val) {
+        if (val == null || val <= 0) {
+            return null;
+        }
+        return val;
     }
 
     private TipoSeccionEstandar22 resolverTipoSeccion22(GuardarEstandarRequest req) {

@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
+  CumplimientoCargaHorariaPlan,
   FichaEstandarActividad,
   GuardarFichaEstandarRequest,
 } from '../estandares/estandar.models';
@@ -101,6 +102,12 @@ export class PlanEstudioService {
       `${this.baseUrl}/validar-completar-8-3`,
       {},
       { params }
+    );
+  }
+
+  obtenerCumplimientoEstandar(planId: string): Observable<CumplimientoCargaHorariaPlan> {
+    return this.http.get<CumplimientoCargaHorariaPlan>(
+      `${this.baseUrl}/${planId}/cumplimiento-estandar`
     );
   }
 

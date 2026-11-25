@@ -19,6 +19,7 @@ import {
   PlanEstudioMaestro,
 } from '../../../core/services/datos-centrales.service';
 import { ActividadEstandarModalComponent } from '../../autoevaluacion/estructura-curricular/actividad-estandar-modal.component';
+import { PlanCumplimientoEstandarPanelComponent } from '../../autoevaluacion/estructura-curricular/plan-cumplimiento-estandar-panel.component';
 import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.component';
 
 @Component({
@@ -31,6 +32,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
     RouterLink,
     SubnavAcademicaComponent,
     ActividadEstandarModalComponent,
+    PlanCumplimientoEstandarPanelComponent,
   ],
   template: `
     <div class="acad-wrap">
@@ -122,6 +124,13 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
               <button type="button" class="btn-pri" (click)="abrirModalAsignatura()">+ Nueva Actividad Curricular</button>
             }
           </div>
+
+          @if (planSeleccionado()?.estandarId) {
+            <app-plan-cumplimiento-estandar-panel
+              [planId]="planSeleccionado()?.id"
+              [refreshKey]="cumplimientoRefreshTick()"
+            />
+          }
 
           <table class="tabla">
             <thead>
@@ -331,6 +340,7 @@ export class AcademicaPlanesComponent implements OnInit {
   readonly errorEstandarFaltante = signal<string | null>(null);
   readonly modalFichaPlanId = signal<string | null>(null);
   readonly modalFichaActividadId = signal<string | null>(null);
+  readonly cumplimientoRefreshTick = signal<number>(0);
 
   readonly isAea = computed(() => this.auth.hasAnyRole('AEA'));
   readonly canEdit = computed(() => {
@@ -445,6 +455,7 @@ export class AcademicaPlanesComponent implements OnInit {
     this.successMessage.set('Ficha del estándar guardada correctamente.');
     if (plan?.id) {
       this.cargarAsignaturas(plan.id);
+      this.cumplimientoRefreshTick.update((n) => n + 1);
     }
   }
 
@@ -565,6 +576,7 @@ export class AcademicaPlanesComponent implements OnInit {
       next: () => {
         this.successMessage.set(`Estado de "${a.nombre}" actualizado a ${nuevo === 'SE_DICTA' ? 'SE DICTA' : 'NO SE DICTA'}.`);
         this.cargarAsignaturas(plan.id);
+        this.cumplimientoRefreshTick.update((n) => n + 1);
       },
       error: (err) => this.errorMessage.set('Error al cambiar estado de dictado: ' + (err.error?.message || err.message)),
     });

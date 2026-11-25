@@ -378,6 +378,14 @@
       </div>
     </div>
 
+    <!-- Panel diagnóstico de cumplimiento horario del estándar (Sección 3) -->
+    @if (planActivo()?.id && planActivo()?.estandarId) {
+      <app-plan-cumplimiento-estandar-panel
+        [planId]="planActivo()?.id"
+        [refreshKey]="cumplimientoRefreshTick()"
+      />
+    }
+
     <!-- Tabla Oficial de Asignaturas FT-001 usando tabla-figma -->
     @if (asignaturas().length === 0) {
       <div style="background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 40px; text-align: center; margin-top: 16px;">

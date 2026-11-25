@@ -1,6 +1,8 @@
 package com.undec.acreditacion.infrastructure.estandares.service;
 
 import com.undec.acreditacion.domain.entities.EstadoVigenciaEstandar;
+import com.undec.acreditacion.domain.entities.ModoSeccion311;
+import com.undec.acreditacion.domain.entities.ModoSeccion312;
 import com.undec.acreditacion.domain.entities.Role;
 import com.undec.acreditacion.domain.entities.TipoEvaluacionEstandar22;
 import com.undec.acreditacion.domain.entities.TipoSeccionCargaHoraria;
@@ -234,6 +236,71 @@ class EstandarServiceTest {
         when(authenticatedUserProvider.getAuthenticatedUser())
                 .thenReturn(Optional.of(userWithRole("AEA", uaPropia)));
         assertDoesNotThrow(() -> service.crear(buildRequest(carreraAjena.getId(), "AEA")));
+    }
+
+    @Test
+    @DisplayName("Sección 3: permite activar/desactivar 3.1.1 y 3.1.2 independientemente y guarda horas mínimas globales de carrera")
+    void seccion3ModosYHorasMinimasGlobales() {
+        UUID uaId = UUID.randomUUID();
+        CarreraJpaEntity carrera = buildCarrera(uaId);
+
+        when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(Optional.of(userWithRole("AEA", null)));
+        when(authenticatedUserProvider.getAuthenticatedUserIdOrNull()).thenReturn(UUID.randomUUID());
+        when(carreraRepository.findById(carrera.getId())).thenReturn(Optional.of(carrera));
+        when(estandarRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        stubEmptyChildren();
+
+        // 1. Permite dar de baja ambas subsecciones (3.1.1 y 3.1.2)
+        GuardarEstandarRequest sinSeccion3 = new GuardarEstandarRequest(
+                carrera.getId(), "Sin S3", "RM 1/26", 2026, EstadoVigenciaEstandar.VIGENTE,
+                TipoSeccionEstandar22.NINGUNA, TipoEvaluacionEstandar22.NINGUNA, null, null,
+                false, ModoSeccion311.BLOQUES_CURRICULARES, null,
+                false, ModoSeccion312.MODALIDADES_PRACTICAS, null,
+                List.of(), List.of(), List.of()
+        );
+        EstandarDetalleDto resSinS3 = service.crear(sinSeccion3);
+        assertFalse(resSinS3.habilitar311());
+        assertFalse(resSinS3.habilitar312());
+        assertEquals(ModoSeccion311.BLOQUES_CURRICULARES, resSinS3.modo311());
+        assertEquals(ModoSeccion312.MODALIDADES_PRACTICAS, resSinS3.modo312());
+
+        // 2. Rechaza horas mínimas negativas
+        GuardarEstandarRequest minNegativo = new GuardarEstandarRequest(
+                carrera.getId(), "Negativo", "RM 2/26", 2026, EstadoVigenciaEstandar.VIGENTE,
+                TipoSeccionEstandar22.NINGUNA, TipoEvaluacionEstandar22.NINGUNA, null, null,
+                true, ModoSeccion311.BLOQUES_CURRICULARES, -100,
+                false, ModoSeccion312.MODALIDADES_PRACTICAS, null,
+                List.of(), List.of(),
+                List.of(new GuardarEstandarRequest.AreaCargaHorariaRequest(
+                        TipoSeccionCargaHoraria.CARGA_TOTAL_311, 1, "CBI", "Ciencias Básicas", "Ciencias Básicas", true, 750))
+        );
+        assertThrows(DomainValidationException.class, () -> service.crear(minNegativo));
+
+        // 3. Guarda horas mínimas globales en cabecera y en cada fila habilitada
+        GuardarEstandarRequest conMinimos = new GuardarEstandarRequest(
+                carrera.getId(), "Ingeniería RM 1254", "RM 1254/18", 2026, EstadoVigenciaEstandar.VIGENTE,
+                TipoSeccionEstandar22.NINGUNA, TipoEvaluacionEstandar22.NINGUNA, null, null,
+                true, ModoSeccion311.BLOQUES_CURRICULARES, 3600,
+                true, ModoSeccion312.MODALIDADES_PRACTICAS, 750,
+                List.of(), List.of(),
+                List.of(
+                        new GuardarEstandarRequest.AreaCargaHorariaRequest(
+                                TipoSeccionCargaHoraria.CARGA_TOTAL_311, 1, "CBI", "Ciencias Básicas", "Ciencias Básicas", true, 750),
+                        new GuardarEstandarRequest.AreaCargaHorariaRequest(
+                                TipoSeccionCargaHoraria.PRACTICA_312, 1, "PPS", "PPS", "PPS", true, 200)
+                )
+        );
+        EstandarDetalleDto resMin = service.crear(conMinimos);
+        assertTrue(resMin.habilitar311());
+        assertEquals(3600, resMin.horasMinimasTotal311());
+        assertEquals(750, resMin.horasMinimasTotal312());
+        verify(areaRepository).saveAll(argThat(col -> {
+            List<EstandarAreaCargaHorariaJpaEntity> list = new ArrayList<>();
+            col.forEach(list::add);
+            return list.size() == 2
+                    && Integer.valueOf(750).equals(list.get(0).getHorasMinimasCarrera())
+                    && Integer.valueOf(200).equals(list.get(1).getHorasMinimasCarrera());
+        }));
     }
 
     private void stubEmptyChildren() {

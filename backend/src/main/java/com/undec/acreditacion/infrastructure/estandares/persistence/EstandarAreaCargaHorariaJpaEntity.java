@@ -37,6 +37,9 @@ public class EstandarAreaCargaHorariaJpaEntity {
     @Column(name = "habilitada", nullable = false)
     private Boolean habilitada = true;
 
+    @Column(name = "horas_minimas_carrera")
+    private Integer horasMinimasCarrera;
+
     public EstandarAreaCargaHorariaJpaEntity() {
     }
 
@@ -102,6 +105,14 @@ public class EstandarAreaCargaHorariaJpaEntity {
 
     public void setHabilitada(Boolean habilitada) {
         this.habilitada = habilitada;
+    }
+
+    public Integer getHorasMinimasCarrera() {
+        return horasMinimasCarrera;
+    }
+
+    public void setHorasMinimasCarrera(Integer horasMinimasCarrera) {
+        this.horasMinimasCarrera = horasMinimasCarrera;
     }
 
     @Override
