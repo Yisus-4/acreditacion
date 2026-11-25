@@ -183,26 +183,21 @@
           >
             {{ mostrarEditorPlan() ? 'Ocultar Ficha Técnica' : 'Editar Ficha FT-001' }}
           </button>
-          <button
-            type="button"
-            [disabled]="asignaturas().length === 0 || completando83() || actividad83Completada()"
-            (click)="validarYCompletar83()"
-            [style.background]="actividad83Completada() ? '#f0fdf4' : '#166534'"
-            [style.color]="actividad83Completada() ? '#166534' : '#ffffff'"
-            [style.border]="actividad83Completada() ? '1px solid #bbf7d0' : 'none'"
-            [style.opacity]="asignaturas().length === 0 || completando83() ? '0.6' : '1'"
-            [style.cursor]="asignaturas().length === 0 || completando83() || actividad83Completada() ? 'not-allowed' : 'pointer'"
-            style="padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; white-space: nowrap;"
-            [title]="asignaturas().length === 0 ? 'El plan debe tener al menos una actividad curricular cargada' : (actividad83Completada() ? 'Actividad 8.3 completada en el Plan de Trabajo' : 'Marcar Actividad 8.3 como Completada')"
-          >
-            @if (completando83()) {
-              <span>Completando...</span>
-            } @else if (actividad83Completada()) {
-              <span>✓ Actividad 8.3 Completada</span>
-            } @else {
-              <span>Marcar Actividad 8.3 como Completada</span>
-            }
-          </button>
+          @if (actividad83Completada()) {
+            <span
+              style="padding: 7px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; background: #eef5f0; color: #2d5a3d; border: 1px solid #c6dccd; white-space: nowrap;"
+              title="Todas las actividades curriculares tienen sus campos obligatorios y estándar CONEAU completos"
+            >
+              ✓ Actividad 8.3 Completada
+            </span>
+          } @else if (asignaturas().length > 0) {
+            <span
+              style="padding: 7px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; background: #f7f3f5; color: #5a4a53; border: 1px solid #e5dde1; white-space: nowrap;"
+              title="La actividad 8.3 se completará automáticamente cuando todas las actividades curriculares tengan sus campos obligatorios y estándar CONEAU completos"
+            >
+              Completitud 8.3: {{ asignaturasCompletasCount() }}/{{ asignaturas().length }}
+            </span>
+          }
         </div>
       }
     </div>
@@ -412,12 +407,14 @@
           <thead>
             <tr>
               <th style="width: 80px;">Cód.</th>
-              <th style="min-width: 240px;">Asignatura / Actividad Curricular</th>
-              <th style="width: 80px; text-align: center;">Año</th>
-              <th style="width: 100px;">Ciclo</th>
-              <th style="width: 90px;">Hs Reloj</th>
+              <th style="min-width: 220px;">Asignatura / Actividad Curricular</th>
+              <th style="width: 70px; text-align: center;">Año</th>
+              <th style="width: 90px;">Ciclo</th>
+              <th style="width: 85px;">Hs Reloj</th>
               <th>Régimen y Correlatividades</th>
-              <th class="col-acciones" style="width: 150px; text-align: center;">Acciones</th>
+              <th style="min-width: 200px;">Docente Responsable</th>
+              <th style="width: 140px;">Estándar (2.2 / 3)</th>
+              <th class="col-acciones" style="min-width: 220px; text-align: center;">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -441,26 +438,81 @@
                 <td class="col-desc">
                   {{ a.correlativas || 'Sin correlatividades previas' }}
                 </td>
+                <td>
+                  @if (puedeDesignarDocente() && a.id) {
+                    <select
+                      [value]="a.docenteResponsableId || ''"
+                      [disabled]="designandoResponsableId() === a.id"
+                      (change)="designarDocenteResponsableAsignatura(a.id, $event)"
+                      style="width: 100%; padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12.5px; background: #fff;"
+                      title="Asignar docente responsable de completar el estándar y programa de la asignatura"
+                    >
+                      <option value="">-- Sin designar --</option>
+                      @for (doc of docentesDisponibles(); track doc.id) {
+                        <option [value]="doc.id">{{ doc.username }} ({{ doc.email }})</option>
+                      }
+                    </select>
+                  } @else {
+                    <span style="font-size: 12.5px; color: #374151;">
+                      {{ a.docenteResponsableNombre || 'Sin designar' }}
+                    </span>
+                  }
+                </td>
+                <td>
+                  <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                    <span
+                      class="badge-estado-figma"
+                      [class.activa]="!!a.seccion22Completa"
+                      [class.inactiva]="!a.seccion22Completa"
+                      style="font-size: 11px; padding: 2px 7px;"
+                    >
+                      2.2: {{ a.seccion22Completa ? 'Completa' : 'Pend.' }}
+                    </span>
+                    <span
+                      class="badge-estado-figma"
+                      [class.activa]="!!a.seccion3Completa"
+                      [class.inactiva]="!a.seccion3Completa"
+                      style="font-size: 11px; padding: 2px 7px;"
+                    >
+                      3: {{ a.seccion3Completa ? 'Completa' : 'Pend.' }}
+                    </span>
+                  </div>
+                </td>
                 <td class="col-acciones" style="white-space: nowrap; text-align: center;">
-                  <button
-                    type="button"
-                    class="btn-nuevo-figma"
-                    style="padding: 5px 12px; font-size: 12px; background: #6b4c5b; margin-right: 6px; cursor: pointer;"
-                    (click)="abrirModalEditarAsignatura(a)"
-                    title="Editar Asignatura"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-cancelar"
-                    style="padding: 5px 10px; font-size: 12px; color: #dc2626; border-color: #fca5a5; cursor: pointer;"
-                    (click)="eliminarAsignatura(a)"
-                    [disabled]="deletingAsignaturaId() === a.id"
-                    title="Eliminar Asignatura"
-                  >
-                    {{ deletingAsignaturaId() === a.id ? '...' : 'Eliminar' }}
-                  </button>
+                  @if (a.id && planActivo()?.estandarId) {
+                    <button
+                      type="button"
+                      class="btn-nuevo-figma"
+                      [style.background]="puedeCompletarEstandarAsignatura(a) ? '#15803d' : '#ffffff'"
+                      [style.color]="puedeCompletarEstandarAsignatura(a) ? '#ffffff' : '#5a4a53'"
+                      [style.border]="puedeCompletarEstandarAsignatura(a) ? 'none' : '1px solid #d1d5db'"
+                      style="padding: 5px 10px; font-size: 12px; margin-right: 6px; cursor: pointer;"
+                      (click)="abrirModalFichaEstandar(a)"
+                    >
+                      {{ puedeCompletarEstandarAsignatura(a) ? 'Completar Estándar' : 'Ver Estándar' }}
+                    </button>
+                  }
+                  @if (puedeDesignarDocente()) {
+                    <button
+                      type="button"
+                      class="btn-nuevo-figma"
+                      style="padding: 5px 12px; font-size: 12px; background: #6b4c5b; margin-right: 6px; cursor: pointer;"
+                      (click)="abrirModalEditarAsignatura(a)"
+                      title="Editar Asignatura"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-cancelar"
+                      style="padding: 5px 10px; font-size: 12px; color: #dc2626; border-color: #fca5a5; cursor: pointer;"
+                      (click)="eliminarAsignatura(a)"
+                      [disabled]="deletingAsignaturaId() === a.id"
+                      title="Eliminar Asignatura"
+                    >
+                      {{ deletingAsignaturaId() === a.id ? '...' : 'Eliminar' }}
+                    </button>
+                  }
                 </td>
               </tr>
             }
@@ -635,7 +687,7 @@
               <td>
                 @if (puedeDesignarDocente() && a.id) {
                   <select
-                    [value]="prog?.docenteDesignadoId || ''"
+                    [value]="prog?.docenteDesignadoId || a.docenteResponsableId || ''"
                     [disabled]="designandoDocenteId() === a.id"
                     (change)="designarDocenteAsignatura(a.id, $event)"
                     style="width: 100%; padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12.5px; background: #fff;"
@@ -648,7 +700,7 @@
                   </select>
                 } @else {
                   <span style="font-size: 12.5px; color: #374151;">
-                    {{ prog?.docenteDesignadoNombre || 'Sin designar' }}
+                    {{ prog?.docenteDesignadoNombre || a.docenteResponsableNombre || 'Sin designar' }}
                   </span>
                 }
               </td>
@@ -914,9 +966,9 @@
           @if (correlativasSeleccionadas().length > 0) {
             <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
               @for (correlativa of correlativasSeleccionadas(); track correlativa) {
-                <span class="badge-correlativa-chip" style="background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                <span class="badge-correlativa-chip" style="background: #f5eef1; color: #6b4c5b; border: 1px solid #d9c5ce; padding: 3px 8px; border-radius: 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
                   {{ correlativa }}
-                  <button type="button" (click)="toggleCorrelativa(correlativa)" style="background: none; border: none; cursor: pointer; font-size: 12px; color: #4338ca; line-height: 1;">✕</button>
+                  <button type="button" (click)="toggleCorrelativa(correlativa)" style="background: none; border: none; cursor: pointer; font-size: 12px; color: #6b4c5b; line-height: 1;">✕</button>
                 </span>
               }
             </div>
@@ -932,4 +984,13 @@
       </form>
     </div>
   </div>
+}
+
+@if (modalFichaActividadId() && planActivo()?.id) {
+  <app-actividad-estandar-modal
+    [planId]="planActivo()!.id!"
+    [actividadId]="modalFichaActividadId()!"
+    (cerrar)="cerrarModalFichaEstandar()"
+    (guardado)="onFichaEstandarGuardada()"
+  />
 }

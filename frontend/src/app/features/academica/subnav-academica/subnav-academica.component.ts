@@ -24,6 +24,9 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
         <a routerLink="/academica/carreras" routerLinkActive="active" class="subnav-tab">
           Carreras
         </a>
+        <a routerLink="/academica/estandares" routerLinkActive="active" class="subnav-tab">
+          Estándares
+        </a>
         <a routerLink="/academica/planes" routerLinkActive="active" class="subnav-tab">
           Planes y Actividades Curriculares
         </a>
@@ -104,6 +107,8 @@ export class SubnavAcademicaComponent {
     switch (this.seccionActual()) {
       case 'Carreras':
         return '/academica/carreras';
+      case 'Estándares':
+        return '/academica/estandares';
       case 'Planes y Actividades Curriculares':
         return '/academica/planes';
       case 'Cuerpo Académico Troncal':

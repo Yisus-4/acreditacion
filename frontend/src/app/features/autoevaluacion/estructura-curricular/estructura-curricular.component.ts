@@ -29,6 +29,7 @@ import { EstructuraService } from '../../../core/estructura/estructura.service';
 import { CarreraResponse } from '../../../core/estructura/estructura.types';
 import { AutoevaluacionContextService } from '../../../core/autoevaluacion/autoevaluacion-context.service';
 import { NotificationState } from '../../../core/autoevaluacion/notification-state.helper';
+import { ActividadEstandarModalComponent } from './actividad-estandar-modal.component';
 
 export type ActividadCurricularTipo =
   | 'GT_007A'
@@ -57,6 +58,7 @@ export interface OpcionCarreraPlan {
     FormsModule,
     ReactiveFormsModule,
     SubnavAutoevaluacionComponent,
+    ActividadEstandarModalComponent,
   ],
   templateUrl: './estructura-curricular.component.html',
   styleUrls: ['../infraestructura/infraestructura.component.scss', './estructura-curricular.component.scss'],
@@ -112,17 +114,18 @@ export class EstructuraCurricularComponent implements OnInit {
   readonly selectedCarreraPlanKey = signal<string>('');
   readonly copiandoPlanesMaestros = signal<boolean>(false);
   readonly actividad83Completada = signal<boolean>(false);
-  readonly completando83 = signal<boolean>(false);
+  readonly resumenCompletitudPorOpcion = signal<Record<string, { completa83: boolean; completa84: boolean }>>({});
   private readonly procesosSincronizados = new Set<string>();
 
-  // Docentes designados para Programas Analíticos (8.4)
+  // Docentes designados para Programas Analíticos (8.4) y Estándar (8.3)
   readonly docentesDisponibles = signal<DocenteDisponibleDto[]>([]);
   readonly designandoDocenteId = signal<string | null>(null);
+  readonly designandoResponsableId = signal<string | null>(null);
+  readonly modalFichaActividadId = signal<string | null>(null);
   readonly puedeDesignarDocente = computed(() =>
     this.auth.hasAnyRole(
       'AEA',
       'DIRECTOR_CARRERA',
-      'CAREER_DIRECTOR',
       'DIRECTOR_ESCUELA',
       'DIRECTOR_DEPARTAMENTO',
       'COMISION_AUTOEVALUACION'
@@ -199,6 +202,22 @@ export class EstructuraCurricularComponent implements OnInit {
       .reduce((acc, curr) => acc + (curr.horasReloj || 0), 0)
   );
 
+  // Métricas de completitud de Actividades Curriculares (8.3)
+  readonly asignaturasCompletasCount = computed(() => {
+    const tieneEstandar = !!this.planActivo()?.estandarId;
+    return this.asignaturas().filter(
+      (a) =>
+        !!a.codigo?.trim() &&
+        !!a.nombre?.trim() &&
+        !!a.grupo?.trim() &&
+        !!a.subgrupo?.trim() &&
+        (a.horasReloj ?? 0) > 0 &&
+        tieneEstandar &&
+        !!a.seccion22Completa &&
+        !!a.seccion3Completa
+    ).length;
+  });
+
   // Métricas de Programas analíticos
   readonly programasCargadosCount = computed(() => {
     return this.asignaturas().filter((a) => this.obtenerPrograma(a.id)?.estadoCarga === 'CARGADO').length;
@@ -210,11 +229,33 @@ export class EstructuraCurricularComponent implements OnInit {
     return Math.round((this.programasCargadosCount() / total) * 100);
   });
 
+  // Completitud global por convocatoria (todos los planes de todas las carreras aprobadas)
+  readonly planesCompletos83Count = computed(() => {
+    const map = this.resumenCompletitudPorOpcion();
+    return this.opcionesCarreraPlan().filter((op) => !!op.planId && !!map[op.key]?.completa83).length;
+  });
+
+  readonly todasOpcionesCompletas83 = computed(() => {
+    const ops = this.opcionesCarreraPlan();
+    return ops.length > 0 && this.planesCompletos83Count() === ops.length;
+  });
+
+  readonly planesCompletos84Count = computed(() => {
+    const map = this.resumenCompletitudPorOpcion();
+    return this.opcionesCarreraPlan().filter((op) => !!op.planId && !!map[op.key]?.completa84).length;
+  });
+
+  readonly todasOpcionesCompletas84 = computed(() => {
+    const ops = this.opcionesCarreraPlan();
+    return ops.length > 0 && this.planesCompletos84Count() === ops.length;
+  });
+
   // Lista oficial de 6 actividades de la dimensión
   readonly listaActividadesDimension = computed(() => {
     const q = this.filtroActividadesTexto().toLowerCase().trim();
-    const tienePlan = !!this.planActivo();
-    const programasOk = this.programasCargadosCount() > 0 && this.programasCargadosCount() === this.asignaturas().length;
+    const totalOpciones = this.opcionesCarreraPlan().length;
+    const ok83Global = this.todasOpcionesCompletas83();
+    const ok84Global = this.todasOpcionesCompletas84();
 
     const actividades = [
       {
@@ -238,20 +279,26 @@ export class EstructuraCurricularComponent implements OnInit {
         nombre: 'Gestionar información de planes de estudio',
         responsable: 'Secretaría Académica / Dirección de Carrera',
         instrumento: 'Resolución Ministerial / Ficha (FT-001)',
-        completada: this.actividad83Completada(),
-        estado: this.actividad83Completada()
+        completada: ok83Global,
+        estado: ok83Global
           ? 'Completada'
-          : this.asignaturas().length > 0
-            ? `Listo para completar (${this.asignaturas().length} act.)`
-            : 'Pendiente',
+          : totalOpciones > 1
+            ? `${this.planesCompletos83Count()}/${totalOpciones} planes completos`
+            : this.asignaturas().length > 0
+              ? `${this.asignaturasCompletasCount()}/${this.asignaturas().length} completas`
+              : 'Pendiente',
       },
       {
         id: 'PROGRAMAS_84' as const,
         nombre: 'Gestionar programas analíticos de las asignaturas',
         responsable: 'Docentes Titulares / Carrera / Comisión Curricular',
         instrumento: 'Programas Vigentes en PDF',
-        completada: programasOk,
-        estado: programasOk ? 'Completada' : `${this.programasCargadosCount()}/${this.asignaturas().length} cargados`,
+        completada: ok84Global,
+        estado: ok84Global
+          ? 'Completada'
+          : totalOpciones > 1
+            ? `${this.planesCompletos84Count()}/${totalOpciones} planes completos`
+            : `${this.programasCargadosCount()}/${this.asignaturas().length} cargados`,
       },
       {
         id: 'FT_003' as const,
@@ -524,6 +571,20 @@ export class EstructuraCurricularComponent implements OnInit {
         this.programaService.listarProgramas(undefined, planId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (progs) => {
             this.programas.set(progs);
+            const activeKey = this.selectedCarreraPlanKey();
+            if (activeKey) {
+              const cargados = activas.filter(
+                (a) => (progs || []).find((p) => p.asignaturaPlanId === a.id)?.estadoCarga === 'CARGADO'
+              ).length;
+              const completa84 = activas.length > 0 && cargados === activas.length;
+              this.resumenCompletitudPorOpcion.update((prev) => ({
+                ...prev,
+                [activeKey]: {
+                  completa83: prev[activeKey]?.completa83 ?? this.actividad83Completada(),
+                  completa84,
+                },
+              }));
+            }
             this.loading.set(false);
           },
           error: () => this.loading.set(false),
@@ -547,41 +608,21 @@ export class EstructuraCurricularComponent implements OnInit {
       .obtenerEstadoActividad83(effectiveProcesoId, effectivePlanId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (res) => this.actividad83Completada.set(!!res?.completada),
+        next: (res) => {
+          const ok = !!res?.completada || !!res?.todasCompletas;
+          this.actividad83Completada.set(ok);
+          const activeKey = this.selectedCarreraPlanKey();
+          if (activeKey) {
+            this.resumenCompletitudPorOpcion.update((prev) => ({
+              ...prev,
+              [activeKey]: {
+                completa83: ok,
+                completa84: prev[activeKey]?.completa84 ?? false,
+              },
+            }));
+          }
+        },
         error: () => this.actividad83Completada.set(false),
-      });
-  }
-
-  validarYCompletar83(): void {
-    const plan = this.planActivo();
-    if (!plan?.id || this.asignaturas().length === 0) {
-      this.notif.mostrar(
-        this.errorMessage,
-        'El plan de estudios debe tener al menos una actividad curricular cargada para completar la actividad 8.3.',
-        6000
-      );
-      return;
-    }
-
-    const effectiveProcesoId =
-      this.procesoId() || this.contextService.procesoIdActivo() || plan.procesoId || undefined;
-    this.completando83.set(true);
-
-    this.planService
-      .validarYCompletarActividad83(effectiveProcesoId, plan.id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (resp) => {
-          this.completando83.set(false);
-          this.actividad83Completada.set(true);
-          this.notif.mostrar(this.successMessage, resp.mensaje, 6000);
-        },
-        error: (err) => {
-          this.completando83.set(false);
-          const msg =
-            err.error?.error || err.error?.mensaje || err.error?.message || 'Error al completar la actividad 8.3';
-          this.notif.mostrar(this.errorMessage, msg, 6000);
-        },
       });
   }
 
@@ -1062,6 +1103,7 @@ export class EstructuraCurricularComponent implements OnInit {
           });
 
           this.opcionesCarreraPlan.set(opciones);
+          this.cargarResumenGlobalOpciones(opciones);
           const actual = opciones.find((o) => o.key === this.selectedCarreraPlanKey())
             || opciones.find((o) => o.carreraId === this.carreraSeleccionadaId() && o.plan)
             || opciones[0];
@@ -1073,6 +1115,49 @@ export class EstructuraCurricularComponent implements OnInit {
           }
         },
         error: () => this.loading.set(false),
+      });
+  }
+
+  private cargarResumenGlobalOpciones(opciones: OpcionCarreraPlan[]): void {
+    if (opciones.length === 0) {
+      this.resumenCompletitudPorOpcion.set({});
+      return;
+    }
+    const checks$ = opciones.map((op) => {
+      if (!op.planId) {
+        return of({ key: op.key, completa83: false, completa84: false });
+      }
+      return forkJoin({
+        estado83: this.planService
+          .obtenerEstadoActividad83(op.procesoId || undefined, op.planId)
+          .pipe(catchError(() => of({ completada: false, totalAsignaturas: 0, todasCompletas: false }))),
+        progs: this.programaService
+          .listarProgramas(undefined, op.planId)
+          .pipe(catchError(() => of([] as ProgramaAnaliticoAsignatura[]))),
+      }).pipe(
+        switchMap(({ estado83, progs }) => {
+          const totalAsigs = estado83?.totalAsignaturas ?? 0;
+          const cargados = (progs || []).filter((p) => p.estadoCarga === 'CARGADO').length;
+          return of({
+            key: op.key,
+            completa83: !!estado83?.completada || !!estado83?.todasCompletas,
+            completa84: totalAsigs > 0 && cargados >= totalAsigs,
+          });
+        })
+      );
+    });
+
+    forkJoin(checks$)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (rows) => {
+          const map: Record<string, { completa83: boolean; completa84: boolean }> = {};
+          for (const r of rows) {
+            map[r.key] = { completa83: r.completa83, completa84: r.completa84 };
+          }
+          this.resumenCompletitudPorOpcion.set(map);
+        },
+        error: () => {},
       });
   }
 
@@ -1124,7 +1209,91 @@ export class EstructuraCurricularComponent implements OnInit {
     const userId = this.auth.currentSession?.user?.id;
     if (!userId || !asignaturaId) return false;
     const prog = this.programas().find((p) => p.asignaturaPlanId === asignaturaId);
+    if (prog?.docenteDesignadoId && prog.docenteDesignadoId === userId) {
+      return true;
+    }
+    const asig = this.asignaturas().find((a) => a.id === asignaturaId);
+    return !!asig?.docenteResponsableId && asig.docenteResponsableId === userId;
+  }
+
+  puedeCompletarEstandarAsignatura(asig: ActividadCurricularPlan): boolean {
+    if (this.puedeDesignarDocente()) {
+      return true;
+    }
+    const userId = this.auth.currentSession?.user?.id;
+    if (!userId || !asig.id) return false;
+    if (asig.docenteResponsableId && asig.docenteResponsableId === userId) {
+      return true;
+    }
+    const prog = this.programas().find((p) => p.asignaturaPlanId === asig.id);
     return !!prog?.docenteDesignadoId && prog.docenteDesignadoId === userId;
+  }
+
+  abrirModalFichaEstandar(asig: ActividadCurricularPlan): void {
+    if (!asig.id) return;
+    this.modalFichaActividadId.set(asig.id);
+  }
+
+  cerrarModalFichaEstandar(): void {
+    this.modalFichaActividadId.set(null);
+  }
+
+  onFichaEstandarGuardada(): void {
+    const planId = this.planActivo()?.id;
+    this.cerrarModalFichaEstandar();
+    this.notif.mostrar(this.successMessage, 'Ficha del estándar (Sección 2.2 y 3) guardada exitosamente.', 5000);
+    if (planId) {
+      this.cargarAsignaturasYProgramas(planId);
+    }
+  }
+
+  designarDocenteResponsableAsignatura(asignaturaId: string, event: Event): void {
+    const planId = this.planActivo()?.id;
+    if (!planId) return;
+    const select = event.target as HTMLSelectElement;
+    const docenteId = select.value;
+    const docente = this.docentesDisponibles().find((d) => d.id === docenteId);
+    this.designandoResponsableId.set(asignaturaId);
+
+    this.planService
+      .designarDocenteResponsable(planId, asignaturaId, docenteId || null, docente?.username ?? null)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updated) => {
+          this.designandoResponsableId.set(null);
+          this.asignaturas.update((list) =>
+            list.map((a) =>
+              a.id === asignaturaId
+                ? {
+                    ...a,
+                    docenteResponsableId: updated.docenteResponsableId ?? null,
+                    docenteResponsableNombre: updated.docenteResponsableNombre ?? null,
+                  }
+                : a
+            )
+          );
+          this.programas.update((list) =>
+            list.map((p) =>
+              p.asignaturaPlanId === asignaturaId
+                ? {
+                    ...p,
+                    docenteDesignadoId: updated.docenteResponsableId ?? undefined,
+                    docenteDesignadoNombre: updated.docenteResponsableNombre ?? undefined,
+                  }
+                : p
+            )
+          );
+          this.notif.mostrar(
+            this.successMessage,
+            docente ? `Docente responsable "${docente.username}" asignado correctamente.` : 'Docente responsable quitado.',
+            4000
+          );
+        },
+        error: (err) => {
+          this.designandoResponsableId.set(null);
+          this.notif.mostrar(this.errorMessage, 'Error al designar docente responsable: ' + (err.error?.message || err.message), 5000);
+        },
+      });
   }
 
   designarDocenteAsignatura(asignaturaId: string, event: Event): void {
@@ -1148,6 +1317,17 @@ export class EstructuraCurricularComponent implements OnInit {
           } else {
             this.programas.set([...actuales, updated]);
           }
+          this.asignaturas.update((list) =>
+            list.map((a) =>
+              a.id === asignaturaId
+                ? {
+                    ...a,
+                    docenteResponsableId: updated.docenteDesignadoId ?? null,
+                    docenteResponsableNombre: updated.docenteDesignadoNombre ?? null,
+                  }
+                : a
+            )
+          );
           this.notif.mostrar(
             this.successMessage,
             docente ? `Docente "${docente.username}" designado correctamente.` : 'Designación removida.',

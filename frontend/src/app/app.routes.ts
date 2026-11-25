@@ -130,6 +130,15 @@ export const routes: Routes = [
       ).then((m) => m.CarrerasComponent),
   },
   {
+    path: 'academica/estandares',
+    title: 'Estándares por Carrera — Gestión Académica UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/academica/academica-estandares/academica-estandares.component'
+      ).then((m) => m.AcademicaEstandaresComponent),
+  },
+  {
     path: 'academica/planes',
     title: 'Planes de Estudio y Actividades Curriculares — Gestión Académica UNdeC',
     canActivate: [authGuard],
