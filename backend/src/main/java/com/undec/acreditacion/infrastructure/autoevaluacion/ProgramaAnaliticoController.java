@@ -10,6 +10,7 @@ import com.undec.acreditacion.domain.ports.DocumentStoragePort;
 import com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.ProgramaAnaliticoAsignaturaDto;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.*;
+import com.undec.acreditacion.infrastructure.autoevaluacion.service.SincronizacionBidireccionalPlanService;
 import com.undec.acreditacion.infrastructure.persistence.postgres.ProcesoAcreditacionJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataProcesoAcreditacionRepository;
 import com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider;
@@ -46,6 +47,7 @@ public class ProgramaAnaliticoController {
     private final DocumentStoragePort storagePort;
     private final AuthenticatedUserProvider authenticatedUserProvider;
     private final UserRepository userRepository;
+    private final SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService;
 
     public ProgramaAnaliticoController(
             SpringDataProgramaAnaliticoAsignaturaRepository programaRepository,
@@ -57,7 +59,21 @@ public class ProgramaAnaliticoController {
             AuthenticatedUserProvider authenticatedUserProvider
     ) {
         this(programaRepository, planEstudioRepository, asignaturaRepository, procesoRepository,
-                planTrabajoRepository, storagePort, authenticatedUserProvider, null);
+                planTrabajoRepository, storagePort, authenticatedUserProvider, null, null);
+    }
+
+    public ProgramaAnaliticoController(
+            SpringDataProgramaAnaliticoAsignaturaRepository programaRepository,
+            SpringDataPlanEstudioFt001Repository planEstudioRepository,
+            SpringDataActividadCurricularPlanRepository asignaturaRepository,
+            SpringDataProcesoAcreditacionRepository procesoRepository,
+            PlanTrabajoRepositoryPort planTrabajoRepository,
+            DocumentStoragePort storagePort,
+            AuthenticatedUserProvider authenticatedUserProvider,
+            UserRepository userRepository
+    ) {
+        this(programaRepository, planEstudioRepository, asignaturaRepository, procesoRepository,
+                planTrabajoRepository, storagePort, authenticatedUserProvider, userRepository, null);
     }
 
     @Autowired
@@ -69,7 +85,8 @@ public class ProgramaAnaliticoController {
             PlanTrabajoRepositoryPort planTrabajoRepository,
             DocumentStoragePort storagePort,
             AuthenticatedUserProvider authenticatedUserProvider,
-            UserRepository userRepository
+            UserRepository userRepository,
+            SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService
     ) {
         this.programaRepository = programaRepository;
         this.planEstudioRepository = planEstudioRepository;
@@ -79,6 +96,7 @@ public class ProgramaAnaliticoController {
         this.storagePort = storagePort;
         this.authenticatedUserProvider = authenticatedUserProvider;
         this.userRepository = userRepository;
+        this.sincronizacionBidireccionalPlanService = sincronizacionBidireccionalPlanService;
     }
 
     @GetMapping
@@ -108,7 +126,7 @@ public class ProgramaAnaliticoController {
     }
 
     @PostMapping("/proceso/{procesoId}/inicializar")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<List<ProgramaAnaliticoAsignaturaDto>> inicializarDesdePlan(@PathVariable UUID procesoId) {
         ProcesoAcreditacionJpaEntity proceso = procesoRepository.findById(procesoId)
@@ -150,7 +168,7 @@ public class ProgramaAnaliticoController {
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<ProgramaAnaliticoAsignaturaDto> subirPrograma(
             @RequestParam("archivo") MultipartFile archivo,
@@ -195,6 +213,10 @@ public class ProgramaAnaliticoController {
         }
 
         ProgramaAnaliticoAsignaturaJpaEntity entity = progOpt.orElseGet(ProgramaAnaliticoAsignaturaJpaEntity::new);
+        if (entity.getDocenteDesignadoId() == null && asig.getDocenteResponsableId() != null) {
+            entity.setDocenteDesignadoId(asig.getDocenteResponsableId());
+            entity.setDocenteDesignadoNombre(asig.getDocenteResponsableNombre());
+        }
         validarPermisoDocenteDesignado(entity);
         Instant now = Instant.now();
         if (entity.getId() == null) {
@@ -236,7 +258,7 @@ public class ProgramaAnaliticoController {
     }
 
     @PostMapping(value = "/proceso/{procesoId}/cargar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<ProgramaAnaliticoAsignaturaDto> cargarPrograma(
             @PathVariable UUID procesoId,
@@ -309,7 +331,7 @@ public class ProgramaAnaliticoController {
     }
 
     @PostMapping("/validar-completar-8-4")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<Map<String, Object>> validarYCompletar84(
             @RequestParam(required = false) UUID procesoId,
@@ -397,7 +419,7 @@ public class ProgramaAnaliticoController {
     }
 
     @PostMapping("/proceso/{procesoId}/completar-actividad-8-4")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<Map<String, Object>> completarActividad84(@PathVariable UUID procesoId) {
         long total = programaRepository.countByProcesoId(procesoId);
@@ -433,7 +455,7 @@ public class ProgramaAnaliticoController {
     }
 
     @GetMapping("/docentes-disponibles")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_ESCUELA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<List<Map<String, Object>>> listarDocentesDisponibles() {
         if (userRepository == null) {
             return ResponseEntity.ok(List.of());
@@ -457,7 +479,7 @@ public class ProgramaAnaliticoController {
     }
 
     @PatchMapping("/asignatura/{asignaturaPlanId}/designar-docente")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_ESCUELA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION')")
     @Transactional
     public ResponseEntity<ProgramaAnaliticoAsignaturaDto> designarDocente(
             @PathVariable UUID asignaturaPlanId,
@@ -493,9 +515,18 @@ public class ProgramaAnaliticoController {
         entity.setActividadCurricular(asig);
         entity.setNombreAsignatura(asig.getNombre().trim());
         entity.setAnioCursada(asig.getSubgrupo());
+        String resolvedDocenteNombre = docenteNombre != null && !docenteNombre.isBlank() ? docenteNombre.trim() : null;
         entity.setDocenteDesignadoId(docenteId);
-        entity.setDocenteDesignadoNombre(docenteNombre != null ? docenteNombre.trim() : null);
+        entity.setDocenteDesignadoNombre(resolvedDocenteNombre);
         entity.setActualizadoEn(now);
+
+        asig.setDocenteResponsableId(docenteId);
+        asig.setDocenteResponsableNombre(docenteId != null ? resolvedDocenteNombre : null);
+        ActividadCurricularPlanJpaEntity asigGuardada = asignaturaRepository.save(asig);
+        if (sincronizacionBidireccionalPlanService != null && asigGuardada.getPlanEstudio() != null) {
+            sincronizacionBidireccionalPlanService.propagarActualizacionAsignatura(
+                    asigGuardada.getPlanEstudio(), asigGuardada);
+        }
 
         return ResponseEntity.ok(toDto(programaRepository.save(entity)));
     }
@@ -510,7 +541,6 @@ public class ProgramaAnaliticoController {
             String c = r.getCode();
             return "AEA".equalsIgnoreCase(c)
                     || "DIRECTOR_CARRERA".equalsIgnoreCase(c)
-                    || "CAREER_DIRECTOR".equalsIgnoreCase(c)
                     || "DIRECTOR_ESCUELA".equalsIgnoreCase(c)
                     || "DIRECTOR_DEPARTAMENTO".equalsIgnoreCase(c)
                     || "COMISION_AUTOEVALUACION".equalsIgnoreCase(c);

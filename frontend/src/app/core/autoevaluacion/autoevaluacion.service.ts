@@ -108,8 +108,12 @@ export class AutoevaluacionService {
     return this.http.post<Inmueble>(`${this.baseUrl}/inmuebles/${id}/verificar`, {});
   }
 
-  eliminarInmueble(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/inmuebles/${id}`);
+  eliminarInmueble(id: string, procesoId?: string | null): Observable<void> {
+    let params = new HttpParams();
+    if (procesoId) {
+      params = params.set('procesoId', procesoId);
+    }
+    return this.http.delete<void>(`${this.baseUrl}/inmuebles/${id}`, { params });
   }
 
   listarTiposEspacio(): Observable<TipoEspacioFisico[]> {

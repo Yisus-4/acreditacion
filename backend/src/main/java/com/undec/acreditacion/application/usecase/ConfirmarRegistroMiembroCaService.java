@@ -31,7 +31,7 @@ import java.util.UUID;
 public class ConfirmarRegistroMiembroCaService implements ConfirmarRegistroMiembroCaUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(ConfirmarRegistroMiembroCaService.class);
-    private static final String ROL_MIEMBRO_COMISION = "SELF_EVALUATION_COMMITTEE_MEMBER";
+    private static final String ROL_MIEMBRO_COMISION = com.undec.acreditacion.domain.entities.CodigosRol.COMISION_AUTOEVALUACION;
 
     private final RegistroConformacionCaRepositoryPort registroCaRepository;
     private final ProcesoAcreditacionRepositoryPort procesoRepository;

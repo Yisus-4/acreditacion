@@ -53,7 +53,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/maestro")
-    @PreAuthorize("hasAnyRole('AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION', 'AC_COORDINATOR', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<GuiaHigieneSeguridadResponse> obtenerGuiaMaestra() {
         return guiaRepository.findGuiaMaestraCompleta()
@@ -67,7 +67,7 @@ public class AutoevaluacionHigieneSeguridadController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/procesos/{procesoId}")
-    @PreAuthorize("hasAnyRole('AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION', 'AC_COORDINATOR', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     public ResponseEntity<GuiaHigieneSeguridadResponse> obtenerGuiaPorProceso(@PathVariable UUID procesoId) {
         Optional<GuiaHigieneSeguridadJpaEntity> opt = guiaRepository.findByProcesoIdCompleta(procesoId);
         if (opt.isPresent()) {

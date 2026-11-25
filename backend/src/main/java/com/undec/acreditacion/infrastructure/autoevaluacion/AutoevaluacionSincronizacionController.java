@@ -20,7 +20,7 @@ public class AutoevaluacionSincronizacionController {
     }
 
     @PostMapping("/{procesoId}/copiar-datos-centrales")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_ESCUELA', 'SCHOOL_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'SELF_EVALUATION_COMMITTEE_MEMBER')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<ResultadoSincronizacionDto> copiarDatosCentrales(
             @PathVariable UUID procesoId,
             @RequestBody(required = false) CopiarDatosCentralesRequest request

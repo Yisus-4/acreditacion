@@ -144,11 +144,8 @@ export class AmbitosPracticaComponent implements OnInit {
     return (
       this.perteneceACarreraActiva() &&
       this.auth.hasAnyRole(
-        'CAREER_DIRECTOR',
         'DIRECTOR_CARRERA',
-        'SCHOOL_DIRECTOR',
         'DIRECTOR_ESCUELA',
-        'SELF_EVALUATION_COMMITTEE_MEMBER',
         'COMISION_AUTOEVALUACION'
       )
     );

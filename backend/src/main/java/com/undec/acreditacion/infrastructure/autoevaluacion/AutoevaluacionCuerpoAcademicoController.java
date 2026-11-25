@@ -48,7 +48,7 @@ public class AutoevaluacionCuerpoAcademicoController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<List<CuerpoAcademicoMaestroDto>> listar(
             @PathVariable UUID procesoId,
@@ -72,7 +72,7 @@ public class AutoevaluacionCuerpoAcademicoController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<CuerpoAcademicoMaestroDto> crear(
             @PathVariable UUID procesoId,
             @RequestBody CrearCuerpoAcademicoMaestroRequest request
@@ -100,7 +100,7 @@ public class AutoevaluacionCuerpoAcademicoController {
     }
 
     @PutMapping("/{docenteId}")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<CuerpoAcademicoMaestroDto> actualizar(
             @PathVariable UUID procesoId,
             @PathVariable UUID docenteId,
@@ -124,7 +124,7 @@ public class AutoevaluacionCuerpoAcademicoController {
     }
 
     @DeleteMapping("/{docenteId}")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<Void> eliminar(
             @PathVariable UUID procesoId,
             @PathVariable UUID docenteId
@@ -137,7 +137,7 @@ public class AutoevaluacionCuerpoAcademicoController {
     }
 
     @PostMapping("/{docenteId}/asignaciones")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<CuerpoAcademicoMaestroDto> agregarAsignacion(
             @PathVariable UUID procesoId,
             @PathVariable UUID docenteId,
@@ -186,7 +186,7 @@ public class AutoevaluacionCuerpoAcademicoController {
     }
 
     @DeleteMapping("/{docenteId}/asignaciones/{asignacionId}")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<CuerpoAcademicoMaestroDto> eliminarAsignacion(
             @PathVariable UUID procesoId,
             @PathVariable UUID docenteId,

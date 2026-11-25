@@ -26,7 +26,7 @@ public class JwtTokenService implements TokenService {
 
     public JwtTokenService(
             @Value("${security.jwt.secret}") String secret,
-            @Value("${security.jwt.expiration-ms}") long expirationMs
+            @Value("${security.jwt.expiration-ms:3600000}") long expirationMs
     ) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMs = expirationMs;

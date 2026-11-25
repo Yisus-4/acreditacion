@@ -116,51 +116,73 @@ public class ConsultarConvocatoriaEscuelaService implements ConsultarConvocatori
     private String resolverEstadoProcesoReal(UUID procesoId) {
         if (registroUsuariosAteneaRepository != null) {
             Optional<RegistroUsuariosAtenea> ateneaOpt = registroUsuariosAteneaRepository.findByProcesoId(procesoId);
-            if (ateneaOpt.isPresent()) {
-                if (ateneaOpt.get().getEstado() == EstadoRegistroUsuariosAtenea.FINALIZADO) {
-                    return "FINALIZADO";
-                }
-                return "USUARIOS_ATENEA";
+            if (ateneaOpt.isPresent() && ateneaOpt.get().getEstado() == EstadoRegistroUsuariosAtenea.FINALIZADO) {
+                return "FINALIZADO";
             }
         }
+
+        Optional<PlanTrabajo> planOpt = planTrabajoRepository != null
+                ? planTrabajoRepository.findByProcesoId(procesoId)
+                : Optional.empty();
+        boolean planEnviado = planOpt.map(PlanTrabajo::isEnviado).orElse(false);
 
         if (registroCaRepository != null) {
             Optional<RegistroConformacionCa> caOpt = registroCaRepository.findByProcesoId(procesoId);
             if (caOpt.isPresent()) {
-                if (caOpt.get().getEstado() == EstadoRegistroCa.APROBADA
-                        || (caOpt.get().getResolucionStoragePath() != null && !caOpt.get().getResolucionStoragePath().isBlank())) {
+                RegistroConformacionCa ca = caOpt.get();
+                if (ca.getEstado() == EstadoRegistroCa.APROBADA
+                        || (ca.getResolucionStoragePath() != null && !ca.getResolucionStoragePath().isBlank())) {
                     return "USUARIOS_ATENEA";
                 }
-                return "EN_AUTOEVALUACION";
+                boolean caConAvanceReal = ca.getEstado() == EstadoRegistroCa.EN_CARGA_BORRADOR
+                        || ca.getEstado() == EstadoRegistroCa.REMITIDA_A_AEA
+                        || ca.getEstado() == EstadoRegistroCa.OBSERVADA
+                        || (ca.getMiembros() != null && !ca.getMiembros().isEmpty());
+                if (caConAvanceReal || planEnviado) {
+                    return "EN_AUTOEVALUACION";
+                }
             }
         }
 
-        if (planTrabajoRepository != null) {
-            Optional<PlanTrabajo> planOpt = planTrabajoRepository.findByProcesoId(procesoId);
-            if (planOpt.isPresent()) {
-                PlanTrabajo plan = planOpt.get();
-                if (plan.isEnviado()) {
-                    return "EN_AUTOEVALUACION";
-                }
-                boolean normativaCompletada = plan.getActividades().stream()
-                        .filter(PlanTrabajo::esActividadNormativa)
-                        .anyMatch(a -> a.getEstado() == EstadoActividad.COMPLETADA);
-                boolean formalizacionIniciadaOCompleta = plan.getActividades().stream()
-                        .filter(PlanTrabajo::esActividadFormalizacionElectronica)
-                        .anyMatch(a -> a.getEstado() == EstadoActividad.COMPLETADA || a.getEstado() == EstadoActividad.EN_PROGRESO);
-                if (normativaCompletada && formalizacionIniciadaOCompleta) {
-                    return "PLAN_TRABAJO";
-                }
-                boolean algunaEnProgresoOCompletada = plan.getActividades().stream()
-                        .anyMatch(a -> a.getEstado() == EstadoActividad.COMPLETADA || a.getEstado() == EstadoActividad.EN_PROGRESO);
-                if (algunaEnProgresoOCompletada) {
-                    return "EN_FORMALIZACION";
-                }
+        if (planOpt.isPresent()) {
+            PlanTrabajo plan = planOpt.get();
+            if (planEnviado) {
+                return "EN_AUTOEVALUACION";
+            }
+            boolean normativaCompletada = plan.getActividades().stream()
+                    .filter(PlanTrabajo::esActividadNormativa)
+                    .anyMatch(a -> a.getEstado() == EstadoActividad.COMPLETADA);
+            boolean formalizacionIniciadaOCompleta = plan.getActividades().stream()
+                    .filter(PlanTrabajo::esActividadFormalizacionElectronica)
+                    .anyMatch(a -> a.getEstado() == EstadoActividad.COMPLETADA || a.getEstado() == EstadoActividad.EN_PROGRESO);
+            if (normativaCompletada && formalizacionIniciadaOCompleta) {
+                return "PLAN_TRABAJO";
+            }
+            boolean algunaEnProgresoOCompletada = plan.getActividades().stream()
+                    .filter(a -> !esFalsoPositivoAutoCompletado(a))
+                    .anyMatch(a -> a.getEstado() == EstadoActividad.COMPLETADA || a.getEstado() == EstadoActividad.EN_PROGRESO);
+            if (algunaEnProgresoOCompletada) {
+                return "EN_FORMALIZACION";
             }
         }
 
         return procesoRepository.findById(procesoId)
-                .map(p -> p.getEstado().name())
+                .map(p -> {
+                    EstadoProcesoAcreditacion est = p.getEstado();
+                    if (est == EstadoProcesoAcreditacion.FINALIZADO || est == EstadoProcesoAcreditacion.CANCELADO) {
+                        return est.name();
+                    }
+                    return "INICIADO";
+                })
                 .orElse("INICIADO");
+    }
+
+    private boolean esFalsoPositivoAutoCompletado(ActividadPlanTrabajo a) {
+        if (a.getEstado() != EstadoActividad.COMPLETADA || a.getCompletadaPor() != null) {
+            return false;
+        }
+        String sintesis = a.getSintesisAcuerdos();
+        return "Informado sobre el proceso de acreditación".equals(sintesis)
+                || "Cronograma institucional y formulario RG-001 formulados y vigentes".equals(sintesis);
     }
 }

@@ -70,7 +70,7 @@ public class ComisionAutoevaluacionController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<RegistroCaDto> consultar(@PathVariable UUID procesoId) {
         RegistroCaDto res = consultarRegistroCaUseCase.consultarPorProcesoId(procesoId);
         return ResponseEntity.ok(res);
@@ -96,7 +96,7 @@ public class ComisionAutoevaluacionController {
     }
 
     @GetMapping("/instructivo-it001")
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<byte[]> descargarInstructivoIt001() throws IOException {
         Resource resource = new ClassPathResource("instructivos/IT-001_Instructivo_Cuentas_CVar_CONEAU_Global.pdf");
         if (!resource.exists()) {
@@ -113,7 +113,7 @@ public class ComisionAutoevaluacionController {
     }
 
     @PutMapping("/borrador")
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<RegistroCaDto> guardarBorrador(
             @PathVariable UUID procesoId,
             @RequestBody GuardarRegistroCaBorradorRequest req
@@ -126,7 +126,7 @@ public class ComisionAutoevaluacionController {
     }
 
     @PostMapping(value = "/remitir", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<RegistroCaDto> remitir(
             @PathVariable UUID procesoId,
             @RequestParam(value = "coincideCurricular", defaultValue = "false") boolean coincideCurricular,
@@ -149,7 +149,7 @@ public class ComisionAutoevaluacionController {
     }
 
     @PostMapping(value = "/resolucion", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<RegistroCaDto> adjuntarResolucion(
             @PathVariable UUID procesoId,
             @RequestParam("resolucion") MultipartFile resolucion
@@ -203,7 +203,7 @@ public class ComisionAutoevaluacionController {
     }
 
     @GetMapping("/resolucion/descargar")
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<byte[]> descargarResolucion(@PathVariable UUID procesoId) {
         RegistroCaDto ca = consultarRegistroCaUseCase.consultarPorProcesoId(procesoId);
         if (ca.resolucionStoragePath() == null || ca.resolucionStoragePath().isBlank()) {

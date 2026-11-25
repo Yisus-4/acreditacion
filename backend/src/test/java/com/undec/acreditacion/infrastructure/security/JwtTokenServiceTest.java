@@ -31,7 +31,7 @@ class JwtTokenServiceTest {
     void generatesAndDecodesToken() {
         UUID userId = UUID.randomUUID();
         String email = "admin@undec.edu.ar";
-        List<String> roles = List.of("AEA", "AC_COORDINATOR");
+        List<String> roles = List.of("AEA", "DIRECTOR_ESCUELA");
 
         String token = jwtTokenService.generateToken(userId, email, roles);
 

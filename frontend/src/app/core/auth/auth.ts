@@ -6,6 +6,7 @@ import { BehaviorSubject, catchError, Observable, tap, throwError } from 'rxjs';
 import { Credentials, Session } from './auth.models';
 
 const SESSION_STORAGE_KEY = 'undec_session';
+const DEFAULT_JWT_TTL_MS = 60 * 60 * 1000; // 1 hora
 
 /**
  * `Auth` es el servicio singleton de autenticación.
@@ -29,7 +30,13 @@ export class Auth {
   }
 
   get isAuthenticated(): boolean {
-    return this.session$.value !== null;
+    const session = this.session$.value;
+    if (!session) return false;
+    if (this.isSessionExpired(session)) {
+      this.signOut();
+      return false;
+    }
+    return true;
   }
 
   hasRole(roleCode: string): boolean {
@@ -80,6 +87,10 @@ export class Auth {
       if (raw) {
         const session: Session = JSON.parse(raw);
         if (session && session.user && session.token) {
+          if (this.isSessionExpired(session)) {
+            localStorage.removeItem(SESSION_STORAGE_KEY);
+            return null;
+          }
           return session;
         }
       }
@@ -87,6 +98,26 @@ export class Auth {
       // Ignorar fallo al acceder a localStorage o parsear
     }
     return null;
+  }
+
+  private isSessionExpired(session: Session): boolean {
+    try {
+      const parts = session.token.split('.');
+      if (parts.length === 3) {
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(base64)) as { exp?: number };
+        if (typeof payload.exp === 'number') {
+          return Date.now() >= payload.exp * 1000;
+        }
+      }
+    } catch {
+      // Fallback a issuedAt + 1h si el token no es decodificable localmente
+    }
+    const sessionWithTs = session as Session & { issuedAt?: number };
+    if (typeof sessionWithTs.issuedAt === 'number') {
+      return Date.now() - sessionWithTs.issuedAt >= DEFAULT_JWT_TTL_MS;
+    }
+    return false;
   }
 
   private saveSessionToStorage(session: Session): void {

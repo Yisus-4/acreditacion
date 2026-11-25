@@ -13,7 +13,10 @@ import com.undec.acreditacion.infrastructure.persistence.postgres.ConvocatoriaCa
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataConvocatoriaCarreraPlanRepository;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -68,40 +71,58 @@ public class ConfirmarConvocatoriaDirectorEscuelaService implements ConfirmarCon
 
         convocatoria.confirmarPorDirectorEscuela(command.carrerasSeleccionadas(), command.confirmadoPorDe());
 
-        // Para cada carrera confirmada, inicializar proceso de acreditación si no existe
+        // 1. Pre-validar todas las carreras y sus planes ANTES de crear procesos (evita estados parciales)
+        Map<UUID, Carrera> carrerasValidadas = new HashMap<>();
+        Map<UUID, List<UUID>> planesValidados = new HashMap<>();
+
+        for (ConvocatoriaCarrera item : convocatoria.getCarreras()) {
+            if (!item.isSeleccionadaPorDe()) {
+                continue;
+            }
+            UUID carreraId = item.getCarreraId();
+            Carrera carrera = carreraRepository.findById(carreraId)
+                    .orElseThrow(() -> new ResourceNotFoundException("No se encontró la carrera ID: " + carreraId));
+
+            List<UUID> planesSeleccionados = null;
+            if (command.planesPorCarrera() != null && command.planesPorCarrera().containsKey(carreraId)) {
+                planesSeleccionados = command.planesPorCarrera().get(carreraId);
+                if (planesSeleccionados == null || planesSeleccionados.isEmpty()) {
+                    throw new DomainValidationException("Debe seleccionar al menos un plan de estudio vigente para la carrera " + carrera.getNombre());
+                }
+            }
+
+            if (planesSeleccionados != null && planEstudioRepository != null) {
+                for (UUID planId : planesSeleccionados) {
+                    PlanEstudioFt001JpaEntity planEnt = planEstudioRepository.findById(planId)
+                            .orElseThrow(() -> new ResourceNotFoundException("No se encontró el plan de estudio ID: " + planId));
+                    if (!Boolean.TRUE.equals(planEnt.getEsMaestro()) || planEnt.getEstadoVigencia() != EstadoVigenciaPlan.VIGENTE) {
+                        throw new DomainValidationException("El plan de estudio seleccionado no es un plan maestro vigente para la carrera " + carrera.getNombre());
+                    }
+                }
+            } else if (planesSeleccionados == null && planEstudioRepository != null) {
+                List<PlanEstudioFt001JpaEntity> planesVigentes = planEstudioRepository
+                        .findByCarreraIdAndEstadoVigenciaAndEsMaestroTrue(carreraId, EstadoVigenciaPlan.VIGENTE);
+                if (!planesVigentes.isEmpty()) {
+                    planesSeleccionados = planesVigentes.stream().map(PlanEstudioFt001JpaEntity::getId).toList();
+                } else {
+                    throw new DomainValidationException("La carrera " + carrera.getNombre() + " no posee planes de estudio maestros vigentes para convocar.");
+                }
+            }
+
+            carrerasValidadas.put(carreraId, carrera);
+            if (planesSeleccionados != null) {
+                planesValidados.put(carreraId, planesSeleccionados);
+            }
+        }
+
+        // 2. Para cada carrera confirmada, inicializar proceso de acreditación si no existe
         int anio = convocatoria.getFechaInicio().getYear();
 
         for (ConvocatoriaCarrera item : convocatoria.getCarreras()) {
             if (item.isSeleccionadaPorDe()) {
                 UUID carreraId = item.getCarreraId();
-                Carrera carrera = carreraRepository.findById(carreraId)
-                        .orElseThrow(() -> new ResourceNotFoundException("No se encontró la carrera ID: " + carreraId));
-
-                List<UUID> planesSeleccionados = null;
-                if (command.planesPorCarrera() != null && command.planesPorCarrera().containsKey(carreraId)) {
-                    planesSeleccionados = command.planesPorCarrera().get(carreraId);
-                    if (planesSeleccionados == null || planesSeleccionados.isEmpty()) {
-                        throw new DomainValidationException("Debe seleccionar al menos un plan de estudio vigente para la carrera " + carrera.getNombre());
-                    }
-                }
-
-                if (planesSeleccionados != null && planEstudioRepository != null) {
-                    for (UUID planId : planesSeleccionados) {
-                        PlanEstudioFt001JpaEntity planEnt = planEstudioRepository.findById(planId)
-                                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el plan de estudio ID: " + planId));
-                        if (!Boolean.TRUE.equals(planEnt.getEsMaestro()) || planEnt.getEstadoVigencia() != EstadoVigenciaPlan.VIGENTE) {
-                            throw new DomainValidationException("El plan de estudio seleccionado no es un plan maestro vigente para la carrera " + carrera.getNombre());
-                        }
-                    }
-                } else if (planesSeleccionados == null && planEstudioRepository != null) {
-                    List<PlanEstudioFt001JpaEntity> planesVigentes = planEstudioRepository
-                            .findByCarreraIdAndEstadoVigenciaAndEsMaestroTrue(carreraId, EstadoVigenciaPlan.VIGENTE);
-                    if (!planesVigentes.isEmpty()) {
-                        planesSeleccionados = planesVigentes.stream().map(PlanEstudioFt001JpaEntity::getId).toList();
-                    } else {
-                        throw new DomainValidationException("La carrera " + carrera.getNombre() + " no posee planes de estudio maestros vigentes para convocar.");
-                    }
-                }
+                Carrera carrera = carrerasValidadas.get(carreraId);
+                List<UUID> planesSeleccionados = planesValidados.get(carreraId);
 
                 // Si la carrera en esta convocatoria aún no tiene proceso creado, lo inicializamos de forma aislada
                 if (item.getProcesoId() == null) {

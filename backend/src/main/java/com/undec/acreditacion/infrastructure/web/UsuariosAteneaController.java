@@ -41,7 +41,7 @@ public class UsuariosAteneaController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('AEA', 'COORDINADOR_AEA', 'DIRECTOR_ESCUELA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<RegistroUsuariosAteneaDto> consultar(@PathVariable UUID procesoId) {
         RegistroUsuariosAteneaDto dto = consultarUseCase.consultarPorProcesoId(procesoId);
         return ResponseEntity.ok(dto);
@@ -83,7 +83,7 @@ public class UsuariosAteneaController {
     }
 
     @GetMapping("/descargar")
-    @PreAuthorize("hasAnyRole('AEA', 'COORDINADOR_AEA', 'DIRECTOR_ESCUELA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<byte[]> descargar(@PathVariable UUID procesoId) {
         RegistroUsuariosAteneaDto dto = consultarUseCase.consultarPorProcesoId(procesoId);
         if (dto.rutaDocumento() == null || dto.rutaDocumento().isBlank()) {
@@ -91,6 +91,12 @@ public class UsuariosAteneaController {
         }
 
         byte[] bytes = storagePort.downloadFile(dto.rutaDocumento());
+        if (bytes != null && esPdfLegacyStub(bytes)) {
+            byte[] regenerado = finalizarUseCase.regenerarPdf(procesoId);
+            if (regenerado != null && regenerado.length > 0) {
+                bytes = regenerado;
+            }
+        }
         String filename = "RG-003_Registro_de_usuarios_de_ATENEA.pdf";
         if (dto.rutaDocumento().contains("/")) {
             filename = dto.rutaDocumento().substring(dto.rutaDocumento().lastIndexOf('/') + 1);
@@ -101,6 +107,11 @@ public class UsuariosAteneaController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
                 .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(bytes.length))
                 .body(bytes);
+    }
+
+    private boolean esPdfLegacyStub(byte[] bytes) {
+        String header = new String(bytes, 0, Math.min(bytes.length, 4096), java.nio.charset.StandardCharsets.ISO_8859_1);
+        return header.contains("% REGISTRO OFICIAL RG-003:") || header.contains("% SECCION I: TABLA DE USUARIOS");
     }
 
     private UUID resolverUsuarioAutenticadoId() {

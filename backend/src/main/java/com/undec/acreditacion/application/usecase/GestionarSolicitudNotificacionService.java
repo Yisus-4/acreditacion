@@ -32,7 +32,7 @@ import java.util.UUID;
 public class GestionarSolicitudNotificacionService implements GestionarSolicitudNotificacionUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(GestionarSolicitudNotificacionService.class);
-    private static final String ROL_MIEMBRO_COMISION = "SELF_EVALUATION_COMMITTEE_MEMBER";
+    private static final String ROL_MIEMBRO_COMISION = com.undec.acreditacion.domain.entities.CodigosRol.COMISION_AUTOEVALUACION;
 
     private final SolicitudNotificacionRepositoryPort notificacionRepository;
     private final CatalogoMiembroComisionRepositoryPort catalogoRepository;

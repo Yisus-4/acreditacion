@@ -89,7 +89,7 @@ public class FormalizacionController {
     // =========================================================================
 
     @GetMapping("/actividades/{actividadId}/documentos")
-    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<List<DocumentoAcreditacionResponse>> listarDocumentosActividad(
             @PathVariable UUID procesoId,
             @PathVariable UUID actividadId
@@ -166,7 +166,7 @@ public class FormalizacionController {
     }
 
     @GetMapping("/actividades/{actividadId}/documentos/{documentoId}/descargar")
-    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<byte[]> descargarDocumentoInteres(
             @PathVariable UUID procesoId,
             @PathVariable UUID actividadId,
@@ -223,7 +223,7 @@ public class FormalizacionController {
     // =========================================================================
 
     @GetMapping("/formalizacion")
-    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA') or hasAuthority('CONVOCATORIA_READ')")
     @Transactional
     public ResponseEntity<FichaFormalizacionFt012Response> obtenerFormalizacion(@PathVariable UUID procesoId) {
         Optional<FichaFormalizacionFt012JpaEntity> fichaOpt = fichaRepository.findByProcesoId(procesoId);
@@ -273,7 +273,7 @@ public class FormalizacionController {
     }
 
     @PutMapping("/formalizacion/ficha")
-    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA') or hasAuthority('CONVOCATORIA_READ')")
     @Transactional
     public ResponseEntity<FichaFormalizacionFt012Response> guardarFichaFormalizacion(
             @PathVariable UUID procesoId,
@@ -397,7 +397,7 @@ public class FormalizacionController {
     }
 
     @GetMapping("/formalizacion/comprobante")
-    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<byte[]> descargarComprobanteFormalizacion(@PathVariable UUID procesoId) {
         FichaFormalizacionFt012JpaEntity ficha = fichaRepository.findByProcesoId(procesoId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró la ficha de formalización FT-012 para el proceso: " + procesoId));

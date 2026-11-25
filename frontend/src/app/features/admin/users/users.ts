@@ -310,15 +310,16 @@ export class UserManagement implements OnInit {
     }
     const fallbackMap: Record<string, string> = {
       AEA: 'Área de Evaluación y Acreditación (Administrador)',
-      CAREER_DIRECTOR: 'Director de Carrera',
       DIRECTOR_CARRERA: 'Director de Carrera',
       DIRECTOR_ESCUELA: 'Director de Escuela',
-      SELF_EVALUATION_COMMITTEE_MEMBER: 'Miembro de Comisión CA',
-      AC_COORDINATOR: 'Coordinador de Acreditación',
-      INFORMATION_PROVIDER: 'Proveedor de Información',
+      DIRECTOR_DEPARTAMENTO: 'Director de Departamento',
+      COMISION_AUTOEVALUACION: 'Miembro de Comisión CA',
+      DOCENTE: 'Docente',
       INFRAESTRUCTURA: 'Responsable de Infraestructura',
       BEDELIA: 'Responsable de Bedelía',
       HIGIENE_SEGURIDAD: 'Higiene y Seguridad',
+      BIBLIOTECA: 'Responsable de Biblioteca',
+      PROVEEDOR_INFORMACION: 'Proveedor de Información',
     };
     return fallbackMap[code] || code;
   }
@@ -328,15 +329,16 @@ export class UserManagement implements OnInit {
     if (found?.description) return found.description;
     const descMap: Record<string, string> = {
       AEA: 'Administrador general del sistema de acreditación · AEA',
-      CAREER_DIRECTOR: 'Gestiona la autoevaluación de su carrera · DIRECTOR_CARRERA',
       DIRECTOR_CARRERA: 'Gestiona la autoevaluación de su carrera · DIRECTOR_CARRERA',
       DIRECTOR_ESCUELA: 'Supervisa las carreras de su escuela · DIRECTOR_ESCUELA',
-      SELF_EVALUATION_COMMITTEE_MEMBER: 'Participa en la autoevaluación · SELF_EVALUATION_COMMITTEE_MEMBER',
-      AC_COORDINATOR: 'Coordina los procesos globales de acreditación · AC_COORDINATOR',
-      INFORMATION_PROVIDER: 'Carga y provee información solicitada · INFORMATION_PROVIDER',
+      DIRECTOR_DEPARTAMENTO: 'Coordina actividades curriculares del departamento · DIRECTOR_DEPARTAMENTO',
+      COMISION_AUTOEVALUACION: 'Participa en la autoevaluación · COMISION_AUTOEVALUACION',
+      DOCENTE: 'Responsable de actividades curriculares y programas · DOCENTE',
       INFRAESTRUCTURA: 'Gestiona datos de sedes y espacios físicos · INFRAESTRUCTURA',
       BEDELIA: 'Gestiona asignaciones de aulas y bedelía · BEDELIA',
       HIGIENE_SEGURIDAD: 'Supervisa condiciones de higiene y seguridad · HIGIENE_SEGURIDAD',
+      BIBLIOTECA: 'Gestiona equipamiento y acervo bibliográfico · BIBLIOTECA',
+      PROVEEDOR_INFORMACION: 'Carga y provee información solicitada · PROVEEDOR_INFORMACION',
     };
     return descMap[code] || code;
   }

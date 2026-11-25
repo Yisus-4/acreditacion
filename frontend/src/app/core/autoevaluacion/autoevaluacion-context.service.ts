@@ -68,11 +68,12 @@ export class AutoevaluacionContextService {
     let baseCarreras = todas;
 
     if (detalle && detalle.carrerasPropuestas && detalle.carrerasPropuestas.length > 0) {
-      const propuestasIds = new Set(detalle.carrerasPropuestas.map((cp) => cp.carreraId));
-      const filtradas = todas.filter((c) => propuestasIds.has(c.id));
-      if (filtradas.length > 0) {
-        baseCarreras = filtradas;
-      }
+      const aprobadasIds = new Set(
+        detalle.carrerasPropuestas
+          .filter((cp) => !!cp.seleccionadaPorDe)
+          .map((cp) => cp.carreraId)
+      );
+      baseCarreras = todas.filter((c) => aprobadasIds.has(c.id));
     }
 
     // Multi-tenancy filter by Academic Unit for non-AEA academic roles
@@ -81,11 +82,9 @@ export class AutoevaluacionContextService {
 
     if (!esAea && currentUser?.unidadAcademicaId) {
       const esAcademico = this.auth.hasAnyRole(
-        'CAREER_DIRECTOR',
         'DIRECTOR_CARRERA',
-        'SCHOOL_DIRECTOR',
         'DIRECTOR_ESCUELA',
-        'SELF_EVALUATION_COMMITTEE_MEMBER',
+        'DIRECTOR_DEPARTAMENTO',
         'COMISION_AUTOEVALUACION',
         'DOCENTE'
       );
@@ -145,25 +144,24 @@ export class AutoevaluacionContextService {
       'BEDELIA',
       'HIGIENE_SEGURIDAD',
       'DIRECTOR_CARRERA',
-      'CAREER_DIRECTOR',
       'COMISION_AUTOEVALUACION'
     );
   });
 
   readonly puedeEditarBiblioteca = computed<boolean>(() => {
-    return this.auth.hasAnyRole('AEA', 'BIBLIOTECA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION');
+    return this.auth.hasAnyRole('AEA', 'BIBLIOTECA', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION');
   });
 
   readonly puedeEditarAmbitosYConvenios = computed<boolean>(() => {
-    return this.auth.hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION');
+    return this.auth.hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION');
   });
 
   readonly puedeEditarPlanesEstudio = computed<boolean>(() => {
-    return this.auth.hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION');
+    return this.auth.hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION');
   });
 
   readonly puedeEditarProgramasAnaliticos = computed<boolean>(() => {
-    return this.auth.hasAnyRole('AEA', 'DOCENTE', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION');
+    return this.auth.hasAnyRole('AEA', 'DOCENTE', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION');
   });
 
   /**

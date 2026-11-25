@@ -56,20 +56,20 @@ class RegisterControllerTest {
     @DisplayName("POST /auth/register creates user and returns 201 with role codes")
     void registersUserSuccessfully() throws Exception {
         UUID roleId = UUID.randomUUID();
-        Role role = Role.system(roleId, "AC_COORDINATOR", "Coordinador", "Desc");
+        Role role = Role.system(roleId, "DIRECTOR_CARRERA", "Coordinador", "Desc");
         User registered = User.register("coordinadora", "coordinadora@undec.edu.ar", "hashed_pwd");
 
         when(passwordHasher.hash("undec2026")).thenReturn("hashed_pwd");
         when(registerUserUseCase.register(eq("coordinadora"), eq("coordinadora@undec.edu.ar"), eq("hashed_pwd")))
                 .thenReturn(registered);
-        when(roleRepository.findByCode("AC_COORDINATOR")).thenReturn(Optional.of(role));
+        when(roleRepository.findByCode("DIRECTOR_CARRERA")).thenReturn(Optional.of(role));
 
         String requestJson = """
                 {
                     "username": "coordinadora",
                     "email": "coordinadora@undec.edu.ar",
                     "password": "undec2026",
-                    "roleCodes": ["AC_COORDINATOR"]
+                    "roleCodes": ["DIRECTOR_CARRERA"]
                 }
                 """;
 
@@ -80,7 +80,7 @@ class RegisterControllerTest {
                 .andExpect(jsonPath("$.username").value("coordinadora"))
                 .andExpect(jsonPath("$.email").value("coordinadora@undec.edu.ar"))
                 .andExpect(jsonPath("$.active").value(true))
-                .andExpect(jsonPath("$.roleCodes[0]").value("AC_COORDINATOR"));
+                .andExpect(jsonPath("$.roleCodes[0]").value("DIRECTOR_CARRERA"));
 
         verify(userRepository).save(any(User.class));
     }

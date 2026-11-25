@@ -24,7 +24,7 @@ public class DocumentoController {
     }
 
     @GetMapping("/{id}/descargar")
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<byte[]> descargarDocumento(@PathVariable UUID id) {
         DocumentoDescarga documento = descargarDocumentoUseCase.descargar(id);
 

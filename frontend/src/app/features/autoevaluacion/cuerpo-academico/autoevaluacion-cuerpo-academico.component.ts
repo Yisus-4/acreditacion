@@ -325,7 +325,6 @@ export class AutoevaluacionCuerpoAcademicoComponent implements OnInit {
       'AEA',
       'DIRECTOR_ESCUELA',
       'DIRECTOR_CARRERA',
-      'CAREER_DIRECTOR',
       'COMISION_AUTOEVALUACION'
     )
   );

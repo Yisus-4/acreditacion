@@ -302,7 +302,6 @@
               <th>Situación Jurídica</th>
               <th>Carreras Vinculadas</th>
               <th>Espacios Físicos (RG-005)</th>
-              <th>Estado CONEAU</th>
               <th class="col-acciones">Acciones</th>
             </tr>
           </thead>
@@ -372,19 +371,6 @@
                     }
                   </div>
                 </td>
-                <td>
-                  @if (actividad41Completada()) {
-                    <span style="display: inline-flex; align-items: center; gap: 6px; color: #166534; font-weight: 600; font-size: 13.5px; white-space: nowrap;">
-                      <span style="width: 7px; height: 7px; border-radius: 50%; background-color: #166534; display: inline-block;"></span>
-                      Verificado
-                    </span>
-                  } @else {
-                    <span style="display: inline-flex; align-items: center; gap: 6px; color: #b45309; font-weight: 600; font-size: 13.5px; white-space: nowrap;">
-                      <span style="width: 7px; height: 7px; border-radius: 50%; background-color: #b45309; display: inline-block;"></span>
-                      Pendiente de verificar
-                    </span>
-                  }
-                </td>
                 <td class="col-acciones">
                   <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
                     @if (puedeGestionarAlgunoEnInmueble()) {
@@ -414,7 +400,7 @@
               <!-- Fila Expandible con el detalle agrupado de espacios físicos (RG-005) -->
               @if (espacioExpandidoId() === inm.id && inm.espacios && inm.espacios.length > 0) {
                 <tr>
-                  <td colspan="9" style="background: #faf9fa; padding: 16px 20px; border-bottom: 2px solid #e5b115;">
+                  <td colspan="8" style="background: #faf9fa; padding: 16px 20px; border-bottom: 2px solid #e5b115;">
                     <div style="font-weight: 700; font-size: 13.5px; color: var(--color-primary-dark); margin-bottom: 8px;">
                       Espacios físicos declarados en RG-005 para: {{ inm.nombre }}
                     </div>

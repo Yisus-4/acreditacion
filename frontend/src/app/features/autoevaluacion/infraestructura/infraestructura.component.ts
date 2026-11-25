@@ -339,7 +339,7 @@ export class InfraestructuraComponent implements OnInit {
           this.modoVista.set('MAESTRO');
         } else {
           this.procesoId.set(ctxProcesoId || null);
-          this.modoVista.set(ctxProcesoId ? 'PROCESO' : 'MAESTRO');
+          this.modoVista.set('PROCESO');
         }
 
         if (cambioCarreraOConvocatoria) {
@@ -378,7 +378,7 @@ export class InfraestructuraComponent implements OnInit {
           this.modoVista.set('MAESTRO');
         } else {
           this.procesoId.set(validProcId || null);
-          this.modoVista.set(validProcId ? 'PROCESO' : 'MAESTRO');
+          this.modoVista.set('PROCESO');
         }
         const act = params.get('actividad');
         if (
@@ -458,8 +458,14 @@ export class InfraestructuraComponent implements OnInit {
     const convId = this.contextService.convocatoriaSeleccionadaId();
     const carId = this.contextService.carreraSeleccionadaId();
 
+    if (!this.esRutaMaestra() && !pId) {
+      this.inmuebles.set([]);
+      this.loading.set(false);
+      return;
+    }
+
     const obs$ =
-      !this.esRutaMaestra() && this.modoVista() === 'PROCESO' && pId
+      !this.esRutaMaestra() && pId
         ? this.autoevalService.obtenerInmueblesPorProceso(pId, convId, carId)
         : this.autoevalService.listarInmueblesMaestros();
 
@@ -1538,12 +1544,21 @@ export class InfraestructuraComponent implements OnInit {
           this.copiandoDatosCentrales.set(false);
           this.cerrarModalCopiarDatosCentrales();
           const validos = resultados.filter((r): r is NonNullable<typeof r> => !!r);
-          const espacios = validos.reduce((acc, r) => acc + (r.espaciosFisicosClonados || 0), 0);
+          if (validos.length === 0) {
+            this.notif.mostrar(
+              this.errorMessage,
+              'No se pudieron copiar los datos maestros. Verifique sus permisos o que el servidor esté actualizado.',
+              6000
+            );
+            return;
+          }
+          const inmuebles = validos.reduce((acc, r) => acc + (r.inmueblesClonados || 0), 0);
+          const espacios = validos.reduce((acc, r) => acc + ((r as any).espaciosClonados ?? r.espaciosFisicosClonados ?? 0), 0);
           const planes = validos.reduce((acc, r) => acc + (r.planesClonados || 0), 0);
-          const docentes = validos.reduce((acc, r) => acc + (r.cuerpoAcademicoClonado || 0), 0);
+          const docentes = validos.reduce((acc, r) => acc + ((r as any).docentesClonados ?? r.cuerpoAcademicoClonado ?? 0), 0);
           this.notif.mostrar(
             this.successMessage,
-            `¡Datos maestros copiados en copia aislada! (${espacios} espacios, ${planes} planes, ${docentes} docentes)`,
+            `¡Datos maestros copiados en copia aislada! (${inmuebles} inmuebles, ${espacios} espacios, ${planes} planes, ${docentes} docentes)`,
             7000
           );
           this.cargarInmuebles();
@@ -1557,13 +1572,24 @@ export class InfraestructuraComponent implements OnInit {
 
   eliminarInmueble(inm: Inmueble): void {
     if (!inm?.id) return;
+    if (!this.esRutaMaestra() && inm.esMaestro) {
+      this.notif.mostrar(
+        this.errorMessage,
+        'No es posible eliminar un inmueble del Padrón Maestro desde una autoevaluación.',
+        6000
+      );
+      return;
+    }
+    const pId = !this.esRutaMaestra()
+      ? (this.contextService.procesoIdActivo() || this.procesoId())
+      : null;
     const msg = this.esRutaMaestra()
       ? `¿Está seguro de eliminar el inmueble maestro "${inm.nombre}"?`
       : `¿Eliminar "${inm.nombre}" de esta autoevaluación? (No afectará el padrón maestro en Gestión Institucional).`;
     if (!window.confirm(msg)) return;
 
     this.autoevalService
-      .eliminarInmueble(inm.id)
+      .eliminarInmueble(inm.id, pId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {

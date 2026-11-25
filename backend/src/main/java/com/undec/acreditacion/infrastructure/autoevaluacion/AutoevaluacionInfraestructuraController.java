@@ -83,7 +83,7 @@ public class AutoevaluacionInfraestructuraController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/inmuebles")
-    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<List<InmuebleResponse>> listarInmuebles(
             @RequestParam(name = "esMaestro", required = false) Boolean esMaestro
@@ -99,7 +99,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @GetMapping("/inmuebles/maestro")
-    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<List<InmuebleResponse>> listarInmueblesMaestros() {
         List<InmuebleJpaEntity> entidades = inmuebleRepository.findMaestrosActivos();
@@ -110,7 +110,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @GetMapping("/inmuebles/{id}")
-    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<InmuebleResponse> obtenerInmueble(@PathVariable UUID id) {
         return inmuebleRepository.findByIdCompleto(id)
@@ -557,13 +557,26 @@ public class AutoevaluacionInfraestructuraController {
     @DeleteMapping("/inmuebles/{id}")
     @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA')")
     @Transactional
-    public ResponseEntity<Void> eliminarInmueble(@PathVariable UUID id) {
+    public ResponseEntity<Void> eliminarInmueble(
+            @PathVariable UUID id,
+            @RequestParam(name = "procesoId", required = false) UUID procesoId
+    ) {
         Optional<InmuebleJpaEntity> opt = inmuebleRepository.findById(id);
         if (opt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
         InmuebleJpaEntity entity = opt.get();
+        if (procesoId != null
+                && (Boolean.TRUE.equals(entity.getEsMaestro())
+                || entity.getProcesoId() == null
+                || !procesoId.equals(entity.getProcesoId()))) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "No es posible eliminar un inmueble del Padrón Maestro Institucional desde una autoevaluación."
+            );
+        }
         entity.setActivo(false);
+        entity.setActualizadoEn(Instant.now());
         inmuebleRepository.save(entity);
         return ResponseEntity.noContent().build();
     }
@@ -591,7 +604,7 @@ public class AutoevaluacionInfraestructuraController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/espacios/consulta")
-    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<ConsultaEspaciosResponse> consultarEspacios(
             @RequestParam(required = false) UUID procesoId,
@@ -655,7 +668,7 @@ public class AutoevaluacionInfraestructuraController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/procesos/{procesoId}/inmuebles")
-    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<?> obtenerInmueblesProceso(
             @PathVariable UUID procesoId,
@@ -682,7 +695,7 @@ public class AutoevaluacionInfraestructuraController {
     }
 
     @GetMapping("/procesos/{procesoId}/infraestructura/estado")
-    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> obtenerEstadoInfraestructuraCarrera(
             @PathVariable UUID procesoId,
@@ -868,7 +881,7 @@ public class AutoevaluacionInfraestructuraController {
     // -------------------------------------------------------------------------
 
     @GetMapping("/tipos-espacio")
-    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'CAREER_DIRECTOR', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'INFRAESTRUCTURA', 'BEDELIA', 'HIGIENE_SEGURIDAD', 'DIRECTOR_CARRERA', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
     @Transactional(readOnly = true)
     public ResponseEntity<List<TipoEspacioResponse>> listarTiposEspacio() {
         List<TipoEspacioResponse> response = tipoEspacioRepository.findByActivoTrueOrderByDenominacionAsc().stream()

@@ -142,7 +142,7 @@ public class AmbitoPracticaController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<AmbitoPracticaDto> crear(@RequestBody AmbitoPracticaDto dto) {
         if (dto.denominacion() == null || dto.denominacion().isBlank()) {
             throw new DomainValidationException("La denominación del ámbito es obligatoria");
@@ -169,7 +169,7 @@ public class AmbitoPracticaController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<AmbitoPracticaDto> actualizar(@PathVariable UUID id, @RequestBody AmbitoPracticaDto dto) {
         AmbitoPracticaJpaEntity entity = ambitoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el ámbito con ID: " + id));
@@ -189,7 +189,7 @@ public class AmbitoPracticaController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<Void> eliminar(@PathVariable UUID id) {
         AmbitoPracticaJpaEntity entity = ambitoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el ámbito con ID: " + id));
@@ -251,7 +251,7 @@ public class AmbitoPracticaController {
     }
 
     @PostMapping({"/carrera/{procesoId}", "/autoevaluacion"})
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA', 'COMISION_AUTOEVALUACION')")
     @Transactional
     public ResponseEntity<AutoevaluacionCarreraAmbitoDto> guardarVinculacionCarrera(
             @PathVariable(required = false) UUID procesoId,
@@ -334,7 +334,7 @@ public class AmbitoPracticaController {
     }
 
     @PostMapping({"/carrera/{procesoId}/completar", "/autoevaluacion/completar"})
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'DIRECTOR_CARRERA', 'SCHOOL_DIRECTOR', 'DIRECTOR_ESCUELA', 'SELF_EVALUATION_COMMITTEE_MEMBER', 'COMISION_AUTOEVALUACION')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA', 'COMISION_AUTOEVALUACION')")
     public ResponseEntity<Map<String, Object>> completarActividadAmbitos(
             @PathVariable(required = false) UUID procesoId,
             @RequestParam(value = "procesoId", required = false) UUID queryProcesoId,

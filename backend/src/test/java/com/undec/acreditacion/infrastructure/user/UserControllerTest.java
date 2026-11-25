@@ -82,7 +82,7 @@ class UserControllerTest {
     @DisplayName("POST /api/users creates user and returns 201 Created")
     void createUserReturns201() throws Exception {
         UUID userId = UUID.randomUUID();
-        Role role = Role.system(UUID.randomUUID(), "AC_COORDINATOR", "Coord", "Desc");
+        Role role = Role.system(UUID.randomUUID(), "DIRECTOR_CARRERA", "Coord", "Desc");
         User user = User.rehydrate(userId, "coord", "coord@undec.edu.ar", "pwd", true, false, Set.of(role));
 
         when(createUserUseCase.createUser(any(CreateUserCommand.class))).thenReturn(user);
@@ -92,7 +92,7 @@ class UserControllerTest {
                     "username": "coord",
                     "email": "coord@undec.edu.ar",
                     "password": "secretpassword",
-                    "roleCodes": ["AC_COORDINATOR"]
+                    "roleCodes": ["DIRECTOR_CARRERA"]
                 }
                 """;
 
@@ -103,7 +103,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.id").value(userId.toString()))
                 .andExpect(jsonPath("$.username").value("coord"))
                 .andExpect(jsonPath("$.email").value("coord@undec.edu.ar"))
-                .andExpect(jsonPath("$.roleCodes[0]").value("AC_COORDINATOR"));
+                .andExpect(jsonPath("$.roleCodes[0]").value("DIRECTOR_CARRERA"));
 
         verify(createUserUseCase).createUser(any(CreateUserCommand.class));
     }

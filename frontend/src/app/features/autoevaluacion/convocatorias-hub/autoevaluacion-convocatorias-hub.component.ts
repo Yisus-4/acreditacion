@@ -76,9 +76,11 @@ interface CarreraConvocadaItem {
                 <div class="convocatoria-meta">
                   <div class="conv-badges">
                     <span class="badge-code">{{ conv.codigo }}</span>
-                    <span class="badge-estado" [ngClass]="conv.estado.toLowerCase()">
-                      {{ formatearEstado(conv.estado) }}
-                    </span>
+                    @if (formatearEstado(conv.estado); as est) {
+                      <span class="badge-estado" [ngClass]="conv.estado.toLowerCase()">
+                        {{ est }}
+                      </span>
+                    }
                   </div>
                   <h2 class="convocatoria-titulo">{{ conv.titulo }}</h2>
                   <p class="convocatoria-submeta">
@@ -626,16 +628,16 @@ export class AutoevaluacionConvocatoriasHubComponent implements OnInit {
 
     let carrerasBase: CarreraResponse[] = [];
     if (detalle?.carrerasPropuestas && detalle.carrerasPropuestas.length > 0) {
-      const idsPropuestas = new Set(detalle.carrerasPropuestas.map((cp) => cp.carreraId));
-      carrerasBase = todas.filter((c) => idsPropuestas.has(c.id));
-    }
-
-    if (carrerasBase.length === 0) {
-      if (detalle?.carreraId) {
-        carrerasBase = todas.filter((c) => c.id === detalle.carreraId);
-      } else {
-        carrerasBase = todas;
-      }
+      const idsAprobadas = new Set(
+        detalle.carrerasPropuestas
+          .filter((cp) => !!cp.seleccionadaPorDe)
+          .map((cp) => cp.carreraId)
+      );
+      carrerasBase = todas.filter((c) => idsAprobadas.has(c.id));
+    } else if (detalle?.carreraId) {
+      carrerasBase = todas.filter((c) => c.id === detalle.carreraId);
+    } else {
+      carrerasBase = todas;
     }
 
     const tieneCargaHabilitada =
@@ -706,9 +708,11 @@ export class AutoevaluacionConvocatoriasHubComponent implements OnInit {
     return user.roleCodes.join(', ');
   }
 
-  formatearEstado(estado?: string): string {
-    if (!estado) return 'En Curso';
+  formatearEstado(estado?: string): string | null {
+    if (!estado) return null;
     switch (estado.toUpperCase()) {
+      case 'CONFIRMADA_DIRECTOR_ESCUELA':
+        return null;
       case 'EN_CURSO':
         return 'En Curso';
       case 'EN_PREPARACION':
@@ -718,7 +722,7 @@ export class AutoevaluacionConvocatoriasHubComponent implements OnInit {
       case 'FINALIZADA':
         return 'Finalizada';
       default:
-        return estado;
+        return null;
     }
   }
 }
