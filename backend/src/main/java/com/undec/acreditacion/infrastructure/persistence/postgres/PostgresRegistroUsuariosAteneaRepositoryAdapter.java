@@ -3,11 +3,13 @@ package com.undec.acreditacion.infrastructure.persistence.postgres;
 import com.undec.acreditacion.domain.entities.RegistroUsuariosAtenea;
 import com.undec.acreditacion.domain.ports.RegistroUsuariosAteneaRepositoryPort;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
 
 @Component
+@Transactional
 public class PostgresRegistroUsuariosAteneaRepositoryAdapter implements RegistroUsuariosAteneaRepositoryPort {
 
     private final SpringDataRegistroUsuariosAteneaRepository repository;

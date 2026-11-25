@@ -7,6 +7,7 @@ import com.undec.acreditacion.infrastructure.persistence.postgres.UnidadAcademic
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/estructura/unidades-academicas-coneau")
+@Transactional
 public class UnidadAcademicaConeauController {
 
     private final SpringDataUnidadAcademicaConeauRepository uaRepository;

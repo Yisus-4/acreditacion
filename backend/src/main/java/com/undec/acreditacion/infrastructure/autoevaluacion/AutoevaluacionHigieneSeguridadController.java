@@ -2,6 +2,7 @@ package com.undec.acreditacion.infrastructure.autoevaluacion;
 
 import com.undec.acreditacion.domain.entities.ActividadPlanTrabajo;
 import com.undec.acreditacion.domain.entities.PlanTrabajo;
+import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
 import com.undec.acreditacion.domain.ports.PlanTrabajoRepositoryPort;
 import com.undec.acreditacion.infrastructure.autoevaluacion.dto.*;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.*;
@@ -68,6 +69,7 @@ public class AutoevaluacionHigieneSeguridadController {
 
     @GetMapping("/procesos/{procesoId}")
     @PreAuthorize("hasAnyRole('AEA', 'HIGIENE_SEGURIDAD', 'INFRAESTRUCTURA', 'BEDELIA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA', 'COMISION_AUTOEVALUACION', 'DOCENTE')")
+    @Transactional(readOnly = true)
     public ResponseEntity<GuiaHigieneSeguridadResponse> obtenerGuiaPorProceso(@PathVariable UUID procesoId) {
         Optional<GuiaHigieneSeguridadJpaEntity> opt = guiaRepository.findByProcesoIdCompleta(procesoId);
         if (opt.isPresent()) {
@@ -75,14 +77,13 @@ public class AutoevaluacionHigieneSeguridadController {
         }
 
         try {
-            GuiaHigieneSeguridadJpaEntity guia = clonerService.clonarGuiaMaestraParaProceso(procesoId);
-            return ResponseEntity.ok(mapToResponse(guia));
+            clonerService.clonarGuiaMaestraParaProceso(procesoId);
         } catch (DataIntegrityViolationException ex) {
             // Concurrencia: otro hilo o petición clonó la guía simultáneamente
-            GuiaHigieneSeguridadJpaEntity reloaded = guiaRepository.findByProcesoIdCompleta(procesoId)
-                    .orElseThrow(() -> ex);
-            return ResponseEntity.ok(mapToResponse(reloaded));
         }
+        GuiaHigieneSeguridadJpaEntity reloaded = guiaRepository.findByProcesoIdCompleta(procesoId)
+                .orElseThrow(() -> new ResourceNotFoundException("No se pudo obtener la guía de higiene y seguridad para el proceso: " + procesoId));
+        return ResponseEntity.ok(mapToResponse(reloaded));
     }
 
     @PutMapping("/{id}")

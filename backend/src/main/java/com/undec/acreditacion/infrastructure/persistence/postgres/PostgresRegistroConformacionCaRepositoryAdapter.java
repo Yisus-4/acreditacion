@@ -3,12 +3,14 @@ package com.undec.acreditacion.infrastructure.persistence.postgres;
 import com.undec.acreditacion.domain.entities.RegistroConformacionCa;
 import com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Component
+@Transactional
 public class PostgresRegistroConformacionCaRepositoryAdapter implements RegistroConformacionCaRepositoryPort {
 
     private final SpringDataRegistroConformacionCaRepository repository;

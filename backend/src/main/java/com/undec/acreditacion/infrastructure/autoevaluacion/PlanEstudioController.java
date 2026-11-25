@@ -128,6 +128,7 @@ public class PlanEstudioController {
     }
 
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<List<PlanEstudioFt001Dto>> listar(
             @RequestParam(required = false) UUID carreraId,
             @RequestParam(required = false) UUID procesoId
@@ -155,6 +156,7 @@ public class PlanEstudioController {
     }
 
     @GetMapping("/carrera/{carreraId}")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<PlanEstudioFt001Dto>> listarPorCarrera(@PathVariable UUID carreraId) {
         List<PlanEstudioFt001JpaEntity> planes = planRepository.findByCarreraIdAndActivoTrueOrderByAnioAprobacionDesc(carreraId);
         List<PlanEstudioFt001Dto> dtos = planes.stream()
@@ -164,6 +166,7 @@ public class PlanEstudioController {
     }
 
     @GetMapping("/carrera/{carreraId}/vigentes")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<PlanEstudioVigenteDto>> listarVigentesPorCarrera(@PathVariable UUID carreraId) {
         List<PlanEstudioFt001JpaEntity> planes = planRepository.findByCarreraIdAndEstadoVigenciaAndEsMaestroTrueOrderByAnioAprobacionDesc(
                 carreraId, EstadoVigenciaPlan.VIGENTE);
@@ -379,6 +382,7 @@ public class PlanEstudioController {
 
     @PostMapping("/{planId}/asignaturas")
     @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @Transactional
     public ResponseEntity<ActividadCurricularPlanDto> crearAsignatura(
             @PathVariable UUID planId,
             @RequestBody CrearAsignaturaRequest request
@@ -390,6 +394,7 @@ public class PlanEstudioController {
 
     @PutMapping("/{planId}/asignaturas/{asigId}")
     @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @Transactional
     public ResponseEntity<ActividadCurricularPlanDto> actualizarAsignatura(
             @PathVariable UUID planId,
             @PathVariable UUID asigId,
@@ -402,6 +407,7 @@ public class PlanEstudioController {
 
     @DeleteMapping("/{planId}/asignaturas/{asigId}")
     @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @Transactional
     public ResponseEntity<Void> eliminarAsignatura(
             @PathVariable UUID planId,
             @PathVariable UUID asigId

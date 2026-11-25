@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/ambitos-practica")
+@Transactional
 public class AmbitoPracticaController {
 
     private final SpringDataAmbitoPracticaRepository ambitoRepository;

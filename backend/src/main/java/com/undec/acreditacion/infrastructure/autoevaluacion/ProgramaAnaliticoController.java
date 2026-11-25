@@ -100,6 +100,7 @@ public class ProgramaAnaliticoController {
     }
 
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<List<ProgramaAnaliticoAsignaturaDto>> listar(
             @RequestParam(required = false) UUID procesoId,
             @RequestParam(required = false) UUID planId
@@ -119,6 +120,7 @@ public class ProgramaAnaliticoController {
     }
 
     @GetMapping("/proceso/{procesoId}")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<ProgramaAnaliticoAsignaturaDto>> listarPorProceso(@PathVariable UUID procesoId) {
         List<ProgramaAnaliticoAsignaturaJpaEntity> list = programaRepository.findByProcesoIdOrderByNombreAsignaturaAsc(procesoId);
         List<ProgramaAnaliticoAsignaturaDto> dtos = list.stream().map(this::toDto).collect(Collectors.toList());

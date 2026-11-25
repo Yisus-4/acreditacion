@@ -3,6 +3,7 @@ package com.undec.acreditacion.infrastructure.persistence.postgres;
 import com.undec.acreditacion.domain.entities.Carrera;
 import com.undec.acreditacion.domain.ports.CarreraRepositoryPort;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Repository
+@Transactional
 public class PostgresCarreraRepositoryAdapter implements CarreraRepositoryPort {
 
     private final SpringDataCarreraRepository springDataRepository;
