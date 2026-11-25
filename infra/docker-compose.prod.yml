@@ -6,9 +6,9 @@ services:
     image: postgres:16
     container_name: acreditacion_db
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-acreditacion}
+      POSTGRES_USER: ${POSTGRES_USER:-acreditacion_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-acreditacion_pass}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
@@ -18,8 +18,8 @@ services:
     container_name: acreditacion_storage
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_PASS}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
     volumes:
       - minio_data:/data
     restart: always
@@ -28,9 +28,19 @@ services:
     image: ghcr.io/tu-org/acreditacion-backend:latest
     container_name: acreditacion_backend
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+      SPRING_PROFILES_ACTIVE: postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-acreditacion}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-acreditacion_user}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-acreditacion_pass}
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
+      ADMIN_INITIAL_EMAIL: ${ADMIN_INITIAL_EMAIL:-admin@undec.edu.ar}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-admin123}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-instituciones-logos}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200,http://localhost}
     depends_on:
       - postgres
       - minio
@@ -41,12 +51,10 @@ services:
   frontend:
     image: ghcr.io/tu-org/acreditacion-frontend:latest
     container_name: acreditacion_frontend
-    environment:
-      NEXT_PUBLIC_API_URL: http://backend:8080
     depends_on:
       - backend
     ports:
-      - "3000:3000"
+      - "80:80"
     restart: always
 
 volumes:

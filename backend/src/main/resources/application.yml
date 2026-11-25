@@ -11,6 +11,8 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:postgres}
   application:
     name: acreditacion-backend
+  jpa:
+    open-in-view: false
   servlet:
     multipart:
       enabled: true
@@ -26,7 +28,7 @@ logging:
 security:
   jwt:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
-    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    expiration-ms: ${JWT_EXPIRATION_MS:3600000}
   admin:
     initial-email: ${ADMIN_INITIAL_EMAIL:admin@undec.edu.ar}
     initial-password: ${ADMIN_INITIAL_PASSWORD:admin123}
