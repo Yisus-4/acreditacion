@@ -251,9 +251,9 @@
                   </div>
                   <h3 class="carrera-titulo">{{ carrera.carreraNombre }}</h3>
                   @if (obtenerPlanesDeCarrera(carrera.carreraId).length > 0) {
-                    <div style="display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 8px 0;">
+                    <div class="carrera-planes-list">
                       @for (p of obtenerPlanesDeCarrera(carrera.carreraId); track p.id) {
-                        <span style="font-size: 11px; font-weight: 600; background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 12px;">
+                        <span class="carrera-plan-chip">
                           {{ p.nombrePlan || p.codigoResolucion || ('Plan ' + p.anioAprobacion) }}
                         </span>
                       }
@@ -316,7 +316,7 @@
           <p class="escuela-subtitulo">{{ c.unidadAcademicaNombre || 'Escuela de Ingeniería' }}</p>
           <h1 class="carrera-titulo-figma">{{ c.carreraNombre }} · {{ c.codigo }}</h1>
           <p class="carrera-meta-figma">
-            Grado · {{ c.tipoProceso === 'EN_FUNCIONAMIENTO' ? 'En funcionamiento' : 'Nueva' }} · Estado del proceso: {{ c.estado }}
+            Grado · {{ c.tipoProceso === 'EN_FUNCIONAMIENTO' ? 'En funcionamiento' : 'Nueva' }}
           </p>
         </div>
 
@@ -491,8 +491,8 @@
             </div>
             <span
               style="font-size: 0.85rem; font-weight: 700; padding: 0.2rem 0.65rem; border-radius: 999px;"
-              [style.background]="progresoFormalizacionPorcentaje() === 100 ? '#dcfce7' : (progresoFormalizacionPorcentaje() > 0 ? '#fef3c7' : '#f1f5f9')"
-              [style.color]="progresoFormalizacionPorcentaje() === 100 ? '#166534' : (progresoFormalizacionPorcentaje() > 0 ? '#92400e' : '#475569')"
+              [style.background]="progresoFormalizacionPorcentaje() === 100 ? '#eef5f0' : (progresoFormalizacionPorcentaje() > 0 ? '#f5eef1' : '#f7f3f5')"
+              [style.color]="progresoFormalizacionPorcentaje() === 100 ? '#2d5a3d' : (progresoFormalizacionPorcentaje() > 0 ? '#6b4c5b' : '#5a4a53')"
             >
               {{ progresoFormalizacionPorcentaje() }}%
             </span>
@@ -910,7 +910,7 @@
                 @if (normativaDetalle()?.estado === 'COMPLETADA') {
                   <span class="seccion-estado-tag completada">Aprobada por AEA</span>
                 } @else if (normativaDetalle()?.estado === 'ENVIADA_A_REVISION') {
-                  <span class="seccion-estado-tag completada" style="background: #dbeafe; color: #1e40af;">Enviada a revisión AEA</span>
+                  <span class="seccion-estado-tag completada" style="background: #f5eef1; color: #6b4c5b; border: 1px solid #d9c5ce;">Enviada a revisión AEA</span>
                 } @else if (normativaDetalle()?.estado === 'OBSERVADA') {
                   <span class="seccion-estado-tag incompleta" style="background: #fef2f2; color: #b91c1c;">Observada</span>
                 } @else {
@@ -1063,9 +1063,7 @@
                 @if (normativaDetalle()?.estado === 'COMPLETADA') {
                   <strong style="color: #166534;">✓ Normativa verificada y aprobada por la AEA.</strong>
                 } @else if (normativaDetalle()?.estado === 'ENVIADA_A_REVISION') {
-                  <strong style="color: #1e40af;">✓ Documentos enviados a la AEA para revisión.</strong>
-                } @else if (normativaObligatoriosCargadosCount() < 5) {
-                  <span>Cargá los 5 documentos obligatorios ({{ normativaObligatoriosCargadosCount() }}/5) para habilitar el envío formal de la normativa.</span>
+                  <strong style="color: #6b4c5b;">✓ Documentos enviados a la AEA para revisión.</strong>
                 }
               </div>
 
@@ -1386,6 +1384,20 @@
                     >
                       {{ enviandoRg001() ? 'Enviando...' : 'Enviar Formulario RG-001' }}
                     </button>
+                  </div>
+                }
+
+                @if (esRg001Enviado()) {
+                  <div
+                    role="status"
+                    style="margin-top: 12px; padding: 10px 14px; border-radius: 6px; background: #eef5f0; border: 1px solid #c6dccd; color: #2d5a3d; font-size: 13px; font-weight: 500;"
+                  >
+                    ✓ Formulario RG-001 enviado formalmente.
+                    @if (!esPlanEnviado()) {
+                      <span> Para completar la Etapa 2, revisá y enviá también el <strong>Plan de Trabajo (PT-001)</strong> más abajo.</span>
+                    } @else if (!actividadPlanFinalizada()) {
+                      <span> Ambos formularios están enviados: presioná <strong>Finalizar Actividad</strong> al final de la pantalla para avanzar a la Etapa 3.</span>
+                    }
                   </div>
                 }
               </div>
@@ -2404,7 +2416,8 @@
                 <button
                   type="button"
                   class="btn-figma-success"
-                  (click)="descargarPdfRg003()"
+                  disabled
+                  [disabled]="true"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -3095,8 +3108,8 @@
                       @for (fExt of actDrawer.plazosExtendidos; track $index; let idx = $index) {
                         <span
                           style="padding: 3px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 600;"
-                          [style.background]="idx === actDrawer.plazosExtendidos.length - 1 ? '#fef3c7' : '#f1f5f9'"
-                          [style.color]="idx === actDrawer.plazosExtendidos.length - 1 ? '#92400e' : '#475569'"
+                          [style.background]="idx === actDrawer.plazosExtendidos.length - 1 ? '#f5eef1' : '#f7f3f5'"
+                          [style.color]="idx === actDrawer.plazosExtendidos.length - 1 ? '#6b4c5b' : '#5a4a53'"
                           [style.border]="idx === actDrawer.plazosExtendidos.length - 1 ? '1px solid #fcd34d' : '1px solid #cbd5e1'"
                         >
                           {{ idx + 1 }}°: {{ fExt | date:'dd/MM/yyyy' }}

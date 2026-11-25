@@ -15,11 +15,15 @@
           <a class="convocatoria-card" [routerLink]="['/acreditacion/convocatorias', c.id]">
             <div class="convocatoria-info">
               <h3 class="convocatoria-nombre">
-                {{ c.codigo }} · {{ c.escuelaNombre || 'Escuela de Ingeniería' }}
+                {{ c.codigo }}@if (c.escuelaNombre) { · {{ c.escuelaNombre }} }
               </h3>
               <p class="convocatoria-detalles">
-                {{ c.cantidadCarreras ?? 3 }} carreras ·
-                Resolución {{ c.nroResolucionConeau || 'RESFC-2026-APN' }} ·
+                @if (c.cantidadCarreras !== undefined && c.cantidadCarreras !== null) {
+                  {{ c.cantidadCarreras }} {{ c.cantidadCarreras === 1 ? 'carrera' : 'carreras' }} ·
+                }
+                @if (c.nroResolucionConeau) {
+                  Resolución {{ c.nroResolucionConeau }} ·
+                }
                 Plazo: {{ c.fechaInicio }} &rarr; {{ c.fechaCierre }}
               </p>
             </div>
@@ -34,61 +38,64 @@
       }
     </section>
 
-    <!-- Sección Módulos -->
+    <!-- Fila 1: Actividades de Acreditación -->
     <section class="inicio-section">
-      <h2 class="section-title">Módulos</h2>
+      <h2 class="section-title">Actividades de Acreditación</h2>
       <div class="modulos-grid">
-        <!-- Módulo 1: Administración de Usuarios -->
-        @if (isAdmin) {
-          <a class="modulo-card" routerLink="/admin/users">
-            <h3 class="modulo-title">Administración de Usuarios</h3>
-            <p class="modulo-desc">
-              Gestión centralizada de cuentas de usuario, asignación de roles y permisos del sistema.
-            </p>
-            <span class="btn-link-action">Acceder &rarr;</span>
-          </a>
-        }
-
-        <!-- Módulo 2: Gestión Institucional -->
-        @if (canManageInstitutions) {
-          <a class="modulo-card" routerLink="/admin/estructura">
-            <h3 class="modulo-title">Gestión Institucional</h3>
-            <p class="modulo-desc">
-              Administración de institución, unidades académicas, sedes, escuelas, infraestructura y ámbitos de práctica maestros.
-            </p>
-            <span class="btn-link-action">Acceder &rarr;</span>
-          </a>
-        }
-
-        <!-- Módulo 3: Convocatorias y Plan de Trabajo -->
         <a class="modulo-card" routerLink="/acreditacion/convocatorias">
           <h3 class="modulo-title">Convocatorias y Plan de Trabajo</h3>
           <p class="modulo-desc">
-            Apertura formal de convocatorias CONEAU
+            Apertura formal de convocatorias CONEAU, formalización, normativa, cronograma y Comisión de Autoevaluación.
           </p>
           <span class="btn-link-action">Acceder &rarr;</span>
         </a>
 
-        <!-- Módulo 4: Autoevaluación Institucional -->
         <a class="modulo-card" routerLink="/autoevaluacion">
           <h3 class="modulo-title">Autoevaluación Institucional</h3>
           <p class="modulo-desc">
-            Gestión de dimensiones, Registro de Inmuebles (RG-005), Guía de Higiene y Seguridad (GT-003) y biblioteca.
+            Gestión de dimensiones, infraestructura (RG-005), estructura curricular, programas analíticos y estándares.
           </p>
           <span class="btn-link-action">Acceder &rarr;</span>
         </a>
-
-        <!-- Módulo 5: Gestión Académica -->
-        @if (canAccessDatosCentrales) {
-          <a class="modulo-card" routerLink="/academica">
-            <h3 class="modulo-title">Académica</h3>
-            <p class="modulo-desc">
-              Carreras, planes de estudio (vigente / no vigente), actividades curriculares y cuerpo académico troncal.
-            </p>
-            <span class="btn-link-action">Acceder &rarr;</span>
-          </a>
-        }
       </div>
     </section>
+
+    <!-- Fila 2: Gestión y Administración -->
+    @if (isAdmin || canManageInstitutions || canAccessDatosCentrales) {
+      <section class="inicio-section">
+        <h2 class="section-title">Gestión y Administración</h2>
+        <div class="modulos-grid">
+          @if (isAdmin) {
+            <a class="modulo-card" routerLink="/admin/users">
+              <h3 class="modulo-title">Administración de Usuarios</h3>
+              <p class="modulo-desc">
+                Gestión centralizada de cuentas de usuario, asignación de roles y permisos del sistema.
+              </p>
+              <span class="btn-link-action">Acceder &rarr;</span>
+            </a>
+          }
+
+          @if (canManageInstitutions) {
+            <a class="modulo-card" routerLink="/admin/estructura">
+              <h3 class="modulo-title">Gestión Institucional</h3>
+              <p class="modulo-desc">
+                Administración de institución, unidades académicas, sedes, escuelas, infraestructura y ámbitos de práctica maestros.
+              </p>
+              <span class="btn-link-action">Acceder &rarr;</span>
+            </a>
+          }
+
+          @if (canAccessDatosCentrales) {
+            <a class="modulo-card" routerLink="/academica">
+              <h3 class="modulo-title">Académica</h3>
+              <p class="modulo-desc">
+                Carreras, estándares CONEAU, planes de estudio (vigente / no vigente), actividades curriculares y cuerpo académico.
+              </p>
+              <span class="btn-link-action">Acceder &rarr;</span>
+            </a>
+          }
+        </div>
+      </section>
+    }
   </div>
 </div>

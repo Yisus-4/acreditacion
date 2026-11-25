@@ -6,10 +6,16 @@ import { NotificacionesCampanaComponent } from './core/notifications/notificacio
 
 const ROL_LABELS: Record<string, string> = {
   AEA: 'Área de Evaluación y Acreditación (Admin)',
-  CAREER_DIRECTOR: 'Director de Carrera',
-  SCHOOL_DIRECTOR: 'Director de Escuela',
-  TEACHER: 'Docente',
-  STUDENT: 'Estudiante',
+  DIRECTOR_CARRERA: 'Director de Carrera',
+  DIRECTOR_ESCUELA: 'Director de Escuela',
+  DIRECTOR_DEPARTAMENTO: 'Director de Departamento',
+  COMISION_AUTOEVALUACION: 'Comisión de Autoevaluación',
+  DOCENTE: 'Docente',
+  INFRAESTRUCTURA: 'Infraestructura',
+  BEDELIA: 'Bedelía',
+  HIGIENE_SEGURIDAD: 'Higiene y Seguridad',
+  BIBLIOTECA: 'Biblioteca',
+  PROVEEDOR_INFORMACION: 'Proveedor de Información',
 };
 
 @Component({

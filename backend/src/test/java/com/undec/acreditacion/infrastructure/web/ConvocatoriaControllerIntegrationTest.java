@@ -205,7 +205,7 @@ class ConvocatoriaControllerIntegrationTest {
         User directorEI = User.rehydrate(
                 UUID.randomUUID(), "director_ei", "de_ei@undec.edu.ar", "hash",
                 true, false, escuelaIngenieriaId,
-                java.util.Set.of(Role.custom(UUID.randomUUID(), "SCHOOL_DIRECTOR", "Director Escuela", "DE"))
+                java.util.Set.of(Role.custom(UUID.randomUUID(), "DIRECTOR_ESCUELA", "Director Escuela", "DE"))
         );
 
         org.springframework.security.core.Authentication auth = mock(org.springframework.security.core.Authentication.class);
@@ -245,7 +245,7 @@ class ConvocatoriaControllerIntegrationTest {
         User directorEI = User.rehydrate(
                 UUID.randomUUID(), "director_ei", "de_ei@undec.edu.ar", "hash",
                 true, false, escuelaIngenieriaId,
-                java.util.Set.of(Role.custom(UUID.randomUUID(), "SCHOOL_DIRECTOR", "Director Escuela", "DE"))
+                java.util.Set.of(Role.custom(UUID.randomUUID(), "DIRECTOR_ESCUELA", "Director Escuela", "DE"))
         );
 
         org.springframework.security.core.Authentication auth = mock(org.springframework.security.core.Authentication.class);

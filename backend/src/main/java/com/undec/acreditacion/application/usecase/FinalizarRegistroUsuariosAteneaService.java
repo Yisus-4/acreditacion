@@ -146,6 +146,49 @@ public class FinalizarRegistroUsuariosAteneaService implements FinalizarRegistro
         return RegistroUsuariosAteneaMapper.toDto(guardado);
     }
 
+    @Override
+    public byte[] regenerarPdf(UUID procesoId) {
+        RegistroUsuariosAtenea registro = registroUsuariosRepository.findByProcesoId(procesoId)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el registro de usuarios de ATENEA para el proceso: " + procesoId));
+        ProcesoAcreditacion proceso = procesoRepository.findById(procesoId)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el proceso de acreditación con ID: " + procesoId));
+        Carrera carrera = carreraRepository.findById(proceso.getCarreraId())
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró la carrera vinculada al proceso"));
+
+        String cicloFase = "1raFase";
+        Optional<RegistroConvocatoria> convOpt = registroConvocatoriaRepository.findByProcesoId(procesoId);
+        if (convOpt.isPresent() && convOpt.get().getFaseEvaluacion() != null) {
+            FaseEvaluacion fase = convOpt.get().getFaseEvaluacion();
+            cicloFase = switch (fase) {
+                case PRIMERA_FASE -> "1raFase";
+                case SEGUNDA_FASE -> "2daFase";
+                case NUEVO_CICLO -> "NuevoCiclo";
+                case SEGUIMIENTO -> "Seguimiento";
+            };
+        }
+
+        String anio = String.valueOf(LocalDate.now().getYear());
+        String estadoCarreraStr = convOpt
+                .map(RegistroConvocatoria::getEstadoCarrera)
+                .map(e -> e.toLowerCase().replace('_', ' '))
+                .orElse("en funcionamiento");
+        String tipoConvocatoria = "Grado - " + estadoCarreraStr + " - " + cicloFase;
+        String nroExpedienteTad = convOpt
+                .map(RegistroConvocatoria::getNroResolucionConeau)
+                .filter(n -> !n.isBlank())
+                .orElseGet(proceso::getCodigo);
+
+        byte[] pdfBytes = GeneradorRegistroUsuariosAteneaPdfService.generarPdf(
+                registro, carrera.getNombre(), tipoConvocatoria, anio, nroExpedienteTad
+        );
+
+        if (registro.getRutaDocumento() != null && !registro.getRutaDocumento().isBlank()) {
+            storagePort.uploadFile(pdfBytes, registro.getRutaDocumento(), DocumentoAcreditacion.MIME_PDF);
+        }
+
+        return pdfBytes;
+    }
+
     private String normalizarNombre(String nombre) {
         if (nombre == null) return "Carrera";
         String sinAcentos = java.text.Normalizer.normalize(nombre.trim(), java.text.Normalizer.Form.NFD)

@@ -17,6 +17,7 @@ import com.undec.acreditacion.infrastructure.persistence.postgres.ProcesoAcredit
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataConvocatoriaCarreraPlanRepository;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataConvocatoriaRepository;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataProcesoAcreditacionRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +41,7 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
     private final SpringDataEspacioFisicoActividadCurricularRepository espacioActividadRepository;
     private final SpringDataAmbitoPracticaRepository ambitoPracticaRepository;
     private final SpringDataAutoevaluacionCarreraAmbitoRepository autoevaluacionAmbitoRepository;
+    private final SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService;
 
     public SincronizacionAutoevaluacionService(
             SpringDataProcesoAcreditacionRepository procesoRepository,
@@ -55,6 +57,29 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
             SpringDataEspacioFisicoActividadCurricularRepository espacioActividadRepository,
             SpringDataAmbitoPracticaRepository ambitoPracticaRepository,
             SpringDataAutoevaluacionCarreraAmbitoRepository autoevaluacionAmbitoRepository) {
+        this(procesoRepository, convocatoriaRepository, convocatoriaCarreraPlanRepository,
+                planEstudioRepository, actividadRepository, cuerpoAcademicoMaestroRepository,
+                procesoDocenteRepository, procesoDocenteActividadRepository, inmuebleRepository,
+                espacioFisicoRepository, espacioActividadRepository, ambitoPracticaRepository,
+                autoevaluacionAmbitoRepository, null);
+    }
+
+    @Autowired
+    public SincronizacionAutoevaluacionService(
+            SpringDataProcesoAcreditacionRepository procesoRepository,
+            SpringDataConvocatoriaRepository convocatoriaRepository,
+            SpringDataConvocatoriaCarreraPlanRepository convocatoriaCarreraPlanRepository,
+            SpringDataPlanEstudioFt001Repository planEstudioRepository,
+            SpringDataActividadCurricularPlanRepository actividadRepository,
+            SpringDataCuerpoAcademicoMaestroRepository cuerpoAcademicoMaestroRepository,
+            SpringDataProcesoCuerpoAcademicoRepository procesoDocenteRepository,
+            SpringDataProcesoCuerpoAcademicoActividadRepository procesoDocenteActividadRepository,
+            SpringDataInmuebleRepository inmuebleRepository,
+            SpringDataEspacioFisicoRepository espacioFisicoRepository,
+            SpringDataEspacioFisicoActividadCurricularRepository espacioActividadRepository,
+            SpringDataAmbitoPracticaRepository ambitoPracticaRepository,
+            SpringDataAutoevaluacionCarreraAmbitoRepository autoevaluacionAmbitoRepository,
+            SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService) {
         this.procesoRepository = procesoRepository;
         this.convocatoriaRepository = convocatoriaRepository;
         this.convocatoriaCarreraPlanRepository = convocatoriaCarreraPlanRepository;
@@ -68,6 +93,7 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
         this.espacioActividadRepository = espacioActividadRepository;
         this.ambitoPracticaRepository = ambitoPracticaRepository;
         this.autoevaluacionAmbitoRepository = autoevaluacionAmbitoRepository;
+        this.sincronizacionBidireccionalPlanService = sincronizacionBidireccionalPlanService;
     }
 
     @Override
@@ -213,6 +239,11 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
                     cloneInm = clonarInmueble(masterInm, procesoId);
                     cloneInm = inmuebleRepository.save(cloneInm);
                     inmueblesClonados++;
+                } else if (!Boolean.TRUE.equals(cloneInm.getActivo())) {
+                    cloneInm.setActivo(true);
+                    cloneInm.setActualizadoEn(Instant.now());
+                    cloneInm = inmuebleRepository.save(cloneInm);
+                    inmueblesClonados++;
                 }
                 inmuebleMasterToCloneMap.put(masterInm.getId(), cloneInm);
             }
@@ -239,6 +270,10 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
                     cloneEsp = clonarEspacio(masterEsp, procesoId, targetInmueble, null);
                     cloneEsp = espacioFisicoRepository.save(cloneEsp);
                     espaciosClonados++;
+                } else if (!Boolean.TRUE.equals(cloneEsp.getActivo())) {
+                    cloneEsp.setActivo(true);
+                    cloneEsp = espacioFisicoRepository.save(cloneEsp);
+                    espaciosClonados++;
                 }
                 espacioMasterToCloneMap.put(masterEsp.getId(), cloneEsp);
             }
@@ -263,9 +298,20 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
                     cloneEsp = clonarEspacio(masterEsp, procesoId, targetInmueble, parentClone);
                     cloneEsp = espacioFisicoRepository.save(cloneEsp);
                     espaciosClonados++;
-                } else if (parentClone != null && cloneEsp.getEspacioPadre() == null) {
-                    cloneEsp.setEspacioPadre(parentClone);
-                    espacioFisicoRepository.save(cloneEsp);
+                } else {
+                    boolean changed = false;
+                    if (!Boolean.TRUE.equals(cloneEsp.getActivo())) {
+                        cloneEsp.setActivo(true);
+                        changed = true;
+                        espaciosClonados++;
+                    }
+                    if (parentClone != null && cloneEsp.getEspacioPadre() == null) {
+                        cloneEsp.setEspacioPadre(parentClone);
+                        changed = true;
+                    }
+                    if (changed) {
+                        espacioFisicoRepository.save(cloneEsp);
+                    }
                 }
                 espacioMasterToCloneMap.put(masterEsp.getId(), cloneEsp);
             }
@@ -384,6 +430,9 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
             if (cloneAct == null) {
                 cloneAct = clonarActividad(masterAct, clonePlan);
                 cloneAct = actividadRepository.save(cloneAct);
+                if (sincronizacionBidireccionalPlanService != null) {
+                    sincronizacionBidireccionalPlanService.copiarFichaEntreActividades(masterAct, cloneAct);
+                }
                 count++;
             }
             actMasterToCloneMap.put(masterAct.getId(), cloneAct);
@@ -457,6 +506,7 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
         PlanEstudioFt001JpaEntity clone = new PlanEstudioFt001JpaEntity();
         clone.setId(UUID.randomUUID());
         clone.setCarrera(master.getCarrera());
+        clone.setEstandar(master.getEstandar());
         clone.setProcesoId(procesoId);
         clone.setNombrePlan(master.getNombrePlan());
         clone.setEstadoVigencia(master.getEstadoVigencia());
@@ -500,6 +550,8 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
         clone.setCorrelativas(master.getCorrelativas());
         clone.setEsObligatoria(master.getEsObligatoria());
         clone.setEstadoDictado(master.getEstadoDictado());
+        clone.setDocenteResponsableId(master.getDocenteResponsableId());
+        clone.setDocenteResponsableNombre(master.getDocenteResponsableNombre());
         clone.setOrigenMaestroId(master.getId());
         clone.setCreadoEn(Instant.now());
         return clone;

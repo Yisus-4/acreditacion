@@ -14,6 +14,10 @@ export interface ActividadCurricularPlan {
   correlativas?: string;
   esObligatoria?: boolean;
   estadoDictado?: EstadoDictadoActividad;
+  docenteResponsableId?: string | null;
+  docenteResponsableNombre?: string | null;
+  seccion22Completa?: boolean;
+  seccion3Completa?: boolean;
 }
 
 export interface CrearAsignaturaRequest {
@@ -90,4 +94,7 @@ export interface PlanEstudioFt001 {
   otraInformacion?: string;
   activo?: boolean;
   asignaturas?: ActividadCurricularPlan[];
+  estandarId?: string;
+  estandarNombre?: string;
+  estandarResolucion?: string;
 }

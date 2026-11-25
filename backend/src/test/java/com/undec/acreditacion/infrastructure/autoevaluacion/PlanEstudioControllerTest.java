@@ -19,6 +19,11 @@ import com.undec.acreditacion.infrastructure.autoevaluacion.service.ActualizarAs
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.CrearAsignaturaPlanService;
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.EliminarAsignaturaPlanService;
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.SincronizacionBidireccionalPlanService;
+import com.undec.acreditacion.infrastructure.estandares.dto.FichaEstandarActividadDto;
+import com.undec.acreditacion.infrastructure.estandares.dto.GuardarFichaEstandarRequest;
+import com.undec.acreditacion.infrastructure.estandares.persistence.EstandarJpaEntity;
+import com.undec.acreditacion.infrastructure.estandares.persistence.SpringDataEstandarRepository;
+import com.undec.acreditacion.infrastructure.estandares.service.ActividadEstandarFichaService;
 import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.ProcesoAcreditacionJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataCarreraRepository;
@@ -422,5 +427,118 @@ class PlanEstudioControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.completada", is(true)))
                 .andExpect(jsonPath("$.totalAsignaturas", is(1)));
+    }
+
+    @Test
+    @DisplayName("PUT /ficha-estandar auto-completa Actividad 8.3 cuando todas las asignaturas activas tienen campos obligatorios y estándar completos")
+    void deberiaAutoCompletarActividad83AlGuardarFichaEstandarCuandoTodasCompletas() throws Exception {
+        SpringDataEstandarRepository estandarRepository = mock(SpringDataEstandarRepository.class);
+        ActividadEstandarFichaService fichaService = mock(ActividadEstandarFichaService.class);
+        PlanEstudioController fullController = new PlanEstudioController(
+                planRepository, asignaturaRepository, carreraRepository, procesoRepository,
+                crearAsignaturaPlanService, actualizarAsignaturaPlanService, eliminarAsignaturaPlanService,
+                sincronizacionBidireccionalPlanService, planTrabajoRepository, authenticatedUserProvider,
+                estandarRepository, fichaService
+        );
+        MockMvc fullMvc = MockMvcBuilders.standaloneSetup(fullController)
+                .setControllerAdvice(new AutoevaluacionExceptionHandler())
+                .build();
+
+        UUID procesoId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        UUID asigId = UUID.randomUUID();
+        UUID usuarioId = UUID.randomUUID();
+
+        PlanEstudioFt001JpaEntity plan = new PlanEstudioFt001JpaEntity();
+        plan.setId(planId);
+        plan.setProcesoId(procesoId);
+        plan.setEstandar(new EstandarJpaEntity());
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+
+        ActividadCurricularPlanJpaEntity asig = new ActividadCurricularPlanJpaEntity();
+        asig.setId(asigId);
+        asig.setCodigo("MAT-01");
+        asig.setNombre("Análisis Matemático I");
+        asig.setGrupo("C.B.I.");
+        asig.setSubgrupo("1º");
+        asig.setHorasReloj(90);
+        asig.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId)).thenReturn(List.of(asig));
+
+        when(fichaService.guardarFicha(eq(planId), eq(asigId), any(GuardarFichaEstandarRequest.class)))
+                .thenReturn(mock(FichaEstandarActividadDto.class));
+        when(fichaService.calcularEstadosCompletitud(eq(plan), anyList()))
+                .thenReturn(java.util.Map.of(asigId, new ActividadEstandarFichaService.CompletitudEstado(true, true)));
+
+        ActividadPlanTrabajo act83 = mock(ActividadPlanTrabajo.class);
+        when(act83.getCodigoActividad()).thenReturn("8.3");
+        when(act83.getEstado()).thenReturn(EstadoActividad.PENDIENTE);
+        PlanTrabajo planTrabajo = mock(PlanTrabajo.class);
+        when(planTrabajo.getActividades()).thenReturn(List.of(act83));
+        when(planTrabajoRepository.findByProcesoId(procesoId)).thenReturn(Optional.of(planTrabajo));
+        when(authenticatedUserProvider.getAuthenticatedUserIdOrNull()).thenReturn(usuarioId);
+
+        fullMvc.perform(put("/api/planes-estudio/{planId}/asignaturas/{asigId}/ficha-estandar", planId, asigId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        verify(act83).completar(eq(usuarioId), contains("completada automáticamente"));
+        verify(planTrabajoRepository).saveActividad(act83);
+    }
+
+    @Test
+    @DisplayName("PUT /ficha-estandar NO auto-completa Actividad 8.3 si falta completar la Sección 3 de una asignatura")
+    void noDeberiaAutoCompletarActividad83SiFaltaSeccion3() throws Exception {
+        SpringDataEstandarRepository estandarRepository = mock(SpringDataEstandarRepository.class);
+        ActividadEstandarFichaService fichaService = mock(ActividadEstandarFichaService.class);
+        PlanEstudioController fullController = new PlanEstudioController(
+                planRepository, asignaturaRepository, carreraRepository, procesoRepository,
+                crearAsignaturaPlanService, actualizarAsignaturaPlanService, eliminarAsignaturaPlanService,
+                sincronizacionBidireccionalPlanService, planTrabajoRepository, authenticatedUserProvider,
+                estandarRepository, fichaService
+        );
+        MockMvc fullMvc = MockMvcBuilders.standaloneSetup(fullController)
+                .setControllerAdvice(new AutoevaluacionExceptionHandler())
+                .build();
+
+        UUID procesoId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        UUID asigId = UUID.randomUUID();
+
+        PlanEstudioFt001JpaEntity plan = new PlanEstudioFt001JpaEntity();
+        plan.setId(planId);
+        plan.setProcesoId(procesoId);
+        plan.setEstandar(new EstandarJpaEntity());
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+
+        ActividadCurricularPlanJpaEntity asig = new ActividadCurricularPlanJpaEntity();
+        asig.setId(asigId);
+        asig.setCodigo("MAT-01");
+        asig.setNombre("Análisis Matemático I");
+        asig.setGrupo("C.B.I.");
+        asig.setSubgrupo("1º");
+        asig.setHorasReloj(90);
+        asig.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId)).thenReturn(List.of(asig));
+
+        when(fichaService.guardarFicha(eq(planId), eq(asigId), any(GuardarFichaEstandarRequest.class)))
+                .thenReturn(mock(FichaEstandarActividadDto.class));
+        when(fichaService.calcularEstadosCompletitud(eq(plan), anyList()))
+                .thenReturn(java.util.Map.of(asigId, new ActividadEstandarFichaService.CompletitudEstado(true, false)));
+
+        ActividadPlanTrabajo act83 = mock(ActividadPlanTrabajo.class);
+        when(act83.getCodigoActividad()).thenReturn("8.3");
+        when(act83.getEstado()).thenReturn(EstadoActividad.PENDIENTE);
+        PlanTrabajo planTrabajo = mock(PlanTrabajo.class);
+        when(planTrabajo.getActividades()).thenReturn(List.of(act83));
+        when(planTrabajoRepository.findByProcesoId(procesoId)).thenReturn(Optional.of(planTrabajo));
+
+        fullMvc.perform(put("/api/planes-estudio/{planId}/asignaturas/{asigId}/ficha-estandar", planId, asigId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        verify(planTrabajoRepository, never()).saveActividad(any());
     }
 }

@@ -2670,8 +2670,15 @@
       white-space: nowrap;
       transition: background-color 0.15s ease-in-out;
 
-      &:hover {
+      &:hover:not(:disabled) {
         background-color: #166534;
+      }
+
+      &:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        pointer-events: none;
+        background-color: #6b7280;
       }
     }
   }

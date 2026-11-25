@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -97,6 +98,7 @@ public class ConvocatoriaController {
 
     @PostMapping
     @PreAuthorize("hasRole('AEA') or hasAuthority('CONVOCATORIA_WRITE')")
+    @Transactional
     public ResponseEntity<ConvocatoriaDetalleResponse> iniciarConvocatoria(@RequestBody IniciarConvocatoriaRequest request) {
         UUID usuarioId = resolverUsuarioAutenticadoId();
 
@@ -143,7 +145,8 @@ public class ConvocatoriaController {
     }
 
     @PostMapping("/{id}/confirmar-de")
-    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA') or hasAuthority('CONVOCATORIA_WRITE')")
+    @Transactional
     public ResponseEntity<ConvocatoriaDetalleResponse> confirmarConvocatoriaDirectorEscuela(
             @PathVariable UUID id,
             @RequestBody ConfirmarConvocatoriaDeRequest request
@@ -171,7 +174,7 @@ public class ConvocatoriaController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR', 'BEDELIA', 'INFRAESTRUCTURA', 'HIGIENE_SEGURIDAD', 'BIBLIOTECA', 'DOCENTE', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ') or hasAuthority('AUTOEVALUACION_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'BEDELIA', 'INFRAESTRUCTURA', 'HIGIENE_SEGURIDAD', 'BIBLIOTECA', 'DOCENTE', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ') or hasAuthority('AUTOEVALUACION_READ')")
     public ResponseEntity<List<ConvocatoriaResumenResponse>> listarConvocatorias(
             @RequestParam(required = false) UUID carreraId,
             @RequestParam(required = false) UUID unidadAcademicaId,
@@ -185,10 +188,16 @@ public class ConvocatoriaController {
         boolean esAdminOAEA = tienePermisoGlobal(usuarioActualOpt);
         UUID userEscuelaId = usuarioActualOpt.map(User::getUnidadAcademicaId).orElse(null);
 
-        // Listar únicamente Convocatorias a nivel de Escuela
+        // Listar Convocatorias a nivel de Escuela y no ocultar ningún ProcesoAcreditacion suelto
         List<ConvocatoriaEscuelaDetalleDto> escuelasConvocatorias = consultarConvocatoriaEscuelaUseCase.listarTodas();
+        Set<UUID> procesosEnConvocatorias = new HashSet<>();
 
         for (ConvocatoriaEscuelaDetalleDto ec : escuelasConvocatorias) {
+            for (ConvocatoriaCarreraItemDto item : ec.carreras()) {
+                if (item.procesoId() != null) {
+                    procesosEnConvocatorias.add(item.procesoId());
+                }
+            }
             // Control de visibilidad por Escuela: Si el usuario no es AEA, solo ve las de su escuela
             if (!esAdminOAEA) {
                 if (userEscuelaId == null || !userEscuelaId.equals(ec.unidadAcademicaId())) {
@@ -246,11 +255,70 @@ public class ConvocatoriaController {
             ));
         }
 
+        // Incluir procesos individuales o sueltos que no pertenezcan a ninguna convocatoria de escuela
+        EstadoProcesoAcreditacion estadoProcesoFiltro = null;
+        boolean estadoFiltroEsSoloEscuela = false;
+        if (estado != null && !estado.isBlank()) {
+            try {
+                estadoProcesoFiltro = EstadoProcesoAcreditacion.valueOf(estado.trim().toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                estadoFiltroEsSoloEscuela = true;
+            }
+        }
+        List<ProcesoAcreditacion> procesosSueltos = estadoFiltroEsSoloEscuela
+                ? Collections.emptyList()
+                : listarConvocatoriasUseCase.listar(
+                        new ConvocatoriaFiltro(carreraId, estadoProcesoFiltro, tipoProceso, anio)
+                );
+        if (procesosSueltos != null) {
+            for (ProcesoAcreditacion p : procesosSueltos) {
+                if (procesosEnConvocatorias.contains(p.getId())) {
+                    continue;
+                }
+                Carrera carrera = carreraRepository.findById(p.getCarreraId()).orElse(null);
+                UUID uaProcesoId = carrera != null ? carrera.getUnidadAcademicaId() : null;
+
+                if (!esAdminOAEA) {
+                    if (userEscuelaId == null || !userEscuelaId.equals(uaProcesoId)) {
+                        continue;
+                    }
+                }
+                if (unidadAcademicaId != null && !unidadAcademicaId.equals(uaProcesoId)) {
+                    continue;
+                }
+
+                UnidadAcademica ua = uaProcesoId != null
+                        ? unidadAcademicaRepository.findById(uaProcesoId).orElse(null)
+                        : null;
+                RegistroConvocatoria reg = registroRepository.findByProcesoId(p.getId()).orElse(null);
+
+                response.add(new ConvocatoriaResumenResponse(
+                        p.getId(),
+                        p.getCodigo(),
+                        p.getTitulo(),
+                        p.getCarreraId(),
+                        carrera != null ? carrera.getNombre() : "Carrera",
+                        carrera != null ? carrera.getSigla() : "",
+                        "GRADO",
+                        reg != null && reg.getNroResolucionConeau() != null ? reg.getNroResolucionConeau() : "",
+                        p.getTipoProceso().name(),
+                        p.getEstado().name(),
+                        reg != null ? reg.getFechaInicio() : null,
+                        reg != null ? reg.getFechaCierre() : null,
+                        null,
+                        p.getCreadoEn(),
+                        uaProcesoId,
+                        ua != null ? ua.getNombre() : null,
+                        1
+                ));
+            }
+        }
+
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR', 'BEDELIA', 'INFRAESTRUCTURA', 'HIGIENE_SEGURIDAD', 'BIBLIOTECA', 'DOCENTE', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ') or hasAuthority('AUTOEVALUACION_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'BEDELIA', 'INFRAESTRUCTURA', 'HIGIENE_SEGURIDAD', 'BIBLIOTECA', 'DOCENTE', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_READ') or hasAuthority('AUTOEVALUACION_READ')")
     public ResponseEntity<ConvocatoriaDetalleResponse> obtenerPorId(@PathVariable UUID id) {
         Optional<Convocatoria> convOpt = convocatoriaEscuelaRepository.findById(id);
         if (convOpt.isPresent()) {
@@ -273,7 +341,8 @@ public class ConvocatoriaController {
     }
 
     @PostMapping("/{id}/reiniciar-test")
-    @PreAuthorize("hasAnyRole('AEA', 'DEV', 'DEVELOPER', 'AC_COORDINATOR')")
+    @PreAuthorize("hasRole('AEA')")
+    @Transactional
     public ResponseEntity<ConvocatoriaDetalleResponse> reiniciarConvocatoriaTest(@PathVariable UUID id) {
         reiniciarConvocatoriaEscuelaTestUseCase.reiniciar(id);
         ConvocatoriaEscuelaDetalleDto detalle = consultarConvocatoriaEscuelaUseCase.obtenerPorId(id);
@@ -281,21 +350,22 @@ public class ConvocatoriaController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('AEA', 'DEV', 'DEVELOPER', 'AC_COORDINATOR')")
+    @PreAuthorize("hasRole('AEA')")
+    @Transactional
     public ResponseEntity<Void> eliminarConvocatoria(@PathVariable UUID id) {
         eliminarConvocatoriaUseCase.ejecutar(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/plan-trabajo")
-    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<PlanTrabajoResponse> obtenerPlanTrabajo(@PathVariable UUID id) {
         PlanTrabajo plan = consultarPlanTrabajoUseCase.obtenerPorProcesoId(id);
         return ResponseEntity.ok(mapearPlanTrabajoResponse(plan));
     }
 
     @GetMapping({"/{id}/plan-trabajo/plantilla", "/{id}/plantilla-plan"})
-    @PreAuthorize("hasAnyRole('AEA', 'SCHOOL_DIRECTOR', 'CAREER_DIRECTOR') or hasAuthority('CONVOCATORIA_READ')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA') or hasAuthority('CONVOCATORIA_READ')")
     public ResponseEntity<PlantillaPlanTrabajoDto> obtenerPlantillaPlanTrabajo(@PathVariable UUID id) {
         PlantillaPlanTrabajoDto plantilla = obtenerPlantillaPlanTrabajoUseCase.obtenerPorProcesoId(id);
         return ResponseEntity.ok(plantilla);
@@ -342,7 +412,7 @@ public class ConvocatoriaController {
     }
 
     @PostMapping("/{id}/rg001/borrador")
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<RegistroConvocatoriaResponse> guardarRg001Borrador(
             @PathVariable UUID id,
             @RequestBody GuardarRg001Request request
@@ -351,7 +421,7 @@ public class ConvocatoriaController {
     }
 
     @PostMapping("/{id}/rg001/enviar")
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<RegistroConvocatoriaResponse> enviarRg001(
             @PathVariable UUID id,
             @RequestBody GuardarRg001Request request
@@ -432,7 +502,7 @@ public class ConvocatoriaController {
     }
 
     @PostMapping("/{id}/plan-trabajo/borrador")
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<PlanTrabajoResponse> guardarPlanTrabajoBorrador(
             @PathVariable UUID id,
             @RequestBody GuardarCronogramaPlanRequest request
@@ -441,7 +511,7 @@ public class ConvocatoriaController {
     }
 
     @PostMapping("/{id}/plan-trabajo/enviar")
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<PlanTrabajoResponse> enviarPlanTrabajo(
             @PathVariable UUID id,
             @RequestBody GuardarCronogramaPlanRequest request
@@ -496,7 +566,7 @@ public class ConvocatoriaController {
     }
 
     @PostMapping("/{id}/plan-trabajo/finalizar-actividad")
-    @PreAuthorize("hasAnyRole('AEA', 'CAREER_DIRECTOR', 'SCHOOL_DIRECTOR') or hasAuthority('CONVOCATORIA_WRITE')")
+    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA') or hasAuthority('CONVOCATORIA_WRITE')")
     public ResponseEntity<ConvocatoriaDetalleResponse> finalizarActividadPlanTrabajo(@PathVariable UUID id) {
         RegistroConvocatoria registro = registroRepository.findByProcesoId(id)
                 .orElseThrow(() -> new com.undec.acreditacion.domain.exceptions.ResourceNotFoundException(

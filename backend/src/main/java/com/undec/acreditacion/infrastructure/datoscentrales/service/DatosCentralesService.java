@@ -1,5 +1,6 @@
 package com.undec.acreditacion.infrastructure.datoscentrales.service;
 
+import com.undec.acreditacion.domain.entities.EstadoVigenciaEstandar;
 import com.undec.acreditacion.domain.entities.EstadoVigenciaPlan;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
 import com.undec.acreditacion.domain.exceptions.ResourceNotFoundException;
@@ -9,6 +10,8 @@ import com.undec.acreditacion.infrastructure.datoscentrales.persistence.CuerpoAc
 import com.undec.acreditacion.infrastructure.datoscentrales.persistence.CuerpoAcademicoMaestroJpaEntity;
 import com.undec.acreditacion.infrastructure.datoscentrales.persistence.SpringDataCuerpoAcademicoMaestroRepository;
 import com.undec.acreditacion.infrastructure.autoevaluacion.service.SincronizacionBidireccionalPlanService;
+import com.undec.acreditacion.infrastructure.estandares.persistence.EstandarJpaEntity;
+import com.undec.acreditacion.infrastructure.estandares.persistence.SpringDataEstandarRepository;
 import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataCarreraRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +36,7 @@ public class DatosCentralesService {
     private final SpringDataCarreraRepository carreraRepository;
     private final SpringDataActividadCurricularPlanRepository actividadRepository;
     private final SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService;
+    private final SpringDataEstandarRepository estandarRepository;
 
     public DatosCentralesService(
             SpringDataPlanEstudioFt001Repository planRepository,
@@ -42,7 +46,20 @@ public class DatosCentralesService {
             SpringDataCarreraRepository carreraRepository,
             SpringDataActividadCurricularPlanRepository actividadRepository) {
         this(planRepository, cuerpoAcademicoRepository, espacioFisicoRepository,
-                ambitoPracticaRepository, carreraRepository, actividadRepository, null);
+                ambitoPracticaRepository, carreraRepository, actividadRepository, null, null);
+    }
+
+    public DatosCentralesService(
+            SpringDataPlanEstudioFt001Repository planRepository,
+            SpringDataCuerpoAcademicoMaestroRepository cuerpoAcademicoRepository,
+            SpringDataEspacioFisicoRepository espacioFisicoRepository,
+            SpringDataAmbitoPracticaRepository ambitoPracticaRepository,
+            SpringDataCarreraRepository carreraRepository,
+            SpringDataActividadCurricularPlanRepository actividadRepository,
+            SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService) {
+        this(planRepository, cuerpoAcademicoRepository, espacioFisicoRepository,
+                ambitoPracticaRepository, carreraRepository, actividadRepository,
+                sincronizacionBidireccionalPlanService, null);
     }
 
     @Autowired
@@ -53,7 +70,8 @@ public class DatosCentralesService {
             SpringDataAmbitoPracticaRepository ambitoPracticaRepository,
             SpringDataCarreraRepository carreraRepository,
             SpringDataActividadCurricularPlanRepository actividadRepository,
-            SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService) {
+            SincronizacionBidireccionalPlanService sincronizacionBidireccionalPlanService,
+            SpringDataEstandarRepository estandarRepository) {
         this.planRepository = Objects.requireNonNull(planRepository);
         this.cuerpoAcademicoRepository = Objects.requireNonNull(cuerpoAcademicoRepository);
         this.espacioFisicoRepository = Objects.requireNonNull(espacioFisicoRepository);
@@ -61,6 +79,7 @@ public class DatosCentralesService {
         this.carreraRepository = Objects.requireNonNull(carreraRepository);
         this.actividadRepository = Objects.requireNonNull(actividadRepository);
         this.sincronizacionBidireccionalPlanService = sincronizacionBidireccionalPlanService;
+        this.estandarRepository = estandarRepository;
     }
 
     @Transactional(readOnly = true)
@@ -102,9 +121,20 @@ public class DatosCentralesService {
         CarreraJpaEntity carrera = carreraRepository.findById(req.carreraId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró la carrera ID: " + req.carreraId()));
 
+        EstandarJpaEntity estandarVigente = null;
+        if (estandarRepository != null) {
+            estandarVigente = estandarRepository
+                    .findByCarreraIdAndEstadoVigencia(carrera.getId(), EstadoVigenciaEstandar.VIGENTE)
+                    .orElseThrow(() -> new DomainValidationException(
+                            "La carrera '" + carrera.getNombre()
+                                    + "' no tiene un Estándar vigente configurado. "
+                                    + "Configure un estándar vigente en Gestión Académica -> Estándares antes de crear un plan de estudio."));
+        }
+
         PlanEstudioFt001JpaEntity plan = new PlanEstudioFt001JpaEntity();
         plan.setId(UUID.randomUUID());
         plan.setCarrera(carrera);
+        plan.setEstandar(estandarVigente);
         plan.setProcesoId(null);
         plan.setNombrePlan(req.nombrePlan().trim());
         plan.setEstadoVigencia(EstadoVigenciaPlan.VIGENTE);
@@ -381,7 +411,10 @@ public class DatosCentralesService {
                 p.getActivo(),
                 p.getAsignaturas() != null ? p.getAsignaturas().size() : 0,
                 p.getCreadoEn(),
-                p.getActualizadoEn()
+                p.getActualizadoEn(),
+                p.getEstandar() != null ? p.getEstandar().getId() : null,
+                p.getEstandar() != null ? p.getEstandar().getNombre() : null,
+                p.getEstandar() != null ? p.getEstandar().getResolucionMinisterial() : null
         );
     }
 

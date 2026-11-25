@@ -331,4 +331,65 @@ class SincronizacionAutoevaluacionServiceTest {
                         && maestro.getId().equals(a.getOrigenMaestroId())
         ));
     }
+
+    @Test
+    @DisplayName("Modo INICIALIZAR_O_AGREGAR_FALTANTES reactiva copias de inmuebles y espacios previamente desactivadas")
+    void debeReactivarCopiasInactivasDeInmueblesYEspaciosAlCopiar() {
+        when(procesoRepository.findById(procesoId)).thenReturn(Optional.of(proceso));
+
+        UUID masterInmId = UUID.randomUUID();
+        InmuebleJpaEntity masterInm = new InmuebleJpaEntity();
+        masterInm.setId(masterInmId);
+        masterInm.setNombre("Sede Central");
+        masterInm.setEsMaestro(true);
+        masterInm.setActivo(true);
+
+        InmuebleJpaEntity cloneInactivo = new InmuebleJpaEntity();
+        cloneInactivo.setId(UUID.randomUUID());
+        cloneInactivo.setNombre("Sede Central");
+        cloneInactivo.setEsMaestro(false);
+        cloneInactivo.setProcesoId(procesoId);
+        cloneInactivo.setOrigenMaestroId(masterInmId);
+        cloneInactivo.setActivo(false);
+
+        UUID masterEspId = UUID.randomUUID();
+        EspacioFisicoJpaEntity masterEsp = new EspacioFisicoJpaEntity();
+        masterEsp.setId(masterEspId);
+        masterEsp.setDenominacion("Aula 1");
+        masterEsp.setInmueble(masterInm);
+        masterEsp.setEsMaestro(true);
+        masterEsp.setActivo(true);
+
+        EspacioFisicoJpaEntity espInactivo = new EspacioFisicoJpaEntity();
+        espInactivo.setId(UUID.randomUUID());
+        espInactivo.setDenominacion("Aula 1");
+        espInactivo.setInmueble(cloneInactivo);
+        espInactivo.setEsMaestro(false);
+        espInactivo.setProcesoId(procesoId);
+        espInactivo.setOrigenMaestroId(masterEspId);
+        espInactivo.setActivo(false);
+
+        when(inmuebleRepository.findMaestrosActivos()).thenReturn(List.of(masterInm));
+        when(inmuebleRepository.findByProcesoIdAndOrigenMaestroId(procesoId, masterInmId))
+                .thenReturn(Optional.of(cloneInactivo));
+        when(inmuebleRepository.save(any(InmuebleJpaEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(espacioFisicoRepository.findByEsMaestroTrue()).thenReturn(List.of(masterEsp));
+        when(espacioFisicoRepository.findByProcesoIdAndOrigenMaestroId(procesoId, masterEspId))
+                .thenReturn(Optional.of(espInactivo));
+        when(espacioFisicoRepository.save(any(EspacioFisicoJpaEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResultadoSincronizacionDto res = service.copiarDatosCentrales(
+                procesoId,
+                ModoClonacion.INICIALIZAR_O_AGREGAR_FALTANTES,
+                Set.of(SeccionClonacion.INFRAESTRUCTURA_Y_ESPACIOS)
+        );
+
+        assertEquals(1, res.inmueblesClonados());
+        assertEquals(1, res.espaciosClonados());
+        assertTrue(cloneInactivo.getActivo());
+        assertTrue(espInactivo.getActivo());
+    }
 }

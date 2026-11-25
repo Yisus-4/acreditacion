@@ -1,6 +1,7 @@
 package com.undec.acreditacion.infrastructure.autoevaluacion.persistence;
 
 import com.undec.acreditacion.domain.entities.EstadoVigenciaPlan;
+import com.undec.acreditacion.infrastructure.estandares.persistence.EstandarJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEntity;
 import jakarta.persistence.*;
 
@@ -18,6 +19,10 @@ public class PlanEstudioFt001JpaEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "carrera_id", nullable = false)
     private CarreraJpaEntity carrera;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "estandar_id")
+    private EstandarJpaEntity estandar;
 
     @Column(name = "proceso_id")
     private UUID procesoId;
@@ -116,6 +121,14 @@ public class PlanEstudioFt001JpaEntity {
 
     public void setCarrera(CarreraJpaEntity carrera) {
         this.carrera = carrera;
+    }
+
+    public EstandarJpaEntity getEstandar() {
+        return estandar;
+    }
+
+    public void setEstandar(EstandarJpaEntity estandar) {
+        this.estandar = estandar;
     }
 
     public UUID getProcesoId() {

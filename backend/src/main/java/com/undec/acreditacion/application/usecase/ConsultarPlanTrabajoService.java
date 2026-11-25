@@ -71,15 +71,26 @@ public class ConsultarPlanTrabajoService implements ConsultarPlanTrabajoUseCase 
             modificado = true;
         }
 
-        boolean tieneEtapasPosteriores = (registroCaRepository != null && registroCaRepository.findByProcesoId(procesoId).isPresent())
-                || (registroUsuariosAteneaRepository != null && registroUsuariosAteneaRepository.findByProcesoId(procesoId).isPresent())
-                || plan.isEnviado();
+        boolean caConAvanceReal = registroCaRepository != null && registroCaRepository.findByProcesoId(procesoId)
+                .map(ca -> ca.getEstado() == EstadoRegistroCa.EN_CARGA_BORRADOR
+                        || ca.getEstado() == EstadoRegistroCa.REMITIDA_A_AEA
+                        || ca.getEstado() == EstadoRegistroCa.OBSERVADA
+                        || ca.getEstado() == EstadoRegistroCa.APROBADA
+                        || (ca.getMiembros() != null && !ca.getMiembros().isEmpty())
+                        || (ca.getResolucionStoragePath() != null && !ca.getResolucionStoragePath().isBlank()))
+                .orElse(false);
+
+        boolean ateneaConAvanceReal = registroUsuariosAteneaRepository != null && registroUsuariosAteneaRepository.findByProcesoId(procesoId)
+                .map(ru -> ru.getEstado() == EstadoRegistroUsuariosAtenea.FINALIZADO)
+                .orElse(false);
+
+        boolean tieneEtapasPosteriores = caConAvanceReal || ateneaConAvanceReal || plan.isEnviado();
 
         boolean normativaCompletada = plan.getActividades().stream()
                 .filter(PlanTrabajo::esActividadNormativa)
                 .anyMatch(a -> a.getEstado() == EstadoActividad.COMPLETADA);
 
-        // 1. Sincronizar Actividad 1 (Informar proceso) solo si ya se completó normativa o etapas posteriores
+        // 1. Sincronizar Actividad 1 (Informar proceso) solo si ya se completó normativa o etapas posteriores reales
         if (normativaCompletada || tieneEtapasPosteriores) {
             plan.getActividades().stream()
                     .filter(a -> ActividadPlanTrabajo.CODIGO_ACT_01.equals(a.getCodigoActividad())
@@ -90,9 +101,21 @@ public class ConsultarPlanTrabajoService implements ConsultarPlanTrabajoUseCase 
                             planTrabajoRepository.saveActividad(a);
                         }
                     });
+        } else {
+            // Revertir falso positivo si fue auto-completada sin usuario responsable por CA autocreada vacía
+            plan.getActividades().stream()
+                    .filter(a -> (ActividadPlanTrabajo.CODIGO_ACT_01.equals(a.getCodigoActividad())
+                            || (a.getNombre() != null && a.getNombre().toLowerCase().contains("informar sobre el proceso")))
+                            && a.getEstado() == EstadoActividad.COMPLETADA
+                            && a.getCompletadaPor() == null
+                            && "Informado sobre el proceso de acreditación".equals(a.getSintesisAcuerdos()))
+                    .forEach(a -> {
+                        a.cambiarEstado(EstadoActividad.PENDIENTE);
+                        planTrabajoRepository.saveActividad(a);
+                    });
         }
 
-        // 1.b. Sincronizar Actividad 2 (Elaborar Plan de Trabajo) si ya se remitieron etapas posteriores o el plan fue enviado
+        // 1.b. Sincronizar Actividad 2 (Elaborar Plan de Trabajo) si ya se remitieron etapas posteriores reales o el plan fue enviado
         if (tieneEtapasPosteriores) {
             plan.getActividades().stream()
                     .filter(a -> ActividadPlanTrabajo.CODIGO_ACT_02.equals(a.getCodigoActividad())
@@ -102,6 +125,17 @@ public class ConsultarPlanTrabajoService implements ConsultarPlanTrabajoUseCase 
                             a.marcarCompletadaAutomatica("Cronograma institucional y formulario RG-001 formulados y vigentes");
                             planTrabajoRepository.saveActividad(a);
                         }
+                    });
+        } else {
+            plan.getActividades().stream()
+                    .filter(a -> (ActividadPlanTrabajo.CODIGO_ACT_02.equals(a.getCodigoActividad())
+                            || (a.getNombre() != null && a.getNombre().toLowerCase().contains("elaborar plan de trabajo")))
+                            && a.getEstado() == EstadoActividad.COMPLETADA
+                            && a.getCompletadaPor() == null
+                            && "Cronograma institucional y formulario RG-001 formulados y vigentes".equals(a.getSintesisAcuerdos()))
+                    .forEach(a -> {
+                        a.cambiarEstado(EstadoActividad.PENDIENTE);
+                        planTrabajoRepository.saveActividad(a);
                     });
         }
 

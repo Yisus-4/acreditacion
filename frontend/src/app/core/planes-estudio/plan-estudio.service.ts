@@ -2,6 +2,10 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
+  FichaEstandarActividad,
+  GuardarFichaEstandarRequest,
+} from '../estandares/estandar.models';
+import {
   ActividadCurricularPlan,
   ActualizarAsignaturaRequest,
   CrearAsignaturaRequest,
@@ -69,14 +73,21 @@ export class PlanEstudioService {
   obtenerEstadoActividad83(
     procesoId?: string,
     planEstudioId?: string
-  ): Observable<{ completada: boolean; totalAsignaturas: number }> {
+  ): Observable<{
+    completada: boolean;
+    totalAsignaturas: number;
+    asignaturasCompletas?: number;
+    todasCompletas?: boolean;
+  }> {
     let params = new HttpParams();
     if (procesoId) params = params.set('procesoId', procesoId);
     if (planEstudioId) params = params.set('planEstudioId', planEstudioId);
-    return this.http.get<{ completada: boolean; totalAsignaturas: number }>(
-      `${this.baseUrl}/estado-actividad-8-3`,
-      { params }
-    );
+    return this.http.get<{
+      completada: boolean;
+      totalAsignaturas: number;
+      asignaturasCompletas?: number;
+      todasCompletas?: boolean;
+    }>(`${this.baseUrl}/estado-actividad-8-3`, { params });
   }
 
   validarYCompletarActividad83(
@@ -90,6 +101,38 @@ export class PlanEstudioService {
       `${this.baseUrl}/validar-completar-8-3`,
       {},
       { params }
+    );
+  }
+
+  obtenerFichaEstandar(planId: string, asigId: string): Observable<FichaEstandarActividad> {
+    return this.http.get<FichaEstandarActividad>(
+      `${this.baseUrl}/${planId}/asignaturas/${asigId}/ficha-estandar`
+    );
+  }
+
+  guardarFichaEstandar(
+    planId: string,
+    asigId: string,
+    body: GuardarFichaEstandarRequest
+  ): Observable<FichaEstandarActividad> {
+    return this.http.put<FichaEstandarActividad>(
+      `${this.baseUrl}/${planId}/asignaturas/${asigId}/ficha-estandar`,
+      body
+    );
+  }
+
+  designarDocenteResponsable(
+    planId: string,
+    asigId: string,
+    docenteUsuarioId: string | null,
+    docenteNombre?: string | null
+  ): Observable<ActividadCurricularPlan> {
+    return this.http.patch<ActividadCurricularPlan>(
+      `${this.baseUrl}/${planId}/asignaturas/${asigId}/docente-responsable`,
+      {
+        docenteUsuarioId,
+        docenteNombre: docenteNombre ?? null,
+      }
     );
   }
 }

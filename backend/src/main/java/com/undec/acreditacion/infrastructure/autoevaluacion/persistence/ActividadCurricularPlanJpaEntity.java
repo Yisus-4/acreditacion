@@ -56,6 +56,12 @@ public class ActividadCurricularPlanJpaEntity {
     @Column(name = "origen_maestro_id")
     private UUID origenMaestroId;
 
+    @Column(name = "docente_responsable_id")
+    private UUID docenteResponsableId;
+
+    @Column(name = "docente_responsable_nombre", length = 200)
+    private String docenteResponsableNombre;
+
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
 
@@ -172,6 +178,22 @@ public class ActividadCurricularPlanJpaEntity {
 
     public void setOrigenMaestroId(UUID origenMaestroId) {
         this.origenMaestroId = origenMaestroId;
+    }
+
+    public UUID getDocenteResponsableId() {
+        return docenteResponsableId;
+    }
+
+    public void setDocenteResponsableId(UUID docenteResponsableId) {
+        this.docenteResponsableId = docenteResponsableId;
+    }
+
+    public String getDocenteResponsableNombre() {
+        return docenteResponsableNombre;
+    }
+
+    public void setDocenteResponsableNombre(String docenteResponsableNombre) {
+        this.docenteResponsableNombre = docenteResponsableNombre;
     }
 
     public Instant getCreadoEn() {

@@ -36,7 +36,7 @@ export class ConvocatoriaListComponent implements OnInit {
   });
 
   readonly canDeleteDev = computed(() => {
-    return this.auth.hasAnyRole('AEA', 'AC_COORDINATOR', 'DEV', 'DEVELOPER');
+    return this.auth.hasRole('AEA');
   });
 
   ngOnInit(): void {

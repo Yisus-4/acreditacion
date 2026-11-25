@@ -75,4 +75,38 @@ class ConsultarPlanTrabajoServiceTest {
         assertTrue(tiene13);
         verify(repository).save(any(PlanTrabajo.class));
     }
+
+    @Test
+    @DisplayName("No debe auto-completar ACT-01 ni ACT-02 cuando la CA solo fue autocreada vacía (SOLICITADA_A_DC) y revierte falsos positivos")
+    void noDebeAutoCompletarConCaAutocreadaVacia() {
+        UUID procesoId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        PlanTrabajo plan = PlanTrabajo.inicializar(procesoId, "PT-001-ISI-2026", TipoPlanTrabajo.PT_001_ACREDITACION);
+        // Simular falso positivo previo en ACT-01 y ACT-02
+        plan.getActividades().stream()
+                .filter(a -> com.undec.acreditacion.domain.entities.ActividadPlanTrabajo.CODIGO_ACT_01.equals(a.getCodigoActividad()))
+                .forEach(a -> a.marcarCompletadaAutomatica("Informado sobre el proceso de acreditación"));
+        plan.getActividades().stream()
+                .filter(a -> com.undec.acreditacion.domain.entities.ActividadPlanTrabajo.CODIGO_ACT_02.equals(a.getCodigoActividad()))
+                .forEach(a -> a.marcarCompletadaAutomatica("Cronograma institucional y formulario RG-001 formulados y vigentes"));
+
+        com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort caRepo =
+                mock(com.undec.acreditacion.domain.ports.RegistroConformacionCaRepositoryPort.class);
+        com.undec.acreditacion.domain.ports.RegistroUsuariosAteneaRepositoryPort ateneaRepo =
+                mock(com.undec.acreditacion.domain.ports.RegistroUsuariosAteneaRepositoryPort.class);
+
+        com.undec.acreditacion.domain.entities.RegistroConformacionCa caVacia =
+                new com.undec.acreditacion.domain.entities.RegistroConformacionCa(null, procesoId);
+        caVacia.solicitar(userId, 15);
+
+        when(repository.findByProcesoId(procesoId)).thenReturn(Optional.of(plan));
+        when(caRepo.findByProcesoId(procesoId)).thenReturn(Optional.of(caVacia));
+        when(ateneaRepo.findByProcesoId(procesoId)).thenReturn(Optional.empty());
+
+        ConsultarPlanTrabajoService fullService = new ConsultarPlanTrabajoService(repository, null, caRepo, ateneaRepo);
+        PlanTrabajo res = fullService.obtenerPorProcesoId(procesoId);
+
+        assertTrue(res.getActividades().stream()
+                .allMatch(a -> a.getEstado() == com.undec.acreditacion.domain.entities.EstadoActividad.PENDIENTE));
+    }
 }

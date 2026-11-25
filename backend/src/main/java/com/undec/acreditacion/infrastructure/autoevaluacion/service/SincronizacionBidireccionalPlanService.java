@@ -6,6 +6,13 @@ import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.Activida
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.PlanEstudioFt001JpaEntity;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataActividadCurricularPlanRepository;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataPlanEstudioFt001Repository;
+import com.undec.acreditacion.infrastructure.estandares.persistence.ActividadCurricularCargaHorariaAreaJpaEntity;
+import com.undec.acreditacion.infrastructure.estandares.persistence.ActividadCurricularCargaHorariaResumenJpaEntity;
+import com.undec.acreditacion.infrastructure.estandares.persistence.ActividadCurricularEvaluacion22JpaEntity;
+import com.undec.acreditacion.infrastructure.estandares.persistence.SpringDataActividadCurricularCargaHorariaAreaRepository;
+import com.undec.acreditacion.infrastructure.estandares.persistence.SpringDataActividadCurricularCargaHorariaResumenRepository;
+import com.undec.acreditacion.infrastructure.estandares.persistence.SpringDataActividadCurricularEvaluacion22Repository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,13 +27,30 @@ public class SincronizacionBidireccionalPlanService {
 
     private final SpringDataPlanEstudioFt001Repository planRepository;
     private final SpringDataActividadCurricularPlanRepository asignaturaRepository;
+    private final SpringDataActividadCurricularEvaluacion22Repository evaluacion22Repository;
+    private final SpringDataActividadCurricularCargaHorariaAreaRepository cargaAreaRepository;
+    private final SpringDataActividadCurricularCargaHorariaResumenRepository cargaResumenRepository;
 
     public SincronizacionBidireccionalPlanService(
             SpringDataPlanEstudioFt001Repository planRepository,
             SpringDataActividadCurricularPlanRepository asignaturaRepository
     ) {
+        this(planRepository, asignaturaRepository, null, null, null);
+    }
+
+    @Autowired
+    public SincronizacionBidireccionalPlanService(
+            SpringDataPlanEstudioFt001Repository planRepository,
+            SpringDataActividadCurricularPlanRepository asignaturaRepository,
+            SpringDataActividadCurricularEvaluacion22Repository evaluacion22Repository,
+            SpringDataActividadCurricularCargaHorariaAreaRepository cargaAreaRepository,
+            SpringDataActividadCurricularCargaHorariaResumenRepository cargaResumenRepository
+    ) {
         this.planRepository = Objects.requireNonNull(planRepository);
         this.asignaturaRepository = Objects.requireNonNull(asignaturaRepository);
+        this.evaluacion22Repository = evaluacion22Repository;
+        this.cargaAreaRepository = cargaAreaRepository;
+        this.cargaResumenRepository = cargaResumenRepository;
     }
 
     public void propagarCreacionAsignatura(
@@ -231,6 +255,7 @@ public class SincronizacionBidireccionalPlanService {
         PlanEstudioFt001JpaEntity master = new PlanEstudioFt001JpaEntity();
         master.setId(UUID.randomUUID());
         master.setCarrera(planProceso.getCarrera());
+        master.setEstandar(planProceso.getEstandar());
         master.setProcesoId(null);
         master.setEsMaestro(true);
         master.setOrigenMaestroId(null);
@@ -341,9 +366,113 @@ public class SincronizacionBidireccionalPlanService {
         clone.setCorrelativas(origen.getCorrelativas());
         clone.setEsObligatoria(origen.getEsObligatoria());
         clone.setEstadoDictado(origen.getEstadoDictado());
+        clone.setDocenteResponsableId(origen.getDocenteResponsableId());
+        clone.setDocenteResponsableNombre(origen.getDocenteResponsableNombre());
         clone.setOrigenMaestroId(origenMaestroId);
         clone.setCreadoEn(Instant.now());
         return clone;
+    }
+
+    public void propagarFichaEstandarAsignatura(
+            PlanEstudioFt001JpaEntity planOrigen,
+            ActividadCurricularPlanJpaEntity asigOrigen
+    ) {
+        if (evaluacion22Repository == null || cargaAreaRepository == null || cargaResumenRepository == null
+                || planOrigen == null || asigOrigen == null) {
+            return;
+        }
+        if (Boolean.TRUE.equals(planOrigen.getEsMaestro())) {
+            List<PlanEstudioFt001JpaEntity> clones = planRepository.findByOrigenMaestroIdAndActivoTrue(planOrigen.getId());
+            for (PlanEstudioFt001JpaEntity clonePlan : clones) {
+                asignaturaRepository.findByPlanEstudioIdAndOrigenMaestroId(clonePlan.getId(), asigOrigen.getId())
+                        .ifPresent(dest -> copiarFichaEntreActividades(asigOrigen, dest));
+            }
+            return;
+        }
+        UUID masterAsigId = asigOrigen.getOrigenMaestroId();
+        if (masterAsigId == null) {
+            return;
+        }
+        asignaturaRepository.findById(masterAsigId)
+                .ifPresent(masterAsig -> copiarFichaEntreActividades(asigOrigen, masterAsig));
+        List<ActividadCurricularPlanJpaEntity> hermanos = asignaturaRepository.findByOrigenMaestroId(masterAsigId);
+        for (ActividadCurricularPlanJpaEntity hermano : hermanos) {
+            if (!hermano.getId().equals(asigOrigen.getId())
+                    && hermano.getPlanEstudio() != null
+                    && Boolean.TRUE.equals(hermano.getPlanEstudio().getActivo())) {
+                copiarFichaEntreActividades(asigOrigen, hermano);
+            }
+        }
+    }
+
+    public void copiarFichaEntreActividades(
+            ActividadCurricularPlanJpaEntity origen,
+            ActividadCurricularPlanJpaEntity destino
+    ) {
+        if (evaluacion22Repository == null || cargaAreaRepository == null || cargaResumenRepository == null
+                || origen == null || destino == null || Objects.equals(origen.getId(), destino.getId())) {
+            return;
+        }
+        UUID estOrigenId = origen.getPlanEstudio() != null && origen.getPlanEstudio().getEstandar() != null
+                ? origen.getPlanEstudio().getEstandar().getId() : null;
+        UUID estDestinoId = destino.getPlanEstudio() != null && destino.getPlanEstudio().getEstandar() != null
+                ? destino.getPlanEstudio().getEstandar().getId() : null;
+        if (estOrigenId != null && estDestinoId != null && !estOrigenId.equals(estDestinoId)) {
+            return;
+        }
+
+        List<ActividadCurricularEvaluacion22JpaEntity> origenEval =
+                evaluacion22Repository.findByActividadCurricularId(origen.getId());
+        evaluacion22Repository.deleteByActividadCurricularId(destino.getId());
+        evaluacion22Repository.flush();
+        if (!origenEval.isEmpty()) {
+            List<ActividadCurricularEvaluacion22JpaEntity> clonesEval = origenEval.stream()
+                    .map(e -> {
+                        ActividadCurricularEvaluacion22JpaEntity c = new ActividadCurricularEvaluacion22JpaEntity();
+                        c.setId(UUID.randomUUID());
+                        c.setActividadCurricular(destino);
+                        c.setEstandarItem(e.getEstandarItem());
+                        c.setEscalaEvaluacion(e.getEscalaEvaluacion());
+                        c.setCreadoEn(Instant.now());
+                        return c;
+                    })
+                    .toList();
+            evaluacion22Repository.saveAll(clonesEval);
+        }
+
+        List<ActividadCurricularCargaHorariaAreaJpaEntity> origenAreas =
+                cargaAreaRepository.findByActividadCurricularId(origen.getId());
+        cargaAreaRepository.deleteByActividadCurricularId(destino.getId());
+        cargaAreaRepository.flush();
+        if (!origenAreas.isEmpty()) {
+            List<ActividadCurricularCargaHorariaAreaJpaEntity> clonesAreas = origenAreas.stream()
+                    .map(a -> {
+                        ActividadCurricularCargaHorariaAreaJpaEntity c = new ActividadCurricularCargaHorariaAreaJpaEntity();
+                        c.setId(UUID.randomUUID());
+                        c.setActividadCurricular(destino);
+                        c.setAreaCargaHoraria(a.getAreaCargaHoraria());
+                        c.setHorasTotalPresencial(a.getHorasTotalPresencial());
+                        c.setHorasTotalDistancia(a.getHorasTotalDistancia());
+                        c.setHorasPracticaPresencial(a.getHorasPracticaPresencial());
+                        c.setHorasPracticaDistancia(a.getHorasPracticaDistancia());
+                        return c;
+                    })
+                    .toList();
+            cargaAreaRepository.saveAll(clonesAreas);
+        }
+
+        cargaResumenRepository.findById(origen.getId()).ifPresentOrElse(src -> {
+            ActividadCurricularCargaHorariaResumenJpaEntity dest = cargaResumenRepository.findById(destino.getId())
+                    .orElseGet(ActividadCurricularCargaHorariaResumenJpaEntity::new);
+            dest.setActividadCurricularId(destino.getId());
+            dest.setAmbitosFormacionPractica(src.getAmbitosFormacionPractica());
+            dest.setHorasSemanalTotalPresencial(src.getHorasSemanalTotalPresencial());
+            dest.setHorasSemanalTotalDistancia(src.getHorasSemanalTotalDistancia());
+            dest.setHorasSemanalPracticaPresencial(src.getHorasSemanalPracticaPresencial());
+            dest.setHorasSemanalPracticaDistancia(src.getHorasSemanalPracticaDistancia());
+            dest.setActualizadoEn(Instant.now());
+            cargaResumenRepository.save(dest);
+        }, () -> cargaResumenRepository.findById(destino.getId()).ifPresent(cargaResumenRepository::delete));
     }
 
     private void copiarCamposAsignatura(
@@ -363,6 +492,8 @@ public class SincronizacionBidireccionalPlanService {
         target.setCorrelativas(source.getCorrelativas());
         target.setEsObligatoria(source.getEsObligatoria());
         target.setEstadoDictado(source.getEstadoDictado());
+        target.setDocenteResponsableId(source.getDocenteResponsableId());
+        target.setDocenteResponsableNombre(source.getDocenteResponsableNombre());
     }
 
     private void copiarMetadatosPlan(PlanEstudioFt001JpaEntity source, PlanEstudioFt001JpaEntity target) {

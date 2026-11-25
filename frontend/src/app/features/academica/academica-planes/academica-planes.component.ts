@@ -2,7 +2,10 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Auth } from '../../../core/auth/auth';
+import { EstandarDetalle } from '../../../core/estandares/estandar.models';
+import { EstandarService } from '../../../core/estandares/estandar.service';
 import { EstructuraService, CarreraResponse } from '../../../core/estructura/estructura.service';
 import { PlanEstudioService } from '../../../core/planes-estudio/plan-estudio.service';
 import {
@@ -15,12 +18,20 @@ import {
   DatosCentralesService,
   PlanEstudioMaestro,
 } from '../../../core/services/datos-centrales.service';
+import { ActividadEstandarModalComponent } from '../../autoevaluacion/estructura-curricular/actividad-estandar-modal.component';
 import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.component';
 
 @Component({
   selector: 'app-academica-planes',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SubnavAcademicaComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    RouterLink,
+    SubnavAcademicaComponent,
+    ActividadEstandarModalComponent,
+  ],
   template: `
     <div class="acad-wrap">
       <app-subnav-academica seccionActual="Planes y Actividades Curriculares"></app-subnav-academica>
@@ -53,7 +64,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
         <table class="tabla">
           <thead>
             <tr>
-              <th>Carrera</th><th>Plan</th><th>Año</th><th>Actividades</th><th>Estado</th><th>Acciones</th>
+              <th>Carrera</th><th>Plan</th><th>Estándar</th><th>Año</th><th>Actividades</th><th>Estado</th><th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -61,6 +72,16 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
               <tr [class.sel]="planSeleccionado()?.id === p.id">
                 <td>{{ p.carreraNombre || 'Carrera' }}</td>
                 <td><strong>{{ p.nombrePlan }}</strong></td>
+                <td>
+                  @if (p.estandarNombre) {
+                    <span>{{ p.estandarNombre }}</span>
+                    @if (p.estandarResolucion) {
+                      <div class="sub">{{ p.estandarResolucion }}</div>
+                    }
+                  } @else {
+                    <span class="sub">Sin estándar</span>
+                  }
+                </td>
                 <td>{{ p.anioAprobacion || '—' }}</td>
                 <td>{{ p.cantidadAsignaturas ?? 0 }}</td>
                 <td>
@@ -80,7 +101,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                   }
                 </td>
               </tr>
-            } @empty { <tr><td colspan="6" class="empty">Sin planes registrados.</td></tr> }
+            } @empty { <tr><td colspan="7" class="empty">Sin planes registrados.</td></tr> }
           </tbody>
         </table>
       </section>
@@ -90,7 +111,12 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
           <div class="bar">
             <div>
               <h3>Actividades Curriculares — {{ planSeleccionado()?.nombrePlan }} ({{ planSeleccionado()?.carreraNombre }})</h3>
-              <p class="sub">Total: {{ asignaturas().length }} · Se dictan: {{ countSeDicta() }}</p>
+              <p class="sub">
+                Total: {{ asignaturas().length }} · Se dictan: {{ countSeDicta() }}
+                @if (planSeleccionado()?.estandarNombre) {
+                  · Estándar: <strong>{{ planSeleccionado()?.estandarNombre }}</strong>
+                }
+              </p>
             </div>
             @if (canEdit()) {
               <button type="button" class="btn-pri" (click)="abrirModalAsignatura()">+ Nueva Actividad Curricular</button>
@@ -99,14 +125,19 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
 
           <table class="tabla">
             <thead>
-              <tr><th>Ord.</th><th>Código</th><th>Nombre</th><th>Ciclo / Año</th><th>Horas</th><th>Dictado</th>@if (canEdit()) { <th>Acciones</th> }</tr>
+              <tr><th>Ord.</th><th>Código</th><th>Nombre</th><th>Ciclo / Año</th><th>Horas</th><th>Dictado</th><th>Estándar (2.2 / 3)</th><th>Acciones</th></tr>
             </thead>
             <tbody>
               @for (a of asignaturas(); track a.id) {
                 <tr>
                   <td>{{ a.numeroOrden }}</td>
                   <td>{{ a.codigo || '—' }}</td>
-                  <td><strong>{{ a.nombre }}</strong></td>
+                  <td>
+                    <strong>{{ a.nombre }}</strong>
+                    @if (a.docenteResponsableNombre) {
+                      <div class="sub">Resp.: {{ a.docenteResponsableNombre }}</div>
+                    }
+                  </td>
                   <td>{{ a.grupo || '—' }} · {{ a.subgrupo || '—' }}</td>
                   <td>{{ a.horasReloj }}h</td>
                   <td>
@@ -114,20 +145,42 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                       {{ a.estadoDictado === 'NO_SE_DICTA' ? 'NO SE DICTA' : 'SE DICTA' }}
                     </span>
                   </td>
-                  @if (canEdit()) {
-                    <td class="acciones">
+                  <td>
+                    <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                      <span class="badge" [class.vigente]="!!a.seccion22Completa" [class.no-vigente]="!a.seccion22Completa">
+                        2.2: {{ a.seccion22Completa ? 'OK' : 'Pend.' }}
+                      </span>
+                      <span class="badge" [class.vigente]="!!a.seccion3Completa" [class.no-vigente]="!a.seccion3Completa">
+                        3: {{ a.seccion3Completa ? 'OK' : 'Pend.' }}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="acciones">
+                    @if (planSeleccionado()?.estandarId && a.id) {
+                      <button type="button" class="btn-xs" (click)="abrirModalFicha(a)">Ficha Estándar</button>
+                    }
+                    @if (canEdit()) {
                       <button type="button" class="btn-xs" (click)="toggleDictado(a)">
                         {{ a.estadoDictado === 'NO_SE_DICTA' ? 'Marcar Se Dicta' : 'Marcar No Se Dicta' }}
                       </button>
                       <button type="button" class="btn-sec" (click)="abrirModalAsignatura(a)">Editar</button>
                       <button type="button" class="btn-danger" (click)="eliminarAsignatura(a)">Eliminar</button>
-                    </td>
-                  }
+                    }
+                  </td>
                 </tr>
-              } @empty { <tr><td [attr.colspan]="canEdit() ? 7 : 6" class="empty">Sin actividades curriculares cargadas en este plan.</td></tr> }
+              } @empty { <tr><td colspan="8" class="empty">Sin actividades curriculares cargadas en este plan.</td></tr> }
             </tbody>
           </table>
         </section>
+      }
+
+      @if (modalFichaPlanId() && modalFichaActividadId()) {
+        <app-actividad-estandar-modal
+          [planId]="modalFichaPlanId()!"
+          [actividadId]="modalFichaActividadId()!"
+          (cerrar)="cerrarModalFicha()"
+          (guardado)="onFichaGuardada()"
+        />
       }
 
       @if (modalPlan()) {
@@ -139,11 +192,31 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
             }
             <form [formGroup]="planForm" (ngSubmit)="guardarPlan()">
               <label>Carrera *
-                <select formControlName="carreraId">
+                <select formControlName="carreraId" (change)="verificarEstandarVigenteParaCarrera($any($event.target).value)">
                   <option value="">Seleccione carrera</option>
                   @for (c of carreras(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
                 </select>
               </label>
+
+              @if (!planEditando()) {
+                @if (verificandoEstandar()) {
+                  <div class="alert" style="background:#f9fafb; border:1px solid #e5e7eb; color:#4b5563;">
+                    <span>Verificando estándar vigente de la carrera...</span>
+                  </div>
+                } @else if (estandarVigentePreview(); as est) {
+                  <div class="alert success">
+                    <span>Estándar vigente que se asignará al plan: <strong>{{ est.nombre }}</strong> ({{ est.tipoSeccion22 }})</span>
+                  </div>
+                } @else if (errorEstandarFaltante()) {
+                  <div class="alert error" style="flex-direction:column; align-items:flex-start; gap:4px;">
+                    <span>{{ errorEstandarFaltante() }}</span>
+                    <a routerLink="/academica/estandares" style="color:#6b4c5b; font-weight:700; text-decoration:underline;">
+                      Ir a configurar Estándares por Carrera
+                    </a>
+                  </div>
+                }
+              }
+
               <label>Nombre Plan *<input type="text" formControlName="nombrePlan" placeholder="Plan 2026" /></label>
               <label>Año *<input type="number" formControlName="anioAprobacion" /></label>
               <div class="grid2">
@@ -152,7 +225,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
               </div>
               <div class="m-actions">
                 <button type="button" class="btn-sec" (click)="modalPlan.set(false)" [disabled]="guardandoPlan()">Cancelar</button>
-                <button type="submit" class="btn-pri" [disabled]="guardandoPlan()">
+                <button type="submit" class="btn-pri" [disabled]="guardandoPlan() || (!planEditando() && (!!errorEstandarFaltante() || verificandoEstandar()))">
                   {{ guardandoPlan() ? 'Guardando...' : 'Guardar' }}
                 </button>
               </div>
@@ -234,6 +307,7 @@ export class AcademicaPlanesComponent implements OnInit {
   private readonly datos = inject(DatosCentralesService);
   private readonly estructura = inject(EstructuraService);
   private readonly planService = inject(PlanEstudioService);
+  private readonly estandarService = inject(EstandarService);
   private readonly auth = inject(Auth);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
@@ -252,6 +326,11 @@ export class AcademicaPlanesComponent implements OnInit {
   readonly guardandoPlan = signal(false);
   readonly modalAsignatura = signal(false);
   readonly asigEditando = signal<ActividadCurricularPlan | null>(null);
+  readonly estandarVigentePreview = signal<EstandarDetalle | null>(null);
+  readonly verificandoEstandar = signal(false);
+  readonly errorEstandarFaltante = signal<string | null>(null);
+  readonly modalFichaPlanId = signal<string | null>(null);
+  readonly modalFichaActividadId = signal<string | null>(null);
 
   readonly isAea = computed(() => this.auth.hasAnyRole('AEA'));
   readonly canEdit = computed(() => {
@@ -304,14 +383,69 @@ export class AcademicaPlanesComponent implements OnInit {
   abrirModalPlan(plan?: PlanEstudioMaestro): void {
     this.planError.set(null);
     this.planEditando.set(plan || null);
+    const carreraInicial = plan?.carreraId || this.carreraId() || '';
     this.planForm.reset({
-      carreraId: plan?.carreraId || this.carreraId() || '',
+      carreraId: carreraInicial,
       nombrePlan: plan?.nombrePlan || '',
       anioAprobacion: plan?.anioAprobacion || new Date().getFullYear(),
       duracionAnios: plan?.duracionAnios || 5,
       horasTotales: plan?.horasTotales || 3000,
     });
+    if (!plan) {
+      this.verificarEstandarVigenteParaCarrera(carreraInicial);
+    } else {
+      this.estandarVigentePreview.set(null);
+      this.errorEstandarFaltante.set(null);
+    }
     this.modalPlan.set(true);
+  }
+
+  verificarEstandarVigenteParaCarrera(cId: string): void {
+    if (!cId) {
+      this.estandarVigentePreview.set(null);
+      this.errorEstandarFaltante.set(null);
+      return;
+    }
+    this.verificandoEstandar.set(true);
+    this.estandarVigentePreview.set(null);
+    this.errorEstandarFaltante.set(null);
+    this.estandarService
+      .obtenerVigentePorCarrera(cId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (det) => {
+          this.verificandoEstandar.set(false);
+          this.estandarVigentePreview.set(det);
+        },
+        error: (err) => {
+          this.verificandoEstandar.set(false);
+          this.errorEstandarFaltante.set(
+            err.error?.message ||
+              'La carrera seleccionada no posee un Estándar vigente. Configúrelo antes de dar de alta el plan.'
+          );
+        },
+      });
+  }
+
+  abrirModalFicha(asig: ActividadCurricularPlan): void {
+    const plan = this.planSeleccionado();
+    if (!plan?.id || !asig.id) return;
+    this.modalFichaPlanId.set(plan.id);
+    this.modalFichaActividadId.set(asig.id);
+  }
+
+  cerrarModalFicha(): void {
+    this.modalFichaPlanId.set(null);
+    this.modalFichaActividadId.set(null);
+  }
+
+  onFichaGuardada(): void {
+    const plan = this.planSeleccionado();
+    this.cerrarModalFicha();
+    this.successMessage.set('Ficha del estándar guardada correctamente.');
+    if (plan?.id) {
+      this.cargarAsignaturas(plan.id);
+    }
   }
 
   guardarPlan(): void {

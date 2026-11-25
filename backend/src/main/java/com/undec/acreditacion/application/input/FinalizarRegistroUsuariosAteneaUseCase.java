@@ -6,4 +6,8 @@ import java.util.UUID;
 
 public interface FinalizarRegistroUsuariosAteneaUseCase {
     RegistroUsuariosAteneaDto finalizar(UUID procesoId, UUID usuarioAeaId);
+
+    default byte[] regenerarPdf(UUID procesoId) {
+        return null;
+    }
 }

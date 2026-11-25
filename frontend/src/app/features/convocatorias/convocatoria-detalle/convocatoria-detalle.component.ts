@@ -359,7 +359,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   });
   readonly guardandoFt012 = signal<boolean>(false);
   readonly seccionFt012Abierta = signal<string | null>('1');
-  readonly opcionalesNormativaVisible = signal<boolean>(true);
+  readonly opcionalesNormativaVisible = signal<boolean>(false);
   readonly seccionesConfirmadasFt012 = signal<Set<string>>(new Set());
   readonly subiendoTipoNormativa = signal<TipoDocumentoNormativa | null>(null);
   readonly enviandoNormativa = signal<boolean>(false);
@@ -850,7 +850,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
   readonly esAdminOAEA = this.canManage;
 
   readonly isAeaOrDev = computed(() => {
-    return this.auth.hasAnyRole('AEA', 'AC_COORDINATOR', 'DEV', 'DEVELOPER');
+    return this.auth.hasRole('AEA');
   });
 
   readonly canConfirmarDe = computed(() => {
@@ -858,7 +858,7 @@ export class ConvocatoriaDetalleComponent implements OnInit, OnDestroy {
     if (!session?.user?.roleCodes) return false;
     return (
       session.user.roleCodes.includes('AEA') ||
-      session.user.roleCodes.includes('SCHOOL_DIRECTOR')
+      session.user.roleCodes.includes('DIRECTOR_ESCUELA')
     );
   });
 
