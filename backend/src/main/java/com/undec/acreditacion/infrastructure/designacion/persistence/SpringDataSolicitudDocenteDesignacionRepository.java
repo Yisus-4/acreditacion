@@ -21,6 +21,12 @@ public interface SpringDataSolicitudDocenteDesignacionRepository extends JpaRepo
             WHERE d.docente.id = :docenteId
               AND d.solicitud.periodoAcademico.id = :periodoId
               AND d.estadoItem <> com.undec.acreditacion.domain.entities.EstadoItemDesignacion.EXCLUIDO
+              AND NOT EXISTS (
+                  SELECT 1 FROM SolicitudDocenteDesignacionJpaEntity r
+                  WHERE r.designacionOrigenId = d.id
+                    AND r.solicitud.periodoAcademico.id = :periodoId
+                    AND r.estadoItem <> com.undec.acreditacion.domain.entities.EstadoItemDesignacion.EXCLUIDO
+              )
             """)
     List<SolicitudDocenteDesignacionJpaEntity> findActivasByDocenteAndPeriodo(
             @Param("docenteId") UUID docenteId,

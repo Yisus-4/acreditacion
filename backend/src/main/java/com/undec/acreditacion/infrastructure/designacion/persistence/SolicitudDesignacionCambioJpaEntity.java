@@ -41,7 +41,7 @@ public class SolicitudDesignacionCambioJpaEntity {
     @Column(name = "usuario_id")
     private UUID usuarioId;
 
-    @Column(name = "usuario_nombre", length = 180)
+    @Column(name = "usuario_nombre", length = 320)
     private String usuarioNombre;
 
     @Column(name = "fecha_cambio", nullable = false, updatable = false)

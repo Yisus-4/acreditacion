@@ -146,6 +146,18 @@ export interface GuardarDesignacionDocenteRequest {
   nroDesignacionMapuche?: string | null;
   observaciones?: string | null;
   motivoCambio?: string | null;
+  designacionReemplazadaId?: string | null;
+}
+
+export interface VistaConsolidadaPeriodo {
+  departamentoAcademicoId: string;
+  departamentoDenominacion: string;
+  periodoAcademicoId: string;
+  periodoDenominacion: string;
+  periodoAnio: number;
+  totalSolicitudesIncluidas: number;
+  totalDesignacionesVigentes: number;
+  designacionesVigentes: DesignacionDocenteItem[];
 }
 
 export interface GuardarDistribucionHorariaRequest {

@@ -9,7 +9,8 @@ public record GuardarDesignacionDocenteRequest(
         UUID tipoDesignacionId,
         String nroDesignacionMapuche,
         String observaciones,
-        String motivoCambio
+        String motivoCambio,
+        UUID designacionReemplazadaId
 ) {
     public GuardarDesignacionDocenteRequest(
             UUID docenteId,
@@ -19,6 +20,18 @@ public record GuardarDesignacionDocenteRequest(
             String nroDesignacionMapuche,
             String observaciones
     ) {
-        this(docenteId, cargoDocenteId, dedicacionDocenteId, tipoDesignacionId, nroDesignacionMapuche, observaciones, null);
+        this(docenteId, cargoDocenteId, dedicacionDocenteId, tipoDesignacionId, nroDesignacionMapuche, observaciones, null, null);
+    }
+
+    public GuardarDesignacionDocenteRequest(
+            UUID docenteId,
+            UUID cargoDocenteId,
+            UUID dedicacionDocenteId,
+            UUID tipoDesignacionId,
+            String nroDesignacionMapuche,
+            String observaciones,
+            String motivoCambio
+    ) {
+        this(docenteId, cargoDocenteId, dedicacionDocenteId, tipoDesignacionId, nroDesignacionMapuche, observaciones, motivoCambio, null);
     }
 }

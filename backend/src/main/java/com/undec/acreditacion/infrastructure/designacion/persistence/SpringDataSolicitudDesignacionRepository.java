@@ -35,14 +35,15 @@ public interface SpringDataSolicitudDesignacionRepository extends JpaRepository<
     @Query("""
             SELECT s FROM SolicitudDesignacionJpaEntity s
             WHERE s.departamentoAcademico.id = :departamentoId
-              AND s.periodoAcademico.id <> :periodoDestinoId
-              AND s.periodoAcademico.anio <= :anioDestino
+              AND s.tipoSolicitud = com.undec.acreditacion.domain.entities.TipoSolicitudDesignacion.ANUAL
+              AND s.periodoAcademico.anio < :anioDestino
               AND s.estado IN :estadosPermitidos
-            ORDER BY s.periodoAcademico.anio DESC, s.creadoEn DESC
+            ORDER BY s.periodoAcademico.anio DESC,
+                     CASE WHEN s.estado = com.undec.acreditacion.domain.entities.EstadoSolicitudDesignacion.APROBADA THEN 0 ELSE 1 END ASC,
+                     s.creadoEn DESC
             """)
-    List<SolicitudDesignacionJpaEntity> findCandidatasOrigenClonacion(
+    List<SolicitudDesignacionJpaEntity> findCandidatasAnualesOrigenClonacion(
             @Param("departamentoId") UUID departamentoId,
-            @Param("periodoDestinoId") UUID periodoDestinoId,
             @Param("anioDestino") Integer anioDestino,
             @Param("estadosPermitidos") Collection<EstadoSolicitudDesignacion> estadosPermitidos
     );

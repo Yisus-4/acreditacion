@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_sol_doc_desig_origen
     ON solicitud_docente_designacion(designacion_origen_id);
 
 CREATE TABLE IF NOT EXISTS solicitud_designacion_cambio (
-    id                 UUID         PRIMARY KEY,
+    id                 UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     solicitud_id       UUID         NOT NULL REFERENCES solicitud_designacion(id) ON DELETE CASCADE,
     designacion_id     UUID         NULL REFERENCES solicitud_docente_designacion(id) ON DELETE SET NULL,
     tipo_evento        VARCHAR(40)  NOT NULL,
@@ -32,8 +32,22 @@ CREATE TABLE IF NOT EXISTS solicitud_designacion_cambio (
     valor_nuevo        TEXT         NULL,
     motivo             TEXT         NULL,
     usuario_id         UUID         NULL REFERENCES usuario(id) ON DELETE SET NULL,
-    usuario_nombre     VARCHAR(180) NULL,
-    fecha_cambio       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    usuario_nombre     VARCHAR(320) NULL,
+    fecha_cambio       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_sol_desig_cambio_tipo_evento CHECK (tipo_evento IN (
+        'CREACION',
+        'CLONACION_PERIODO_ANTERIOR',
+        'ALTA_DESIGNACION',
+        'MODIFICACION_DESIGNACION',
+        'MODIFICACION_DISTRIBUCION',
+        'EXCLUSION_DESIGNACION',
+        'REACTIVACION_DESIGNACION',
+        'ALTA_ASIGNACION',
+        'BAJA_ASIGNACION',
+        'PRESENTACION_SGA',
+        'APROBACION_SGA',
+        'OBSERVACION_SGA'
+    ))
 );
 
 CREATE INDEX IF NOT EXISTS idx_sol_desig_cambio_solicitud

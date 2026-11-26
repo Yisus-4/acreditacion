@@ -202,8 +202,9 @@ class SolicitudDesignacionFase3ServiceTest {
         when(periodoRepository.findById(periodo2026.getId())).thenReturn(Optional.of(periodo2026));
         when(solicitudRepository.findByDepartamentoAcademicoIdAndPeriodoAcademicoIdAndTipoSolicitud(
                 deptoCyT.getId(), periodo2026.getId(), TipoSolicitudDesignacion.ANUAL)).thenReturn(Optional.empty());
-        when(solicitudRepository.findCandidatasOrigenClonacion(
-                eq(deptoCyT.getId()), eq(periodo2026.getId()), eq(2026), eq(List.of(EstadoSolicitudDesignacion.APROBADA))))
+        when(solicitudRepository.findCandidatasAnualesOrigenClonacion(
+                eq(deptoCyT.getId()), eq(2026),
+                eq(List.of(EstadoSolicitudDesignacion.APROBADA, EstadoSolicitudDesignacion.PRESENTADA_SGA))))
                 .thenReturn(List.of(sol2025));
         when(solicitudRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(designacionRepository.findBySolicitudIdOrderByCreadoEnAsc(sol2025.getId()))
@@ -391,6 +392,122 @@ class SolicitudDesignacionFase3ServiceTest {
         assertThrows(DomainValidationException.class, () -> service.agregarDesignacion(
                 sol.getId(),
                 new GuardarDesignacionDocenteRequest(docente.getId(), cargoAdjunto.getId(), dedSemi20.getId(), tipoOrdinario.getId(), null, null)));
+    }
+
+    @Test
+    void reactivarDesignacion_revalidaRN09EnAsignaturasRetenidas() {
+        SolicitudDesignacionJpaEntity sol = new SolicitudDesignacionJpaEntity();
+        sol.setId(UUID.randomUUID());
+        sol.setDepartamentoAcademico(deptoCyT);
+        sol.setPeriodoAcademico(periodo2026);
+        sol.setEstado(EstadoSolicitudDesignacion.BORRADOR);
+
+        SolicitudDocenteDesignacionJpaEntity itemExcluido = new SolicitudDocenteDesignacionJpaEntity();
+        itemExcluido.setId(UUID.randomUUID());
+        itemExcluido.setSolicitud(sol);
+        itemExcluido.setDocente(docente);
+        itemExcluido.setCargoDocente(cargoAdjunto);
+        itemExcluido.setDedicacionDocente(dedSemi20);
+        itemExcluido.setTipoDesignacion(tipoOrdinario);
+        itemExcluido.setHorasDedicacion(20);
+        itemExcluido.setEstadoItem(EstadoItemDesignacion.EXCLUIDO);
+        itemExcluido.setDesignacionOrigenId(UUID.randomUUID());
+
+        CarreraJpaEntity carrera = new CarreraJpaEntity();
+        carrera.setId(UUID.randomUUID());
+        PlanEstudioFt001JpaEntity plan = new PlanEstudioFt001JpaEntity();
+        plan.setId(UUID.randomUUID());
+        plan.setCarrera(carrera);
+        ActividadCurricularPlanJpaEntity actCerrada = new ActividadCurricularPlanJpaEntity();
+        actCerrada.setId(UUID.randomUUID());
+        actCerrada.setPlanEstudio(plan);
+        actCerrada.setNombre("Química Inactiva");
+        actCerrada.setEstadoDictado(EstadoDictadoActividad.INACTIVA);
+
+        SolicitudAsignacionCurricularJpaEntity asigInvalida = asig(
+                itemExcluido, carrera, plan, actCerrada, ModalidadParticipacionDocente.DESARROLLO_CLASES);
+
+        when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(Optional.empty());
+        when(solicitudRepository.findById(sol.getId())).thenReturn(Optional.of(sol));
+        when(designacionRepository.findById(itemExcluido.getId())).thenReturn(Optional.of(itemExcluido));
+        when(designacionRepository.findActivasByDocenteAndPeriodo(docente.getId(), periodo2026.getId()))
+                .thenReturn(List.of());
+        when(asignacionRepository.findByDesignacionIdOrderByCreadoEnAsc(itemExcluido.getId()))
+                .thenReturn(List.of(asigInvalida));
+
+        assertThrows(DomainValidationException.class, () -> service.reactivarDesignacion(
+                sol.getId(), itemExcluido.getId(), new MotivoCambioRequest("Intento con asignatura inactiva")));
+    }
+
+    @Test
+    void solicitudExtraordinaria_reemplazaCargoDeAnualAprobadaSinExceder50HorasYConsolida() {
+        SolicitudDesignacionJpaEntity solAnualAprobada = new SolicitudDesignacionJpaEntity();
+        solAnualAprobada.setId(UUID.randomUUID());
+        solAnualAprobada.setDepartamentoAcademico(deptoCyT);
+        solAnualAprobada.setPeriodoAcademico(periodo2026);
+        solAnualAprobada.setTipoSolicitud(TipoSolicitudDesignacion.ANUAL);
+        solAnualAprobada.setEstado(EstadoSolicitudDesignacion.APROBADA);
+
+        SolicitudDocenteDesignacionJpaEntity cargoOriginal40 = new SolicitudDocenteDesignacionJpaEntity();
+        cargoOriginal40.setId(UUID.randomUUID());
+        cargoOriginal40.setSolicitud(solAnualAprobada);
+        cargoOriginal40.setDocente(docente);
+        cargoOriginal40.setCargoDocente(cargoAdjunto);
+        cargoOriginal40.setDedicacionDocente(dedExclusiva40);
+        cargoOriginal40.setTipoDesignacion(tipoOrdinario);
+        cargoOriginal40.setHorasDedicacion(40);
+        cargoOriginal40.setEstadoItem(EstadoItemDesignacion.NUEVO);
+
+        SolicitudDesignacionJpaEntity solExtra = new SolicitudDesignacionJpaEntity();
+        solExtra.setId(UUID.randomUUID());
+        solExtra.setDepartamentoAcademico(deptoCyT);
+        solExtra.setPeriodoAcademico(periodo2026);
+        solExtra.setTipoSolicitud(TipoSolicitudDesignacion.EXTRAORDINARIA);
+        solExtra.setEstado(EstadoSolicitudDesignacion.BORRADOR);
+        solExtra.setSolicitudOrigenId(solAnualAprobada.getId());
+
+        when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(Optional.empty());
+        when(solicitudRepository.findById(solExtra.getId())).thenReturn(Optional.of(solExtra));
+        when(designacionRepository.findById(cargoOriginal40.getId())).thenReturn(Optional.of(cargoOriginal40));
+        when(docenteRepository.findById(docente.getId())).thenReturn(Optional.of(docente));
+        when(cargoRepository.findById(cargoAdjunto.getId())).thenReturn(Optional.of(cargoAdjunto));
+        when(dedicacionRepository.findById(dedExclusiva40.getId())).thenReturn(Optional.of(dedExclusiva40));
+        when(tipoDesignacionRepository.findById(tipoOrdinario.getId())).thenReturn(Optional.of(tipoOrdinario));
+        // Al pasar designacionReemplazadaId = cargoOriginal40.id, sus 40h previas se descuentan -> 0 + 40 = 40 <= 50
+        when(designacionRepository.findActivasByDocenteAndPeriodo(docente.getId(), periodo2026.getId()))
+                .thenReturn(List.of(cargoOriginal40));
+        List<SolicitudDocenteDesignacionJpaEntity> extraItems = new ArrayList<>();
+        when(designacionRepository.save(any())).thenAnswer(inv -> {
+            SolicitudDocenteDesignacionJpaEntity saved = inv.getArgument(0);
+            extraItems.add(saved);
+            return saved;
+        });
+        when(asignacionRepository.findByDesignacionIdOrderByCreadoEnAsc(any())).thenReturn(List.of());
+
+        DesignacionDocenteItemDto reemplazo = service.agregarDesignacion(
+                solExtra.getId(),
+                new GuardarDesignacionDocenteRequest(
+                        docente.getId(), cargoAdjunto.getId(), dedExclusiva40.getId(), tipoOrdinario.getId(),
+                        "MAP-99", "Cambio de carácter en extraordinaria", "Concurso ganado", cargoOriginal40.getId()
+                )
+        );
+
+        assertEquals(cargoOriginal40.getId(), reemplazo.designacionOrigenId());
+        assertEquals(40, reemplazo.totalHorasDocentePeriodo());
+
+        // Verificar Vista Consolidada del Período: cargoOriginal40 queda superado por reemplazo -> solo 1 cargo vigente (40h)
+        when(departamentoRepository.findById(deptoCyT.getId())).thenReturn(Optional.of(deptoCyT));
+        when(periodoRepository.findById(periodo2026.getId())).thenReturn(Optional.of(periodo2026));
+        when(solicitudRepository.findByDepartamentoAcademicoIdAndPeriodoAcademicoIdOrderByCreadoEnDesc(
+                deptoCyT.getId(), periodo2026.getId())).thenReturn(List.of(solExtra, solAnualAprobada));
+        when(designacionRepository.findBySolicitudIdOrderByCreadoEnAsc(solExtra.getId())).thenReturn(extraItems);
+        when(designacionRepository.findBySolicitudIdOrderByCreadoEnAsc(solAnualAprobada.getId())).thenReturn(List.of(cargoOriginal40));
+        when(asignacionRepository.findByDesignacionIdInOrderByCreadoEnAsc(any())).thenReturn(List.of());
+
+        VistaConsolidadaPeriodoDto consolidado = service.obtenerVistaConsolidadaPeriodo(deptoCyT.getId(), periodo2026.getId());
+        assertEquals(2, consolidado.totalSolicitudesIncluidas());
+        assertEquals(1, consolidado.totalDesignacionesVigentes());
+        assertEquals("MAP-99", consolidado.designacionesVigentes().get(0).nroDesignacionMapuche());
     }
 
     private static SolicitudAsignacionCurricularJpaEntity asig(

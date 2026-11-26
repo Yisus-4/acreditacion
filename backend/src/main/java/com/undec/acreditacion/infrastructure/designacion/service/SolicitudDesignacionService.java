@@ -15,6 +15,9 @@ import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEnti
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataCarreraRepository;
 import com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -148,6 +151,73 @@ public class SolicitudDesignacionService {
         return obtenerHistorialDtos(solicitudId);
     }
 
+    @Transactional(readOnly = true)
+    public VistaConsolidadaPeriodoDto obtenerVistaConsolidadaPeriodo(UUID departamentoId, UUID periodoId) {
+        if (periodoId == null) {
+            throw new DomainValidationException("El Período Académico es obligatorio para consultar el consolidado.");
+        }
+        UUID deptoEfectivo = resolverDepartamentoLectura(departamentoId);
+        if (deptoEfectivo == null) {
+            throw new DomainValidationException("El Departamento Académico es obligatorio para consultar el consolidado.");
+        }
+        validarAccesoLecturaDepartamento(deptoEfectivo);
+
+        DepartamentoAcademicoJpaEntity depto = departamentoRepository.findById(deptoEfectivo)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el Departamento Académico ID: " + deptoEfectivo));
+        PeriodoAcademicoJpaEntity periodo = periodoRepository.findById(periodoId)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el Período Académico ID: " + periodoId));
+
+        List<SolicitudDesignacionJpaEntity> solicitudesPeriodo =
+                solicitudRepository.findByDepartamentoAcademicoIdAndPeriodoAcademicoIdOrderByCreadoEnDesc(depto.getId(), periodo.getId());
+
+        List<SolicitudDocenteDesignacionJpaEntity> todosActivos = new ArrayList<>();
+        for (SolicitudDesignacionJpaEntity s : solicitudesPeriodo) {
+            for (SolicitudDocenteDesignacionJpaEntity d : designacionRepository.findBySolicitudIdOrderByCreadoEnAsc(s.getId())) {
+                if (d.getEstadoItem() != EstadoItemDesignacion.EXCLUIDO) {
+                    todosActivos.add(d);
+                }
+            }
+        }
+
+        Set<UUID> reemplazadosEnPeriodo = todosActivos.stream()
+                .map(SolicitudDocenteDesignacionJpaEntity::getDesignacionOrigenId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<SolicitudDocenteDesignacionJpaEntity> vigentes = todosActivos.stream()
+                .filter(d -> !reemplazadosEnPeriodo.contains(d.getId()))
+                .toList();
+
+        List<UUID> vigenteIds = vigentes.stream().map(SolicitudDocenteDesignacionJpaEntity::getId).toList();
+        Map<UUID, List<SolicitudAsignacionCurricularJpaEntity>> asigsMap = vigenteIds.isEmpty()
+                ? Map.of()
+                : asignacionRepository.findByDesignacionIdInOrderByCreadoEnAsc(vigenteIds).stream()
+                        .collect(Collectors.groupingBy(a -> a.getDesignacion().getId()));
+
+        Map<UUID, Integer> totalPorDocente = new HashMap<>();
+        for (SolicitudDocenteDesignacionJpaEntity d : vigentes) {
+            totalPorDocente.merge(d.getDocente().getId(), d.getHorasDedicacion() != null ? d.getHorasDedicacion() : 0, Integer::sum);
+        }
+
+        List<DesignacionDocenteItemDto> dtos = vigentes.stream()
+                .map(d -> toDesignacionDto(
+                        d,
+                        asigsMap.getOrDefault(d.getId(), List.of()),
+                        totalPorDocente.getOrDefault(d.getDocente().getId(), 0)))
+                .toList();
+
+        return new VistaConsolidadaPeriodoDto(
+                depto.getId(),
+                depto.getDenominacion(),
+                periodo.getId(),
+                periodo.getDenominacion(),
+                periodo.getAnio(),
+                solicitudesPeriodo.size(),
+                dtos.size(),
+                dtos
+        );
+    }
+
     public SolicitudDesignacionDetalleDto crearSolicitud(CrearSolicitudDesignacionRequest req) {
         if (req == null) {
             throw new DomainValidationException("Los datos de la solicitud son obligatorios.");
@@ -162,8 +232,14 @@ public class SolicitudDesignacionService {
 
         DepartamentoAcademicoJpaEntity depto = departamentoRepository.findById(deptoId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el Departamento Académico ID: " + deptoId));
+        if (!depto.isActivo()) {
+            throw new DomainValidationException("El Departamento Académico '" + depto.getDenominacion() + "' se encuentra inactivo.");
+        }
         PeriodoAcademicoJpaEntity periodo = periodoRepository.findById(req.periodoAcademicoId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el Período Académico ID: " + req.periodoAcademicoId()));
+        if (!periodo.isActivo()) {
+            throw new DomainValidationException("El Período Académico '" + periodo.getDenominacion() + "' se encuentra inactivo.");
+        }
 
         TipoSolicitudDesignacion tipo = req.tipoSolicitud() != null ? req.tipoSolicitud() : TipoSolicitudDesignacion.ANUAL;
         if (tipo == TipoSolicitudDesignacion.ANUAL) {
@@ -191,6 +267,9 @@ public class SolicitudDesignacionService {
                 SolicitudDesignacionJpaEntity ref = obtenerSolicitudOCascada(req.solicitudOrigenId());
                 if (!ref.getDepartamentoAcademico().getId().equals(depto.getId())) {
                     throw new DomainValidationException("La solicitud base vinculada no pertenece al mismo Departamento Académico.");
+                }
+                if (!ref.getPeriodoAcademico().getId().equals(periodo.getId())) {
+                    throw new DomainValidationException("La solicitud base de una EXTRAORDINARIA debe pertenecer al mismo Período Académico.");
                 }
                 solicitudOrigenVinculadaId = ref.getId();
             } else {
@@ -242,8 +321,8 @@ public class SolicitudDesignacionService {
 
         SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
         validarEscrituraSobreSolicitud(solicitud);
-        if (solicitud.getEstado() == EstadoSolicitudDesignacion.OBSERVADA) {
-            exigirMotivoNoVacio(req.motivoCambio(), "agregar una designación sobre una solicitud OBSERVADA");
+        if (solicitud.getEstado() == EstadoSolicitudDesignacion.OBSERVADA || req.designacionReemplazadaId() != null) {
+            exigirMotivoNoVacio(req.motivoCambio(), "registrar este movimiento de designación");
         }
 
         CuerpoAcademicoMaestroJpaEntity docente = docenteRepository.findById(req.docenteId())
@@ -259,24 +338,40 @@ public class SolicitudDesignacionService {
 
         validarEntidadesActivas(docente, cargo, dedicacion, tipoDesig);
 
+        UUID designacionReemplazadaId = null;
+        if (req.designacionReemplazadaId() != null) {
+            if (solicitud.getTipoSolicitud() != TipoSolicitudDesignacion.EXTRAORDINARIA) {
+                throw new DomainValidationException("El reemplazo de un cargo vigente solo aplica en solicitudes EXTRAORDINARIAS (RF09).");
+            }
+            SolicitudDocenteDesignacionJpaEntity reemplazada = designacionRepository.findById(req.designacionReemplazadaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("No se encontró la designación a reemplazar ID: " + req.designacionReemplazadaId()));
+            if (!reemplazada.getDocente().getId().equals(docente.getId())
+                    || !reemplazada.getSolicitud().getPeriodoAcademico().getId().equals(solicitud.getPeriodoAcademico().getId())
+                    || !reemplazada.getSolicitud().getDepartamentoAcademico().getId().equals(solicitud.getDepartamentoAcademico().getId())) {
+                throw new DomainValidationException("La designación a reemplazar debe pertenecer al mismo docente, departamento y período académico.");
+            }
+            designacionReemplazadaId = reemplazada.getId();
+        }
+
         int horasNuevas = dedicacion.getHorasSemanales() != null ? dedicacion.getHorasSemanales() : 0;
         if (horasNuevas <= 0) {
             throw new DomainValidationException("La dedicación seleccionada debe tener una carga horaria mayor a 0 hs semanales.");
         }
         int horasPreviasPeriodo = sumarHorasActivasDocenteEnPeriodo(
-                docente.getId(), solicitud.getPeriodoAcademico().getId(), null);
+                docente.getId(), solicitud.getPeriodoAcademico().getId(), designacionReemplazadaId);
         validarTope50Horas(docente, horasPreviasPeriodo, horasNuevas);
 
         SolicitudDocenteDesignacionJpaEntity entity = new SolicitudDocenteDesignacionJpaEntity();
         entity.setId(UUID.randomUUID());
         entity.setSolicitud(solicitud);
+        entity.setDesignacionOrigenId(designacionReemplazadaId);
         entity.setDocente(docente);
         entity.setCargoDocente(cargo);
         entity.setDedicacionDocente(dedicacion);
         entity.setTipoDesignacion(tipoDesig);
         entity.setHorasDedicacion(horasNuevas);
         entity.setNroDesignacionMapuche(trimToNull(req.nroDesignacionMapuche()));
-        entity.setEstadoItem(EstadoItemDesignacion.NUEVO);
+        entity.setEstadoItem(designacionReemplazadaId != null ? EstadoItemDesignacion.MODIFICADO : EstadoItemDesignacion.NUEVO);
         entity.setObservaciones(trimToNull(req.observaciones()));
         entity.setCreadoEn(Instant.now());
         entity.setActualizadoEn(Instant.now());
@@ -288,7 +383,7 @@ public class SolicitudDesignacionService {
                 solicitud,
                 saved.getId(),
                 TipoEventoSolicitudDesignacion.ALTA_DESIGNACION,
-                "designacion",
+                designacionReemplazadaId != null ? "reemplazo_extraordinario" : "designacion",
                 null,
                 resumenDesignacion(saved),
                 trimToNull(req.motivoCambio())
@@ -425,6 +520,10 @@ public class SolicitudDesignacionService {
         if (entity.getEstadoItem() != EstadoItemDesignacion.EXCLUIDO) {
             throw new DomainValidationException("Solo se pueden reactivar designaciones en estado EXCLUIDO.");
         }
+        String motivo = req != null ? req.motivo() : null;
+        if (solicitud.getEstado() == EstadoSolicitudDesignacion.OBSERVADA || entity.getDesignacionOrigenId() != null) {
+            exigirMotivoNoVacio(motivo, "reactivar una designación excluida (RF08)");
+        }
 
         validarEntidadesActivas(
                 entity.getDocente(),
@@ -437,6 +536,12 @@ public class SolicitudDesignacionService {
         int horasOtrasActivas = sumarHorasActivasDocenteEnPeriodo(
                 entity.getDocente().getId(), solicitud.getPeriodoAcademico().getId(), entity.getId());
         validarTope50Horas(entity.getDocente(), horasOtrasActivas, horasReactivadas);
+
+        List<SolicitudAsignacionCurricularJpaEntity> asignaciones =
+                asignacionRepository.findByDesignacionIdOrderByCreadoEnAsc(entity.getId());
+        for (SolicitudAsignacionCurricularJpaEntity asig : asignaciones) {
+            validarCoherenciaRN09(asig.getActividadCurricular(), asig.getModalidadParticipacion());
+        }
 
         EstadoItemDesignacion nuevoEstado = entity.getDesignacionOrigenId() != null
                 ? EstadoItemDesignacion.MODIFICADO
@@ -454,12 +559,10 @@ public class SolicitudDesignacionService {
                 "estadoItem",
                 EstadoItemDesignacion.EXCLUIDO.name(),
                 nuevoEstado.name() + " (" + resumenDesignacion(saved) + ")",
-                req != null ? trimToNull(req.motivo()) : null
+                trimToNull(motivo)
         );
 
         int totalDocentePeriodo = horasOtrasActivas + horasReactivadas;
-        List<SolicitudAsignacionCurricularJpaEntity> asignaciones =
-                asignacionRepository.findByDesignacionIdOrderByCreadoEnAsc(saved.getId());
         return toDesignacionDto(saved, asignaciones, totalDocentePeriodo);
     }
 
@@ -471,9 +574,12 @@ public class SolicitudDesignacionService {
         SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
         validarEscrituraSobreSolicitud(solicitud);
         SolicitudDocenteDesignacionJpaEntity entity = obtenerDesignacionEnSolicitud(solicitudId, designacionId);
-        if (entity.getDesignacionOrigenId() != null) {
+        if (entity.getDesignacionOrigenId() != null || entity.getEstadoItem() == EstadoItemDesignacion.REPLICADO) {
             throw new DomainValidationException(
                     "Las designaciones replicadas del período anterior no deben eliminarse físicamente; utilice la opción Excluir para conservar el historial (RF07.6).");
+        }
+        if (solicitud.getEstado() == EstadoSolicitudDesignacion.OBSERVADA) {
+            exigirMotivoNoVacio(motivo, "eliminar una designación en solicitud observada");
         }
         String resumen = resumenDesignacion(entity);
         designacionRepository.delete(entity);
@@ -781,12 +887,18 @@ public class SolicitudDesignacionService {
             PeriodoAcademicoJpaEntity periodoDestino,
             UUID solicitudOrigenExplicitaId
     ) {
+        int anioDestino = periodoDestino.getAnio() != null ? periodoDestino.getAnio() : Integer.MAX_VALUE;
         if (solicitudOrigenExplicitaId != null) {
             SolicitudDesignacionJpaEntity explicita = obtenerSolicitudOCascada(solicitudOrigenExplicitaId);
             if (!explicita.getDepartamentoAcademico().getId().equals(depto.getId())) {
                 throw new DomainValidationException("La solicitud de origen seleccionada pertenece a otro Departamento Académico.");
             }
-            if (explicita.getPeriodoAcademico().getId().equals(periodoDestino.getId())) {
+            if (explicita.getTipoSolicitud() != TipoSolicitudDesignacion.ANUAL) {
+                throw new DomainValidationException("Solo se puede clonar una solicitud ANUAL como base del nuevo período (RN11).");
+            }
+            Integer anioOrigen = explicita.getPeriodoAcademico().getAnio();
+            if (explicita.getPeriodoAcademico().getId().equals(periodoDestino.getId())
+                    || (anioOrigen != null && anioOrigen >= anioDestino)) {
                 throw new DomainValidationException("La solicitud de origen debe corresponder a un período académico anterior.");
             }
             if (explicita.getEstado() != EstadoSolicitudDesignacion.APROBADA
@@ -796,15 +908,12 @@ public class SolicitudDesignacionService {
             return explicita;
         }
 
-        int anioRef = periodoDestino.getAnio() != null ? periodoDestino.getAnio() : Integer.MAX_VALUE;
-        List<SolicitudDesignacionJpaEntity> aprobadas = solicitudRepository.findCandidatasOrigenClonacion(
-                depto.getId(), periodoDestino.getId(), anioRef, List.of(EstadoSolicitudDesignacion.APROBADA));
-        if (!aprobadas.isEmpty()) {
-            return aprobadas.get(0);
-        }
-        List<SolicitudDesignacionJpaEntity> presentadas = solicitudRepository.findCandidatasOrigenClonacion(
-                depto.getId(), periodoDestino.getId(), anioRef, List.of(EstadoSolicitudDesignacion.PRESENTADA_SGA));
-        return presentadas.isEmpty() ? null : presentadas.get(0);
+        List<SolicitudDesignacionJpaEntity> candidatas = solicitudRepository.findCandidatasAnualesOrigenClonacion(
+                depto.getId(),
+                anioDestino,
+                List.of(EstadoSolicitudDesignacion.APROBADA, EstadoSolicitudDesignacion.PRESENTADA_SGA)
+        );
+        return candidatas.isEmpty() ? null : candidatas.get(0);
     }
 
     private void ejecutarClonacionDesdeOrigen(
@@ -826,18 +935,24 @@ public class SolicitudDesignacionService {
         int designacionesClonadas = 0;
         int asignacionesClonadas = 0;
         int asignacionesOmitidasRN09 = 0;
+        UUID deptoDestinoId = destino.getDepartamentoAcademico().getId();
 
         for (SolicitudDocenteDesignacionJpaEntity itemOrig : itemsOrigen) {
             CuerpoAcademicoMaestroJpaEntity doc = itemOrig.getDocente();
-            if (Boolean.FALSE.equals(doc.getActivo())) {
+            UUID deptoDocActual = doc.getDepartamentoAcademico() != null ? doc.getDepartamentoAcademico().getId() : null;
+            if (Boolean.FALSE.equals(doc.getActivo())
+                    || (deptoDocActual != null && !deptoDocActual.equals(deptoDestinoId))
+                    || !itemOrig.getCargoDocente().isActivo()
+                    || !itemOrig.getDedicacionDocente().isActivo()
+                    || !itemOrig.getTipoDesignacion().isActivo()) {
                 registrarCambio(
                         destino,
                         null,
                         TipoEventoSolicitudDesignacion.CLONACION_PERIODO_ANTERIOR,
-                        "docente_inactivo_omitido",
-                        doc.getApellido() + ", " + doc.getNombre(),
+                        "renglon_omitido",
+                        resumenDesignacion(itemOrig),
                         null,
-                        "Omitido en clonación por encontrarse inactivo en el padrón docente."
+                        "Omitido en clonación por docente/catálogo inactivo o cambio de departamento."
                 );
                 continue;
             }
@@ -893,6 +1008,15 @@ public class SolicitudDesignacionService {
                         || (estadoAct == EstadoDictadoActividad.SOLO_EXAMENES_FINALES
                                 && mod == ModalidadParticipacionDocente.DESARROLLO_CLASES)) {
                     asignacionesOmitidasRN09++;
+                    registrarCambio(
+                            destino,
+                            savedItem.getId(),
+                            TipoEventoSolicitudDesignacion.CLONACION_PERIODO_ANTERIOR,
+                            "asignatura_omitida_rn09",
+                            doc.getApellido() + " — " + act.getNombre() + " [" + mod + "]",
+                            null,
+                            "Asignatura omitida en clonación por situación actual " + estadoAct + " (RN09)."
+                    );
                     continue;
                 }
 
@@ -924,6 +1048,21 @@ public class SolicitudDesignacionService {
     }
 
     // --- Helpers de Reglas de Negocio, Auditoría y Seguridad ---
+
+    private Optional<User> resolverUsuarioAutenticadoSeguro() {
+        if (authenticatedUserProvider == null) {
+            return Optional.empty();
+        }
+        Optional<User> userOpt = authenticatedUserProvider.getAuthenticatedUser();
+        if (userOpt.isEmpty()) {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+                throw new DomainValidationException(
+                        "No se pudo verificar la identidad vigente del usuario autenticado en el padrón (RNF01).");
+            }
+        }
+        return userOpt;
+    }
 
     private static void validarEntidadesActivas(
             CuerpoAcademicoMaestroJpaEntity docente,
@@ -968,10 +1107,7 @@ public class SolicitudDesignacionService {
     }
 
     private void exigirRolSgaOAdmin() {
-        if (authenticatedUserProvider == null) {
-            return;
-        }
-        Optional<User> userOpt = authenticatedUserProvider.getAuthenticatedUser();
+        Optional<User> userOpt = resolverUsuarioAutenticadoSeguro();
         if (userOpt.isEmpty()) {
             return;
         }
@@ -983,19 +1119,14 @@ public class SolicitudDesignacionService {
     }
 
     private UUID obtenerUsuarioIdActual() {
-        if (authenticatedUserProvider == null) {
-            return null;
-        }
-        return authenticatedUserProvider.getAuthenticatedUser().map(User::getId).orElse(null);
+        return resolverUsuarioAutenticadoSeguro().map(User::getId).orElse(null);
     }
 
     private String obtenerUsuarioNombreActual() {
-        if (authenticatedUserProvider == null) {
-            return "Sistema";
-        }
-        return authenticatedUserProvider.getAuthenticatedUser()
+        String raw = resolverUsuarioAutenticadoSeguro()
                 .map(u -> u.getUsername() != null && !u.getUsername().isBlank() ? u.getUsername() : u.getEmail())
                 .orElse("Sistema");
+        return raw != null && raw.length() > 320 ? raw.substring(0, 320) : raw;
     }
 
     private void registrarCambio(
@@ -1026,10 +1157,11 @@ public class SolicitudDesignacionService {
     }
 
     private static String resumenDesignacion(SolicitudDocenteDesignacionJpaEntity d) {
+        String mapuche = d.getNroDesignacionMapuche() != null ? ", Mapuche=" + d.getNroDesignacionMapuche() : "";
         return d.getDocente().getApellido() + ", " + d.getDocente().getNombre()
                 + " — " + d.getCargoDocente().getNombre()
                 + " (" + d.getDedicacionDocente().getNombre() + " " + d.getHorasDedicacion() + " hs, "
-                + d.getTipoDesignacion().getNombre() + ")";
+                + d.getTipoDesignacion().getNombre() + mapuche + ")";
     }
 
     private static String resumenDistribucion(SolicitudDocenteDesignacionJpaEntity d) {
@@ -1051,14 +1183,14 @@ public class SolicitudDesignacionService {
 
         if (estado.esInactiva()) {
             throw new DomainValidationException(
-                    "No se puede asignar la asignatura '" + actividad.getNombre()
+                    "No se puede asignar ni reactivar la asignatura '" + actividad.getNombre()
                             + "' porque se encuentra en estado INACTIVA (RN09).");
         }
         if (estado == EstadoDictadoActividad.SOLO_EXAMENES_FINALES
                 && modalidad == ModalidadParticipacionDocente.DESARROLLO_CLASES) {
             throw new DomainValidationException(
                     "La asignatura '" + actividad.getNombre()
-                            + "' está habilitada únicamente para SOLO EXÁMENES FINALES; no se permite asignar desarrollo de clases (RN09).");
+                            + "' está habilitada únicamente para SOLO EXÁMENES FINALES; no se permite desarrollo de clases (RN09).");
         }
     }
 
@@ -1110,10 +1242,7 @@ public class SolicitudDesignacionService {
             CuerpoAcademicoMaestroJpaEntity docente,
             SolicitudDesignacionJpaEntity solicitud
     ) {
-        if (authenticatedUserProvider == null) {
-            return;
-        }
-        Optional<User> userOpt = authenticatedUserProvider.getAuthenticatedUser();
+        Optional<User> userOpt = resolverUsuarioAutenticadoSeguro();
         if (userOpt.isEmpty()) {
             return;
         }
@@ -1134,22 +1263,39 @@ public class SolicitudDesignacionService {
 
     private void validarEscrituraSobreSolicitud(SolicitudDesignacionJpaEntity solicitud) {
         validarAccesoEscrituraDepartamento(solicitud.getDepartamentoAcademico().getId());
-        if (!esEditable(solicitud.getEstado())) {
+        if (!esEstadoEditable(solicitud.getEstado())) {
             throw new DomainValidationException(
                     "La solicitud se encuentra en estado " + solicitud.getEstado()
                             + " y no admite modificaciones. Solo se pueden editar solicitudes en estado BORRADOR u OBSERVADA.");
         }
     }
 
-    private static boolean esEditable(EstadoSolicitudDesignacion estado) {
+    private static boolean esEstadoEditable(EstadoSolicitudDesignacion estado) {
         return estado != null && estado.esEditablePorDepartamento();
     }
 
-    private UUID resolverDepartamentoLectura(UUID requestedDeptoId) {
-        if (authenticatedUserProvider == null) {
-            return requestedDeptoId;
+    private boolean esEditablePorUsuarioActual(SolicitudDesignacionJpaEntity solicitud) {
+        if (!esEstadoEditable(solicitud.getEstado())) {
+            return false;
         }
-        Optional<User> userOpt = authenticatedUserProvider.getAuthenticatedUser();
+        Optional<User> userOpt = resolverUsuarioAutenticadoSeguro();
+        if (userOpt.isEmpty()) {
+            return true;
+        }
+        User user = userOpt.get();
+        Set<String> codes = user.getRoles().stream().map(Role::getCode).collect(Collectors.toSet());
+        if (codes.contains(CodigosRol.AEA) || codes.contains(CodigosRol.SECRETARIA_ACADEMICA)) {
+            return true;
+        }
+        if (codes.contains(CodigosRol.DIRECTOR_DEPARTAMENTO)) {
+            UUID miDepto = user.getDepartamentoAcademicoId();
+            return miDepto != null && miDepto.equals(solicitud.getDepartamentoAcademico().getId());
+        }
+        return false;
+    }
+
+    private UUID resolverDepartamentoLectura(UUID requestedDeptoId) {
+        Optional<User> userOpt = resolverUsuarioAutenticadoSeguro();
         if (userOpt.isEmpty()) {
             return requestedDeptoId;
         }
@@ -1168,10 +1314,7 @@ public class SolicitudDesignacionService {
     }
 
     private void validarAccesoLecturaDepartamento(UUID deptoSolicitudId) {
-        if (authenticatedUserProvider == null) {
-            return;
-        }
-        Optional<User> userOpt = authenticatedUserProvider.getAuthenticatedUser();
+        Optional<User> userOpt = resolverUsuarioAutenticadoSeguro();
         if (userOpt.isEmpty()) {
             return;
         }
@@ -1188,10 +1331,7 @@ public class SolicitudDesignacionService {
     }
 
     private UUID resolverDepartamentoEscritura(UUID requestedDeptoId) {
-        if (authenticatedUserProvider == null) {
-            return requestedDeptoId;
-        }
-        Optional<User> userOpt = authenticatedUserProvider.getAuthenticatedUser();
+        Optional<User> userOpt = resolverUsuarioAutenticadoSeguro();
         if (userOpt.isEmpty()) {
             return requestedDeptoId;
         }
@@ -1214,10 +1354,7 @@ public class SolicitudDesignacionService {
     }
 
     private void validarAccesoEscrituraDepartamento(UUID deptoSolicitudId) {
-        if (authenticatedUserProvider == null) {
-            return;
-        }
-        Optional<User> userOpt = authenticatedUserProvider.getAuthenticatedUser();
+        Optional<User> userOpt = resolverUsuarioAutenticadoSeguro();
         if (userOpt.isEmpty()) {
             return;
         }
@@ -1295,7 +1432,7 @@ public class SolicitudDesignacionService {
                 periodo.getAnio(),
                 s.getTipoSolicitud(),
                 s.getEstado(),
-                esEditable(s.getEstado()),
+                esEditablePorUsuarioActual(s),
                 activas,
                 conAlerta,
                 s.getObservacionesDepartamento(),
@@ -1346,7 +1483,7 @@ public class SolicitudDesignacionService {
                 periodo.getAnio(),
                 s.getTipoSolicitud(),
                 s.getEstado(),
-                esEditable(s.getEstado()),
+                esEditablePorUsuarioActual(s),
                 s.getObservacionesDepartamento(),
                 s.getObservacionesSga(),
                 s.getFechaEmision(),

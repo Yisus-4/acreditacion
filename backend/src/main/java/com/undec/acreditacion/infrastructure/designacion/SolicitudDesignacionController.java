@@ -34,6 +34,15 @@ public class SolicitudDesignacionController {
         return ResponseEntity.ok(service.listarSolicitudes(periodoId, departamentoId));
     }
 
+    @GetMapping("/consolidado")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_DEPARTAMENTO', 'CONSULTA_INSTITUCIONAL', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA')")
+    public ResponseEntity<VistaConsolidadaPeriodoDto> obtenerConsolidado(
+            @RequestParam UUID periodoId,
+            @RequestParam(required = false) UUID departamentoId
+    ) {
+        return ResponseEntity.ok(service.obtenerVistaConsolidadaPeriodo(departamentoId, periodoId));
+    }
+
     @GetMapping("/{solicitudId}")
     @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_DEPARTAMENTO', 'CONSULTA_INSTITUCIONAL', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA')")
     public ResponseEntity<SolicitudDesignacionDetalleDto> obtenerDetalle(@PathVariable UUID solicitudId) {

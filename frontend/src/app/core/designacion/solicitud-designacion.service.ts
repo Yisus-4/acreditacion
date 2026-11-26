@@ -13,6 +13,7 @@ import {
   RevisionSgaRequest,
   SolicitudDesignacionDetalle,
   SolicitudDesignacionResumen,
+  VistaConsolidadaPeriodo,
 } from './solicitud-designacion.models';
 
 @Injectable({ providedIn: 'root' })
@@ -29,6 +30,12 @@ export class SolicitudDesignacionService {
 
   obtenerDetalle(solicitudId: string): Observable<SolicitudDesignacionDetalle> {
     return this.http.get<SolicitudDesignacionDetalle>(`${this.baseUrl}/${solicitudId}`);
+  }
+
+  obtenerConsolidado(periodoId: string, departamentoId?: string | null): Observable<VistaConsolidadaPeriodo> {
+    let params = new HttpParams().set('periodoId', periodoId);
+    if (departamentoId) params = params.set('departamentoId', departamentoId);
+    return this.http.get<VistaConsolidadaPeriodo>(`${this.baseUrl}/consolidado`, { params });
   }
 
   listarHistorial(solicitudId: string): Observable<CambioSolicitudDesignacion[]> {
