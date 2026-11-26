@@ -148,4 +148,34 @@ class ActualizarAsignaturaPlanServiceTest {
                 p.getHorasTotales() == 80
         ));
     }
+
+    @Test
+    @DisplayName("RF02.6: Permite limpiar horasSemanales a null al editar una asignatura")
+    void deberiaPermitirLimpiarHorasSemanalesANull() {
+        asignatura.setHorasSemanales(6);
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(asignaturaRepository.findById(asigId)).thenReturn(Optional.of(asignatura));
+        when(asignaturaRepository.save(any(ActividadCurricularPlanJpaEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId))
+                .thenReturn(List.of(asignatura));
+
+        ActualizarAsignaturaRequest request = new ActualizarAsignaturaRequest(
+                asigId,
+                "AGR-101",
+                "Física I",
+                "C.B.I.",
+                "1° Año",
+                64,
+                64,
+                0,
+                null,
+                "Sin correlativas previas",
+                true,
+                1,
+                null
+        );
+
+        ActividadCurricularPlanDto result = service.actualizarAsignatura(planId, asigId, request);
+        assertNull(result.horasSemanales());
+    }
 }

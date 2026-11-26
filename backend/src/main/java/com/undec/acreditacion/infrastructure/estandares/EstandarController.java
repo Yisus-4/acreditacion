@@ -26,7 +26,7 @@ public class EstandarController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'INFRAESTRUCTURA', 'BEDELIA', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'CONSULTA_INSTITUCIONAL', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'INFRAESTRUCTURA', 'BEDELIA', 'DOCENTE')")
     public ResponseEntity<List<EstandarResumenDto>> listar(
             @RequestParam(required = false) UUID carreraId,
             @RequestParam(required = false) EstadoVigenciaEstandar estadoVigencia
@@ -35,25 +35,25 @@ public class EstandarController {
     }
 
     @GetMapping("/vigente")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'INFRAESTRUCTURA', 'BEDELIA', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'CONSULTA_INSTITUCIONAL', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'INFRAESTRUCTURA', 'BEDELIA', 'DOCENTE')")
     public ResponseEntity<EstandarDetalleDto> obtenerVigentePorCarrera(@RequestParam UUID carreraId) {
         return ResponseEntity.ok(estandarService.obtenerVigentePorCarrera(carreraId));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'INFRAESTRUCTURA', 'BEDELIA', 'DOCENTE')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'CONSULTA_INSTITUCIONAL', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'INFRAESTRUCTURA', 'BEDELIA', 'DOCENTE')")
     public ResponseEntity<EstandarDetalleDto> obtenerDetalle(@PathVariable UUID id) {
         return ResponseEntity.ok(estandarService.obtenerDetalle(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_ESCUELA')")
     public ResponseEntity<EstandarDetalleDto> crear(@RequestBody GuardarEstandarRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(estandarService.crear(request));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_ESCUELA')")
     public ResponseEntity<EstandarDetalleDto> actualizar(
             @PathVariable UUID id,
             @RequestBody GuardarEstandarRequest request
@@ -62,7 +62,7 @@ public class EstandarController {
     }
 
     @PatchMapping("/{id}/estado-vigencia")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_ESCUELA')")
     public ResponseEntity<EstandarDetalleDto> cambiarVigencia(
             @PathVariable UUID id,
             @RequestBody CambiarVigenciaEstandarRequest request
@@ -71,7 +71,7 @@ public class EstandarController {
     }
 
     @PostMapping("/{id}/nueva-version")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_ESCUELA')")
     public ResponseEntity<EstandarDetalleDto> crearNuevaVersion(@PathVariable UUID id) {
         return ResponseEntity.status(HttpStatus.CREATED).body(estandarService.crearNuevaVersion(id));
     }

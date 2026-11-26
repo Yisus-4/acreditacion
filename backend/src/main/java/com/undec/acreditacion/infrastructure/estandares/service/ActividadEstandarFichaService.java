@@ -49,6 +49,7 @@ public class ActividadEstandarFichaService {
 
     private static final Set<String> ROLES_GESTORES = Set.of(
             "AEA",
+            "SECRETARIA_ACADEMICA",
             "DIRECTOR_ESCUELA",
             "DIRECTOR_CARRERA",
             "DIRECTOR_DEPARTAMENTO",

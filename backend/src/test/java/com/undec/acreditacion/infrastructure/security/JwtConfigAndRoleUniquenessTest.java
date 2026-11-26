@@ -75,6 +75,16 @@ class JwtConfigAndRoleUniquenessTest {
         assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS periodo_academico"));
         assertTrue(sql.contains("SOLO_EXAMENES_FINALES"));
         assertTrue(sql.contains("horas_semanales"));
+
+        String planCtrl = Files.readString(Path.of("src/main/java/com/undec/acreditacion/infrastructure/autoevaluacion/PlanEstudioController.java"));
+        assertTrue(planCtrl.contains("SECRETARIA_ACADEMICA"), "PlanEstudioController debe autorizar SECRETARIA_ACADEMICA");
+
+        String estCtrl = Files.readString(Path.of("src/main/java/com/undec/acreditacion/infrastructure/estandares/EstandarController.java"));
+        assertTrue(estCtrl.contains("SECRETARIA_ACADEMICA") && estCtrl.contains("CONSULTA_INSTITUCIONAL"),
+                "EstandarController debe autorizar SECRETARIA_ACADEMICA y CONSULTA_INSTITUCIONAL");
+
+        String fichaSvc = Files.readString(Path.of("src/main/java/com/undec/acreditacion/infrastructure/estandares/service/ActividadEstandarFichaService.java"));
+        assertTrue(fichaSvc.contains("SECRETARIA_ACADEMICA"), "ActividadEstandarFichaService debe incluir SECRETARIA_ACADEMICA en ROLES_GESTORES");
     }
 
     private static void scanDirectory(Path root, String extension, List<String> violations) throws IOException {

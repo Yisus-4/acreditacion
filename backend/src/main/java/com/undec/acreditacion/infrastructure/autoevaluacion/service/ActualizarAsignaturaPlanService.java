@@ -92,9 +92,7 @@ public class ActualizarAsignaturaPlanService {
         asig.setHorasReloj(request.horasReloj());
         asig.setHorasPresenciales(request.horasPresenciales());
         asig.setHorasNoPresenciales(request.horasNoPresenciales());
-        if (request.horasSemanales() != null) {
-            asig.setHorasSemanales(request.horasSemanales());
-        }
+        asig.setHorasSemanales(request.horasSemanales());
         asig.setCorrelativas(request.correlativas() != null && !request.correlativas().trim().isEmpty() ?
                 request.correlativas().trim() : "Sin correlativas previas");
         if (request.esObligatoria() != null) {

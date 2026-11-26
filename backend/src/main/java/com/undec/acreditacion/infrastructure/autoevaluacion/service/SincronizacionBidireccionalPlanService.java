@@ -474,6 +474,11 @@ public class SincronizacionBidireccionalPlanService {
             dest.setActualizadoEn(Instant.now());
             cargaResumenRepository.save(dest);
         }, () -> cargaResumenRepository.findById(destino.getId()).ifPresent(cargaResumenRepository::delete));
+
+        if (!Objects.equals(destino.getHorasSemanales(), origen.getHorasSemanales())) {
+            destino.setHorasSemanales(origen.getHorasSemanales());
+            asignaturaRepository.save(destino);
+        }
     }
 
     private void copiarCamposAsignatura(

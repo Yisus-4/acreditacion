@@ -6,6 +6,8 @@ import { NotificacionesCampanaComponent } from './core/notifications/notificacio
 
 const ROL_LABELS: Record<string, string> = {
   AEA: 'Área de Evaluación y Acreditación (Admin)',
+  SECRETARIA_ACADEMICA: 'Secretaría de Gestión Académica',
+  CONSULTA_INSTITUCIONAL: 'Consulta Institucional',
   DIRECTOR_CARRERA: 'Director de Carrera',
   DIRECTOR_ESCUELA: 'Director de Escuela',
   DIRECTOR_DEPARTAMENTO: 'Director de Departamento',

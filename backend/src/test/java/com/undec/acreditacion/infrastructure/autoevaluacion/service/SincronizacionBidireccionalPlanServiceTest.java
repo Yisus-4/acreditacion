@@ -6,6 +6,9 @@ import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.Activida
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.PlanEstudioFt001JpaEntity;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataActividadCurricularPlanRepository;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataPlanEstudioFt001Repository;
+import com.undec.acreditacion.infrastructure.estandares.persistence.SpringDataActividadCurricularCargaHorariaAreaRepository;
+import com.undec.acreditacion.infrastructure.estandares.persistence.SpringDataActividadCurricularCargaHorariaResumenRepository;
+import com.undec.acreditacion.infrastructure.estandares.persistence.SpringDataActividadCurricularEvaluacion22Repository;
 import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -236,6 +239,33 @@ class SincronizacionBidireccionalPlanServiceTest {
                         && p.getProcesoId() == null
                         && p.getId().equals(planSinMaestro.getOrigenMaestroId())
         ));
+    }
+
+    @Test
+    @DisplayName("RF02.6: copiarFichaEntreActividades sincroniza también horasSemanales en la asignatura destino")
+    void deberiaSincronizarHorasSemanalesAlCopiarFichaEstandar() {
+        SpringDataActividadCurricularEvaluacion22Repository evalRepo = mock(SpringDataActividadCurricularEvaluacion22Repository.class);
+        SpringDataActividadCurricularCargaHorariaAreaRepository areaRepo = mock(SpringDataActividadCurricularCargaHorariaAreaRepository.class);
+        SpringDataActividadCurricularCargaHorariaResumenRepository resumenRepo = mock(SpringDataActividadCurricularCargaHorariaResumenRepository.class);
+
+        SincronizacionBidireccionalPlanService fullService = new SincronizacionBidireccionalPlanService(
+                planRepository, asignaturaRepository, evalRepo, areaRepo, resumenRepo
+        );
+
+        ActividadCurricularPlanJpaEntity origen = crearAsignatura(clonePlan, "101", "Análisis I", EstadoDictadoActividad.ACTIVA, null);
+        origen.setHorasSemanales(6);
+        ActividadCurricularPlanJpaEntity destino = crearAsignatura(masterPlan, "101", "Análisis I", EstadoDictadoActividad.ACTIVA, null);
+        destino.setHorasSemanales(null);
+
+        when(evalRepo.findByActividadCurricularId(origen.getId())).thenReturn(List.of());
+        when(areaRepo.findByActividadCurricularId(origen.getId())).thenReturn(List.of());
+        when(resumenRepo.findById(origen.getId())).thenReturn(Optional.empty());
+        when(resumenRepo.findById(destino.getId())).thenReturn(Optional.empty());
+
+        fullService.copiarFichaEntreActividades(origen, destino);
+
+        assertEquals(6, destino.getHorasSemanales());
+        verify(asignaturaRepository).save(destino);
     }
 
     private ActividadCurricularPlanJpaEntity crearAsignatura(

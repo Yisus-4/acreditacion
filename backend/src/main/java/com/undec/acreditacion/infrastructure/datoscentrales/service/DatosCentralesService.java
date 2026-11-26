@@ -275,7 +275,7 @@ public class DatosCentralesService {
             String query
     ) {
         UUID deptoRestringido = obtenerDepartamentoRestringidoDirectorOrNull();
-        if (carreraId == null && deptoRestringido != null) {
+        if (deptoRestringido != null) {
             departamentoAcademicoId = deptoRestringido;
         }
 
@@ -376,6 +376,7 @@ public class DatosCentralesService {
                         .orElseThrow(() -> new ResourceNotFoundException("No se encontró el plan de estudio ID: " + item.planEstudioId()));
                 ActividadCurricularPlanJpaEntity act = actividadRepository.findById(item.actividadCurricularId())
                         .orElseThrow(() -> new ResourceNotFoundException("No se encontró la actividad curricular ID: " + item.actividadCurricularId()));
+                validarActividadAptaParaAsignacion(plan, act);
 
                 CuerpoAcademicoActividadMaestroJpaEntity asig = new CuerpoAcademicoActividadMaestroJpaEntity();
                 asig.setDocente(docente);
@@ -471,6 +472,7 @@ public class DatosCentralesService {
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el plan de estudio ID: " + item.planEstudioId()));
         ActividadCurricularPlanJpaEntity act = actividadRepository.findById(item.actividadCurricularId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró la actividad curricular ID: " + item.actividadCurricularId()));
+        validarActividadAptaParaAsignacion(plan, act);
 
         CuerpoAcademicoActividadMaestroJpaEntity asig = new CuerpoAcademicoActividadMaestroJpaEntity();
         asig.setDocente(docente);
@@ -588,6 +590,19 @@ public class DatosCentralesService {
         }
         return departamentoRepository.findByCodigoIgnoreCase("SIN_ASIGNAR")
                 .orElseThrow(() -> new DomainValidationException("El Departamento Académico es obligatorio (RN01)."));
+    }
+
+    private static void validarActividadAptaParaAsignacion(
+            PlanEstudioFt001JpaEntity plan,
+            ActividadCurricularPlanJpaEntity act
+    ) {
+        if (act.getPlanEstudio() != null && !plan.getId().equals(act.getPlanEstudio().getId())) {
+            throw new DomainValidationException("La actividad curricular no pertenece al plan de estudio seleccionado.");
+        }
+        if (act.getEstadoDictado().esInactiva()) {
+            throw new DomainValidationException(
+                    "No se puede asignar un docente a una actividad curricular en situación INACTIVA (RN09).");
+        }
     }
 
     private static String normalizarTipoDocumento(String raw) {

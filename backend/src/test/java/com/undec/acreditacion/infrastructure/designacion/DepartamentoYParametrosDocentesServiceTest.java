@@ -1,9 +1,12 @@
 package com.undec.acreditacion.infrastructure.designacion;
 
 import com.undec.acreditacion.domain.entities.CodigosRol;
+import com.undec.acreditacion.domain.entities.EstadoDictadoActividad;
 import com.undec.acreditacion.domain.entities.Role;
 import com.undec.acreditacion.domain.entities.User;
 import com.undec.acreditacion.domain.exceptions.DomainValidationException;
+import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.ActividadCurricularPlanJpaEntity;
+import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.PlanEstudioFt001JpaEntity;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataActividadCurricularPlanRepository;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataAmbitoPracticaRepository;
 import com.undec.acreditacion.infrastructure.autoevaluacion.persistence.SpringDataEspacioFisicoRepository;
@@ -243,6 +246,86 @@ class DepartamentoYParametrosDocentesServiceTest {
                         "DNI", "32555666", null, null, null, otroDeptoId,
                         "Díaz", "Mario", null, null, null,
                         null, null, "ADJUNTO", "INTERINO_RENTADO", "PARCIAL", 20, true, List.of()
+                )
+        ));
+    }
+
+    @Test
+    @DisplayName("RNF01: DIRECTOR_DEPARTAMENTO mantiene aislamiento de lectura incluso filtrando por carreraId")
+    void directorDepartamentoNoPuedeLeerDocentesDeOtroDepartamentoConCarreraId() {
+        UUID miDeptoId = UUID.randomUUID();
+        UUID otroDeptoId = UUID.randomUUID();
+        UUID carreraId = UUID.randomUUID();
+
+        DepartamentoAcademicoJpaEntity miDepto = new DepartamentoAcademicoJpaEntity();
+        miDepto.setId(miDeptoId);
+        miDepto.setCodigo("CBASICAS");
+        miDepto.setDenominacion("Ciencias Básicas");
+
+        DepartamentoAcademicoJpaEntity otroDepto = new DepartamentoAcademicoJpaEntity();
+        otroDepto.setId(otroDeptoId);
+        otroDepto.setCodigo("CSOCIALES");
+        otroDepto.setDenominacion("Ciencias Sociales");
+
+        CuerpoAcademicoMaestroJpaEntity docMio = new CuerpoAcademicoMaestroJpaEntity();
+        docMio.setId(UUID.randomUUID());
+        docMio.setDni("25000111");
+        docMio.setApellido("Álvarez");
+        docMio.setNombre("Sofía");
+        docMio.setDepartamentoAcademico(miDepto);
+        docMio.setActivo(true);
+
+        CuerpoAcademicoMaestroJpaEntity docAjeno = new CuerpoAcademicoMaestroJpaEntity();
+        docAjeno.setId(UUID.randomUUID());
+        docAjeno.setDni("26000222");
+        docAjeno.setApellido("Benítez");
+        docAjeno.setNombre("Carlos");
+        docAjeno.setDepartamentoAcademico(otroDepto);
+        docAjeno.setActivo(true);
+
+        Role rolDirectorDepto = Role.system(UUID.randomUUID(), CodigosRol.DIRECTOR_DEPARTAMENTO, "Director Depto", "Desc");
+        User director = User.rehydrate(
+                UUID.randomUUID(), "dir_basicas", "dir@undec.edu.ar", "hash",
+                true, false, null, miDeptoId, Set.of(rolDirectorDepto)
+        );
+        when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(Optional.of(director));
+        when(docenteRepository.findByCarreraId(carreraId)).thenReturn(List.of(docMio, docAjeno));
+
+        List<CuerpoAcademicoMaestroDto> resultado = datosCentralesService.listarCuerpoAcademico(
+                carreraId, otroDeptoId, false, null
+        );
+
+        assertEquals(1, resultado.size());
+        assertEquals("25000111", resultado.get(0).dni());
+    }
+
+    @Test
+    @DisplayName("RN09: Rechaza asignar un docente a una actividad curricular en situación INACTIVA")
+    void rechazaAsignarDocenteAActividadInactiva() {
+        UUID docenteId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        UUID actId = UUID.randomUUID();
+
+        CuerpoAcademicoMaestroJpaEntity docente = new CuerpoAcademicoMaestroJpaEntity();
+        docente.setId(docenteId);
+
+        PlanEstudioFt001JpaEntity plan = new PlanEstudioFt001JpaEntity();
+        plan.setId(planId);
+
+        ActividadCurricularPlanJpaEntity actInactiva = new ActividadCurricularPlanJpaEntity();
+        actInactiva.setId(actId);
+        actInactiva.setPlanEstudio(plan);
+        actInactiva.setEstadoDictado(EstadoDictadoActividad.INACTIVA);
+
+        when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(Optional.empty());
+        when(docenteRepository.findById(docenteId)).thenReturn(Optional.of(docente));
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(actividadRepository.findById(actId)).thenReturn(Optional.of(actInactiva));
+
+        assertThrows(DomainValidationException.class, () -> datosCentralesService.agregarAsignacionDocente(
+                docenteId,
+                new CrearCuerpoAcademicoMaestroRequest.CrearAsignacionCatedraItem(
+                        UUID.randomUUID(), planId, actId, "PROFESOR_A_CARGO", 4
                 )
         ));
     }

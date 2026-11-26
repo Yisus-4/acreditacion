@@ -209,7 +209,7 @@ public class PlanEstudioController {
     }
 
     @PostMapping("/validar-completar-8-3")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_CARRERA', 'DIRECTOR_ESCUELA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<Map<String, Object>> validarYCompletar83(
             @RequestParam(required = false) UUID procesoId,
@@ -287,7 +287,7 @@ public class PlanEstudioController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<PlanEstudioFt001Dto> crear(@RequestBody PlanEstudioFt001Dto dto) {
         if (dto.carreraId() == null) {
@@ -356,7 +356,7 @@ public class PlanEstudioController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<PlanEstudioFt001Dto> actualizar(@PathVariable UUID id, @RequestBody PlanEstudioFt001Dto dto) {
         PlanEstudioFt001JpaEntity plan = planRepository.findById(id)
@@ -381,7 +381,7 @@ public class PlanEstudioController {
     }
 
     @PostMapping("/{planId}/asignaturas")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<ActividadCurricularPlanDto> crearAsignatura(
             @PathVariable UUID planId,
@@ -393,7 +393,7 @@ public class PlanEstudioController {
     }
 
     @PutMapping("/{planId}/asignaturas/{asigId}")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<ActividadCurricularPlanDto> actualizarAsignatura(
             @PathVariable UUID planId,
@@ -406,7 +406,7 @@ public class PlanEstudioController {
     }
 
     @DeleteMapping("/{planId}/asignaturas/{asigId}")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<Void> eliminarAsignatura(
             @PathVariable UUID planId,
@@ -418,7 +418,7 @@ public class PlanEstudioController {
     }
 
     @PatchMapping("/{planId}/asignaturas/{asigId}/estado-dictado")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<ActividadCurricularPlanDto> cambiarEstadoDictado(
             @PathVariable UUID planId,
@@ -476,7 +476,7 @@ public class PlanEstudioController {
     }
 
     @PutMapping("/{planId}/asignaturas/{asigId}/ficha-estandar")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION', 'DOCENTE') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<FichaEstandarActividadDto> guardarFichaEstandar(
             @PathVariable UUID planId,
@@ -492,7 +492,7 @@ public class PlanEstudioController {
     }
 
     @PatchMapping("/{planId}/asignaturas/{asigId}/docente-responsable")
-    @PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'DIRECTOR_DEPARTAMENTO', 'COMISION_AUTOEVALUACION') or hasAuthority('CONVOCATORIA_MANAGE')")
     @Transactional
     public ResponseEntity<ActividadCurricularPlanDto> designarDocenteResponsable(
             @PathVariable UUID planId,

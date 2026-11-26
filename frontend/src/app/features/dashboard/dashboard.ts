@@ -47,7 +47,16 @@ export class Dashboard implements OnInit {
   }
 
   get canAccessDatosCentrales(): boolean {
-    const allowed = ['AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'INFRAESTRUCTURA', 'BEDELIA'];
+    const allowed = [
+      'AEA',
+      'SECRETARIA_ACADEMICA',
+      'DIRECTOR_DEPARTAMENTO',
+      'CONSULTA_INSTITUCIONAL',
+      'DIRECTOR_ESCUELA',
+      'DIRECTOR_CARRERA',
+      'INFRAESTRUCTURA',
+      'BEDELIA',
+    ];
     return this.user?.roleCodes?.some((role) => allowed.includes(role)) ?? false;
   }
 
