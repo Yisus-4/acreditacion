@@ -40,12 +40,42 @@ public class SolicitudDesignacionController {
         return ResponseEntity.ok(service.obtenerDetalleSolicitud(solicitudId));
     }
 
+    @GetMapping("/{solicitudId}/historial")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_DEPARTAMENTO', 'CONSULTA_INSTITUCIONAL', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA')")
+    public ResponseEntity<List<CambioSolicitudDesignacionDto>> listarHistorial(@PathVariable UUID solicitudId) {
+        return ResponseEntity.ok(service.listarHistorialCambios(solicitudId));
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_DEPARTAMENTO')")
     public ResponseEntity<SolicitudDesignacionDetalleDto> crearSolicitud(
             @RequestBody CrearSolicitudDesignacionRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.crearSolicitud(request));
+    }
+
+    @PostMapping("/{solicitudId}/presentar")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_DEPARTAMENTO')")
+    public ResponseEntity<SolicitudDesignacionDetalleDto> presentarSolicitud(@PathVariable UUID solicitudId) {
+        return ResponseEntity.ok(service.presentarSolicitudASga(solicitudId));
+    }
+
+    @PostMapping("/{solicitudId}/aprobar")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA')")
+    public ResponseEntity<SolicitudDesignacionDetalleDto> aprobarSolicitud(
+            @PathVariable UUID solicitudId,
+            @RequestBody(required = false) RevisionSgaRequest request
+    ) {
+        return ResponseEntity.ok(service.aprobarSolicitudSga(solicitudId, request));
+    }
+
+    @PostMapping("/{solicitudId}/observar")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA')")
+    public ResponseEntity<SolicitudDesignacionDetalleDto> observarSolicitud(
+            @PathVariable UUID solicitudId,
+            @RequestBody RevisionSgaRequest request
+    ) {
+        return ResponseEntity.ok(service.observarSolicitudSga(solicitudId, request));
     }
 
     @PostMapping("/{solicitudId}/designaciones")
@@ -67,13 +97,34 @@ public class SolicitudDesignacionController {
         return ResponseEntity.ok(service.actualizarDesignacion(solicitudId, designacionId, request));
     }
 
+    @PostMapping("/{solicitudId}/designaciones/{designacionId}/excluir")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_DEPARTAMENTO')")
+    public ResponseEntity<DesignacionDocenteItemDto> excluirDesignacion(
+            @PathVariable UUID solicitudId,
+            @PathVariable UUID designacionId,
+            @RequestBody MotivoCambioRequest request
+    ) {
+        return ResponseEntity.ok(service.excluirDesignacion(solicitudId, designacionId, request));
+    }
+
+    @PostMapping("/{solicitudId}/designaciones/{designacionId}/reactivar")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_DEPARTAMENTO')")
+    public ResponseEntity<DesignacionDocenteItemDto> reactivarDesignacion(
+            @PathVariable UUID solicitudId,
+            @PathVariable UUID designacionId,
+            @RequestBody(required = false) MotivoCambioRequest request
+    ) {
+        return ResponseEntity.ok(service.reactivarDesignacion(solicitudId, designacionId, request));
+    }
+
     @DeleteMapping("/{solicitudId}/designaciones/{designacionId}")
     @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_DEPARTAMENTO')")
     public ResponseEntity<Void> eliminarDesignacion(
             @PathVariable UUID solicitudId,
-            @PathVariable UUID designacionId
+            @PathVariable UUID designacionId,
+            @RequestParam(required = false) String motivo
     ) {
-        service.eliminarDesignacion(solicitudId, designacionId);
+        service.eliminarDesignacion(solicitudId, designacionId, motivo);
         return ResponseEntity.noContent().build();
     }
 
@@ -103,9 +154,10 @@ public class SolicitudDesignacionController {
     public ResponseEntity<Void> eliminarAsignacion(
             @PathVariable UUID solicitudId,
             @PathVariable UUID designacionId,
-            @PathVariable UUID asignacionId
+            @PathVariable UUID asignacionId,
+            @RequestParam(required = false) String motivo
     ) {
-        service.eliminarAsignacionCurricular(solicitudId, designacionId, asignacionId);
+        service.eliminarAsignacionCurricular(solicitudId, designacionId, asignacionId, motivo);
         return ResponseEntity.noContent().build();
     }
 

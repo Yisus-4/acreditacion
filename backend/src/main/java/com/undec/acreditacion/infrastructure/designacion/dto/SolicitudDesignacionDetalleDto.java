@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public record SolicitudDesignacionDetalleDto(
         UUID id,
+        UUID solicitudOrigenId,
         UUID departamentoAcademicoId,
         String departamentoCodigo,
         String departamentoDenominacion,
@@ -24,5 +25,6 @@ public record SolicitudDesignacionDetalleDto(
         Instant fechaEmision,
         Instant creadoEn,
         Instant actualizadoEn,
-        List<DesignacionDocenteItemDto> designaciones
+        List<DesignacionDocenteItemDto> designaciones,
+        List<CambioSolicitudDesignacionDto> historialCambios
 ) {}

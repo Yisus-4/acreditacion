@@ -8,6 +8,7 @@ import java.util.UUID;
 public record DesignacionDocenteItemDto(
         UUID id,
         UUID solicitudId,
+        UUID designacionOrigenId,
         UUID docenteId,
         String docenteDni,
         String docenteLegajo,

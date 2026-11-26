@@ -29,6 +29,8 @@ import {
 } from '../../../core/services/datos-centrales.service';
 import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.component';
 
+type TabDetalle = 'DESIGNACIONES' | 'HISTORIAL';
+
 @Component({
   selector: 'app-academica-solicitudes-designacion',
   standalone: true,
@@ -87,7 +89,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
           <div class="filter-actions">
             @if (canManage()) {
               <button type="button" class="btn-pri" (click)="abrirModalNuevaSolicitud()">
-                + Nueva Solicitud Anual
+                + Nueva Solicitud
               </button>
             }
           </div>
@@ -123,7 +125,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                 <strong class="sol-card__depto">{{ sol.departamentoDenominacion }}</strong>
                 <span class="sol-card__periodo">{{ sol.periodoDenominacion }} · {{ sol.periodoAnio }}</span>
                 <div class="sol-card__meta">
-                  <span>{{ sol.cantidadDesignaciones }} designación(es)</span>
+                  <span>{{ sol.cantidadDesignaciones }} designación(es) activa(s)</span>
                   @if (sol.cantidadConAlertaHoras > 0) {
                     <span class="badge badge--warn">
                       ⚠ {{ sol.cantidadConAlertaHoras }} con hs sin distribuir
@@ -146,6 +148,11 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                 <span class="badge" [class]="'badge--estado-' + detalle.estado.toLowerCase()">
                   {{ etiquetaEstado(detalle.estado) }}
                 </span>
+                @if (detalle.solicitudOrigenId) {
+                  <span class="badge badge--origen" title="Generada o vinculada a solicitud anterior (RF07 / RF09)">
+                    ⇄ Con solicitud base vinculada
+                  </span>
+                }
                 @if (!detalle.editable) {
                   <span class="badge badge--muted">Solo lectura</span>
                 }
@@ -160,127 +167,240 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
 
             <div class="detail-actions">
               @if (canManage() && detalle.editable) {
-                <button type="button" class="btn-pri" (click)="abrirModalDesignacion(null)">
+                <button type="button" class="btn-sec" (click)="abrirModalDesignacion(null)">
                   + Agregar Cargo / Docente
+                </button>
+                <button
+                  type="button"
+                  class="btn-pri"
+                  [disabled]="guardando()"
+                  (click)="presentarASga(detalle)"
+                >
+                  Presentar a SGA →
+                </button>
+              }
+              @if (canReviewSga() && detalle.estado === 'PRESENTADA_SGA') {
+                <button
+                  type="button"
+                  class="btn-ok"
+                  [disabled]="guardando()"
+                  (click)="abrirModalRevisionSga('APROBAR')"
+                >
+                  ✓ Aprobar (SGA)
+                </button>
+                <button
+                  type="button"
+                  class="btn-warn-act"
+                  [disabled]="guardando()"
+                  (click)="abrirModalRevisionSga('OBSERVAR')"
+                >
+                  ↩ Observar / Devolver
                 </button>
               }
             </div>
           </header>
 
+          @if (detalle.observacionesSga) {
+            <div class="sga-banner" [class.sga-banner--obs]="detalle.estado === 'OBSERVADA'">
+              <strong>Dictamen / Observaciones SGA:</strong> {{ detalle.observacionesSga }}
+            </div>
+          }
+
+          <!-- Sub-pestañas de Detalle: Designaciones vs. Historial de Auditoría -->
+          <div class="inner-tabs">
+            <button
+              type="button"
+              class="itab"
+              [class.on]="tabDetalle() === 'DESIGNACIONES'"
+              (click)="tabDetalle.set('DESIGNACIONES')"
+            >
+              Designaciones y Carga Horaria ({{ detalle.designaciones.length }})
+            </button>
+            <button
+              type="button"
+              class="itab"
+              [class.on]="tabDetalle() === 'HISTORIAL'"
+              (click)="tabDetalle.set('HISTORIAL')"
+            >
+              Historial de Cambios y Auditoría ({{ detalle.historialCambios.length }})
+            </button>
+          </div>
+
           @if (cargandoDetalle()) {
             <p class="muted">Actualizando detalle...</p>
-          } @else if (detalle.designaciones.length === 0) {
-            <div class="empty-box">
-              <p>Esta solicitud aún no tiene designaciones docentes cargadas.</p>
-              @if (canManage() && detalle.editable) {
-                <button type="button" class="btn-pri" (click)="abrirModalDesignacion(null)">
-                  + Agregar primera designación
-                </button>
-              }
-            </div>
-          } @else {
-            <div class="table-wrap">
-              <table class="tabla">
-                <thead>
-                  <tr>
-                    <th>Docente y Tope Período (RN02)</th>
-                    <th>Cargo · Dedicación · Tipo</th>
-                    <th>Distribución 6 Actividades (RF04 / RN06)</th>
-                    <th>Asignaturas (Clases vs. Finales · RN09)</th>
-                    @if (canManage() && detalle.editable) {
-                      <th>Acciones</th>
-                    }
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (item of detalle.designaciones; track item.id) {
+          } @else if (tabDetalle() === 'DESIGNACIONES') {
+            @if (detalle.designaciones.length === 0) {
+              <div class="empty-box">
+                <p>Esta solicitud aún no tiene designaciones docentes cargadas.</p>
+                @if (canManage() && detalle.editable) {
+                  <button type="button" class="btn-pri" (click)="abrirModalDesignacion(null)">
+                    + Agregar primera designación
+                  </button>
+                }
+              </div>
+            } @else {
+              <div class="table-wrap">
+                <table class="tabla">
+                  <thead>
                     <tr>
-                      <td>
-                        <div class="doc-name">{{ item.docenteApellido }}, {{ item.docenteNombre }}</div>
-                        <div class="doc-meta">
-                          DNI {{ item.docenteDni }}
-                          @if (item.docenteLegajo) { · Leg. {{ item.docenteLegajo }} }
-                        </div>
-                        <div class="cap-pill" [class.cap-pill--full]="item.totalHorasDocentePeriodo === 50">
-                          Acumulado período: <strong>{{ item.totalHorasDocentePeriodo }} / 50 hs</strong>
-                        </div>
-                      </td>
-
-                      <td>
-                        <div class="cargo-title">{{ item.cargoNombre }}</div>
-                        <div class="doc-meta">
-                          {{ item.dedicacionNombre }} (<strong>{{ item.horasDedicacion }} hs/sem</strong>)
-                          · {{ item.tipoDesignacionNombre }}
-                        </div>
-                        @if (item.nroDesignacionMapuche) {
-                          <div class="doc-meta">Mapuche: <code>{{ item.nroDesignacionMapuche }}</code></div>
-                        }
-                      </td>
-
-                      <td>
-                        <div class="dist-summary">
-                          <span><strong>{{ item.totalHorasDistribuidas }}</strong> / {{ item.horasDedicacion }} hs</span>
-                          @if (item.tieneAlertaHorasSinDistribuir) {
-                            <span class="badge badge--warn" title="Horas de dedicación aún no distribuidas (RF04.5)">
-                              ⚠ Faltan {{ item.horasSinDistribuir }} hs
-                            </span>
-                          } @else {
-                            <span class="badge badge--ok">✓ Completa</span>
-                          }
-                        </div>
-                        <div class="dist-chips">
-                          <span>Clases: {{ item.horasClases }}h</span>
-                          <span>Inv: {{ item.horasInvestigacion }}h</span>
-                          <span>Ext: {{ item.horasExtension }}h</span>
-                          <span>Gest: {{ item.horasGestion }}h</span>
-                          <span>Tesis: {{ item.horasDireccionTesis }}h</span>
-                          <span>Otras: {{ item.horasOtras }}h</span>
-                        </div>
-                      </td>
-
-                      <td>
-                        @if (item.asignaciones.length === 0) {
-                          <span class="muted-sm">Sin asignaturas asignadas</span>
-                        } @else {
-                          <div class="asig-list">
-                            @for (a of item.asignaciones; track a.id) {
-                              <div class="asig-chip">
-                                <span
-                                  class="badge"
-                                  [class.badge--clases]="a.modalidadParticipacion === 'DESARROLLO_CLASES'"
-                                  [class.badge--finales]="a.modalidadParticipacion === 'EVALUACION_FINALES'"
-                                >
-                                  {{ a.modalidadParticipacion === 'DESARROLLO_CLASES' ? 'Clases' : 'Solo Finales' }}
-                                </span>
-                                <span class="asig-text">
-                                  <strong>{{ a.actividadNombre }}</strong>
-                                  ({{ a.carreraSigla || a.carreraNombre }} · {{ a.planEstudioNombre }}
-                                  @if (a.planEstadoVigencia !== 'VIGENTE') { · <em>No vigente</em> })
-                                </span>
-                              </div>
-                            }
-                          </div>
-                        }
-                      </td>
-
+                      <th>Docente y Tope Período (RN02)</th>
+                      <th>Cargo · Dedicación · Estado</th>
+                      <th>Distribución 6 Actividades (RF04 / RN06)</th>
+                      <th>Asignaturas (Clases vs. Finales · RN09)</th>
                       @if (canManage() && detalle.editable) {
-                        <td class="actions-cell">
-                          <button type="button" class="btn-sm" (click)="abrirModalDesignacion(item)">Cargo</button>
-                          <button type="button" class="btn-sm" (click)="abrirModalDistribucion(item)">6 Actividades</button>
-                          <button type="button" class="btn-sm" (click)="abrirModalAsignaciones(item)">Asignaturas</button>
-                          <button type="button" class="btn-sm btn-danger" (click)="eliminarDesignacion(item)">Eliminar</button>
-                        </td>
+                        <th>Acciones</th>
                       }
                     </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    @for (item of detalle.designaciones; track item.id) {
+                      <tr [class.row-excluded]="item.estadoItem === 'EXCLUIDO'">
+                        <td>
+                          <div class="doc-name">{{ item.docenteApellido }}, {{ item.docenteNombre }}</div>
+                          <div class="doc-meta">
+                            DNI {{ item.docenteDni }}
+                            @if (item.docenteLegajo) { · Leg. {{ item.docenteLegajo }} }
+                          </div>
+                          <div class="cap-pill" [class.cap-pill--full]="item.totalHorasDocentePeriodo === 50">
+                            Acumulado activo: <strong>{{ item.totalHorasDocentePeriodo }} / 50 hs</strong>
+                          </div>
+                        </td>
+
+                        <td>
+                          <div class="cargo-row">
+                            <span class="cargo-title">{{ item.cargoNombre }}</span>
+                            <span class="badge" [class]="'badge--item-' + item.estadoItem.toLowerCase()">
+                              {{ etiquetaEstadoItem(item.estadoItem) }}
+                            </span>
+                          </div>
+                          <div class="doc-meta">
+                            {{ item.dedicacionNombre }} (<strong>{{ item.horasDedicacion }} hs/sem</strong>)
+                            · {{ item.tipoDesignacionNombre }}
+                          </div>
+                          @if (item.nroDesignacionMapuche) {
+                            <div class="doc-meta">Mapuche: <code>{{ item.nroDesignacionMapuche }}</code></div>
+                          }
+                        </td>
+
+                        <td>
+                          <div class="dist-summary">
+                            <span><strong>{{ item.totalHorasDistribuidas }}</strong> / {{ item.horasDedicacion }} hs</span>
+                            @if (item.estadoItem === 'EXCLUIDO') {
+                              <span class="badge badge--muted">Excluida</span>
+                            } @else if (item.tieneAlertaHorasSinDistribuir) {
+                              <span class="badge badge--warn" title="Horas de dedicación aún no distribuidas (RF04.5)">
+                                ⚠ Faltan {{ item.horasSinDistribuir }} hs
+                              </span>
+                            } @else {
+                              <span class="badge badge--ok">✓ Completa</span>
+                            }
+                          </div>
+                          <div class="dist-chips">
+                            <span>Clases: {{ item.horasClases }}h</span>
+                            <span>Inv: {{ item.horasInvestigacion }}h</span>
+                            <span>Ext: {{ item.horasExtension }}h</span>
+                            <span>Gest: {{ item.horasGestion }}h</span>
+                            <span>Tesis: {{ item.horasDireccionTesis }}h</span>
+                            <span>Otras: {{ item.horasOtras }}h</span>
+                          </div>
+                        </td>
+
+                        <td>
+                          @if (item.asignaciones.length === 0) {
+                            <span class="muted-sm">Sin asignaturas asignadas</span>
+                          } @else {
+                            <div class="asig-list">
+                              @for (a of item.asignaciones; track a.id) {
+                                <div class="asig-chip">
+                                  <span
+                                    class="badge"
+                                    [class.badge--clases]="a.modalidadParticipacion === 'DESARROLLO_CLASES'"
+                                    [class.badge--finales]="a.modalidadParticipacion === 'EVALUACION_FINALES'"
+                                  >
+                                    {{ a.modalidadParticipacion === 'DESARROLLO_CLASES' ? 'Clases' : 'Solo Finales' }}
+                                  </span>
+                                  <span class="asig-text">
+                                    <strong>{{ a.actividadNombre }}</strong>
+                                    ({{ a.carreraSigla || a.carreraNombre }} · {{ a.planEstudioNombre }}
+                                    @if (a.planEstadoVigencia !== 'VIGENTE') { · <em>No vigente</em> })
+                                  </span>
+                                </div>
+                              }
+                            </div>
+                          }
+                        </td>
+
+                        @if (canManage() && detalle.editable) {
+                          <td class="actions-cell">
+                            @if (item.estadoItem === 'EXCLUIDO') {
+                              <button type="button" class="btn-sm btn-reactivar" (click)="reactivarDesignacion(item)">
+                                ↺ Reactivar
+                              </button>
+                            } @else {
+                              <button type="button" class="btn-sm" (click)="abrirModalDesignacion(item)">Cargo</button>
+                              <button type="button" class="btn-sm" (click)="abrirModalDistribucion(item)">6 Actividades</button>
+                              <button type="button" class="btn-sm" (click)="abrirModalAsignaciones(item)">Asignaturas</button>
+                              <button type="button" class="btn-sm btn-danger" (click)="abrirModalExcluir(item)">
+                                Excluir
+                              </button>
+                              @if (!item.designacionOrigenId) {
+                                <button type="button" class="btn-sm btn-danger" (click)="eliminarDesignacion(item)">
+                                  Borrar
+                                </button>
+                              }
+                            }
+                          </td>
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          } @else {
+            <!-- Pestaña HISTORIAL DE CAMBIOS (RF08) -->
+            @if (detalle.historialCambios.length === 0) {
+              <div class="empty-box">
+                <p>Aún no hay movimientos registrados en el historial de esta solicitud.</p>
+              </div>
+            } @else {
+              <div class="table-wrap">
+                <table class="tabla">
+                  <thead>
+                    <tr>
+                      <th>Fecha y Hora</th>
+                      <th>Usuario</th>
+                      <th>Evento</th>
+                      <th>Valor Anterior → Nuevo</th>
+                      <th>Motivo / Observación (RF08)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (h of detalle.historialCambios; track h.id) {
+                      <tr>
+                        <td class="nowrap">{{ h.fechaCambio | date: 'dd/MM/yyyy HH:mm' }}</td>
+                        <td>{{ h.usuarioNombre || 'Sistema' }}</td>
+                        <td><span class="badge badge--muted">{{ etiquetaEvento(h.tipoEvento) }}</span></td>
+                        <td>
+                          @if (h.valorAnterior) {
+                            <div class="diff-old">− {{ h.valorAnterior }}</div>
+                          }
+                          @if (h.valorNuevo) {
+                            <div class="diff-new">+ {{ h.valorNuevo }}</div>
+                          }
+                        </td>
+                        <td>{{ h.motivo || '—' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
           }
         </section>
       }
 
-      <!-- MODAL 1: Nueva Solicitud -->
+      <!-- MODAL 1: Nueva Solicitud (con Clonación RF07) -->
       @if (modalNuevaSolicitud()) {
         <div class="modal-backdrop" (click)="modalNuevaSolicitud.set(false)">
           <div class="modal" (click)="$event.stopPropagation()">
@@ -310,9 +430,19 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                 Tipo de Solicitud *
                 <select [(ngModel)]="nuevaSolForm.tipoSolicitud">
                   <option value="ANUAL">ANUAL (General del Departamento)</option>
-                  <option value="EXTRAORDINARIA">EXTRAORDINARIA (Ampliación / Modificación)</option>
+                  <option value="EXTRAORDINARIA">EXTRAORDINARIA (Movimiento durante el período · RF09)</option>
                 </select>
               </label>
+
+              @if (nuevaSolForm.tipoSolicitud === 'ANUAL') {
+                <label class="chk-box">
+                  <input type="checkbox" [(ngModel)]="nuevaSolForm.clonarPeriodoAnterior" />
+                  <span>
+                    <strong>Clonar automáticamente el período anterior (RF07):</strong>
+                    copia los cargos activos, distribución en 6 actividades y asignaturas vigentes de la última solicitud aprobada/presentada del Departamento.
+                  </span>
+                </label>
+              }
 
               <label>
                 Observaciones del Departamento
@@ -322,7 +452,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
             <div class="modal-actions">
               <button type="button" class="btn-sec" (click)="modalNuevaSolicitud.set(false)">Cancelar</button>
               <button type="button" class="btn-pri" [disabled]="guardando()" (click)="crearSolicitud()">
-                {{ guardando() ? 'Creando...' : 'Crear Solicitud' }}
+                {{ guardando() ? 'Procesando...' : 'Crear Solicitud' }}
               </button>
             </div>
           </div>
@@ -333,11 +463,11 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
       @if (modalDesignacion()) {
         <div class="modal-backdrop" (click)="modalDesignacion.set(false)">
           <div class="modal" (click)="$event.stopPropagation()">
-            <h3>{{ editandoDesignacionId() ? 'Editar Cargo y Dedicación' : 'Agregar Cargo / Designación Docente' }}</h3>
+            <h3>{{ editandoDesignacionItem() ? 'Editar Cargo y Dedicación' : 'Agregar Cargo / Designación Docente' }}</h3>
             <div class="form-grid">
               <label>
                 Docente *
-                <select [(ngModel)]="desigForm.docenteId" [disabled]="!!editandoDesignacionId()">
+                <select [(ngModel)]="desigForm.docenteId" [disabled]="!!editandoDesignacionItem()">
                   <option value="">Seleccione un docente...</option>
                   @for (doc of docentesDisponibles(); track doc.id) {
                     <option [value]="doc.id">
@@ -387,6 +517,17 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                 Observaciones
                 <textarea rows="2" [(ngModel)]="desigForm.observaciones" placeholder="Opcional"></textarea>
               </label>
+
+              @if (requiereMotivoModalCargo()) {
+                <label class="motivo-highlight">
+                  Motivo de la modificación (obligatorio · RF08) *
+                  <input
+                    type="text"
+                    [(ngModel)]="desigForm.motivoCambio"
+                    placeholder="Ej.: Promoción ordinaria / Ajuste por observación SGA"
+                  />
+                </label>
+              }
             </div>
 
             @if (desigForm.docenteId && desigForm.dedicacionDocenteId) {
@@ -453,6 +594,19 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
               </label>
             </div>
 
+            @if (requiereMotivoItem(target)) {
+              <div class="form-grid">
+                <label class="motivo-highlight">
+                  Motivo del cambio horario (obligatorio · RF08) *
+                  <input
+                    type="text"
+                    [(ngModel)]="distForm.motivoCambio"
+                    placeholder="Indique el motivo de la redistribución horaria"
+                  />
+                </label>
+              </div>
+            }
+
             <div
               class="preview-cap"
               [class.preview-cap--over]="tieneNegativosDistribucion() || sumaDistribucionModal() > target.horasDedicacion"
@@ -496,6 +650,19 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
               {{ target.cargoNombre }} · {{ target.dedicacionNombre }} ({{ target.horasDedicacion }} hs/sem).
               Puede asignar asignaturas de planes vigentes o no vigentes, diferenciando Desarrollo de Clases vs. Solo Exámenes Finales (RF05 / RN09).
             </p>
+
+            @if (requiereMotivoItem(target)) {
+              <div class="form-grid">
+                <label class="motivo-highlight">
+                  Motivo de modificación de asignaturas (obligatorio para altas/bajas en este cargo · RF08) *
+                  <input
+                    type="text"
+                    [(ngModel)]="asigForm.motivoCambio"
+                    placeholder="Indique el motivo para agregar o quitar asignaturas"
+                  />
+                </label>
+              </div>
+            }
 
             @if (target.asignaciones.length > 0) {
               <table class="tabla tabla--compact">
@@ -606,10 +773,66 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
           </div>
         </div>
       }
+
+      <!-- MODAL 5: Excluir Designación con Motivo Obligatorio (RF07.6 / RF08) -->
+      @if (modalExcluir(); as target) {
+        <div class="modal-backdrop" (click)="modalExcluir.set(null)">
+          <div class="modal" (click)="$event.stopPropagation()">
+            <h3>Excluir Designación de la Solicitud (RF07.6)</h3>
+            <p class="sub-desc">
+              {{ target.docenteApellido }}, {{ target.docenteNombre }} — {{ target.cargoNombre }} ({{ target.horasDedicacion }} hs).
+              El renglón quedará marcado como <strong>EXCLUIDO</strong> conservando la trazabilidad histórica y liberando sus horas del tope de 50 hs.
+            </p>
+            <div class="form-grid">
+              <label class="motivo-highlight">
+                Motivo de la exclusión (obligatorio · RF08) *
+                <textarea
+                  rows="3"
+                  [(ngModel)]="motivoExclusion"
+                  placeholder="Ej.: Licencia sin goce de haberes / Renuncia / Fin de interinato"
+                ></textarea>
+              </label>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn-sec" (click)="modalExcluir.set(null)">Cancelar</button>
+              <button type="button" class="btn-pri" [disabled]="guardando()" (click)="confirmarExcluir(target)">
+                {{ guardando() ? 'Excluyendo...' : 'Confirmar Exclusión' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- MODAL 6: Revisión SGA (Aprobar / Observar) -->
+      @if (modalRevisionSga(); as modo) {
+        <div class="modal-backdrop" (click)="modalRevisionSga.set(null)">
+          <div class="modal" (click)="$event.stopPropagation()">
+            <h3>
+              {{ modo === 'APROBAR' ? 'Aprobar Solicitud (Secretaría de Gestión Académica)' : 'Observar y Devolver Solicitud al Departamento' }}
+            </h3>
+            <div class="form-grid">
+              <label [class.motivo-highlight]="modo === 'OBSERVAR'">
+                {{ modo === 'APROBAR' ? 'Observaciones o nota de conformidad (opcional)' : 'Observaciones para el Departamento (obligatorio) *' }}
+                <textarea
+                  rows="4"
+                  [(ngModel)]="observacionesSgaModal"
+                  [placeholder]="modo === 'APROBAR' ? 'Opcional...' : 'Detalle las correcciones requeridas para que el Departamento pueda subsanarlas...'"
+                ></textarea>
+              </label>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn-sec" (click)="modalRevisionSga.set(null)">Cancelar</button>
+              <button type="button" class="btn-pri" [disabled]="guardando()" (click)="confirmarRevisionSga(modo)">
+                {{ guardando() ? 'Procesando...' : (modo === 'APROBAR' ? 'Confirmar Aprobación' : 'Devolver como Observada') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `,
   styles: [`
-    .acad-wrap { max-width: 1320px; margin: 0 auto; padding: 20px 24px 48px; }
+    .acad-wrap { max-width: 1340px; margin: 0 auto; padding: 20px 24px 48px; }
     .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
     .alert { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
     .alert.error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
@@ -628,17 +851,25 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
     .sol-card__depto { font-size: 15px; color: #1f1a1d; }
     .sol-card__periodo { font-size: 13px; color: #5a4a53; }
     .sol-card__meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; color: #4b5563; margin-top: 4px; }
-    .detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
-    .detail-badges { display: flex; gap: 8px; margin-bottom: 6px; }
+    .detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+    .detail-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
     .detail-title { margin: 0; font-size: 20px; color: #1f1a1d; }
+    .detail-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .sub-desc { margin: 6px 0 0; font-size: 13px; color: #5a4a53; }
+    .sga-banner { padding: 10px 14px; border-radius: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; font-size: 13px; margin-bottom: 14px; }
+    .sga-banner--obs { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    .inner-tabs { display: flex; gap: 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 16px; }
+    .itab { background: none; border: none; padding: 8px 14px; font-size: 13px; font-weight: 600; color: #5a4a53; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .itab.on { color: #6b4c5b; border-bottom-color: #e5b115; }
     .table-wrap { overflow-x: auto; }
     .tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
     .tabla th { text-align: left; padding: 10px 12px; background: #f8f5f7; border-bottom: 1px solid #e5e7eb; color: #4a3741; font-weight: 600; }
     .tabla td { padding: 12px; border-bottom: 1px solid #f1f1f4; vertical-align: top; }
     .tabla--compact td, .tabla--compact th { padding: 8px 10px; }
+    .row-excluded { opacity: 0.58; background: #f9fafb; }
     .doc-name { font-weight: 700; color: #1f1a1d; font-size: 14px; }
     .doc-meta { font-size: 12px; color: #5a4a53; margin-top: 2px; }
+    .cargo-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .cargo-title { font-weight: 600; color: #1f1a1d; }
     .cap-pill { display: inline-block; margin-top: 6px; padding: 3px 8px; border-radius: 999px; font-size: 11px; background: #f3f4f6; color: #374151; }
     .cap-pill--full { background: #fef3c7; color: #92400e; }
@@ -651,10 +882,15 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
     .actions-cell { display: flex; flex-wrap: wrap; gap: 6px; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
     .badge--tipo { background: #ede9fe; color: #5b21b6; }
+    .badge--origen { background: #e0e7ff; color: #3730a3; }
     .badge--estado-borrador { background: #e0f2fe; color: #075985; }
     .badge--estado-presentada_sga { background: #fef3c7; color: #92400e; }
     .badge--estado-aprobada { background: #d1fae5; color: #065f46; }
     .badge--estado-observada { background: #fee2e2; color: #991b1b; }
+    .badge--item-nuevo { background: #dcfce7; color: #166534; }
+    .badge--item-replicado { background: #e0e7ff; color: #3730a3; }
+    .badge--item-modificado { background: #fef3c7; color: #92400e; }
+    .badge--item-excluido { background: #e5e7eb; color: #4b5563; }
     .badge--warn { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
     .badge--ok { background: #d1fae5; color: #065f46; }
     .badge--muted { background: #f3f4f6; color: #4b5563; }
@@ -662,22 +898,31 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
     .badge--finales { background: #fef3c7; color: #92400e; }
     .btn-pri { background: #6b4c5b; color: #fff; border: none; border-radius: 8px; padding: 9px 16px; font-weight: 600; font-size: 14px; cursor: pointer; }
     .btn-pri:hover:not(:disabled) { background: #563c49; }
-    .btn-pri:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-pri:disabled, .btn-ok:disabled, .btn-warn-act:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-ok { background: #059669; color: #fff; border: none; border-radius: 8px; padding: 9px 14px; font-weight: 600; font-size: 14px; cursor: pointer; }
+    .btn-warn-act { background: #d97706; color: #fff; border: none; border-radius: 8px; padding: 9px 14px; font-weight: 600; font-size: 14px; cursor: pointer; }
     .btn-sec { background: #f3f4f6; color: #1f2937; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 14px; cursor: pointer; }
     .btn-sm { background: #fff; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; padding: 4px 9px; font-size: 12px; font-weight: 600; cursor: pointer; }
     .btn-sm:hover { background: #f9fafb; border-color: #6b4c5b; }
+    .btn-reactivar { color: #065f46; border-color: #a7f3d0; background: #ecfdf5; }
     .btn-danger { color: #b91c1c; border-color: #fecaca; }
     .btn-danger:hover { background: #fef2f2; }
     .empty-box { text-align: center; padding: 28px; color: #5a4a53; }
     .muted { color: #6b7280; font-size: 14px; }
     .muted-sm { color: #9ca3af; font-size: 12px; font-style: italic; }
+    .nowrap { white-space: nowrap; }
+    .diff-old { color: #991b1b; font-size: 12px; }
+    .diff-new { color: #065f46; font-size: 12px; }
     .modal-backdrop { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
     .modal { background: #fff; border-radius: 12px; padding: 24px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
     .modal--wide { max-width: 780px; }
     .modal h3 { margin: 0 0 12px; color: #1f1a1d; }
     .form-grid { display: flex; flex-direction: column; gap: 12px; margin: 14px 0; }
     .form-grid label, .dist-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: #374151; }
-    .form-grid input, .form-grid select, .form-grid textarea, .dist-grid input { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-weight: 400; }
+    .form-grid input[type="text"], .form-grid input[type="number"], .form-grid select, .form-grid textarea, .dist-grid input { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-weight: 400; }
+    .chk-box { flex-direction: row !important; align-items: flex-start; gap: 10px !important; background: #f8f5f7; border: 1px solid #e5e7eb; padding: 10px 12px; border-radius: 8px; font-weight: 400 !important; }
+    .chk-box input { margin-top: 3px; }
+    .motivo-highlight { background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 8px; }
     .dist-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
     .preview-cap { padding: 10px 12px; border-radius: 8px; background: #ecfdf5; color: #065f46; font-size: 13px; margin-top: 8px; }
     .preview-cap--warn { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
@@ -697,6 +942,8 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
   private readonly estructuraService = inject(EstructuraService);
   private readonly planEstudioService = inject(PlanEstudioService);
 
+  private readonly session = toSignal(this.auth.currentSession$, { initialValue: this.auth.currentSession });
+
   readonly departamentos = signal<DepartamentoAcademico[]>([]);
   readonly periodos = signal<PeriodoAcademico[]>([]);
   readonly cargos = signal<CargoDocente[]>([]);
@@ -709,6 +956,7 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
 
   readonly filtroPeriodoId = signal<string>('');
   readonly filtroDepartamentoId = signal<string>('');
+  readonly tabDetalle = signal<TabDetalle>('DESIGNACIONES');
 
   readonly solicitudes = signal<SolicitudDesignacionResumen[]>([]);
   readonly solicitudSeleccionada = signal<SolicitudDesignacionDetalle | null>(null);
@@ -720,19 +968,26 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
 
   readonly modalNuevaSolicitud = signal(false);
   readonly modalDesignacion = signal(false);
-  readonly editandoDesignacionId = signal<string | null>(null);
+  readonly editandoDesignacionItem = signal<DesignacionDocenteItem | null>(null);
   readonly modalDistribucion = signal<DesignacionDocenteItem | null>(null);
   readonly modalAsignaciones = signal<DesignacionDocenteItem | null>(null);
+  readonly modalExcluir = signal<DesignacionDocenteItem | null>(null);
+  readonly modalRevisionSga = signal<'APROBAR' | 'OBSERVAR' | null>(null);
+
+  motivoExclusion = '';
+  observacionesSgaModal = '';
 
   nuevaSolForm: {
     departamentoAcademicoId: string;
     periodoAcademicoId: string;
     tipoSolicitud: TipoSolicitudDesignacion;
+    clonarPeriodoAnterior: boolean;
     observacionesDepartamento: string;
   } = {
     departamentoAcademicoId: '',
     periodoAcademicoId: '',
     tipoSolicitud: 'ANUAL',
+    clonarPeriodoAnterior: true,
     observacionesDepartamento: '',
   };
 
@@ -743,6 +998,7 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
     tipoDesignacionId: '',
     nroDesignacionMapuche: '',
     observaciones: '',
+    motivoCambio: '',
   };
 
   distForm = {
@@ -752,6 +1008,7 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
     horasGestion: 0,
     horasDireccionTesis: 0,
     horasOtras: 0,
+    motivoCambio: '',
   };
 
   asigForm: {
@@ -761,6 +1018,7 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
     modalidadParticipacion: ModalidadParticipacionDocente;
     horasAsignadas: number | null;
     observaciones: string;
+    motivoCambio: string;
   } = {
     carreraId: '',
     planEstudioId: '',
@@ -768,13 +1026,17 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
     modalidadParticipacion: 'DESARROLLO_CLASES',
     horasAsignadas: null,
     observaciones: '',
+    motivoCambio: '',
   };
-
-  private readonly session = toSignal(this.auth.currentSession$, { initialValue: this.auth.currentSession });
 
   readonly canManage = computed(() => {
     const roles = this.session()?.user?.roleCodes ?? [];
     return roles.includes('AEA') || roles.includes('SECRETARIA_ACADEMICA') || roles.includes('DIRECTOR_DEPARTAMENTO');
+  });
+
+  readonly canReviewSga = computed(() => {
+    const roles = this.session()?.user?.roleCodes ?? [];
+    return roles.includes('AEA') || roles.includes('SECRETARIA_ACADEMICA');
   });
 
   readonly esSoloDirectorDepto = computed(() => {
@@ -792,13 +1054,12 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
     const detalle = this.solicitudSeleccionada();
     const todos = this.docentes();
     if (!detalle) return todos;
-    // Priorizar docentes del departamento de la solicitud, pero permitir ver todos si AEA/SGA
     const delDepto = todos.filter((d) => d.departamentoAcademicoId === detalle.departamentoAcademicoId);
     return this.esSoloDirectorDepto() ? delDepto : todos;
   });
 
   ngOnInit(): void {
-    const userDepto = this.auth.currentSession?.user?.departamentoAcademicoId ?? '';
+    const userDepto = this.session()?.user?.departamentoAcademicoId ?? '';
     if (this.esSoloDirectorDepto() && userDepto) {
       this.filtroDepartamentoId.set(userDepto);
     }
@@ -819,7 +1080,7 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
           }
           this.cargarSolicitudes();
         },
-        error: () => this.errorMessage.set('No se pudieron cargar los catálogos docentes.'),
+        error: () => this.mostrarError('No se pudieron cargar los catálogos docentes.'),
       });
 
     this.datosCentralesService
@@ -853,7 +1114,7 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
         },
         error: (err) => {
           this.cargandoLista.set(false);
-          this.errorMessage.set(err?.error?.error ?? 'Error al cargar las solicitudes de designación.');
+          this.mostrarError(err?.error?.error ?? 'Error al cargar las solicitudes de designación.');
         },
       });
   }
@@ -867,7 +1128,6 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
         next: (det) => {
           this.solicitudSeleccionada.set(det);
           this.cargandoDetalle.set(false);
-          // Mantener sincronizado modal de asignaciones si está abierto
           const modAsig = this.modalAsignaciones();
           if (modAsig) {
             const actualizado = det.designaciones.find((d) => d.id === modAsig.id) ?? null;
@@ -876,17 +1136,29 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
         },
         error: (err) => {
           this.cargandoDetalle.set(false);
-          this.errorMessage.set(err?.error?.error ?? 'No se pudo cargar el detalle de la solicitud.');
+          this.mostrarError(err?.error?.error ?? 'No se pudo cargar el detalle de la solicitud.');
         },
       });
   }
 
+  requiereMotivoItem(item: DesignacionDocenteItem | null): boolean {
+    const det = this.solicitudSeleccionada();
+    if (!det) return false;
+    if (det.estado === 'OBSERVADA') return true;
+    return !!item && (!!item.designacionOrigenId || item.estadoItem === 'REPLICADO');
+  }
+
+  requiereMotivoModalCargo(): boolean {
+    return this.requiereMotivoItem(this.editandoDesignacionItem());
+  }
+
   abrirModalNuevaSolicitud(): void {
-    const userDepto = this.auth.currentSession?.user?.departamentoAcademicoId ?? '';
+    const userDepto = this.session()?.user?.departamentoAcademicoId ?? '';
     this.nuevaSolForm = {
       departamentoAcademicoId: this.esSoloDirectorDepto() ? userDepto : this.filtroDepartamentoId(),
       periodoAcademicoId: this.filtroPeriodoId() || (this.periodos().find((p) => p.esActual)?.id ?? ''),
       tipoSolicitud: 'ANUAL',
+      clonarPeriodoAnterior: true,
       observacionesDepartamento: '',
     };
     this.modalNuevaSolicitud.set(true);
@@ -894,7 +1166,7 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
 
   crearSolicitud(): void {
     if (!this.nuevaSolForm.departamentoAcademicoId || !this.nuevaSolForm.periodoAcademicoId) {
-      this.errorMessage.set('Debe seleccionar Departamento Académico y Período Académico.');
+      this.mostrarError('Debe seleccionar Departamento Académico y Período Académico.');
       return;
     }
     this.guardando.set(true);
@@ -903,6 +1175,8 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
         departamentoAcademicoId: this.nuevaSolForm.departamentoAcademicoId,
         periodoAcademicoId: this.nuevaSolForm.periodoAcademicoId,
         tipoSolicitud: this.nuevaSolForm.tipoSolicitud,
+        clonarPeriodoAnterior:
+          this.nuevaSolForm.tipoSolicitud === 'ANUAL' ? this.nuevaSolForm.clonarPeriodoAnterior : false,
         observacionesDepartamento: this.nuevaSolForm.observacionesDepartamento || null,
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -917,20 +1191,83 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
           if (this.filtroDepartamentoId() && this.filtroDepartamentoId() !== det.departamentoAcademicoId) {
             this.filtroDepartamentoId.set(det.departamentoAcademicoId);
           }
-          this.errorMessage.set(null);
-          this.successMessage.set('Solicitud de designación creada en estado BORRADOR.');
+          const msgClon =
+            det.solicitudOrigenId && det.tipoSolicitud === 'ANUAL'
+              ? ` Se replicaron ${det.designaciones.length} designación(es) desde el período anterior.`
+              : '';
+          this.mostrarExito(`Solicitud creada en estado BORRADOR.${msgClon}`);
           this.cargarSolicitudes();
         },
         error: (err) => {
           this.guardando.set(false);
-          this.errorMessage.set(err?.error?.error ?? 'No se pudo crear la solicitud.');
+          this.mostrarError(err?.error?.error ?? 'No se pudo crear la solicitud.');
         },
       });
   }
 
+  presentarASga(detalle: SolicitudDesignacionDetalle): void {
+    if (!confirm('¿Presentar formalmente esta solicitud a Secretaría de Gestión Académica? Pasará a estado PRESENTADA_SGA.')) {
+      return;
+    }
+    this.guardando.set(true);
+    this.solicitudService
+      .presentarSolicitud(detalle.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (det) => {
+          this.guardando.set(false);
+          this.solicitudSeleccionada.set(det);
+          this.mostrarExito('Solicitud presentada a Secretaría de Gestión Académica.');
+          this.cargarSolicitudes();
+        },
+        error: (err) => {
+          this.guardando.set(false);
+          this.mostrarError(err?.error?.error ?? 'No se pudo presentar la solicitud a SGA.');
+        },
+      });
+  }
+
+  abrirModalRevisionSga(modo: 'APROBAR' | 'OBSERVAR'): void {
+    this.observacionesSgaModal = '';
+    this.modalRevisionSga.set(modo);
+  }
+
+  confirmarRevisionSga(modo: 'APROBAR' | 'OBSERVAR'): void {
+    const detalle = this.solicitudSeleccionada();
+    if (!detalle) return;
+    if (modo === 'OBSERVAR' && !this.observacionesSgaModal.trim()) {
+      this.mostrarError('Debe ingresar las observaciones de SGA para devolver la solicitud.');
+      return;
+    }
+    this.guardando.set(true);
+    const obs = { observacionesSga: this.observacionesSgaModal.trim() || null };
+    const req$ =
+      modo === 'APROBAR'
+        ? this.solicitudService.aprobarSolicitud(detalle.id, obs)
+        : this.solicitudService.observarSolicitud(detalle.id, obs);
+
+    req$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (det) => {
+        this.guardando.set(false);
+        this.modalRevisionSga.set(null);
+        this.solicitudSeleccionada.set(det);
+        this.mostrarExito(
+          modo === 'APROBAR'
+            ? 'Solicitud APROBADA por Secretaría de Gestión Académica.'
+            : 'Solicitud devuelta como OBSERVADA al Departamento.'
+        );
+        this.cargarSolicitudes();
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        this.mostrarError(err?.error?.error ?? 'No se pudo registrar la revisión SGA.');
+      },
+    });
+  }
+
   abrirModalDesignacion(item: DesignacionDocenteItem | null): void {
     if (item) {
-      this.editandoDesignacionId.set(item.id);
+      this.editandoDesignacionItem.set(item);
       this.desigForm = {
         docenteId: item.docenteId,
         cargoDocenteId: item.cargoDocenteId,
@@ -938,9 +1275,10 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
         tipoDesignacionId: item.tipoDesignacionId,
         nroDesignacionMapuche: item.nroDesignacionMapuche ?? '',
         observaciones: item.observaciones ?? '',
+        motivoCambio: '',
       };
     } else {
-      this.editandoDesignacionId.set(null);
+      this.editandoDesignacionItem.set(null);
       this.desigForm = {
         docenteId: '',
         cargoDocenteId: '',
@@ -948,6 +1286,7 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
         tipoDesignacionId: '',
         nroDesignacionMapuche: '',
         observaciones: '',
+        motivoCambio: '',
       };
     }
     this.modalDesignacion.set(true);
@@ -955,7 +1294,7 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
 
   docenteYaEnSolicitudActual(): boolean {
     const detalle = this.solicitudSeleccionada();
-    return !!detalle?.designaciones.some((d) => d.docenteId === this.desigForm.docenteId);
+    return !!detalle?.designaciones.some((d) => d.docenteId === this.desigForm.docenteId && d.estadoItem !== 'EXCLUIDO');
   }
 
   horasProyectadasDocente(): number {
@@ -964,12 +1303,12 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
     const horasNuevas = ded?.horasSemanales ?? 0;
     if (!detalle || !this.desigForm.docenteId) return horasNuevas;
 
-    const editId = this.editandoDesignacionId();
-    const existente = detalle.designaciones.find((d) => d.docenteId === this.desigForm.docenteId);
+    const editItem = this.editandoDesignacionItem();
+    const existente = detalle.designaciones.find(
+      (d) => d.docenteId === this.desigForm.docenteId && d.estadoItem !== 'EXCLUIDO'
+    );
     const totalActualDocente = existente?.totalHorasDocentePeriodo ?? 0;
-    const horasEditando = editId
-      ? (detalle.designaciones.find((d) => d.id === editId)?.horasDedicacion ?? 0)
-      : 0;
+    const horasEditando = editItem && editItem.estadoItem !== 'EXCLUIDO' ? editItem.horasDedicacion : 0;
     return totalActualDocente - horasEditando + horasNuevas;
   }
 
@@ -977,7 +1316,11 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
     const detalle = this.solicitudSeleccionada();
     if (!detalle) return;
     if (!this.desigForm.docenteId || !this.desigForm.cargoDocenteId || !this.desigForm.dedicacionDocenteId || !this.desigForm.tipoDesignacionId) {
-      this.errorMessage.set('Complete Docente, Cargo, Dedicación y Tipo de Designación.');
+      this.mostrarError('Complete Docente, Cargo, Dedicación y Tipo de Designación.');
+      return;
+    }
+    if (this.requiereMotivoModalCargo() && !this.desigForm.motivoCambio.trim()) {
+      this.mostrarError('Debe informar el motivo del cambio (RF08).');
       return;
     }
 
@@ -989,31 +1332,82 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
       tipoDesignacionId: this.desigForm.tipoDesignacionId,
       nroDesignacionMapuche: this.desigForm.nroDesignacionMapuche || null,
       observaciones: this.desigForm.observaciones || null,
+      motivoCambio: this.desigForm.motivoCambio.trim() || null,
     };
 
-    const editId = this.editandoDesignacionId();
-    const req$ = editId
-      ? this.solicitudService.actualizarDesignacion(detalle.id, editId, payload)
+    const editItem = this.editandoDesignacionItem();
+    const req$ = editItem
+      ? this.solicitudService.actualizarDesignacion(detalle.id, editItem.id, payload)
       : this.solicitudService.agregarDesignacion(detalle.id, payload);
 
     req$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.guardando.set(false);
         this.modalDesignacion.set(false);
-        this.successMessage.set(editId ? 'Designación actualizada.' : 'Designación agregada a la solicitud.');
+        this.mostrarExito(editItem ? 'Designación actualizada y auditada.' : 'Designación agregada a la solicitud.');
         this.cargarSolicitudes();
       },
       error: (err) => {
         this.guardando.set(false);
-        this.errorMessage.set(err?.error?.error ?? 'No se pudo guardar la designación.');
+        this.mostrarError(err?.error?.error ?? 'No se pudo guardar la designación.');
       },
     });
+  }
+
+  abrirModalExcluir(item: DesignacionDocenteItem): void {
+    this.motivoExclusion = '';
+    this.modalExcluir.set(item);
+  }
+
+  confirmarExcluir(item: DesignacionDocenteItem): void {
+    const detalle = this.solicitudSeleccionada();
+    if (!detalle) return;
+    if (!this.motivoExclusion.trim()) {
+      this.mostrarError('Debe indicar el motivo para excluir la designación (RF08).');
+      return;
+    }
+    this.guardando.set(true);
+    this.solicitudService
+      .excluirDesignacion(detalle.id, item.id, { motivo: this.motivoExclusion.trim() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.guardando.set(false);
+          this.modalExcluir.set(null);
+          this.mostrarExito('Designación marcada como EXCLUIDA conservando historial.');
+          this.cargarSolicitudes();
+        },
+        error: (err) => {
+          this.guardando.set(false);
+          this.mostrarError(err?.error?.error ?? 'No se pudo excluir la designación.');
+        },
+      });
+  }
+
+  reactivarDesignacion(item: DesignacionDocenteItem): void {
+    const detalle = this.solicitudSeleccionada();
+    if (!detalle) return;
+    this.guardando.set(true);
+    this.solicitudService
+      .reactivarDesignacion(detalle.id, item.id, { motivo: 'Reactivación en solicitud' })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.guardando.set(false);
+          this.mostrarExito('Designación reactivada.');
+          this.cargarSolicitudes();
+        },
+        error: (err) => {
+          this.guardando.set(false);
+          this.mostrarError(err?.error?.error ?? 'No se pudo reactivar la designación.');
+        },
+      });
   }
 
   eliminarDesignacion(item: DesignacionDocenteItem): void {
     const detalle = this.solicitudSeleccionada();
     if (!detalle) return;
-    if (!confirm(`¿Eliminar la designación de ${item.docenteApellido}, ${item.docenteNombre} (${item.cargoNombre})?`)) {
+    if (!confirm(`¿Eliminar definitivamente la designación nueva de ${item.docenteApellido}, ${item.docenteNombre}?`)) {
       return;
     }
     this.solicitudService
@@ -1021,10 +1415,10 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.successMessage.set('Designación eliminada.');
+          this.mostrarExito('Designación eliminada.');
           this.cargarSolicitudes();
         },
-        error: (err) => this.errorMessage.set(err?.error?.error ?? 'No se pudo eliminar la designación.'),
+        error: (err) => this.mostrarError(err?.error?.error ?? 'No se pudo eliminar la designación.'),
       });
   }
 
@@ -1036,6 +1430,7 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
       horasGestion: item.horasGestion ?? 0,
       horasDireccionTesis: item.horasDireccionTesis ?? 0,
       horasOtras: item.horasOtras ?? 0,
+      motivoCambio: '',
     };
     this.modalDistribucion.set(item);
   }
@@ -1065,6 +1460,10 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
   guardarDistribucion(item: DesignacionDocenteItem): void {
     const detalle = this.solicitudSeleccionada();
     if (!detalle) return;
+    if (this.requiereMotivoItem(item) && !this.distForm.motivoCambio.trim()) {
+      this.mostrarError('Debe indicar el motivo del cambio horario (RF08).');
+      return;
+    }
     this.guardando.set(true);
     this.solicitudService
       .actualizarDistribucion(detalle.id, item.id, {
@@ -1074,18 +1473,19 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
         horasGestion: Number(this.distForm.horasGestion) || 0,
         horasDireccionTesis: Number(this.distForm.horasDireccionTesis) || 0,
         horasOtras: Number(this.distForm.horasOtras) || 0,
+        motivoCambio: this.distForm.motivoCambio.trim() || null,
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.guardando.set(false);
           this.modalDistribucion.set(null);
-          this.successMessage.set('Distribución horaria guardada.');
+          this.mostrarExito('Distribución horaria guardada.');
           this.cargarSolicitudes();
         },
         error: (err) => {
           this.guardando.set(false);
-          this.errorMessage.set(err?.error?.error ?? 'No se pudo guardar la distribución horaria.');
+          this.mostrarError(err?.error?.error ?? 'No se pudo guardar la distribución horaria.');
         },
       });
   }
@@ -1098,6 +1498,7 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
       modalidadParticipacion: 'DESARROLLO_CLASES',
       horasAsignadas: null,
       observaciones: '',
+      motivoCambio: '',
     };
     this.planesCarrera.set([]);
     this.asignaturasPlan.set([]);
@@ -1130,6 +1531,8 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
     const act = this.asignaturasPlan().find((a) => a.id === actividadId);
     if (act?.estadoDictado === 'SOLO_EXAMENES_FINALES') {
       this.asigForm.modalidadParticipacion = 'EVALUACION_FINALES';
+    } else if (act?.estadoDictado === 'ACTIVA') {
+      this.asigForm.modalidadParticipacion = 'DESARROLLO_CLASES';
     }
   }
 
@@ -1142,7 +1545,11 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
     const detalle = this.solicitudSeleccionada();
     if (!detalle) return;
     if (!this.asigForm.carreraId || !this.asigForm.planEstudioId || !this.asigForm.actividadCurricularId) {
-      this.errorMessage.set('Seleccione Carrera, Plan de Estudio y Asignatura.');
+      this.mostrarError('Seleccione Carrera, Plan de Estudio y Asignatura.');
+      return;
+    }
+    if (this.requiereMotivoItem(item) && !this.asigForm.motivoCambio.trim()) {
+      this.mostrarError('Debe indicar el motivo para agregar asignaturas en este cargo (RF08).');
       return;
     }
     this.guardando.set(true);
@@ -1154,6 +1561,7 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
         modalidadParticipacion: this.asigForm.modalidadParticipacion,
         horasAsignadas: this.asigForm.horasAsignadas,
         observaciones: this.asigForm.observaciones || null,
+        motivoCambio: this.asigForm.motivoCambio.trim() || null,
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -1161,12 +1569,12 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
           this.guardando.set(false);
           this.asigForm.actividadCurricularId = '';
           this.asigForm.horasAsignadas = null;
-          this.successMessage.set('Asignatura asignada correctamente.');
+          this.mostrarExito('Asignatura asignada correctamente.');
           this.seleccionarSolicitud(detalle.id);
         },
         error: (err) => {
           this.guardando.set(false);
-          this.errorMessage.set(err?.error?.error ?? 'No se pudo asignar la asignatura.');
+          this.mostrarError(err?.error?.error ?? 'No se pudo asignar la asignatura.');
         },
       });
   }
@@ -1174,15 +1582,19 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
   eliminarAsignacion(item: DesignacionDocenteItem, asignacionId: string): void {
     const detalle = this.solicitudSeleccionada();
     if (!detalle) return;
+    if (this.requiereMotivoItem(item) && !this.asigForm.motivoCambio.trim()) {
+      this.mostrarError('Indique primero el motivo del cambio arriba antes de quitar la asignatura (RF08).');
+      return;
+    }
     this.solicitudService
-      .eliminarAsignacion(detalle.id, item.id, asignacionId)
+      .eliminarAsignacion(detalle.id, item.id, asignacionId, this.asigForm.motivoCambio.trim() || null)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.successMessage.set('Asignación quitada.');
+          this.mostrarExito('Asignación quitada.');
           this.seleccionarSolicitud(detalle.id);
         },
-        error: (err) => this.errorMessage.set(err?.error?.error ?? 'No se pudo quitar la asignación.'),
+        error: (err) => this.mostrarError(err?.error?.error ?? 'No se pudo quitar la asignación.'),
       });
   }
 
@@ -1199,5 +1611,61 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
       default:
         return estado;
     }
+  }
+
+  etiquetaEstadoItem(estado: string): string {
+    switch (estado) {
+      case 'NUEVO':
+        return 'Nuevo';
+      case 'REPLICADO':
+        return 'Replicado';
+      case 'MODIFICADO':
+        return 'Modificado';
+      case 'EXCLUIDO':
+        return 'Excluido';
+      default:
+        return estado;
+    }
+  }
+
+  etiquetaEvento(ev: string): string {
+    switch (ev) {
+      case 'CREACION':
+        return 'Creación';
+      case 'CLONACION_PERIODO_ANTERIOR':
+        return 'Clonación período anterior';
+      case 'ALTA_DESIGNACION':
+        return 'Alta de cargo';
+      case 'MODIFICACION_DESIGNACION':
+        return 'Modificación de cargo';
+      case 'MODIFICACION_DISTRIBUCION':
+        return 'Distribución horaria';
+      case 'EXCLUSION_DESIGNACION':
+        return 'Exclusión de cargo';
+      case 'REACTIVACION_DESIGNACION':
+        return 'Reactivación de cargo';
+      case 'ALTA_ASIGNACION':
+        return 'Alta de asignatura';
+      case 'BAJA_ASIGNACION':
+        return 'Baja de asignatura';
+      case 'PRESENTACION_SGA':
+        return 'Presentación a SGA';
+      case 'APROBACION_SGA':
+        return 'Aprobación SGA';
+      case 'OBSERVACION_SGA':
+        return 'Observación SGA';
+      default:
+        return ev;
+    }
+  }
+
+  private mostrarExito(msg: string): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(msg);
+  }
+
+  private mostrarError(msg: string): void {
+    this.successMessage.set(null);
+    this.errorMessage.set(msg);
   }
 }

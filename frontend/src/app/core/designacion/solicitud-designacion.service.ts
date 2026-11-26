@@ -4,10 +4,13 @@ import { Observable } from 'rxjs';
 import {
   AgregarAsignacionCurricularRequest,
   AsignacionCurricularPeriodo,
+  CambioSolicitudDesignacion,
   CrearSolicitudDesignacionRequest,
   DesignacionDocenteItem,
   GuardarDesignacionDocenteRequest,
   GuardarDistribucionHorariaRequest,
+  MotivoCambioRequest,
+  RevisionSgaRequest,
   SolicitudDesignacionDetalle,
   SolicitudDesignacionResumen,
 } from './solicitud-designacion.models';
@@ -28,8 +31,24 @@ export class SolicitudDesignacionService {
     return this.http.get<SolicitudDesignacionDetalle>(`${this.baseUrl}/${solicitudId}`);
   }
 
+  listarHistorial(solicitudId: string): Observable<CambioSolicitudDesignacion[]> {
+    return this.http.get<CambioSolicitudDesignacion[]>(`${this.baseUrl}/${solicitudId}/historial`);
+  }
+
   crearSolicitud(req: CrearSolicitudDesignacionRequest): Observable<SolicitudDesignacionDetalle> {
     return this.http.post<SolicitudDesignacionDetalle>(this.baseUrl, req);
+  }
+
+  presentarSolicitud(solicitudId: string): Observable<SolicitudDesignacionDetalle> {
+    return this.http.post<SolicitudDesignacionDetalle>(`${this.baseUrl}/${solicitudId}/presentar`, {});
+  }
+
+  aprobarSolicitud(solicitudId: string, req?: RevisionSgaRequest): Observable<SolicitudDesignacionDetalle> {
+    return this.http.post<SolicitudDesignacionDetalle>(`${this.baseUrl}/${solicitudId}/aprobar`, req ?? {});
+  }
+
+  observarSolicitud(solicitudId: string, req: RevisionSgaRequest): Observable<SolicitudDesignacionDetalle> {
+    return this.http.post<SolicitudDesignacionDetalle>(`${this.baseUrl}/${solicitudId}/observar`, req);
   }
 
   agregarDesignacion(
@@ -50,8 +69,32 @@ export class SolicitudDesignacionService {
     );
   }
 
-  eliminarDesignacion(solicitudId: string, designacionId: string): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/${solicitudId}/designaciones/${designacionId}`);
+  excluirDesignacion(
+    solicitudId: string,
+    designacionId: string,
+    req: MotivoCambioRequest
+  ): Observable<DesignacionDocenteItem> {
+    return this.http.post<DesignacionDocenteItem>(
+      `${this.baseUrl}/${solicitudId}/designaciones/${designacionId}/excluir`,
+      req
+    );
+  }
+
+  reactivarDesignacion(
+    solicitudId: string,
+    designacionId: string,
+    req?: MotivoCambioRequest
+  ): Observable<DesignacionDocenteItem> {
+    return this.http.post<DesignacionDocenteItem>(
+      `${this.baseUrl}/${solicitudId}/designaciones/${designacionId}/reactivar`,
+      req ?? {}
+    );
+  }
+
+  eliminarDesignacion(solicitudId: string, designacionId: string, motivo?: string | null): Observable<void> {
+    let params = new HttpParams();
+    if (motivo) params = params.set('motivo', motivo);
+    return this.http.delete<void>(`${this.baseUrl}/${solicitudId}/designaciones/${designacionId}`, { params });
   }
 
   actualizarDistribucion(
@@ -79,10 +122,14 @@ export class SolicitudDesignacionService {
   eliminarAsignacion(
     solicitudId: string,
     designacionId: string,
-    asignacionId: string
+    asignacionId: string,
+    motivo?: string | null
   ): Observable<void> {
+    let params = new HttpParams();
+    if (motivo) params = params.set('motivo', motivo);
     return this.http.delete<void>(
-      `${this.baseUrl}/${solicitudId}/designaciones/${designacionId}/asignaciones/${asignacionId}`
+      `${this.baseUrl}/${solicitudId}/designaciones/${designacionId}/asignaciones/${asignacionId}`,
+      { params }
     );
   }
 }

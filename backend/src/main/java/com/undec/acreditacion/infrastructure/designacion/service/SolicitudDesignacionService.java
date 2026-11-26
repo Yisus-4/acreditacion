@@ -14,6 +14,7 @@ import com.undec.acreditacion.infrastructure.designacion.persistence.*;
 import com.undec.acreditacion.infrastructure.persistence.postgres.CarreraJpaEntity;
 import com.undec.acreditacion.infrastructure.persistence.postgres.SpringDataCarreraRepository;
 import com.undec.acreditacion.infrastructure.security.AuthenticatedUserProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +49,7 @@ public class SolicitudDesignacionService {
     private final SpringDataPlanEstudioFt001Repository planRepository;
     private final SpringDataActividadCurricularPlanRepository actividadRepository;
     private final AuthenticatedUserProvider authenticatedUserProvider;
+    private final SpringDataSolicitudDesignacionCambioRepository cambioRepository;
 
     public SolicitudDesignacionService(
             SpringDataSolicitudDesignacionRepository solicitudRepository,
@@ -64,6 +66,41 @@ public class SolicitudDesignacionService {
             SpringDataActividadCurricularPlanRepository actividadRepository,
             AuthenticatedUserProvider authenticatedUserProvider
     ) {
+        this(
+                solicitudRepository,
+                designacionRepository,
+                asignacionRepository,
+                departamentoRepository,
+                periodoRepository,
+                cargoRepository,
+                dedicacionRepository,
+                tipoDesignacionRepository,
+                docenteRepository,
+                carreraRepository,
+                planRepository,
+                actividadRepository,
+                authenticatedUserProvider,
+                null
+        );
+    }
+
+    @Autowired
+    public SolicitudDesignacionService(
+            SpringDataSolicitudDesignacionRepository solicitudRepository,
+            SpringDataSolicitudDocenteDesignacionRepository designacionRepository,
+            SpringDataSolicitudAsignacionCurricularRepository asignacionRepository,
+            SpringDataDepartamentoAcademicoRepository departamentoRepository,
+            SpringDataPeriodoAcademicoRepository periodoRepository,
+            SpringDataCargoDocenteRepository cargoRepository,
+            SpringDataDedicacionDocenteRepository dedicacionRepository,
+            SpringDataTipoDesignacionDocenteRepository tipoDesignacionRepository,
+            SpringDataCuerpoAcademicoMaestroRepository docenteRepository,
+            SpringDataCarreraRepository carreraRepository,
+            SpringDataPlanEstudioFt001Repository planRepository,
+            SpringDataActividadCurricularPlanRepository actividadRepository,
+            AuthenticatedUserProvider authenticatedUserProvider,
+            SpringDataSolicitudDesignacionCambioRepository cambioRepository
+    ) {
         this.solicitudRepository = Objects.requireNonNull(solicitudRepository);
         this.designacionRepository = Objects.requireNonNull(designacionRepository);
         this.asignacionRepository = Objects.requireNonNull(asignacionRepository);
@@ -77,6 +114,7 @@ public class SolicitudDesignacionService {
         this.planRepository = Objects.requireNonNull(planRepository);
         this.actividadRepository = Objects.requireNonNull(actividadRepository);
         this.authenticatedUserProvider = authenticatedUserProvider;
+        this.cambioRepository = cambioRepository;
     }
 
     @Transactional(readOnly = true)
@@ -101,6 +139,13 @@ public class SolicitudDesignacionService {
         SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
         validarAccesoLecturaDepartamento(solicitud.getDepartamentoAcademico().getId());
         return toDetalleDto(solicitud);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CambioSolicitudDesignacionDto> listarHistorialCambios(UUID solicitudId) {
+        SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
+        validarAccesoLecturaDepartamento(solicitud.getDepartamentoAcademico().getId());
+        return obtenerHistorialDtos(solicitudId);
     }
 
     public SolicitudDesignacionDetalleDto crearSolicitud(CrearSolicitudDesignacionRequest req) {
@@ -132,17 +177,57 @@ public class SolicitudDesignacionService {
             }
         }
 
+        SolicitudDesignacionJpaEntity origenClonacion = null;
+        UUID solicitudOrigenVinculadaId = null;
+
+        boolean deseaClonar = Boolean.TRUE.equals(req.clonarPeriodoAnterior()) || req.solicitudOrigenId() != null;
+        if (deseaClonar && tipo == TipoSolicitudDesignacion.ANUAL) {
+            origenClonacion = resolverSolicitudOrigenClonacion(depto, periodo, req.solicitudOrigenId());
+            if (origenClonacion != null) {
+                solicitudOrigenVinculadaId = origenClonacion.getId();
+            }
+        } else if (tipo == TipoSolicitudDesignacion.EXTRAORDINARIA) {
+            if (req.solicitudOrigenId() != null) {
+                SolicitudDesignacionJpaEntity ref = obtenerSolicitudOCascada(req.solicitudOrigenId());
+                if (!ref.getDepartamentoAcademico().getId().equals(depto.getId())) {
+                    throw new DomainValidationException("La solicitud base vinculada no pertenece al mismo Departamento Académico.");
+                }
+                solicitudOrigenVinculadaId = ref.getId();
+            } else {
+                solicitudOrigenVinculadaId = solicitudRepository
+                        .findByDepartamentoAcademicoIdAndPeriodoAcademicoIdAndTipoSolicitud(
+                                depto.getId(), periodo.getId(), TipoSolicitudDesignacion.ANUAL)
+                        .map(SolicitudDesignacionJpaEntity::getId)
+                        .orElse(null);
+            }
+        }
+
         SolicitudDesignacionJpaEntity entity = new SolicitudDesignacionJpaEntity();
         entity.setId(UUID.randomUUID());
         entity.setDepartamentoAcademico(depto);
         entity.setPeriodoAcademico(periodo);
         entity.setTipoSolicitud(tipo);
         entity.setEstado(EstadoSolicitudDesignacion.BORRADOR);
+        entity.setSolicitudOrigenId(solicitudOrigenVinculadaId);
         entity.setObservacionesDepartamento(trimToNull(req.observacionesDepartamento()));
         entity.setCreadoEn(Instant.now());
         entity.setActualizadoEn(Instant.now());
 
         SolicitudDesignacionJpaEntity saved = solicitudRepository.save(entity);
+        registrarCambio(
+                saved,
+                null,
+                TipoEventoSolicitudDesignacion.CREACION,
+                "estado",
+                null,
+                "BORRADOR (" + tipo + ")",
+                trimToNull(req.observacionesDepartamento())
+        );
+
+        if (origenClonacion != null) {
+            ejecutarClonacionDesdeOrigen(saved, origenClonacion);
+        }
+
         return toDetalleDto(saved);
     }
 
@@ -157,6 +242,9 @@ public class SolicitudDesignacionService {
 
         SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
         validarEscrituraSobreSolicitud(solicitud);
+        if (solicitud.getEstado() == EstadoSolicitudDesignacion.OBSERVADA) {
+            exigirMotivoNoVacio(req.motivoCambio(), "agregar una designación sobre una solicitud OBSERVADA");
+        }
 
         CuerpoAcademicoMaestroJpaEntity docente = docenteRepository.findById(req.docenteId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el docente ID: " + req.docenteId()));
@@ -168,6 +256,8 @@ public class SolicitudDesignacionService {
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró la dedicación docente ID: " + req.dedicacionDocenteId()));
         TipoDesignacionDocenteJpaEntity tipoDesig = tipoDesignacionRepository.findById(req.tipoDesignacionId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el tipo de designación ID: " + req.tipoDesignacionId()));
+
+        validarEntidadesActivas(docente, cargo, dedicacion, tipoDesig);
 
         int horasNuevas = dedicacion.getHorasSemanales() != null ? dedicacion.getHorasSemanales() : 0;
         if (horasNuevas <= 0) {
@@ -194,6 +284,16 @@ public class SolicitudDesignacionService {
         SolicitudDocenteDesignacionJpaEntity saved = designacionRepository.save(entity);
         solicitud.setActualizadoEn(Instant.now());
 
+        registrarCambio(
+                solicitud,
+                saved.getId(),
+                TipoEventoSolicitudDesignacion.ALTA_DESIGNACION,
+                "designacion",
+                null,
+                resumenDesignacion(saved),
+                trimToNull(req.motivoCambio())
+        );
+
         int totalDocentePeriodo = horasPreviasPeriodo + horasNuevas;
         List<SolicitudAsignacionCurricularJpaEntity> asignaciones =
                 asignacionRepository.findByDesignacionIdOrderByCreadoEnAsc(saved.getId());
@@ -216,12 +316,19 @@ public class SolicitudDesignacionService {
         validarEscrituraSobreSolicitud(solicitud);
 
         SolicitudDocenteDesignacionJpaEntity entity = obtenerDesignacionEnSolicitud(solicitudId, designacionId);
+        validarItemNoExcluido(entity);
+        if (requiereMotivoAuditoria(solicitud, entity)) {
+            exigirMotivoNoVacio(req.motivoCambio(), "modificar un cargo replicado o en solicitud observada");
+        }
+
         CargoDocenteJpaEntity cargo = cargoRepository.findById(req.cargoDocenteId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el cargo docente ID: " + req.cargoDocenteId()));
         DedicacionDocenteJpaEntity dedicacion = dedicacionRepository.findById(req.dedicacionDocenteId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró la dedicación docente ID: " + req.dedicacionDocenteId()));
         TipoDesignacionDocenteJpaEntity tipoDesig = tipoDesignacionRepository.findById(req.tipoDesignacionId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el tipo de designación ID: " + req.tipoDesignacionId()));
+
+        validarEntidadesActivas(entity.getDocente(), cargo, dedicacion, tipoDesig);
 
         int horasNuevas = dedicacion.getHorasSemanales() != null ? dedicacion.getHorasSemanales() : 0;
         if (horasNuevas <= 0) {
@@ -237,6 +344,8 @@ public class SolicitudDesignacionService {
                 entity.getDocente().getId(), solicitud.getPeriodoAcademico().getId(), entity.getId());
         validarTope50Horas(entity.getDocente(), horasOtrasDesignaciones, horasNuevas);
 
+        String anterior = resumenDesignacion(entity);
+
         entity.setCargoDocente(cargo);
         entity.setDedicacionDocente(dedicacion);
         entity.setTipoDesignacion(tipoDesig);
@@ -251,18 +360,133 @@ public class SolicitudDesignacionService {
         SolicitudDocenteDesignacionJpaEntity saved = designacionRepository.save(entity);
         solicitud.setActualizadoEn(Instant.now());
 
+        registrarCambio(
+                solicitud,
+                saved.getId(),
+                TipoEventoSolicitudDesignacion.MODIFICACION_DESIGNACION,
+                "cargo_dedicacion_tipo",
+                anterior,
+                resumenDesignacion(saved),
+                trimToNull(req.motivoCambio())
+        );
+
         int totalDocentePeriodo = horasOtrasDesignaciones + horasNuevas;
         List<SolicitudAsignacionCurricularJpaEntity> asignaciones =
                 asignacionRepository.findByDesignacionIdOrderByCreadoEnAsc(saved.getId());
         return toDesignacionDto(saved, asignaciones, totalDocentePeriodo);
     }
 
-    public void eliminarDesignacion(UUID solicitudId, UUID designacionId) {
+    public DesignacionDocenteItemDto excluirDesignacion(
+            UUID solicitudId,
+            UUID designacionId,
+            MotivoCambioRequest req
+    ) {
         SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
         validarEscrituraSobreSolicitud(solicitud);
         SolicitudDocenteDesignacionJpaEntity entity = obtenerDesignacionEnSolicitud(solicitudId, designacionId);
+        if (entity.getEstadoItem() == EstadoItemDesignacion.EXCLUIDO) {
+            throw new DomainValidationException("La designación ya se encuentra excluida.");
+        }
+        String motivo = req != null ? req.motivo() : null;
+        exigirMotivoNoVacio(motivo, "excluir una designación de la solicitud (RF07.6 / RF08)");
+
+        EstadoItemDesignacion estadoPrevio = entity.getEstadoItem();
+        entity.setEstadoItem(EstadoItemDesignacion.EXCLUIDO);
+        entity.setActualizadoEn(Instant.now());
+
+        SolicitudDocenteDesignacionJpaEntity saved = designacionRepository.save(entity);
+        solicitud.setActualizadoEn(Instant.now());
+
+        registrarCambio(
+                solicitud,
+                saved.getId(),
+                TipoEventoSolicitudDesignacion.EXCLUSION_DESIGNACION,
+                "estadoItem",
+                estadoPrevio.name() + " (" + resumenDesignacion(saved) + ")",
+                EstadoItemDesignacion.EXCLUIDO.name(),
+                motivo.trim()
+        );
+
+        int totalDocentePeriodo = sumarHorasActivasDocenteEnPeriodo(
+                saved.getDocente().getId(), solicitud.getPeriodoAcademico().getId(), saved.getId());
+        List<SolicitudAsignacionCurricularJpaEntity> asignaciones =
+                asignacionRepository.findByDesignacionIdOrderByCreadoEnAsc(saved.getId());
+        return toDesignacionDto(saved, asignaciones, totalDocentePeriodo);
+    }
+
+    public DesignacionDocenteItemDto reactivarDesignacion(
+            UUID solicitudId,
+            UUID designacionId,
+            MotivoCambioRequest req
+    ) {
+        SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
+        validarEscrituraSobreSolicitud(solicitud);
+        SolicitudDocenteDesignacionJpaEntity entity = obtenerDesignacionEnSolicitud(solicitudId, designacionId);
+        if (entity.getEstadoItem() != EstadoItemDesignacion.EXCLUIDO) {
+            throw new DomainValidationException("Solo se pueden reactivar designaciones en estado EXCLUIDO.");
+        }
+
+        validarEntidadesActivas(
+                entity.getDocente(),
+                entity.getCargoDocente(),
+                entity.getDedicacionDocente(),
+                entity.getTipoDesignacion()
+        );
+
+        int horasReactivadas = entity.getHorasDedicacion() != null ? entity.getHorasDedicacion() : 0;
+        int horasOtrasActivas = sumarHorasActivasDocenteEnPeriodo(
+                entity.getDocente().getId(), solicitud.getPeriodoAcademico().getId(), entity.getId());
+        validarTope50Horas(entity.getDocente(), horasOtrasActivas, horasReactivadas);
+
+        EstadoItemDesignacion nuevoEstado = entity.getDesignacionOrigenId() != null
+                ? EstadoItemDesignacion.MODIFICADO
+                : EstadoItemDesignacion.NUEVO;
+        entity.setEstadoItem(nuevoEstado);
+        entity.setActualizadoEn(Instant.now());
+
+        SolicitudDocenteDesignacionJpaEntity saved = designacionRepository.save(entity);
+        solicitud.setActualizadoEn(Instant.now());
+
+        registrarCambio(
+                solicitud,
+                saved.getId(),
+                TipoEventoSolicitudDesignacion.REACTIVACION_DESIGNACION,
+                "estadoItem",
+                EstadoItemDesignacion.EXCLUIDO.name(),
+                nuevoEstado.name() + " (" + resumenDesignacion(saved) + ")",
+                req != null ? trimToNull(req.motivo()) : null
+        );
+
+        int totalDocentePeriodo = horasOtrasActivas + horasReactivadas;
+        List<SolicitudAsignacionCurricularJpaEntity> asignaciones =
+                asignacionRepository.findByDesignacionIdOrderByCreadoEnAsc(saved.getId());
+        return toDesignacionDto(saved, asignaciones, totalDocentePeriodo);
+    }
+
+    public void eliminarDesignacion(UUID solicitudId, UUID designacionId) {
+        eliminarDesignacion(solicitudId, designacionId, null);
+    }
+
+    public void eliminarDesignacion(UUID solicitudId, UUID designacionId, String motivo) {
+        SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
+        validarEscrituraSobreSolicitud(solicitud);
+        SolicitudDocenteDesignacionJpaEntity entity = obtenerDesignacionEnSolicitud(solicitudId, designacionId);
+        if (entity.getDesignacionOrigenId() != null) {
+            throw new DomainValidationException(
+                    "Las designaciones replicadas del período anterior no deben eliminarse físicamente; utilice la opción Excluir para conservar el historial (RF07.6).");
+        }
+        String resumen = resumenDesignacion(entity);
         designacionRepository.delete(entity);
         solicitud.setActualizadoEn(Instant.now());
+        registrarCambio(
+                solicitud,
+                null,
+                TipoEventoSolicitudDesignacion.EXCLUSION_DESIGNACION,
+                "designacion",
+                resumen,
+                "ELIMINADA",
+                trimToNull(motivo)
+        );
     }
 
     public DesignacionDocenteItemDto actualizarDistribucionHoraria(
@@ -276,6 +500,10 @@ public class SolicitudDesignacionService {
         SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
         validarEscrituraSobreSolicitud(solicitud);
         SolicitudDocenteDesignacionJpaEntity entity = obtenerDesignacionEnSolicitud(solicitudId, designacionId);
+        validarItemNoExcluido(entity);
+        if (requiereMotivoAuditoria(solicitud, entity)) {
+            exigirMotivoNoVacio(req.motivoCambio(), "modificar la distribución horaria de un cargo replicado o en solicitud observada");
+        }
 
         int clases = validarHoraNoNegativa(req.horasClases(), "Desarrollo de clases");
         int inv = validarHoraNoNegativa(req.horasInvestigacion(), "Investigación");
@@ -292,6 +520,8 @@ public class SolicitudDesignacionService {
                             + topeDedicacion + " hs semanales) (RN06).");
         }
 
+        String anterior = resumenDistribucion(entity);
+
         entity.setHorasClases(clases);
         entity.setHorasInvestigacion(inv);
         entity.setHorasExtension(ext);
@@ -305,6 +535,16 @@ public class SolicitudDesignacionService {
 
         SolicitudDocenteDesignacionJpaEntity saved = designacionRepository.save(entity);
         solicitud.setActualizadoEn(Instant.now());
+
+        registrarCambio(
+                solicitud,
+                saved.getId(),
+                TipoEventoSolicitudDesignacion.MODIFICACION_DISTRIBUCION,
+                "distribucion_horaria",
+                anterior,
+                resumenDistribucion(saved),
+                trimToNull(req.motivoCambio())
+        );
 
         int totalDocentePeriodo = sumarHorasActivasDocenteEnPeriodo(
                 saved.getDocente().getId(), solicitud.getPeriodoAcademico().getId(), null);
@@ -331,6 +571,10 @@ public class SolicitudDesignacionService {
         SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
         validarEscrituraSobreSolicitud(solicitud);
         SolicitudDocenteDesignacionJpaEntity designacion = obtenerDesignacionEnSolicitud(solicitudId, designacionId);
+        validarItemNoExcluido(designacion);
+        if (requiereMotivoAuditoria(solicitud, designacion)) {
+            exigirMotivoNoVacio(req.motivoCambio(), "agregar asignaturas a un cargo replicado o en solicitud observada");
+        }
 
         CarreraJpaEntity carrera = carreraRepository.findById(req.carreraId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró la carrera ID: " + req.carreraId()));
@@ -372,25 +616,430 @@ public class SolicitudDesignacionService {
         entity.setCreadoEn(Instant.now());
 
         SolicitudAsignacionCurricularJpaEntity saved = asignacionRepository.save(entity);
+        if (designacion.getEstadoItem() == EstadoItemDesignacion.REPLICADO) {
+            designacion.setEstadoItem(EstadoItemDesignacion.MODIFICADO);
+            designacion.setActualizadoEn(Instant.now());
+            designacionRepository.save(designacion);
+        }
         solicitud.setActualizadoEn(Instant.now());
+
+        registrarCambio(
+                solicitud,
+                designacion.getId(),
+                TipoEventoSolicitudDesignacion.ALTA_ASIGNACION,
+                "asignacion_curricular",
+                null,
+                actividad.getNombre() + " [" + modalidad + "]",
+                trimToNull(req.motivoCambio())
+        );
+
         return toAsignacionDto(saved);
     }
 
     public void eliminarAsignacionCurricular(UUID solicitudId, UUID designacionId, UUID asignacionId) {
+        eliminarAsignacionCurricular(solicitudId, designacionId, asignacionId, null);
+    }
+
+    public void eliminarAsignacionCurricular(
+            UUID solicitudId,
+            UUID designacionId,
+            UUID asignacionId,
+            String motivo
+    ) {
         SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
         validarEscrituraSobreSolicitud(solicitud);
         SolicitudDocenteDesignacionJpaEntity designacion = obtenerDesignacionEnSolicitud(solicitudId, designacionId);
+        validarItemNoExcluido(designacion);
+        if (requiereMotivoAuditoria(solicitud, designacion)) {
+            exigirMotivoNoVacio(motivo, "quitar una asignatura de un cargo replicado o en solicitud observada");
+        }
 
         SolicitudAsignacionCurricularJpaEntity asig = asignacionRepository.findById(asignacionId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró la asignación curricular ID: " + asignacionId));
         if (!asig.getDesignacion().getId().equals(designacion.getId())) {
             throw new ResourceNotFoundException("La asignación curricular no pertenece a la designación indicada.");
         }
+        String anterior = asig.getActividadCurricular().getNombre() + " [" + asig.getModalidadParticipacion() + "]";
         asignacionRepository.delete(asig);
+        if (designacion.getEstadoItem() == EstadoItemDesignacion.REPLICADO) {
+            designacion.setEstadoItem(EstadoItemDesignacion.MODIFICADO);
+            designacion.setActualizadoEn(Instant.now());
+            designacionRepository.save(designacion);
+        }
         solicitud.setActualizadoEn(Instant.now());
+
+        registrarCambio(
+                solicitud,
+                designacion.getId(),
+                TipoEventoSolicitudDesignacion.BAJA_ASIGNACION,
+                "asignacion_curricular",
+                anterior,
+                null,
+                trimToNull(motivo)
+        );
     }
 
-    // --- Helpers de Reglas de Negocio y Seguridad ---
+    // --- Flujo Formal con Secretaría de Gestión Académica (SGA — RF09 / RN15) ---
+
+    public SolicitudDesignacionDetalleDto presentarSolicitudASga(UUID solicitudId) {
+        SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
+        validarEscrituraSobreSolicitud(solicitud);
+
+        long activas = designacionRepository.countBySolicitudIdAndEstadoItemNot(
+                solicitud.getId(), EstadoItemDesignacion.EXCLUIDO);
+        if (activas <= 0) {
+            throw new DomainValidationException(
+                    "No se puede presentar la solicitud a Secretaría de Gestión Académica porque no contiene designaciones docentes activas.");
+        }
+
+        EstadoSolicitudDesignacion estadoPrevio = solicitud.getEstado();
+        Instant ahora = Instant.now();
+        solicitud.setEstado(EstadoSolicitudDesignacion.PRESENTADA_SGA);
+        solicitud.setFechaEmision(ahora);
+        solicitud.setEmitidaPorUsuarioId(obtenerUsuarioIdActual());
+        solicitud.setActualizadoEn(ahora);
+
+        SolicitudDesignacionJpaEntity saved = solicitudRepository.save(solicitud);
+        registrarCambio(
+                saved,
+                null,
+                TipoEventoSolicitudDesignacion.PRESENTACION_SGA,
+                "estado",
+                estadoPrevio.name(),
+                EstadoSolicitudDesignacion.PRESENTADA_SGA.name(),
+                "Presentada por Departamento a SGA"
+        );
+        return toDetalleDto(saved);
+    }
+
+    public SolicitudDesignacionDetalleDto aprobarSolicitudSga(UUID solicitudId, RevisionSgaRequest req) {
+        exigirRolSgaOAdmin();
+        SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
+        if (solicitud.getEstado() != EstadoSolicitudDesignacion.PRESENTADA_SGA) {
+            throw new DomainValidationException(
+                    "Solo se pueden aprobar solicitudes en estado PRESENTADA_SGA (estado actual: " + solicitud.getEstado() + ").");
+        }
+
+        Instant ahora = Instant.now();
+        String obs = req != null ? trimToNull(req.observacionesSga()) : null;
+        solicitud.setEstado(EstadoSolicitudDesignacion.APROBADA);
+        solicitud.setObservacionesSga(obs);
+        solicitud.setRevisadaPorUsuarioId(obtenerUsuarioIdActual());
+        solicitud.setFechaRevision(ahora);
+        solicitud.setActualizadoEn(ahora);
+
+        SolicitudDesignacionJpaEntity saved = solicitudRepository.save(solicitud);
+        registrarCambio(
+                saved,
+                null,
+                TipoEventoSolicitudDesignacion.APROBACION_SGA,
+                "estado",
+                EstadoSolicitudDesignacion.PRESENTADA_SGA.name(),
+                EstadoSolicitudDesignacion.APROBADA.name(),
+                obs
+        );
+        return toDetalleDto(saved);
+    }
+
+    public SolicitudDesignacionDetalleDto observarSolicitudSga(UUID solicitudId, RevisionSgaRequest req) {
+        exigirRolSgaOAdmin();
+        SolicitudDesignacionJpaEntity solicitud = obtenerSolicitudOCascada(solicitudId);
+        if (solicitud.getEstado() != EstadoSolicitudDesignacion.PRESENTADA_SGA) {
+            throw new DomainValidationException(
+                    "Solo se pueden observar solicitudes en estado PRESENTADA_SGA (estado actual: " + solicitud.getEstado() + ").");
+        }
+        String obs = req != null ? trimToNull(req.observacionesSga()) : null;
+        if (obs == null) {
+            throw new DomainValidationException(
+                    "Debe indicar el motivo u observaciones de Secretaría de Gestión Académica para devolver la solicitud.");
+        }
+
+        Instant ahora = Instant.now();
+        solicitud.setEstado(EstadoSolicitudDesignacion.OBSERVADA);
+        solicitud.setObservacionesSga(obs);
+        solicitud.setRevisadaPorUsuarioId(obtenerUsuarioIdActual());
+        solicitud.setFechaRevision(ahora);
+        solicitud.setActualizadoEn(ahora);
+
+        SolicitudDesignacionJpaEntity saved = solicitudRepository.save(solicitud);
+        registrarCambio(
+                saved,
+                null,
+                TipoEventoSolicitudDesignacion.OBSERVACION_SGA,
+                "estado",
+                EstadoSolicitudDesignacion.PRESENTADA_SGA.name(),
+                EstadoSolicitudDesignacion.OBSERVADA.name(),
+                obs
+        );
+        return toDetalleDto(saved);
+    }
+
+    // --- Motor de Clonación del Período Anterior (RF07 / RN11-RN13) ---
+
+    private SolicitudDesignacionJpaEntity resolverSolicitudOrigenClonacion(
+            DepartamentoAcademicoJpaEntity depto,
+            PeriodoAcademicoJpaEntity periodoDestino,
+            UUID solicitudOrigenExplicitaId
+    ) {
+        if (solicitudOrigenExplicitaId != null) {
+            SolicitudDesignacionJpaEntity explicita = obtenerSolicitudOCascada(solicitudOrigenExplicitaId);
+            if (!explicita.getDepartamentoAcademico().getId().equals(depto.getId())) {
+                throw new DomainValidationException("La solicitud de origen seleccionada pertenece a otro Departamento Académico.");
+            }
+            if (explicita.getPeriodoAcademico().getId().equals(periodoDestino.getId())) {
+                throw new DomainValidationException("La solicitud de origen debe corresponder a un período académico anterior.");
+            }
+            if (explicita.getEstado() != EstadoSolicitudDesignacion.APROBADA
+                    && explicita.getEstado() != EstadoSolicitudDesignacion.PRESENTADA_SGA) {
+                throw new DomainValidationException("Solo se puede clonar desde una solicitud APROBADA o PRESENTADA_SGA.");
+            }
+            return explicita;
+        }
+
+        int anioRef = periodoDestino.getAnio() != null ? periodoDestino.getAnio() : Integer.MAX_VALUE;
+        List<SolicitudDesignacionJpaEntity> aprobadas = solicitudRepository.findCandidatasOrigenClonacion(
+                depto.getId(), periodoDestino.getId(), anioRef, List.of(EstadoSolicitudDesignacion.APROBADA));
+        if (!aprobadas.isEmpty()) {
+            return aprobadas.get(0);
+        }
+        List<SolicitudDesignacionJpaEntity> presentadas = solicitudRepository.findCandidatasOrigenClonacion(
+                depto.getId(), periodoDestino.getId(), anioRef, List.of(EstadoSolicitudDesignacion.PRESENTADA_SGA));
+        return presentadas.isEmpty() ? null : presentadas.get(0);
+    }
+
+    private void ejecutarClonacionDesdeOrigen(
+            SolicitudDesignacionJpaEntity destino,
+            SolicitudDesignacionJpaEntity origen
+    ) {
+        List<SolicitudDocenteDesignacionJpaEntity> itemsOrigen = designacionRepository
+                .findBySolicitudIdOrderByCreadoEnAsc(origen.getId())
+                .stream()
+                .filter(i -> i.getEstadoItem() != EstadoItemDesignacion.EXCLUIDO)
+                .toList();
+
+        List<UUID> idsOrigen = itemsOrigen.stream().map(SolicitudDocenteDesignacionJpaEntity::getId).toList();
+        Map<UUID, List<SolicitudAsignacionCurricularJpaEntity>> asigsOrigenMap = idsOrigen.isEmpty()
+                ? Map.of()
+                : asignacionRepository.findByDesignacionIdInOrderByCreadoEnAsc(idsOrigen).stream()
+                        .collect(Collectors.groupingBy(a -> a.getDesignacion().getId()));
+
+        int designacionesClonadas = 0;
+        int asignacionesClonadas = 0;
+        int asignacionesOmitidasRN09 = 0;
+
+        for (SolicitudDocenteDesignacionJpaEntity itemOrig : itemsOrigen) {
+            CuerpoAcademicoMaestroJpaEntity doc = itemOrig.getDocente();
+            if (Boolean.FALSE.equals(doc.getActivo())) {
+                registrarCambio(
+                        destino,
+                        null,
+                        TipoEventoSolicitudDesignacion.CLONACION_PERIODO_ANTERIOR,
+                        "docente_inactivo_omitido",
+                        doc.getApellido() + ", " + doc.getNombre(),
+                        null,
+                        "Omitido en clonación por encontrarse inactivo en el padrón docente."
+                );
+                continue;
+            }
+
+            int horasItem = itemOrig.getHorasDedicacion() != null ? itemOrig.getHorasDedicacion() : 0;
+            int horasYaEnPeriodo = sumarHorasActivasDocenteEnPeriodo(
+                    doc.getId(), destino.getPeriodoAcademico().getId(), null);
+            if (horasYaEnPeriodo + horasItem > TOPE_HORAS_SEMANALES_DOCENTE) {
+                registrarCambio(
+                        destino,
+                        null,
+                        TipoEventoSolicitudDesignacion.CLONACION_PERIODO_ANTERIOR,
+                        "tope_50hs_omitido",
+                        resumenDesignacion(itemOrig),
+                        null,
+                        "Omitido en clonación porque superaría las 50 hs semanales del docente en el período destino (RN02)."
+                );
+                continue;
+            }
+
+            SolicitudDocenteDesignacionJpaEntity nuevoItem = new SolicitudDocenteDesignacionJpaEntity();
+            nuevoItem.setId(UUID.randomUUID());
+            nuevoItem.setSolicitud(destino);
+            nuevoItem.setDesignacionOrigenId(itemOrig.getId());
+            nuevoItem.setDocente(doc);
+            nuevoItem.setCargoDocente(itemOrig.getCargoDocente());
+            nuevoItem.setDedicacionDocente(itemOrig.getDedicacionDocente());
+            nuevoItem.setTipoDesignacion(itemOrig.getTipoDesignacion());
+            nuevoItem.setHorasDedicacion(horasItem);
+            nuevoItem.setNroDesignacionMapuche(itemOrig.getNroDesignacionMapuche());
+            nuevoItem.setEstadoItem(EstadoItemDesignacion.REPLICADO);
+            nuevoItem.setHorasClases(itemOrig.getHorasClases());
+            nuevoItem.setHorasInvestigacion(itemOrig.getHorasInvestigacion());
+            nuevoItem.setHorasExtension(itemOrig.getHorasExtension());
+            nuevoItem.setHorasGestion(itemOrig.getHorasGestion());
+            nuevoItem.setHorasDireccionTesis(itemOrig.getHorasDireccionTesis());
+            nuevoItem.setHorasOtras(itemOrig.getHorasOtras());
+            nuevoItem.setObservaciones(itemOrig.getObservaciones());
+            nuevoItem.setCreadoEn(Instant.now());
+            nuevoItem.setActualizadoEn(Instant.now());
+
+            SolicitudDocenteDesignacionJpaEntity savedItem = designacionRepository.save(nuevoItem);
+            designacionesClonadas++;
+
+            for (SolicitudAsignacionCurricularJpaEntity asigOrig : asigsOrigenMap.getOrDefault(itemOrig.getId(), List.of())) {
+                ActividadCurricularPlanJpaEntity act = asigOrig.getActividadCurricular();
+                EstadoDictadoActividad estadoAct = act.getEstadoDictado() != null
+                        ? act.getEstadoDictado()
+                        : EstadoDictadoActividad.ACTIVA;
+                ModalidadParticipacionDocente mod = asigOrig.getModalidadParticipacion();
+
+                if (estadoAct.esInactiva()
+                        || (estadoAct == EstadoDictadoActividad.SOLO_EXAMENES_FINALES
+                                && mod == ModalidadParticipacionDocente.DESARROLLO_CLASES)) {
+                    asignacionesOmitidasRN09++;
+                    continue;
+                }
+
+                SolicitudAsignacionCurricularJpaEntity nuevaAsig = new SolicitudAsignacionCurricularJpaEntity();
+                nuevaAsig.setId(UUID.randomUUID());
+                nuevaAsig.setDesignacion(savedItem);
+                nuevaAsig.setCarrera(asigOrig.getCarrera());
+                nuevaAsig.setPlanEstudio(asigOrig.getPlanEstudio());
+                nuevaAsig.setActividadCurricular(act);
+                nuevaAsig.setModalidadParticipacion(mod);
+                nuevaAsig.setHorasAsignadas(asigOrig.getHorasAsignadas());
+                nuevaAsig.setObservaciones(asigOrig.getObservaciones());
+                nuevaAsig.setCreadoEn(Instant.now());
+                asignacionRepository.save(nuevaAsig);
+                asignacionesClonadas++;
+            }
+        }
+
+        registrarCambio(
+                destino,
+                null,
+                TipoEventoSolicitudDesignacion.CLONACION_PERIODO_ANTERIOR,
+                "solicitud_origen_id",
+                origen.getPeriodoAcademico().getDenominacion() + " (" + origen.getEstado() + ")",
+                designacionesClonadas + " designación(es) y " + asignacionesClonadas + " asignatura(s) replicadas"
+                        + (asignacionesOmitidasRN09 > 0 ? " (" + asignacionesOmitidasRN09 + " omitida(s) por RN09)" : ""),
+                "Clonación automática desde período anterior (RF07)"
+        );
+    }
+
+    // --- Helpers de Reglas de Negocio, Auditoría y Seguridad ---
+
+    private static void validarEntidadesActivas(
+            CuerpoAcademicoMaestroJpaEntity docente,
+            CargoDocenteJpaEntity cargo,
+            DedicacionDocenteJpaEntity dedicacion,
+            TipoDesignacionDocenteJpaEntity tipoDesig
+    ) {
+        if (Boolean.FALSE.equals(docente.getActivo())) {
+            throw new DomainValidationException("El docente seleccionado se encuentra inactivo en el padrón.");
+        }
+        if (!cargo.isActivo()) {
+            throw new DomainValidationException("El cargo docente '" + cargo.getNombre() + "' se encuentra inactivo.");
+        }
+        if (!dedicacion.isActivo()) {
+            throw new DomainValidationException("La dedicación '" + dedicacion.getNombre() + "' se encuentra inactiva.");
+        }
+        if (!tipoDesig.isActivo()) {
+            throw new DomainValidationException("El tipo de designación '" + tipoDesig.getNombre() + "' se encuentra inactivo.");
+        }
+    }
+
+    private static void validarItemNoExcluido(SolicitudDocenteDesignacionJpaEntity entity) {
+        if (entity.getEstadoItem() == EstadoItemDesignacion.EXCLUIDO) {
+            throw new DomainValidationException(
+                    "La designación se encuentra EXCLUIDA. Debe reactivarla antes de modificar sus datos.");
+        }
+    }
+
+    private static boolean requiereMotivoAuditoria(
+            SolicitudDesignacionJpaEntity solicitud,
+            SolicitudDocenteDesignacionJpaEntity entity
+    ) {
+        return entity.getDesignacionOrigenId() != null
+                || entity.getEstadoItem() == EstadoItemDesignacion.REPLICADO
+                || solicitud.getEstado() == EstadoSolicitudDesignacion.OBSERVADA;
+    }
+
+    private static void exigirMotivoNoVacio(String motivo, String accion) {
+        if (motivo == null || motivo.isBlank()) {
+            throw new DomainValidationException("Debe indicar el motivo del cambio para " + accion + " (RF08).");
+        }
+    }
+
+    private void exigirRolSgaOAdmin() {
+        if (authenticatedUserProvider == null) {
+            return;
+        }
+        Optional<User> userOpt = authenticatedUserProvider.getAuthenticatedUser();
+        if (userOpt.isEmpty()) {
+            return;
+        }
+        Set<String> codes = userOpt.get().getRoles().stream().map(Role::getCode).collect(Collectors.toSet());
+        if (!codes.contains(CodigosRol.AEA) && !codes.contains(CodigosRol.SECRETARIA_ACADEMICA)) {
+            throw new DomainValidationException(
+                    "Solo Secretaría de Gestión Académica o Administración pueden aprobar u observar solicitudes (RNF01).");
+        }
+    }
+
+    private UUID obtenerUsuarioIdActual() {
+        if (authenticatedUserProvider == null) {
+            return null;
+        }
+        return authenticatedUserProvider.getAuthenticatedUser().map(User::getId).orElse(null);
+    }
+
+    private String obtenerUsuarioNombreActual() {
+        if (authenticatedUserProvider == null) {
+            return "Sistema";
+        }
+        return authenticatedUserProvider.getAuthenticatedUser()
+                .map(u -> u.getUsername() != null && !u.getUsername().isBlank() ? u.getUsername() : u.getEmail())
+                .orElse("Sistema");
+    }
+
+    private void registrarCambio(
+            SolicitudDesignacionJpaEntity solicitud,
+            UUID designacionId,
+            TipoEventoSolicitudDesignacion tipoEvento,
+            String campo,
+            String valorAnterior,
+            String valorNuevo,
+            String motivo
+    ) {
+        if (cambioRepository == null) {
+            return;
+        }
+        SolicitudDesignacionCambioJpaEntity c = new SolicitudDesignacionCambioJpaEntity();
+        c.setId(UUID.randomUUID());
+        c.setSolicitud(solicitud);
+        c.setDesignacionId(designacionId);
+        c.setTipoEvento(tipoEvento);
+        c.setCampoModificado(campo);
+        c.setValorAnterior(valorAnterior);
+        c.setValorNuevo(valorNuevo);
+        c.setMotivo(motivo);
+        c.setUsuarioId(obtenerUsuarioIdActual());
+        c.setUsuarioNombre(obtenerUsuarioNombreActual());
+        c.setFechaCambio(Instant.now());
+        cambioRepository.save(c);
+    }
+
+    private static String resumenDesignacion(SolicitudDocenteDesignacionJpaEntity d) {
+        return d.getDocente().getApellido() + ", " + d.getDocente().getNombre()
+                + " — " + d.getCargoDocente().getNombre()
+                + " (" + d.getDedicacionDocente().getNombre() + " " + d.getHorasDedicacion() + " hs, "
+                + d.getTipoDesignacion().getNombre() + ")";
+    }
+
+    private static String resumenDistribucion(SolicitudDocenteDesignacionJpaEntity d) {
+        return "Clases=" + d.getHorasClases()
+                + "h, Inv=" + d.getHorasInvestigacion()
+                + "h, Ext=" + d.getHorasExtension()
+                + "h, Gest=" + d.getHorasGestion()
+                + "h, Tesis=" + d.getHorasDireccionTesis()
+                + "h, Otras=" + d.getHorasOtras() + "h";
+    }
 
     private void validarCoherenciaRN09(
             ActividadCurricularPlanJpaEntity actividad,
@@ -602,6 +1251,28 @@ public class SolicitudDesignacionService {
 
     // --- Mappers a DTOs inmutables dentro de @Transactional (OSIV=false safe) ---
 
+    private List<CambioSolicitudDesignacionDto> obtenerHistorialDtos(UUID solicitudId) {
+        if (cambioRepository == null) {
+            return List.of();
+        }
+        return cambioRepository.findBySolicitudIdOrderByFechaCambioDesc(solicitudId)
+                .stream()
+                .map(c -> new CambioSolicitudDesignacionDto(
+                        c.getId(),
+                        c.getSolicitud().getId(),
+                        c.getDesignacionId(),
+                        c.getTipoEvento(),
+                        c.getCampoModificado(),
+                        c.getValorAnterior(),
+                        c.getValorNuevo(),
+                        c.getMotivo(),
+                        c.getUsuarioId(),
+                        c.getUsuarioNombre(),
+                        c.getFechaCambio()
+                ))
+                .toList();
+    }
+
     private SolicitudDesignacionResumenDto toResumenDto(SolicitudDesignacionJpaEntity s) {
         List<SolicitudDocenteDesignacionJpaEntity> items =
                 designacionRepository.findBySolicitudIdOrderByCreadoEnAsc(s.getId());
@@ -665,6 +1336,7 @@ public class SolicitudDesignacionService {
 
         return new SolicitudDesignacionDetalleDto(
                 s.getId(),
+                s.getSolicitudOrigenId(),
                 depto.getId(),
                 depto.getCodigo(),
                 depto.getDenominacion(),
@@ -680,7 +1352,8 @@ public class SolicitudDesignacionService {
                 s.getFechaEmision(),
                 s.getCreadoEn(),
                 s.getActualizadoEn(),
-                designacionDtos
+                designacionDtos,
+                obtenerHistorialDtos(s.getId())
         );
     }
 
@@ -702,6 +1375,7 @@ public class SolicitudDesignacionService {
         return new DesignacionDocenteItemDto(
                 d.getId(),
                 d.getSolicitud().getId(),
+                d.getDesignacionOrigenId(),
                 doc.getId(),
                 doc.getDni(),
                 doc.getLegajo(),

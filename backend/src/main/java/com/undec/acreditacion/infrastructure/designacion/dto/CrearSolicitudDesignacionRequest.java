@@ -8,5 +8,16 @@ public record CrearSolicitudDesignacionRequest(
         UUID departamentoAcademicoId,
         UUID periodoAcademicoId,
         TipoSolicitudDesignacion tipoSolicitud,
-        String observacionesDepartamento
-) {}
+        String observacionesDepartamento,
+        Boolean clonarPeriodoAnterior,
+        UUID solicitudOrigenId
+) {
+    public CrearSolicitudDesignacionRequest(
+            UUID departamentoAcademicoId,
+            UUID periodoAcademicoId,
+            TipoSolicitudDesignacion tipoSolicitud,
+            String observacionesDepartamento
+    ) {
+        this(departamentoAcademicoId, periodoAcademicoId, tipoSolicitud, observacionesDepartamento, false, null);
+    }
+}

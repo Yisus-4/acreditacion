@@ -5,6 +5,33 @@ export type TipoSolicitudDesignacion = 'ANUAL' | 'EXTRAORDINARIA';
 export type EstadoSolicitudDesignacion = 'BORRADOR' | 'PRESENTADA_SGA' | 'APROBADA' | 'OBSERVADA';
 export type EstadoItemDesignacion = 'NUEVO' | 'REPLICADO' | 'MODIFICADO' | 'EXCLUIDO';
 export type ModalidadParticipacionDocente = 'DESARROLLO_CLASES' | 'EVALUACION_FINALES';
+export type TipoEventoSolicitudDesignacion =
+  | 'CREACION'
+  | 'CLONACION_PERIODO_ANTERIOR'
+  | 'ALTA_DESIGNACION'
+  | 'MODIFICACION_DESIGNACION'
+  | 'MODIFICACION_DISTRIBUCION'
+  | 'EXCLUSION_DESIGNACION'
+  | 'REACTIVACION_DESIGNACION'
+  | 'ALTA_ASIGNACION'
+  | 'BAJA_ASIGNACION'
+  | 'PRESENTACION_SGA'
+  | 'APROBACION_SGA'
+  | 'OBSERVACION_SGA';
+
+export interface CambioSolicitudDesignacion {
+  id: string;
+  solicitudId: string;
+  designacionId: string | null;
+  tipoEvento: TipoEventoSolicitudDesignacion;
+  campoModificado: string | null;
+  valorAnterior: string | null;
+  valorNuevo: string | null;
+  motivo: string | null;
+  usuarioId: string | null;
+  usuarioNombre: string | null;
+  fechaCambio: string;
+}
 
 export interface SolicitudDesignacionResumen {
   id: string;
@@ -48,6 +75,7 @@ export interface AsignacionCurricularPeriodo {
 export interface DesignacionDocenteItem {
   id: string;
   solicitudId: string;
+  designacionOrigenId: string | null;
   docenteId: string;
   docenteDni: string;
   docenteLegajo: string | null;
@@ -81,6 +109,7 @@ export interface DesignacionDocenteItem {
 
 export interface SolicitudDesignacionDetalle {
   id: string;
+  solicitudOrigenId: string | null;
   departamentoAcademicoId: string;
   departamentoCodigo: string;
   departamentoDenominacion: string;
@@ -97,6 +126,7 @@ export interface SolicitudDesignacionDetalle {
   creadoEn: string;
   actualizadoEn: string;
   designaciones: DesignacionDocenteItem[];
+  historialCambios: CambioSolicitudDesignacion[];
 }
 
 export interface CrearSolicitudDesignacionRequest {
@@ -104,6 +134,8 @@ export interface CrearSolicitudDesignacionRequest {
   periodoAcademicoId: string;
   tipoSolicitud: TipoSolicitudDesignacion;
   observacionesDepartamento?: string | null;
+  clonarPeriodoAnterior?: boolean;
+  solicitudOrigenId?: string | null;
 }
 
 export interface GuardarDesignacionDocenteRequest {
@@ -113,6 +145,7 @@ export interface GuardarDesignacionDocenteRequest {
   tipoDesignacionId: string;
   nroDesignacionMapuche?: string | null;
   observaciones?: string | null;
+  motivoCambio?: string | null;
 }
 
 export interface GuardarDistribucionHorariaRequest {
@@ -122,6 +155,7 @@ export interface GuardarDistribucionHorariaRequest {
   horasGestion: number;
   horasDireccionTesis: number;
   horasOtras: number;
+  motivoCambio?: string | null;
 }
 
 export interface AgregarAsignacionCurricularRequest {
@@ -131,4 +165,13 @@ export interface AgregarAsignacionCurricularRequest {
   modalidadParticipacion: ModalidadParticipacionDocente;
   horasAsignadas?: number | null;
   observaciones?: string | null;
+  motivoCambio?: string | null;
+}
+
+export interface MotivoCambioRequest {
+  motivo?: string | null;
+}
+
+export interface RevisionSgaRequest {
+  observacionesSga?: string | null;
 }

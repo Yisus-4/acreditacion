@@ -46,6 +46,9 @@ public class SolicitudDocenteDesignacionJpaEntity {
     @Column(name = "estado_item", nullable = false, length = 25)
     private EstadoItemDesignacion estadoItem = EstadoItemDesignacion.NUEVO;
 
+    @Column(name = "designacion_origen_id")
+    private UUID designacionOrigenId;
+
     @Column(name = "horas_clases", nullable = false)
     private Integer horasClases = 0;
 
@@ -111,6 +114,9 @@ public class SolicitudDocenteDesignacionJpaEntity {
 
     public EstadoItemDesignacion getEstadoItem() { return estadoItem; }
     public void setEstadoItem(EstadoItemDesignacion estadoItem) { this.estadoItem = estadoItem; }
+
+    public UUID getDesignacionOrigenId() { return designacionOrigenId; }
+    public void setDesignacionOrigenId(UUID designacionOrigenId) { this.designacionOrigenId = designacionOrigenId; }
 
     public Integer getHorasClases() { return horasClases; }
     public void setHorasClases(Integer horasClases) { this.horasClases = horasClases; }

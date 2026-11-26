@@ -6,5 +6,17 @@ public record GuardarDistribucionHorariaRequest(
         Integer horasExtension,
         Integer horasGestion,
         Integer horasDireccionTesis,
-        Integer horasOtras
-) {}
+        Integer horasOtras,
+        String motivoCambio
+) {
+    public GuardarDistribucionHorariaRequest(
+            Integer horasClases,
+            Integer horasInvestigacion,
+            Integer horasExtension,
+            Integer horasGestion,
+            Integer horasDireccionTesis,
+            Integer horasOtras
+    ) {
+        this(horasClases, horasInvestigacion, horasExtension, horasGestion, horasDireccionTesis, horasOtras, null);
+    }
+}

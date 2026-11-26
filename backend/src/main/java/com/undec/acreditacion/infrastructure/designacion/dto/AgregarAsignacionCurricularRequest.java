@@ -10,5 +10,17 @@ public record AgregarAsignacionCurricularRequest(
         UUID actividadCurricularId,
         ModalidadParticipacionDocente modalidadParticipacion,
         Integer horasAsignadas,
-        String observaciones
-) {}
+        String observaciones,
+        String motivoCambio
+) {
+    public AgregarAsignacionCurricularRequest(
+            UUID carreraId,
+            UUID planEstudioId,
+            UUID actividadCurricularId,
+            ModalidadParticipacionDocente modalidadParticipacion,
+            Integer horasAsignadas,
+            String observaciones
+    ) {
+        this(carreraId, planEstudioId, actividadCurricularId, modalidadParticipacion, horasAsignadas, observaciones, null);
+    }
+}
