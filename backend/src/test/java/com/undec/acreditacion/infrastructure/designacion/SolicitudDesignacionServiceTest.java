@@ -320,6 +320,23 @@ class SolicitudDesignacionServiceTest {
         assertThrows(DomainValidationException.class, () -> service.agregarDesignacion(
                 solCyTPresentada.getId(),
                 new GuardarDesignacionDocenteRequest(docente.getId(), cargoAdjunto.getId(), dedSimple10.getId(), tipoOrdinario.getId(), null, null)));
+
+        // Director de CyT no puede designar un docente de Sociales en su propia solicitud (RNF01)
+        SolicitudDesignacionJpaEntity solCyTBorrador = solicitudBorrador(deptoCyT);
+        CuerpoAcademicoMaestroJpaEntity docenteSociales = new CuerpoAcademicoMaestroJpaEntity();
+        docenteSociales.setId(UUID.randomUUID());
+        docenteSociales.setDni("30999888");
+        docenteSociales.setApellido("Pérez");
+        docenteSociales.setNombre("Luis");
+        docenteSociales.setDepartamentoAcademico(deptoSociales);
+
+        when(solicitudRepository.findById(solCyTBorrador.getId())).thenReturn(Optional.of(solCyTBorrador));
+        when(docenteRepository.findById(docenteSociales.getId())).thenReturn(Optional.of(docenteSociales));
+
+        DomainValidationException exOtroDepto = assertThrows(DomainValidationException.class, () -> service.agregarDesignacion(
+                solCyTBorrador.getId(),
+                new GuardarDesignacionDocenteRequest(docenteSociales.getId(), cargoAdjunto.getId(), dedSimple10.getId(), tipoOrdinario.getId(), null, null)));
+        assertTrue(exOtroDepto.getMessage().contains("Departamento Académico"));
     }
 
     private SolicitudDesignacionJpaEntity solicitudBorrador(DepartamentoAcademicoJpaEntity depto) {

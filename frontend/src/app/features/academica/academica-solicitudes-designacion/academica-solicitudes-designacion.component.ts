@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Auth } from '../../../core/auth/auth';
 import {
@@ -393,6 +393,9 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
               <div class="preview-cap" [class.preview-cap--over]="horasProyectadasDocente() > 50">
                 Carga proyectada en el período (RN02):
                 <strong>{{ horasProyectadasDocente() }} / 50 hs semanales</strong>
+                @if (!docenteYaEnSolicitudActual()) {
+                  <span> (referencia local; el servidor valida el acumulado global del período).</span>
+                }
                 @if (horasProyectadasDocente() > 50) {
                   <span> — Supera el tope institucional de 50 hs.</span>
                 }
@@ -452,16 +455,20 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
 
             <div
               class="preview-cap"
-              [class.preview-cap--over]="sumaDistribucionModal() > target.horasDedicacion"
-              [class.preview-cap--warn]="sumaDistribucionModal() < target.horasDedicacion"
+              [class.preview-cap--over]="tieneNegativosDistribucion() || sumaDistribucionModal() > target.horasDedicacion"
+              [class.preview-cap--warn]="!tieneNegativosDistribucion() && sumaDistribucionModal() < target.horasDedicacion"
             >
-              Total distribuido: <strong>{{ sumaDistribucionModal() }} / {{ target.horasDedicacion }} hs</strong>
-              @if (sumaDistribucionModal() > target.horasDedicacion) {
-                <span> — Excede la dedicación de {{ target.horasDedicacion }} hs (bloqueado por RN06).</span>
-              } @else if (sumaDistribucionModal() < target.horasDedicacion) {
-                <span> — Quedan {{ target.horasDedicacion - sumaDistribucionModal() }} hs sin distribuir (alerta RF04.5).</span>
+              @if (tieneNegativosDistribucion()) {
+                <span>Las horas por actividad no pueden ser negativas.</span>
               } @else {
-                <span> — Distribución completa.</span>
+                Total distribuido: <strong>{{ sumaDistribucionModal() }} / {{ target.horasDedicacion }} hs</strong>
+                @if (sumaDistribucionModal() > target.horasDedicacion) {
+                  <span> — Excede la dedicación de {{ target.horasDedicacion }} hs (bloqueado por RN06).</span>
+                } @else if (sumaDistribucionModal() < target.horasDedicacion) {
+                  <span> — Quedan {{ target.horasDedicacion - sumaDistribucionModal() }} hs sin distribuir (alerta RF04.5).</span>
+                } @else {
+                  <span> — Distribución completa.</span>
+                }
               }
             </div>
 
@@ -470,7 +477,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
               <button
                 type="button"
                 class="btn-pri"
-                [disabled]="guardando() || sumaDistribucionModal() > target.horasDedicacion"
+                [disabled]="guardando() || tieneNegativosDistribucion() || sumaDistribucionModal() > target.horasDedicacion"
                 (click)="guardarDistribucion(target)"
               >
                 {{ guardando() ? 'Guardando...' : 'Guardar Distribución' }}
@@ -763,13 +770,15 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
     observaciones: '',
   };
 
+  private readonly session = toSignal(this.auth.currentSession$, { initialValue: this.auth.currentSession });
+
   readonly canManage = computed(() => {
-    const roles = this.auth.currentSession?.user?.roleCodes ?? [];
+    const roles = this.session()?.user?.roleCodes ?? [];
     return roles.includes('AEA') || roles.includes('SECRETARIA_ACADEMICA') || roles.includes('DIRECTOR_DEPARTAMENTO');
   });
 
   readonly esSoloDirectorDepto = computed(() => {
-    const roles = this.auth.currentSession?.user?.roleCodes ?? [];
+    const roles = this.session()?.user?.roleCodes ?? [];
     const institucional =
       roles.includes('AEA') ||
       roles.includes('SECRETARIA_ACADEMICA') ||
@@ -902,6 +911,13 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
           this.guardando.set(false);
           this.modalNuevaSolicitud.set(false);
           this.solicitudSeleccionada.set(det);
+          if (this.filtroPeriodoId() && this.filtroPeriodoId() !== det.periodoAcademicoId) {
+            this.filtroPeriodoId.set(det.periodoAcademicoId);
+          }
+          if (this.filtroDepartamentoId() && this.filtroDepartamentoId() !== det.departamentoAcademicoId) {
+            this.filtroDepartamentoId.set(det.departamentoAcademicoId);
+          }
+          this.errorMessage.set(null);
           this.successMessage.set('Solicitud de designación creada en estado BORRADOR.');
           this.cargarSolicitudes();
         },
@@ -935,6 +951,11 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
       };
     }
     this.modalDesignacion.set(true);
+  }
+
+  docenteYaEnSolicitudActual(): boolean {
+    const detalle = this.solicitudSeleccionada();
+    return !!detalle?.designaciones.some((d) => d.docenteId === this.desigForm.docenteId);
   }
 
   horasProyectadasDocente(): number {
@@ -1017,6 +1038,17 @@ export class AcademicaSolicitudesDesignacionComponent implements OnInit {
       horasOtras: item.horasOtras ?? 0,
     };
     this.modalDistribucion.set(item);
+  }
+
+  tieneNegativosDistribucion(): boolean {
+    return (
+      Number(this.distForm.horasClases) < 0 ||
+      Number(this.distForm.horasInvestigacion) < 0 ||
+      Number(this.distForm.horasExtension) < 0 ||
+      Number(this.distForm.horasGestion) < 0 ||
+      Number(this.distForm.horasDireccionTesis) < 0 ||
+      Number(this.distForm.horasOtras) < 0
+    );
   }
 
   sumaDistribucionModal(): number {

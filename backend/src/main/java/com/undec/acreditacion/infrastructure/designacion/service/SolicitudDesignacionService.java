@@ -160,6 +160,8 @@ public class SolicitudDesignacionService {
 
         CuerpoAcademicoMaestroJpaEntity docente = docenteRepository.findById(req.docenteId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el docente ID: " + req.docenteId()));
+        validarDocenteEnDepartamentoSolicitud(docente, solicitud);
+
         CargoDocenteJpaEntity cargo = cargoRepository.findById(req.cargoDocenteId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el cargo docente ID: " + req.cargoDocenteId()));
         DedicacionDocenteJpaEntity dedicacion = dedicacionRepository.findById(req.dedicacionDocenteId())
@@ -168,6 +170,9 @@ public class SolicitudDesignacionService {
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el tipo de designación ID: " + req.tipoDesignacionId()));
 
         int horasNuevas = dedicacion.getHorasSemanales() != null ? dedicacion.getHorasSemanales() : 0;
+        if (horasNuevas <= 0) {
+            throw new DomainValidationException("La dedicación seleccionada debe tener una carga horaria mayor a 0 hs semanales.");
+        }
         int horasPreviasPeriodo = sumarHorasActivasDocenteEnPeriodo(
                 docente.getId(), solicitud.getPeriodoAcademico().getId(), null);
         validarTope50Horas(docente, horasPreviasPeriodo, horasNuevas);
@@ -219,6 +224,9 @@ public class SolicitudDesignacionService {
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el tipo de designación ID: " + req.tipoDesignacionId()));
 
         int horasNuevas = dedicacion.getHorasSemanales() != null ? dedicacion.getHorasSemanales() : 0;
+        if (horasNuevas <= 0) {
+            throw new DomainValidationException("La dedicación seleccionada debe tener una carga horaria mayor a 0 hs semanales.");
+        }
         if (entity.totalHorasDistribuidas() > horasNuevas) {
             throw new DomainValidationException(
                     "No se puede reducir la dedicación a " + horasNuevas + " hs semanales porque ya hay "
@@ -449,6 +457,32 @@ public class SolicitudDesignacionService {
         return entity;
     }
 
+    private void validarDocenteEnDepartamentoSolicitud(
+            CuerpoAcademicoMaestroJpaEntity docente,
+            SolicitudDesignacionJpaEntity solicitud
+    ) {
+        if (authenticatedUserProvider == null) {
+            return;
+        }
+        Optional<User> userOpt = authenticatedUserProvider.getAuthenticatedUser();
+        if (userOpt.isEmpty()) {
+            return;
+        }
+        User user = userOpt.get();
+        Set<String> codes = user.getRoles().stream().map(Role::getCode).collect(Collectors.toSet());
+        boolean esAdminOSga = codes.contains(CodigosRol.AEA) || codes.contains(CodigosRol.SECRETARIA_ACADEMICA);
+        if (!esAdminOSga && codes.contains(CodigosRol.DIRECTOR_DEPARTAMENTO)) {
+            UUID deptoDocente = docente.getDepartamentoAcademico() != null
+                    ? docente.getDepartamentoAcademico().getId()
+                    : null;
+            UUID deptoSolicitud = solicitud.getDepartamentoAcademico().getId();
+            if (deptoDocente == null || !deptoDocente.equals(deptoSolicitud)) {
+                throw new DomainValidationException(
+                        "Un Director de Departamento solo puede designar docentes pertenecientes a su propio Departamento Académico (RNF01).");
+            }
+        }
+    }
+
     private void validarEscrituraSobreSolicitud(SolicitudDesignacionJpaEntity solicitud) {
         validarAccesoEscrituraDepartamento(solicitud.getDepartamentoAcademico().getId());
         if (!esEditable(solicitud.getEstado())) {
@@ -459,7 +493,7 @@ public class SolicitudDesignacionService {
     }
 
     private static boolean esEditable(EstadoSolicitudDesignacion estado) {
-        return estado == EstadoSolicitudDesignacion.BORRADOR || estado == EstadoSolicitudDesignacion.OBSERVADA;
+        return estado != null && estado.esEditablePorDepartamento();
     }
 
     private UUID resolverDepartamentoLectura(UUID requestedDeptoId) {
