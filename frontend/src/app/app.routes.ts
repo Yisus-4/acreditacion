@@ -166,6 +166,15 @@ export const routes: Routes = [
       ).then((m) => m.AcademicaCuerpoAcademicoComponent),
   },
   {
+    path: 'academica/solicitudes-designacion',
+    title: 'Solicitudes de Designación Docente — Gestión Académica UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/academica/academica-solicitudes-designacion/academica-solicitudes-designacion.component'
+      ).then((m) => m.AcademicaSolicitudesDesignacionComponent),
+  },
+  {
     path: 'admin/convenios',
     title: 'Convenios Institucionales (RG-007) — Sistema de Acreditación UNdeC',
     canActivate: [authGuard],
