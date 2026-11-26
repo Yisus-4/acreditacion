@@ -149,4 +149,28 @@ class UpdateUserServiceTest {
         User result = service.updateUser(command);
         assertEquals(escuelaId, result.getUnidadAcademicaId());
     }
+
+    @Test
+    @DisplayName("Updates departamentoAcademicoId successfully")
+    void updatesDepartamentoAcademicoSuccessfully() {
+        UUID userId = UUID.randomUUID();
+        UUID deptoId = UUID.randomUUID();
+        User existingUser = User.rehydrate(userId, "dir_depto", "depto@undec.edu.ar", "hash", true, false, Set.of());
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateUserCommand command = new UpdateUserCommand(
+                userId,
+                "dir_depto",
+                "depto@undec.edu.ar",
+                List.of(),
+                null,
+                null,
+                deptoId
+        );
+
+        User result = service.updateUser(command);
+        assertEquals(deptoId, result.getDepartamentoAcademicoId());
+    }
 }

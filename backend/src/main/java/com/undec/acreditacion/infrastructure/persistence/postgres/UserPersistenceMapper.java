@@ -30,6 +30,7 @@ public class UserPersistenceMapper {
                 entity.isActive(),
                 entity.isSystemUser(),
                 entity.getUnidadAcademicaId(),
+                entity.getDepartamentoAcademicoId(),
                 roles
         );
     }
@@ -49,6 +50,7 @@ public class UserPersistenceMapper {
                 Instant.now()
         );
         entity.setUnidadAcademicaId(user.getUnidadAcademicaId());
+        entity.setDepartamentoAcademicoId(user.getDepartamentoAcademicoId());
 
         if (user.getRoles() != null) {
             Set<RoleJpaEntity> roleEntities = user.getRoles().stream()

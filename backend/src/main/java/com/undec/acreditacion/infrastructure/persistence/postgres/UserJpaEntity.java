@@ -41,6 +41,9 @@ public class UserJpaEntity {
     @Column(name = "unidad_academica_id")
     private UUID unidadAcademicaId;
 
+    @Column(name = "departamento_academico_id")
+    private UUID departamentoAcademicoId;
+
     @Column(name = "creado_en", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -120,6 +123,14 @@ public class UserJpaEntity {
 
     public void setUnidadAcademicaId(UUID unidadAcademicaId) {
         this.unidadAcademicaId = unidadAcademicaId;
+    }
+
+    public UUID getDepartamentoAcademicoId() {
+        return departamentoAcademicoId;
+    }
+
+    public void setDepartamentoAcademicoId(UUID departamentoAcademicoId) {
+        this.departamentoAcademicoId = departamentoAcademicoId;
     }
 
     public Instant getCreatedAt() {

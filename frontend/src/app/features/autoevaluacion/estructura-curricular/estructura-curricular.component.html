@@ -433,6 +433,11 @@
                 </td>
                 <td>
                   <strong>{{ a.nombre }}</strong>
+                  @if (a.estadoDictado === 'SOLO_EXAMENES_FINALES') {
+                    <span style="margin-left: 6px; padding: 1px 6px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #fffbeb; color: #92400e; border: 1px solid #fde68a;">
+                      Solo Finales
+                    </span>
+                  }
                 </td>
                 <td style="text-align: center;">
                   {{ a.subgrupo }}
@@ -442,6 +447,9 @@
                 </td>
                 <td class="font-bold">
                   {{ a.horasReloj }} hs
+                  @if (a.horasSemanales != null && a.horasSemanales > 0) {
+                    <div style="font-size: 11.5px; font-weight: 400; color: #6b7280;">{{ a.horasSemanales }} hs/sem</div>
+                  }
                 </td>
                 <td class="col-desc">
                   {{ a.correlativas || 'Sin correlatividades previas' }}
@@ -911,13 +919,18 @@
           </div>
         </div>
 
-        <div class="form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+        <div class="form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px;">
           <div class="form-group">
             <label>Horas Reloj Totales *</label>
             <input type="number" formControlName="horasReloj" min="1" />
             @if (formAsignatura.get('horasReloj')?.invalid && formAsignatura.get('horasReloj')?.touched) {
               <span class="error-text" style="color: #dc2626; font-size: 12px;">Debe ser mayor a 0.</span>
             }
+          </div>
+
+          <div class="form-group">
+            <label>Hs Semanales</label>
+            <input type="number" formControlName="horasSemanales" min="0" placeholder="Ej: 6" />
           </div>
 
           <div class="form-group">

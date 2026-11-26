@@ -148,7 +148,7 @@
           <thead>
             <tr>
               <th>Usuario</th>
-              <th>Escuela</th>
+              <th>Escuela / Departamento</th>
               <th>Roles</th>
               <th>Origen</th>
               <th>Estado</th>
@@ -225,7 +225,11 @@
                   <td>
                     @if (user.unidadAcademicaId) {
                       <span class="plain">{{ getNombreUnidadAcademica(user.unidadAcademicaId) }}</span>
-                    } @else {
+                    }
+                    @if (user.departamentoAcademicoId) {
+                      <span class="plain">{{ getNombreDepartamentoAcademico(user.departamentoAcademicoId) }}</span>
+                    }
+                    @if (!user.unidadAcademicaId && !user.departamentoAcademicoId) {
                       <span class="plain text-muted">Ámbito central</span>
                     }
                   </td>
@@ -440,6 +444,20 @@
         </div>
 
         <div class="field">
+          <label for="create-departamento">Departamento Académico</label>
+          <select
+            id="create-departamento"
+            [formControl]="createForm.controls.departamentoAcademicoId"
+          >
+            <option value="">-- Sin Departamento Académico --</option>
+            @for (dep of departamentosAcademicos(); track dep.id) {
+              <option [value]="dep.id">{{ dep.denominacion }} ({{ dep.codigo }})</option>
+            }
+          </select>
+          <small>Requerido para Responsables / Directores de Departamento (RNF01).</small>
+        </div>
+
+        <div class="field">
           <label>Roles asignados</label>
           <div class="roles">
             @for (role of roles(); track role.id) {
@@ -475,6 +493,10 @@
           <div class="row">
             <span>Escuela</span>
             <strong>{{ getSelectedEscuelaName() }}</strong>
+          </div>
+          <div class="row">
+            <span>Departamento Académico</span>
+            <strong>{{ getSelectedDepartamentoName() }}</strong>
           </div>
           <div class="row">
             <span>Roles seleccionados</span>
@@ -788,6 +810,20 @@
             }
           </select>
           <small>Requerido para Directores de Escuela o Carrera.</small>
+        </div>
+
+        <div class="field">
+          <label for="edit-departamento-academico">Departamento Académico</label>
+          <select
+            id="edit-departamento-academico"
+            formControlName="departamentoAcademicoId"
+          >
+            <option value="">-- Sin Departamento Académico --</option>
+            @for (dep of departamentosAcademicos(); track dep.id) {
+              <option [value]="dep.id">{{ dep.denominacion }} ({{ dep.codigo }})</option>
+            }
+          </select>
+          <small>Requerido para Responsables / Directores de Departamento (RNF01).</small>
         </div>
 
         <div class="field">

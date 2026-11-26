@@ -56,6 +56,7 @@ public final class UpdateUserService implements UpdateUserUseCase {
         }
 
         user.assignUnidadAcademica(command.unidadAcademicaId());
+        user.assignDepartamentoAcademico(command.departamentoAcademicoId());
 
         if (command.roleCodes() != null) {
             Set<Role> roles = new LinkedHashSet<>();

@@ -62,7 +62,7 @@ public class SincronizacionBidireccionalPlanService {
         }
 
         if (Boolean.TRUE.equals(planOrigen.getEsMaestro())) {
-            if (asigCreada.getEstadoDictado() == EstadoDictadoActividad.NO_SE_DICTA) {
+            if (asigCreada.getEstadoDictado().esInactiva()) {
                 return;
             }
             propagarNuevaAsignaturaMaestraAClones(planOrigen.getId(), asigCreada, null);
@@ -117,7 +117,7 @@ public class SincronizacionBidireccionalPlanService {
                     copiarCamposAsignatura(asigActualizada, cloneAsig);
                     asignaturaRepository.save(cloneAsig);
                     recalcularHorasPlan(clonePlan);
-                } else if (asigActualizada.getEstadoDictado() != EstadoDictadoActividad.NO_SE_DICTA) {
+                } else if (!asigActualizada.getEstadoDictado().esInactiva()) {
                     Integer maxOrden = asignaturaRepository.findMaxNumeroOrdenByPlanEstudioId(clonePlan.getId());
                     int orden = asigActualizada.getNumeroOrden() != null
                             ? asigActualizada.getNumeroOrden()
@@ -363,6 +363,7 @@ public class SincronizacionBidireccionalPlanService {
         clone.setHorasReloj(origen.getHorasReloj());
         clone.setHorasPresenciales(origen.getHorasPresenciales());
         clone.setHorasNoPresenciales(origen.getHorasNoPresenciales());
+        clone.setHorasSemanales(origen.getHorasSemanales());
         clone.setCorrelativas(origen.getCorrelativas());
         clone.setEsObligatoria(origen.getEsObligatoria());
         clone.setEstadoDictado(origen.getEstadoDictado());
@@ -489,6 +490,7 @@ public class SincronizacionBidireccionalPlanService {
         target.setHorasReloj(source.getHorasReloj());
         target.setHorasPresenciales(source.getHorasPresenciales());
         target.setHorasNoPresenciales(source.getHorasNoPresenciales());
+        target.setHorasSemanales(source.getHorasSemanales());
         target.setCorrelativas(source.getCorrelativas());
         target.setEsObligatoria(source.getEsObligatoria());
         target.setEstadoDictado(source.getEstadoDictado());
@@ -522,7 +524,7 @@ public class SincronizacionBidireccionalPlanService {
         int totales = 0;
 
         for (ActividadCurricularPlanJpaEntity a : asignaturas) {
-            if (a.getEstadoDictado() == EstadoDictadoActividad.NO_SE_DICTA) {
+            if (a.getEstadoDictado().esInactiva()) {
                 continue;
             }
             int pres = a.getHorasPresenciales() != null ? a.getHorasPresenciales() : 0;

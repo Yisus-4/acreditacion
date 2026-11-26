@@ -43,6 +43,9 @@ public class ActividadCurricularPlanJpaEntity {
     @Column(name = "horas_no_presenciales")
     private Integer horasNoPresenciales;
 
+    @Column(name = "horas_semanales")
+    private Integer horasSemanales;
+
     @Column(name = "correlativas", columnDefinition = "TEXT")
     private String correlativas;
 
@@ -50,8 +53,8 @@ public class ActividadCurricularPlanJpaEntity {
     private Boolean esObligatoria = true;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "estado_dictado", nullable = false, length = 20)
-    private EstadoDictadoActividad estadoDictado = EstadoDictadoActividad.SE_DICTA;
+    @Column(name = "estado_dictado", nullable = false, length = 30)
+    private EstadoDictadoActividad estadoDictado = EstadoDictadoActividad.ACTIVA;
 
     @Column(name = "origen_maestro_id")
     private UUID origenMaestroId;
@@ -148,6 +151,14 @@ public class ActividadCurricularPlanJpaEntity {
         this.horasNoPresenciales = horasNoPresenciales;
     }
 
+    public Integer getHorasSemanales() {
+        return horasSemanales;
+    }
+
+    public void setHorasSemanales(Integer horasSemanales) {
+        this.horasSemanales = horasSemanales;
+    }
+
     public String getCorrelativas() {
         return correlativas;
     }
@@ -169,11 +180,11 @@ public class ActividadCurricularPlanJpaEntity {
     }
 
     public EstadoDictadoActividad getEstadoDictado() {
-        return estadoDictado != null ? estadoDictado : EstadoDictadoActividad.SE_DICTA;
+        return estadoDictado != null ? estadoDictado : EstadoDictadoActividad.ACTIVA;
     }
 
     public void setEstadoDictado(EstadoDictadoActividad estadoDictado) {
-        this.estadoDictado = estadoDictado != null ? estadoDictado : EstadoDictadoActividad.SE_DICTA;
+        this.estadoDictado = estadoDictado != null ? estadoDictado : EstadoDictadoActividad.ACTIVA;
     }
 
     public void setOrigenMaestroId(UUID origenMaestroId) {

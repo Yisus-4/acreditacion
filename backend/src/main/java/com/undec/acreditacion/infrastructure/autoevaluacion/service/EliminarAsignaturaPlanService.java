@@ -80,7 +80,7 @@ public class EliminarAsignaturaPlanService {
         boolean existeOtraConMismoNombre = asignaturasDelPlan.stream()
                 .anyMatch(otra -> otra.getId() != null
                         && !otra.getId().equals(asigId)
-                        && otra.getEstadoDictado() != EstadoDictadoActividad.NO_SE_DICTA
+                        && !otra.getEstadoDictado().esInactiva()
                         && otra.getNombre() != null
                         && asig.getNombre() != null
                         && otra.getNombre().trim().equalsIgnoreCase(asig.getNombre().trim()));

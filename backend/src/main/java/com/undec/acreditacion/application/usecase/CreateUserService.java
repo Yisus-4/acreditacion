@@ -37,7 +37,13 @@ public final class CreateUserService implements CreateUserUseCase {
         }
 
         String passwordHash = passwordHasher.hash(command.password());
-        User user = User.register(command.username(), command.email(), passwordHash, command.unidadAcademicaId());
+        User user = User.register(
+                command.username(),
+                command.email(),
+                passwordHash,
+                command.unidadAcademicaId(),
+                command.departamentoAcademicoId()
+        );
 
         if (command.roleCodes() != null && !command.roleCodes().isEmpty()) {
             Set<Role> roles = new LinkedHashSet<>();

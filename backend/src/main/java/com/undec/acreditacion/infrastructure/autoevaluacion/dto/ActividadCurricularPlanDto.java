@@ -15,6 +15,7 @@ public record ActividadCurricularPlanDto(
         Integer horasReloj,
         Integer horasPresenciales,
         Integer horasNoPresenciales,
+        Integer horasSemanales,
         String correlativas,
         Boolean esObligatoria,
         EstadoDictadoActividad estadoDictado,
@@ -38,8 +39,8 @@ public record ActividadCurricularPlanDto(
             Boolean esObligatoria
     ) {
         this(id, planEstudioId, numeroOrden, codigo, nombre, grupo, subgrupo,
-                horasReloj, horasPresenciales, horasNoPresenciales, correlativas,
-                esObligatoria, EstadoDictadoActividad.SE_DICTA, null, null, false, false);
+                horasReloj, horasPresenciales, horasNoPresenciales, null, correlativas,
+                esObligatoria, EstadoDictadoActividad.ACTIVA, null, null, false, false);
     }
 
     public ActividadCurricularPlanDto(
@@ -58,7 +59,28 @@ public record ActividadCurricularPlanDto(
             EstadoDictadoActividad estadoDictado
     ) {
         this(id, planEstudioId, numeroOrden, codigo, nombre, grupo, subgrupo,
-                horasReloj, horasPresenciales, horasNoPresenciales, correlativas,
+                horasReloj, horasPresenciales, horasNoPresenciales, null, correlativas,
+                esObligatoria, estadoDictado, null, null, false, false);
+    }
+
+    public ActividadCurricularPlanDto(
+            UUID id,
+            UUID planEstudioId,
+            Integer numeroOrden,
+            String codigo,
+            String nombre,
+            String grupo,
+            String subgrupo,
+            Integer horasReloj,
+            Integer horasPresenciales,
+            Integer horasNoPresenciales,
+            Integer horasSemanales,
+            String correlativas,
+            Boolean esObligatoria,
+            EstadoDictadoActividad estadoDictado
+    ) {
+        this(id, planEstudioId, numeroOrden, codigo, nombre, grupo, subgrupo,
+                horasReloj, horasPresenciales, horasNoPresenciales, horasSemanales, correlativas,
                 esObligatoria, estadoDictado, null, null, false, false);
     }
 }

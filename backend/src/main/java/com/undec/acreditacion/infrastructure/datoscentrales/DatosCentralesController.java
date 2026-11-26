@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping({"/api/datos-centrales", "/api/academica"})
-@PreAuthorize("hasAnyRole('AEA', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'INFRAESTRUCTURA', 'BEDELIA')")
+@PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_DEPARTAMENTO', 'DIRECTOR_ESCUELA', 'DIRECTOR_CARRERA', 'CONSULTA_INSTITUCIONAL', 'INFRAESTRUCTURA', 'BEDELIA')")
 public class DatosCentralesController {
 
     private final DatosCentralesService datosCentralesService;
@@ -37,7 +37,7 @@ public class DatosCentralesController {
     }
 
     @PostMapping("/planes-estudio")
-    @PreAuthorize("hasRole('AEA')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA')")
     public ResponseEntity<PlanEstudioMaestroDto> crearPlanEstudio(
             @RequestBody CrearPlanEstudioMaestroRequest request
     ) {
@@ -46,7 +46,7 @@ public class DatosCentralesController {
     }
 
     @PatchMapping("/planes-estudio/{id}/estado-vigencia")
-    @PreAuthorize("hasRole('AEA')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA')")
     public ResponseEntity<PlanEstudioMaestroDto> cambiarEstadoVigencia(
             @PathVariable UUID id,
             @RequestBody CambiarVigenciaPlanRequest request
@@ -56,7 +56,7 @@ public class DatosCentralesController {
     }
 
     @PutMapping("/planes-estudio/{id}")
-    @PreAuthorize("hasRole('AEA')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA')")
     public ResponseEntity<PlanEstudioMaestroDto> actualizarPlanEstudio(
             @PathVariable UUID id,
             @RequestBody CrearPlanEstudioMaestroRequest request
@@ -67,13 +67,19 @@ public class DatosCentralesController {
     @GetMapping("/cuerpo-academico")
     public ResponseEntity<List<CuerpoAcademicoMaestroDto>> listarCuerpoAcademico(
             @RequestParam(required = false) UUID carreraId,
+            @RequestParam(required = false) UUID departamentoAcademicoId,
+            @RequestParam(required = false, defaultValue = "false") boolean incluirInactivos,
             @RequestParam(required = false) String query
     ) {
-        return ResponseEntity.ok(datosCentralesService.listarCuerpoAcademico(carreraId, query));
+        if (departamentoAcademicoId == null && !incluirInactivos) {
+            return ResponseEntity.ok(datosCentralesService.listarCuerpoAcademico(carreraId, query));
+        }
+        return ResponseEntity.ok(datosCentralesService.listarCuerpoAcademico(
+                carreraId, departamentoAcademicoId, incluirInactivos, query));
     }
 
     @PostMapping("/cuerpo-academico")
-    @PreAuthorize("hasRole('AEA')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_DEPARTAMENTO')")
     public ResponseEntity<CuerpoAcademicoMaestroDto> crearCuerpoAcademico(
             @RequestBody CrearCuerpoAcademicoMaestroRequest request
     ) {
@@ -82,7 +88,7 @@ public class DatosCentralesController {
     }
 
     @PutMapping("/cuerpo-academico/{id}")
-    @PreAuthorize("hasRole('AEA')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_DEPARTAMENTO')")
     public ResponseEntity<CuerpoAcademicoMaestroDto> actualizarCuerpoAcademico(
             @PathVariable UUID id,
             @RequestBody CrearCuerpoAcademicoMaestroRequest request
@@ -91,7 +97,7 @@ public class DatosCentralesController {
     }
 
     @PostMapping("/cuerpo-academico/{id}/asignaciones")
-    @PreAuthorize("hasRole('AEA')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_DEPARTAMENTO')")
     public ResponseEntity<CuerpoAcademicoMaestroDto> agregarAsignacion(
             @PathVariable UUID id,
             @RequestBody CrearCuerpoAcademicoMaestroRequest.CrearAsignacionCatedraItem item
@@ -100,7 +106,7 @@ public class DatosCentralesController {
     }
 
     @DeleteMapping("/cuerpo-academico/{id}/asignaciones/{asignacionId}")
-    @PreAuthorize("hasRole('AEA')")
+    @PreAuthorize("hasAnyRole('AEA', 'SECRETARIA_ACADEMICA', 'DIRECTOR_DEPARTAMENTO')")
     public ResponseEntity<CuerpoAcademicoMaestroDto> eliminarAsignacion(
             @PathVariable UUID id,
             @PathVariable UUID asignacionId

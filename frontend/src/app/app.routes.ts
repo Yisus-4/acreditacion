@@ -148,6 +148,15 @@ export const routes: Routes = [
       ).then((m) => m.AcademicaPlanesComponent),
   },
   {
+    path: 'academica/departamentos-parametros',
+    title: 'Departamentos y Parámetros Docentes — Gestión Académica UNdeC',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './features/academica/academica-departamentos-parametros/academica-departamentos-parametros.component'
+      ).then((m) => m.AcademicaDepartamentosParametrosComponent),
+  },
+  {
     path: 'academica/cuerpo-academico',
     title: 'Cuerpo Académico Troncal — Gestión Académica UNdeC',
     canActivate: [authGuard],

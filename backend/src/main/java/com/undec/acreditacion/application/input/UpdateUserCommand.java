@@ -9,9 +9,15 @@ public record UpdateUserCommand(
         String email,
         List<String> roleCodes,
         String optionalNewPassword,
-        UUID unidadAcademicaId
+        UUID unidadAcademicaId,
+        UUID departamentoAcademicoId
 ) {
     public UpdateUserCommand(UUID userId, String username, String email, List<String> roleCodes, String optionalNewPassword) {
-        this(userId, username, email, roleCodes, optionalNewPassword, null);
+        this(userId, username, email, roleCodes, optionalNewPassword, null, null);
+    }
+
+    public UpdateUserCommand(UUID userId, String username, String email, List<String> roleCodes,
+                             String optionalNewPassword, UUID unidadAcademicaId) {
+        this(userId, username, email, roleCodes, optionalNewPassword, unidadAcademicaId, null);
     }
 }

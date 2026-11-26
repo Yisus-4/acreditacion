@@ -420,7 +420,7 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
                 .findByPlanEstudioIdOrderByNumeroOrdenAsc(masterPlan.getId());
 
         for (ActividadCurricularPlanJpaEntity masterAct : masterActs) {
-            if (masterAct.getEstadoDictado() == EstadoDictadoActividad.NO_SE_DICTA) {
+            if (masterAct.getEstadoDictado().esInactiva()) {
                 continue;
             }
             ActividadCurricularPlanJpaEntity cloneAct = actividadRepository
@@ -547,6 +547,7 @@ public class SincronizacionAutoevaluacionService implements SincronizacionAutoev
         clone.setHorasReloj(master.getHorasReloj());
         clone.setHorasPresenciales(master.getHorasPresenciales());
         clone.setHorasNoPresenciales(master.getHorasNoPresenciales());
+        clone.setHorasSemanales(master.getHorasSemanales());
         clone.setCorrelativas(master.getCorrelativas());
         clone.setEsObligatoria(master.getEsObligatoria());
         clone.setEstadoDictado(master.getEstadoDictado());

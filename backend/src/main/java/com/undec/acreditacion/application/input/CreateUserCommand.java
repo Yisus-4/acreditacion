@@ -8,9 +8,14 @@ public record CreateUserCommand(
         String email,
         String password,
         List<String> roleCodes,
-        UUID unidadAcademicaId
+        UUID unidadAcademicaId,
+        UUID departamentoAcademicoId
 ) {
     public CreateUserCommand(String username, String email, String password, List<String> roleCodes) {
-        this(username, email, password, roleCodes, null);
+        this(username, email, password, roleCodes, null, null);
+    }
+
+    public CreateUserCommand(String username, String email, String password, List<String> roleCodes, UUID unidadAcademicaId) {
+        this(username, email, password, roleCodes, unidadAcademicaId, null);
     }
 }

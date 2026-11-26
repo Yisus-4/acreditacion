@@ -169,6 +169,7 @@ export class EstructuraCurricularComponent implements OnInit {
     grupo: ['C.B.I.', [Validators.required]],
     subgrupo: ['1º', [Validators.required]],
     horasReloj: [64, [Validators.required, Validators.min(1)]],
+    horasSemanales: [null as number | null, [Validators.min(0)]],
     horasPresenciales: [64, [Validators.min(0)]],
     horasNoPresenciales: [0, [Validators.min(0)]],
     esObligatoria: [true],
@@ -562,7 +563,7 @@ export class EstructuraCurricularComponent implements OnInit {
   cargarAsignaturasYProgramas(planId: string): void {
     this.planService.listarAsignaturas(planId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (asigs) => {
-        const activas = (asigs || []).filter((a) => a.estadoDictado !== 'NO_SE_DICTA');
+        const activas = (asigs || []).filter((a) => a.estadoDictado !== 'INACTIVA' && a.estadoDictado !== 'NO_SE_DICTA');
         this.asignaturas.set(activas);
         this.cargarEstadoActividad83(planId);
         this.planService.obtenerPlan(planId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -824,6 +825,7 @@ export class EstructuraCurricularComponent implements OnInit {
       grupo: 'C.B.I.',
       subgrupo: '1º',
       horasReloj: 64,
+      horasSemanales: null,
       horasPresenciales: 64,
       horasNoPresenciales: 0,
       esObligatoria: true,
@@ -846,6 +848,7 @@ export class EstructuraCurricularComponent implements OnInit {
       grupo: asig.grupo || 'C.B.I.',
       subgrupo: asig.subgrupo || '1º',
       horasReloj: asig.horasReloj || 64,
+      horasSemanales: asig.horasSemanales ?? null,
       horasPresenciales: asig.horasPresenciales || asig.horasReloj || 64,
       horasNoPresenciales: asig.horasNoPresenciales || 0,
       esObligatoria: asig.esObligatoria ?? true,
@@ -942,6 +945,7 @@ export class EstructuraCurricularComponent implements OnInit {
         grupo: val.grupo || 'C.B.I.',
         subgrupo: val.subgrupo || '1º',
         horasReloj: Number(val.horasReloj) || 0,
+        horasSemanales: val.horasSemanales != null && String(val.horasSemanales) !== '' ? Number(val.horasSemanales) : null,
         horasPresenciales: Number(val.horasPresenciales) || 0,
         horasNoPresenciales: Number(val.horasNoPresenciales) || 0,
         correlativas: correlativasStr,
@@ -972,6 +976,7 @@ export class EstructuraCurricularComponent implements OnInit {
         grupo: val.grupo || 'C.B.I.',
         subgrupo: val.subgrupo || '1º',
         horasReloj: Number(val.horasReloj) || 0,
+        horasSemanales: val.horasSemanales != null && String(val.horasSemanales) !== '' ? Number(val.horasSemanales) : null,
         horasPresenciales: Number(val.horasPresenciales) || 0,
         horasNoPresenciales: Number(val.horasNoPresenciales) || 0,
         correlativas: correlativasStr,

@@ -432,10 +432,10 @@ public class PlanEstudioController {
         }
         String raw = body != null ? body.get("estadoDictado") : null;
         if (raw == null || raw.isBlank()) {
-            throw new DomainValidationException("El estadoDictado es obligatorio (SE_DICTA o NO_SE_DICTA).");
+            throw new DomainValidationException("El estadoDictado es obligatorio (ACTIVA, SOLO_EXAMENES_FINALES o INACTIVA).");
         }
         try {
-            asig.setEstadoDictado(EstadoDictadoActividad.valueOf(raw.trim().toUpperCase()));
+            asig.setEstadoDictado(EstadoDictadoActividad.fromString(raw));
         } catch (IllegalArgumentException ex) {
             throw new DomainValidationException("Estado de dictado inválido: " + raw);
         }
@@ -528,7 +528,7 @@ public class PlanEstudioController {
         }
         List<ActividadCurricularPlanJpaEntity> activas = asignaturaRepository
                 .findByPlanEstudioIdOrderByNumeroOrdenAsc(plan.getId()).stream()
-                .filter(a -> a.getEstadoDictado() != EstadoDictadoActividad.NO_SE_DICTA)
+                .filter(a -> !a.getEstadoDictado().esInactiva())
                 .toList();
         if (activas.isEmpty()) {
             return new EvaluacionCompletitud83(0, 0, false);
@@ -632,7 +632,7 @@ public class PlanEstudioController {
         long totalActivas = 0;
         if (planEntidad != null) {
             totalActivas = asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planEntidad.getId()).stream()
-                    .filter(a -> a.getEstadoDictado() != EstadoDictadoActividad.NO_SE_DICTA)
+                    .filter(a -> !a.getEstadoDictado().esInactiva())
                     .count();
         }
 
@@ -697,9 +697,13 @@ public class PlanEstudioController {
         asig.setHorasReloj(dto.horasReloj());
         asig.setHorasPresenciales(dto.horasPresenciales());
         asig.setHorasNoPresenciales(dto.horasNoPresenciales());
+        asig.setHorasSemanales(dto.horasSemanales());
         asig.setCorrelativas(dto.correlativas());
         if (dto.esObligatoria() != null) {
             asig.setEsObligatoria(dto.esObligatoria());
+        }
+        if (dto.estadoDictado() != null) {
+            asig.setEstadoDictado(dto.estadoDictado());
         }
     }
 
@@ -719,6 +723,7 @@ public class PlanEstudioController {
                 a.getHorasReloj(),
                 a.getHorasPresenciales(),
                 a.getHorasNoPresenciales(),
+                a.getHorasSemanales(),
                 a.getCorrelativas(),
                 a.getEsObligatoria(),
                 a.getEstadoDictado(),

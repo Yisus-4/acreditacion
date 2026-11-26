@@ -1,5 +1,6 @@
 package com.undec.acreditacion.infrastructure.datoscentrales.persistence;
 
+import com.undec.acreditacion.infrastructure.designacion.persistence.DepartamentoAcademicoJpaEntity;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -16,11 +17,24 @@ public class CuerpoAcademicoMaestroJpaEntity {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
+    @Column(name = "tipo_documento", length = 20, nullable = false)
+    private String tipoDocumento = "DNI";
+
     @Column(name = "dni", length = 20, nullable = false, unique = true)
     private String dni;
 
     @Column(name = "cuit", length = 25)
     private String cuit;
+
+    @Column(name = "legajo", length = 50)
+    private String legajo;
+
+    @Column(name = "nro_designacion_mapuche", length = 80)
+    private String nroDesignacionMapuche;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "departamento_academico_id", nullable = false)
+    private DepartamentoAcademicoJpaEntity departamentoAcademico;
 
     @Column(name = "apellido", length = 100, nullable = false)
     private String apellido;
@@ -78,6 +92,14 @@ public class CuerpoAcademicoMaestroJpaEntity {
         this.id = id;
     }
 
+    public String getTipoDocumento() {
+        return tipoDocumento;
+    }
+
+    public void setTipoDocumento(String tipoDocumento) {
+        this.tipoDocumento = tipoDocumento;
+    }
+
     public String getDni() {
         return dni;
     }
@@ -92,6 +114,30 @@ public class CuerpoAcademicoMaestroJpaEntity {
 
     public void setCuit(String cuit) {
         this.cuit = cuit;
+    }
+
+    public String getLegajo() {
+        return legajo;
+    }
+
+    public void setLegajo(String legajo) {
+        this.legajo = legajo;
+    }
+
+    public String getNroDesignacionMapuche() {
+        return nroDesignacionMapuche;
+    }
+
+    public void setNroDesignacionMapuche(String nroDesignacionMapuche) {
+        this.nroDesignacionMapuche = nroDesignacionMapuche;
+    }
+
+    public DepartamentoAcademicoJpaEntity getDepartamentoAcademico() {
+        return departamentoAcademico;
+    }
+
+    public void setDepartamentoAcademico(DepartamentoAcademicoJpaEntity departamentoAcademico) {
+        this.departamentoAcademico = departamentoAcademico;
     }
 
     public String getApellido() {

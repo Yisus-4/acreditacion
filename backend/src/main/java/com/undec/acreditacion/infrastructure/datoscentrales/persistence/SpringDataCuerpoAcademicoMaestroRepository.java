@@ -16,11 +16,13 @@ public interface SpringDataCuerpoAcademicoMaestroRepository extends JpaRepositor
 
     Optional<CuerpoAcademicoMaestroJpaEntity> findByDni(String dni);
 
+    Optional<CuerpoAcademicoMaestroJpaEntity> findByLegajoIgnoreCase(String legajo);
+
     boolean existsByDni(String dni);
 
     long countByActivoTrue();
 
-    @Query("SELECT d FROM CuerpoAcademicoMaestroJpaEntity d WHERE d.activo = true AND (:query IS NULL OR LOWER(d.nombre) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(d.apellido) LIKE LOWER(CONCAT('%', :query, '%')) OR d.dni LIKE CONCAT('%', :query, '%'))")
+    @Query("SELECT d FROM CuerpoAcademicoMaestroJpaEntity d WHERE d.activo = true AND (:query IS NULL OR LOWER(d.nombre) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(d.apellido) LIKE LOWER(CONCAT('%', :query, '%')) OR d.dni LIKE CONCAT('%', :query, '%') OR (d.legajo IS NOT NULL AND LOWER(d.legajo) LIKE LOWER(CONCAT('%', :query, '%'))))")
     List<CuerpoAcademicoMaestroJpaEntity> buscarPorTexto(@Param("query") String query);
 
     @Query("SELECT DISTINCT d FROM CuerpoAcademicoMaestroJpaEntity d JOIN d.asignaciones a WHERE a.carreraId = :carreraId AND d.activo = true")

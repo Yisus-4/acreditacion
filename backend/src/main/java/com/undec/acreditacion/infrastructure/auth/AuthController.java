@@ -60,7 +60,8 @@ public final class AuthController {
                 user.getEmail(),
                 user.getUsername(),
                 roleCodes,
-                user.getUnidadAcademicaId()
+                user.getUnidadAcademicaId(),
+                user.getDepartamentoAcademicoId()
         );
 
         return ResponseEntity.ok(new LoginResponse(userView, token, issuedAt));

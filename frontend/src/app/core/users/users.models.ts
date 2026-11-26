@@ -6,6 +6,7 @@ export interface UserItem {
   readonly systemUser: boolean;
   readonly roleCodes: readonly string[];
   readonly unidadAcademicaId?: string | null;
+  readonly departamentoAcademicoId?: string | null;
 }
 
 export interface RoleItem {
@@ -21,6 +22,7 @@ export interface CreateUserPayload {
   readonly password: string;
   readonly roleCodes: readonly string[];
   readonly unidadAcademicaId?: string | null;
+  readonly departamentoAcademicoId?: string | null;
 }
 
 export interface UpdateUserPayload {
@@ -29,4 +31,5 @@ export interface UpdateUserPayload {
   readonly roleCodes: readonly string[];
   readonly newPassword?: string;
   readonly unidadAcademicaId?: string | null;
+  readonly departamentoAcademicoId?: string | null;
 }

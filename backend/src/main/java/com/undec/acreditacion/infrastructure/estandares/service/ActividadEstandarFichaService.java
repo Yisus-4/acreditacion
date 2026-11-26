@@ -274,7 +274,7 @@ public class ActividadEstandarFichaService {
 
         List<ActividadCurricularPlanJpaEntity> asignaturasSeDicta =
                 asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId).stream()
-                        .filter(a -> a.getEstadoDictado() != EstadoDictadoActividad.NO_SE_DICTA)
+                        .filter(a -> !a.getEstadoDictado().esInactiva())
                         .toList();
 
         List<EstandarAreaCargaHorariaJpaEntity> todasAreas =
@@ -717,6 +717,11 @@ public class ActividadEstandarFichaService {
         resumen.setHorasSemanalPracticaDistancia(semPracDist);
         resumen.setActualizadoEn(Instant.now());
         cargaResumenRepository.save(resumen);
+
+        if ((semTotalPres + semTotalDist) > 0) {
+            asig.setHorasSemanales(semTotalPres + semTotalDist);
+            asignaturaRepository.save(asig);
+        }
     }
 
     private FichaEstandarActividadDto buildFichaDto(

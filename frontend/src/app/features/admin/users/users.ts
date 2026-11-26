@@ -12,6 +12,8 @@ import { finalize } from 'rxjs';
 
 import { RoleItem, UserItem, UsersService } from '../../../core/users/users.service';
 import { EstructuraService, UnidadAcademicaResponse } from '../../../core/estructura/estructura.service';
+import { DepartamentoAcademico } from '../../../core/designacion/designacion-parametros.models';
+import { DesignacionParametrosService } from '../../../core/designacion/designacion-parametros.service';
 import {
   DatosPayloadAltaMiembro,
   NotificationService,
@@ -43,6 +45,7 @@ export type TableRowItem =
 export class UserManagement implements OnInit {
   private readonly usersService = inject(UsersService);
   private readonly estructuraService = inject(EstructuraService);
+  private readonly parametrosDocentesService = inject(DesignacionParametrosService);
   private readonly notificationService = inject(NotificationService);
   private readonly fb = inject(FormBuilder);
 
@@ -50,6 +53,7 @@ export class UserManagement implements OnInit {
   readonly users = signal<UserItem[]>([]);
   readonly roles = signal<RoleItem[]>([]);
   readonly unidadesAcademicas = signal<UnidadAcademicaResponse[]>([]);
+  readonly departamentosAcademicos = signal<DepartamentoAcademico[]>([]);
   readonly solicitudesPendientes = signal<SolicitudNotificacion[]>([]);
   readonly procesandoSolicitudId = signal<string | null>(null);
   readonly loading = signal<boolean>(true);
@@ -84,6 +88,7 @@ export class UserManagement implements OnInit {
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
     unidadAcademicaId: [''],
+    departamentoAcademicoId: [''],
   });
 
   readonly editForm = this.fb.nonNullable.group({
@@ -91,6 +96,7 @@ export class UserManagement implements OnInit {
     email: ['', [Validators.required, Validators.email]],
     newPassword: [''],
     unidadAcademicaId: [''],
+    departamentoAcademicoId: [''],
   });
 
   // Computed data
@@ -223,6 +229,11 @@ export class UserManagement implements OnInit {
       error: (err) => console.error('Error al cargar unidades académicas:', err),
     });
 
+    this.parametrosDocentesService.listarDepartamentos(false).subscribe({
+      next: (deptos) => this.departamentosAcademicos.set(deptos.filter((d) => d.codigo !== 'SIN_ASIGNAR')),
+      error: (err) => console.error('Error al cargar departamentos académicos:', err),
+    });
+
     this.usersService.getRoles().subscribe({
       next: (roles) => this.roles.set(roles),
       error: (err) => console.error('Error al cargar roles:', err),
@@ -303,6 +314,12 @@ export class UserManagement implements OnInit {
     return ua ? `${ua.nombre} (${ua.sigla})` : id;
   }
 
+  getNombreDepartamentoAcademico(id?: string | null): string {
+    if (!id) return '';
+    const d = this.departamentosAcademicos().find((dep) => dep.id === id);
+    return d ? `${d.denominacion} (${d.codigo})` : id;
+  }
+
   getNombreRol(code: string): string {
     const found = this.roles().find((r) => r.code === code);
     if (found?.name) {
@@ -310,6 +327,8 @@ export class UserManagement implements OnInit {
     }
     const fallbackMap: Record<string, string> = {
       AEA: 'Área de Evaluación y Acreditación (Administrador)',
+      SECRETARIA_ACADEMICA: 'Secretaría de Gestión Académica',
+      CONSULTA_INSTITUCIONAL: 'Consulta Institucional',
       DIRECTOR_CARRERA: 'Director de Carrera',
       DIRECTOR_ESCUELA: 'Director de Escuela',
       DIRECTOR_DEPARTAMENTO: 'Director de Departamento',
@@ -329,9 +348,11 @@ export class UserManagement implements OnInit {
     if (found?.description) return found.description;
     const descMap: Record<string, string> = {
       AEA: 'Administrador general del sistema de acreditación · AEA',
+      SECRETARIA_ACADEMICA: 'Recibe, controla y aprueba solicitudes de designación docente · SECRETARIA_ACADEMICA',
+      CONSULTA_INSTITUCIONAL: 'Consulta transversal de reportes docentes y curriculares · CONSULTA_INSTITUCIONAL',
       DIRECTOR_CARRERA: 'Gestiona la autoevaluación de su carrera · DIRECTOR_CARRERA',
       DIRECTOR_ESCUELA: 'Supervisa las carreras de su escuela · DIRECTOR_ESCUELA',
-      DIRECTOR_DEPARTAMENTO: 'Coordina actividades curriculares del departamento · DIRECTOR_DEPARTAMENTO',
+      DIRECTOR_DEPARTAMENTO: 'Responsable de solicitudes y docentes de su departamento · DIRECTOR_DEPARTAMENTO',
       COMISION_AUTOEVALUACION: 'Participa en la autoevaluación · COMISION_AUTOEVALUACION',
       DOCENTE: 'Responsable de actividades curriculares y programas · DOCENTE',
       INFRAESTRUCTURA: 'Gestiona datos de sedes y espacios físicos · INFRAESTRUCTURA',
@@ -364,6 +385,12 @@ export class UserManagement implements OnInit {
     const id = this.createForm.controls.unidadAcademicaId.value;
     if (!id) return 'Sin Escuela / Ámbito Central';
     return this.getDetalleUnidadAcademica(id);
+  }
+
+  getSelectedDepartamentoName(): string {
+    const id = this.createForm.controls.departamentoAcademicoId.value;
+    if (!id) return 'Sin Departamento Académico';
+    return this.getNombreDepartamentoAcademico(id);
   }
 
   // --- Role checkboxes helper ---
@@ -480,6 +507,7 @@ export class UserManagement implements OnInit {
       email: '',
       password: '',
       unidadAcademicaId: '',
+      departamentoAcademicoId: '',
     });
     this.selectedRoles.set(new Set());
     this.createStep.set(1);
@@ -561,7 +589,7 @@ export class UserManagement implements OnInit {
     }
 
     this.submitting.set(true);
-    const { username, email, password, unidadAcademicaId } = this.createForm.getRawValue();
+    const { username, email, password, unidadAcademicaId, departamentoAcademicoId } = this.createForm.getRawValue();
     const roleCodes = Array.from(this.selectedRoles());
 
     this.usersService
@@ -571,6 +599,7 @@ export class UserManagement implements OnInit {
         password,
         roleCodes,
         unidadAcademicaId: unidadAcademicaId ? unidadAcademicaId : null,
+        departamentoAcademicoId: departamentoAcademicoId ? departamentoAcademicoId : null,
       })
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
@@ -594,6 +623,7 @@ export class UserManagement implements OnInit {
       email: user.email,
       newPassword: '',
       unidadAcademicaId: user.unidadAcademicaId ?? '',
+      departamentoAcademicoId: user.departamentoAcademicoId ?? '',
     });
     this.selectedRoles.set(new Set(user.roleCodes));
     this.errorMessage.set(null);
@@ -619,7 +649,7 @@ export class UserManagement implements OnInit {
       return;
     }
 
-    const { username, email, newPassword, unidadAcademicaId } = this.editForm.getRawValue();
+    const { username, email, newPassword, unidadAcademicaId, departamentoAcademicoId } = this.editForm.getRawValue();
     if (newPassword && newPassword.trim().length > 0 && newPassword.trim().length < 6) {
       this.errorMessage.set('La nueva contraseña debe tener al menos 6 caracteres.');
       return;
@@ -635,6 +665,7 @@ export class UserManagement implements OnInit {
         roleCodes,
         newPassword: newPassword ? newPassword : undefined,
         unidadAcademicaId: unidadAcademicaId ? unidadAcademicaId : null,
+        departamentoAcademicoId: departamentoAcademicoId ? departamentoAcademicoId : null,
       })
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({

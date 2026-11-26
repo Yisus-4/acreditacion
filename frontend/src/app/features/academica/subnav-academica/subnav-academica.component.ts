@@ -30,6 +30,9 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
         <a routerLink="/academica/planes" routerLinkActive="active" class="subnav-tab">
           Planes y Actividades Curriculares
         </a>
+        <a routerLink="/academica/departamentos-parametros" routerLinkActive="active" class="subnav-tab">
+          Departamentos y Parámetros
+        </a>
         <a routerLink="/academica/cuerpo-academico" routerLinkActive="active" class="subnav-tab">
           Cuerpo Académico Troncal
         </a>
@@ -111,6 +114,8 @@ export class SubnavAcademicaComponent {
         return '/academica/estandares';
       case 'Planes y Actividades Curriculares':
         return '/academica/planes';
+      case 'Departamentos y Parámetros':
+        return '/academica/departamentos-parametros';
       case 'Cuerpo Académico Troncal':
         return '/academica/cuerpo-academico';
       default:

@@ -550,7 +550,7 @@ class ActividadEstandarFichaServiceTest {
         asig2.setCodigo("FIS101");
         asig2.setNombre("Física I");
         asig2.setHorasReloj(160);
-        asig2.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+        asig2.setEstadoDictado(EstadoDictadoActividad.ACTIVA);
 
         ActividadCurricularPlanJpaEntity asigNoSeDicta = new ActividadCurricularPlanJpaEntity();
         asigNoSeDicta.setId(UUID.randomUUID());
@@ -558,9 +558,9 @@ class ActividadEstandarFichaServiceTest {
         asigNoSeDicta.setCodigo("OPT999");
         asigNoSeDicta.setNombre("Optativa inactiva");
         asigNoSeDicta.setHorasReloj(500);
-        asigNoSeDicta.setEstadoDictado(EstadoDictadoActividad.NO_SE_DICTA);
+        asigNoSeDicta.setEstadoDictado(EstadoDictadoActividad.INACTIVA);
 
-        f.asig.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+        f.asig.setEstadoDictado(EstadoDictadoActividad.ACTIVA);
 
         when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(f.plan.getId()))
                 .thenReturn(List.of(f.asig, asig2, asigNoSeDicta));

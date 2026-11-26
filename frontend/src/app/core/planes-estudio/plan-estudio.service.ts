@@ -10,6 +10,7 @@ import {
   ActividadCurricularPlan,
   ActualizarAsignaturaRequest,
   CrearAsignaturaRequest,
+  EstadoDictadoActividad,
   PlanEstudioFt001,
   PlanEstudioVigenteDto,
 } from './plan-estudio.models';
@@ -63,7 +64,7 @@ export class PlanEstudioService {
   cambiarEstadoDictado(
     planId: string,
     asigId: string,
-    estadoDictado: 'SE_DICTA' | 'NO_SE_DICTA'
+    estadoDictado: EstadoDictadoActividad
   ): Observable<ActividadCurricularPlan> {
     return this.http.patch<ActividadCurricularPlan>(
       `${this.baseUrl}/${planId}/asignaturas/${asigId}/estado-dictado`,

@@ -8,9 +8,14 @@ public record UpdateUserRequest(
         String email,
         List<String> roleCodes,
         String newPassword,
-        UUID unidadAcademicaId
+        UUID unidadAcademicaId,
+        UUID departamentoAcademicoId
 ) {
     public UpdateUserRequest(String username, String email, List<String> roleCodes, String newPassword) {
-        this(username, email, roleCodes, newPassword, null);
+        this(username, email, roleCodes, newPassword, null, null);
+    }
+
+    public UpdateUserRequest(String username, String email, List<String> roleCodes, String newPassword, UUID unidadAcademicaId) {
+        this(username, email, roleCodes, newPassword, unidadAcademicaId, null);
     }
 }

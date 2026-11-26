@@ -65,7 +65,7 @@ public class CrearAsignaturaPlanService {
             throw new DomainValidationException("El año de cursada (subgrupo) es obligatorio.");
         }
 
-        validarHoras(request.horasReloj(), request.horasPresenciales(), request.horasNoPresenciales());
+        validarHoras(request.horasReloj(), request.horasPresenciales(), request.horasNoPresenciales(), request.horasSemanales());
         validarCorrelativasConAsignaturasPrevias(planId, request.correlativas());
 
         if (request.codigo() != null && !request.codigo().trim().isEmpty()) {
@@ -89,10 +89,11 @@ public class CrearAsignaturaPlanService {
         asig.setHorasReloj(request.horasReloj());
         asig.setHorasPresenciales(request.horasPresenciales());
         asig.setHorasNoPresenciales(request.horasNoPresenciales());
+        asig.setHorasSemanales(request.horasSemanales());
         asig.setCorrelativas(request.correlativas() != null && !request.correlativas().trim().isEmpty() ?
                 request.correlativas().trim() : "Sin correlativas previas");
         asig.setEsObligatoria(request.esObligatoria() != null ? request.esObligatoria() : true);
-        asig.setEstadoDictado(request.estadoDictado() != null ? request.estadoDictado() : EstadoDictadoActividad.SE_DICTA);
+        asig.setEstadoDictado(request.estadoDictado() != null ? request.estadoDictado() : EstadoDictadoActividad.ACTIVA);
         asig.setCreadoEn(Instant.now());
 
         ActividadCurricularPlanJpaEntity guardada = asignaturaRepository.save(asig);
@@ -106,10 +107,11 @@ public class CrearAsignaturaPlanService {
         return toDto(guardada);
     }
 
-    private void validarHoras(Integer horasReloj, Integer horasPresenciales, Integer horasNoPresenciales) {
+    private void validarHoras(Integer horasReloj, Integer horasPresenciales, Integer horasNoPresenciales, Integer horasSemanales) {
         if ((horasReloj != null && horasReloj < 0) ||
             (horasPresenciales != null && horasPresenciales < 0) ||
-            (horasNoPresenciales != null && horasNoPresenciales < 0)) {
+            (horasNoPresenciales != null && horasNoPresenciales < 0) ||
+            (horasSemanales != null && horasSemanales < 0)) {
             throw new DomainValidationException("Las horas deben ser valores numéricos positivos o cero.");
         }
     }
@@ -163,6 +165,7 @@ public class CrearAsignaturaPlanService {
                 a.getHorasReloj(),
                 a.getHorasPresenciales(),
                 a.getHorasNoPresenciales(),
+                a.getHorasSemanales(),
                 a.getCorrelativas(),
                 a.getEsObligatoria(),
                 a.getEstadoDictado()

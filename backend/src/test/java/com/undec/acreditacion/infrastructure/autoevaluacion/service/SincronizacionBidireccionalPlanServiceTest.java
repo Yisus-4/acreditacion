@@ -69,7 +69,7 @@ class SincronizacionBidireccionalPlanServiceTest {
     @Test
     @DisplayName("Alta de actividad curricular en Académica se refleja automáticamente en Autoevaluación")
     void deberiaPropagarCreacionDesdeMaestroAClones() {
-        ActividadCurricularPlanJpaEntity asigMaster = crearAsignatura(masterPlan, "101", "Análisis I", EstadoDictadoActividad.SE_DICTA, null);
+        ActividadCurricularPlanJpaEntity asigMaster = crearAsignatura(masterPlan, "101", "Análisis I", EstadoDictadoActividad.ACTIVA, null);
 
         when(planRepository.findByOrigenMaestroIdAndActivoTrue(masterPlan.getId())).thenReturn(List.of(clonePlan));
         when(asignaturaRepository.findByPlanEstudioIdAndOrigenMaestroId(clonePlan.getId(), asigMaster.getId()))
@@ -92,7 +92,7 @@ class SincronizacionBidireccionalPlanServiceTest {
     @Test
     @DisplayName("Actividad curricular marcada NO_SE_DICTA en Académica no se crea en clones de Autoevaluación")
     void noDebePropagarCreacionSiNoSeDictaEnMaestro() {
-        ActividadCurricularPlanJpaEntity asigMaster = crearAsignatura(masterPlan, "102", "Optativa", EstadoDictadoActividad.NO_SE_DICTA, null);
+        ActividadCurricularPlanJpaEntity asigMaster = crearAsignatura(masterPlan, "102", "Optativa", EstadoDictadoActividad.INACTIVA, null);
 
         service.propagarCreacionAsignatura(masterPlan, asigMaster);
 
@@ -111,7 +111,7 @@ class SincronizacionBidireccionalPlanServiceTest {
         siblingClone.setOrigenMaestroId(masterPlan.getId());
         siblingClone.setActivo(true);
 
-        ActividadCurricularPlanJpaEntity asigClone = crearAsignatura(clonePlan, "201", "Edafología", EstadoDictadoActividad.SE_DICTA, null);
+        ActividadCurricularPlanJpaEntity asigClone = crearAsignatura(clonePlan, "201", "Edafología", EstadoDictadoActividad.ACTIVA, null);
 
         when(planRepository.findById(masterPlan.getId())).thenReturn(Optional.of(masterPlan));
         when(asignaturaRepository.findMaxNumeroOrdenByPlanEstudioId(masterPlan.getId())).thenReturn(1);
@@ -139,8 +139,8 @@ class SincronizacionBidireccionalPlanServiceTest {
     @Test
     @DisplayName("Edición y cambio de dictado en Académica actualiza o crea clon en Autoevaluación")
     void deberiaPropagarActualizacionYDictadoDesdeMaestro() {
-        ActividadCurricularPlanJpaEntity asigMaster = crearAsignatura(masterPlan, "101", "Análisis Matemático I", EstadoDictadoActividad.SE_DICTA, null);
-        ActividadCurricularPlanJpaEntity asigClon = crearAsignatura(clonePlan, "101", "Análisis 1", EstadoDictadoActividad.SE_DICTA, asigMaster.getId());
+        ActividadCurricularPlanJpaEntity asigMaster = crearAsignatura(masterPlan, "101", "Análisis Matemático I", EstadoDictadoActividad.ACTIVA, null);
+        ActividadCurricularPlanJpaEntity asigClon = crearAsignatura(clonePlan, "101", "Análisis 1", EstadoDictadoActividad.ACTIVA, asigMaster.getId());
 
         when(planRepository.findByOrigenMaestroIdAndActivoTrue(masterPlan.getId())).thenReturn(List.of(clonePlan));
         when(asignaturaRepository.findByPlanEstudioIdAndOrigenMaestroId(clonePlan.getId(), asigMaster.getId()))
@@ -158,8 +158,8 @@ class SincronizacionBidireccionalPlanServiceTest {
     @Test
     @DisplayName("Edición en Autoevaluación actualiza el registro maestro de Académica")
     void deberiaPropagarActualizacionDesdeAutoevaluacionAMaestro() {
-        ActividadCurricularPlanJpaEntity asigMaster = crearAsignatura(masterPlan, "101", "Análisis I", EstadoDictadoActividad.SE_DICTA, null);
-        ActividadCurricularPlanJpaEntity asigClon = crearAsignatura(clonePlan, "101", "Análisis I Actualizada", EstadoDictadoActividad.SE_DICTA, asigMaster.getId());
+        ActividadCurricularPlanJpaEntity asigMaster = crearAsignatura(masterPlan, "101", "Análisis I", EstadoDictadoActividad.ACTIVA, null);
+        ActividadCurricularPlanJpaEntity asigClon = crearAsignatura(clonePlan, "101", "Análisis I Actualizada", EstadoDictadoActividad.ACTIVA, asigMaster.getId());
 
         when(asignaturaRepository.findById(asigMaster.getId())).thenReturn(Optional.of(asigMaster));
         when(asignaturaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -176,8 +176,8 @@ class SincronizacionBidireccionalPlanServiceTest {
     @Test
     @DisplayName("Eliminación en Académica elimina los clones en Autoevaluación y viceversa")
     void deberiaPropagarEliminacionEnAmbasDirecciones() {
-        ActividadCurricularPlanJpaEntity asigMaster = crearAsignatura(masterPlan, "101", "Análisis I", EstadoDictadoActividad.SE_DICTA, null);
-        ActividadCurricularPlanJpaEntity asigClon = crearAsignatura(clonePlan, "101", "Análisis I", EstadoDictadoActividad.SE_DICTA, asigMaster.getId());
+        ActividadCurricularPlanJpaEntity asigMaster = crearAsignatura(masterPlan, "101", "Análisis I", EstadoDictadoActividad.ACTIVA, null);
+        ActividadCurricularPlanJpaEntity asigClon = crearAsignatura(clonePlan, "101", "Análisis I", EstadoDictadoActividad.ACTIVA, asigMaster.getId());
 
         // Caso 1: Eliminación desde Académica
         when(asignaturaRepository.findByOrigenMaestroId(asigMaster.getId())).thenReturn(List.of(asigClon));
@@ -221,7 +221,7 @@ class SincronizacionBidireccionalPlanServiceTest {
         planSinMaestro.setEsMaestro(false);
         planSinMaestro.setOrigenMaestroId(null);
 
-        ActividadCurricularPlanJpaEntity asigInicial = crearAsignatura(planSinMaestro, "101", "Química", EstadoDictadoActividad.SE_DICTA, null);
+        ActividadCurricularPlanJpaEntity asigInicial = crearAsignatura(planSinMaestro, "101", "Química", EstadoDictadoActividad.ACTIVA, null);
 
         when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planSinMaestro.getId())).thenReturn(List.of(asigInicial));

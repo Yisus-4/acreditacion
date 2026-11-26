@@ -61,7 +61,8 @@ public class UserController {
                 request.email(),
                 request.password(),
                 request.roleCodes(),
-                request.unidadAcademicaId()
+                request.unidadAcademicaId(),
+                request.departamentoAcademicoId()
         );
         User created = createUserUseCase.createUser(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.fromDomain(created));
@@ -76,7 +77,8 @@ public class UserController {
                 request.email(),
                 request.roleCodes(),
                 request.newPassword(),
-                request.unidadAcademicaId()
+                request.unidadAcademicaId(),
+                request.departamentoAcademicoId()
         );
         User updated = updateUserUseCase.updateUser(command);
         return ResponseEntity.ok(UserResponse.fromDomain(updated));

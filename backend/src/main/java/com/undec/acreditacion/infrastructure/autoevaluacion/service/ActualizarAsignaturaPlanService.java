@@ -71,7 +71,7 @@ public class ActualizarAsignaturaPlanService {
             throw new DomainValidationException("El año de cursada (subgrupo) es obligatorio.");
         }
 
-        validarHoras(request.horasReloj(), request.horasPresenciales(), request.horasNoPresenciales());
+        validarHoras(request.horasReloj(), request.horasPresenciales(), request.horasNoPresenciales(), request.horasSemanales());
         validarAutocorrelatividad(asig, request);
         validarCorrelativasConAsignaturasPrevias(planId, asigId, request.correlativas());
 
@@ -92,6 +92,9 @@ public class ActualizarAsignaturaPlanService {
         asig.setHorasReloj(request.horasReloj());
         asig.setHorasPresenciales(request.horasPresenciales());
         asig.setHorasNoPresenciales(request.horasNoPresenciales());
+        if (request.horasSemanales() != null) {
+            asig.setHorasSemanales(request.horasSemanales());
+        }
         asig.setCorrelativas(request.correlativas() != null && !request.correlativas().trim().isEmpty() ?
                 request.correlativas().trim() : "Sin correlativas previas");
         if (request.esObligatoria() != null) {
@@ -115,10 +118,11 @@ public class ActualizarAsignaturaPlanService {
         return toDto(guardada);
     }
 
-    private void validarHoras(Integer horasReloj, Integer horasPresenciales, Integer horasNoPresenciales) {
+    private void validarHoras(Integer horasReloj, Integer horasPresenciales, Integer horasNoPresenciales, Integer horasSemanales) {
         if ((horasReloj != null && horasReloj < 0) ||
             (horasPresenciales != null && horasPresenciales < 0) ||
-            (horasNoPresenciales != null && horasNoPresenciales < 0)) {
+            (horasNoPresenciales != null && horasNoPresenciales < 0) ||
+            (horasSemanales != null && horasSemanales < 0)) {
             throw new DomainValidationException("Las horas deben ser valores numéricos positivos o cero.");
         }
     }
@@ -199,6 +203,7 @@ public class ActualizarAsignaturaPlanService {
                 a.getHorasReloj(),
                 a.getHorasPresenciales(),
                 a.getHorasNoPresenciales(),
+                a.getHorasSemanales(),
                 a.getCorrelativas(),
                 a.getEsObligatoria(),
                 a.getEstadoDictado()

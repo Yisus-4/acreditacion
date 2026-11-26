@@ -13,6 +13,7 @@ public record ActualizarAsignaturaRequest(
         Integer horasReloj,
         Integer horasPresenciales,
         Integer horasNoPresenciales,
+        Integer horasSemanales,
         String correlativas,
         Boolean esObligatoria,
         Integer numeroOrden,
@@ -32,6 +33,24 @@ public record ActualizarAsignaturaRequest(
             Integer numeroOrden
     ) {
         this(id, codigo, nombre, grupo, subgrupo, horasReloj, horasPresenciales,
-                horasNoPresenciales, correlativas, esObligatoria, numeroOrden, null);
+                horasNoPresenciales, null, correlativas, esObligatoria, numeroOrden, null);
+    }
+
+    public ActualizarAsignaturaRequest(
+            UUID id,
+            String codigo,
+            String nombre,
+            String grupo,
+            String subgrupo,
+            Integer horasReloj,
+            Integer horasPresenciales,
+            Integer horasNoPresenciales,
+            String correlativas,
+            Boolean esObligatoria,
+            Integer numeroOrden,
+            EstadoDictadoActividad estadoDictado
+    ) {
+        this(id, codigo, nombre, grupo, subgrupo, horasReloj, horasPresenciales,
+                horasNoPresenciales, null, correlativas, esObligatoria, numeroOrden, estadoDictado);
     }
 }

@@ -17,6 +17,7 @@ export interface User {
   /** Códigos de rol como strings dinámicos; nunca un enum cerrado del frontend. */
   readonly roleCodes: readonly RoleCode[];
   readonly unidadAcademicaId?: string | null;
+  readonly departamentoAcademicoId?: string | null;
 }
 
 export interface Session {

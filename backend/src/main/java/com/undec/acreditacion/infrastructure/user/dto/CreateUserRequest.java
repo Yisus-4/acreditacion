@@ -8,9 +8,14 @@ public record CreateUserRequest(
         String email,
         String password,
         List<String> roleCodes,
-        UUID unidadAcademicaId
+        UUID unidadAcademicaId,
+        UUID departamentoAcademicoId
 ) {
     public CreateUserRequest(String username, String email, String password, List<String> roleCodes) {
-        this(username, email, password, roleCodes, null);
+        this(username, email, password, roleCodes, null, null);
+    }
+
+    public CreateUserRequest(String username, String email, String password, List<String> roleCodes, UUID unidadAcademicaId) {
+        this(username, email, password, roleCodes, unidadAcademicaId, null);
     }
 }

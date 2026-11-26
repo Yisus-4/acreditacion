@@ -1,5 +1,6 @@
 package com.undec.acreditacion.infrastructure.security;
 
+import com.undec.acreditacion.domain.entities.CodigosRol;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -53,6 +54,27 @@ class JwtConfigAndRoleUniquenessTest {
                 violations.isEmpty(),
                 () -> "Se detectaron códigos de rol duplicados/obsoletos en producción:\n" + String.join("\n", violations)
         );
+    }
+
+    @Test
+    @DisplayName("CodigosRol incluye SECRETARIA_ACADEMICA y CONSULTA_INSTITUCIONAL y V48 migra esquema Fase 1")
+    void codigosRolYV48IncluyenRolesYEstructuraFase1() throws IOException {
+        assertTrue(CodigosRol.TODOS.contains(CodigosRol.SECRETARIA_ACADEMICA));
+        assertTrue(CodigosRol.TODOS.contains(CodigosRol.CONSULTA_INSTITUCIONAL));
+
+        Path v48 = Path.of("src/main/resources/db/migration/V48__departamentos_academicos_catalogos_docentes_y_estados_asignatura.sql");
+        assertTrue(Files.exists(v48), "Debe existir la migración V48");
+        String sql = Files.readString(v48);
+        assertTrue(sql.contains("SECRETARIA_ACADEMICA"));
+        assertTrue(sql.contains("CONSULTA_INSTITUCIONAL"));
+        assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS departamento_academico"));
+        assertTrue(sql.contains("SIN_ASIGNAR"));
+        assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS cargo_docente"));
+        assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS dedicacion_docente"));
+        assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS tipo_designacion_docente"));
+        assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS periodo_academico"));
+        assertTrue(sql.contains("SOLO_EXAMENES_FINALES"));
+        assertTrue(sql.contains("horas_semanales"));
     }
 
     private static void scanDirectory(Path root, String extension, List<String> violations) throws IOException {

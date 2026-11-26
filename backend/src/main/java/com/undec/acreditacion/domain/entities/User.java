@@ -18,35 +18,50 @@ public final class User {
     private boolean active;
     private final boolean systemUser;
     private UUID unidadAcademicaId;
+    private UUID departamentoAcademicoId;
 
     public static User register(String username, String email, String passwordHash) {
         return new User(UUID.randomUUID(), username, email, passwordHash, false);
     }
 
     public static User register(String username, String email, String passwordHash, UUID unidadAcademicaId) {
+        return register(username, email, passwordHash, unidadAcademicaId, null);
+    }
+
+    public static User register(String username, String email, String passwordHash,
+                                UUID unidadAcademicaId, UUID departamentoAcademicoId) {
         User user = new User(UUID.randomUUID(), username, email, passwordHash, false);
         user.unidadAcademicaId = unidadAcademicaId;
+        user.departamentoAcademicoId = departamentoAcademicoId;
         return user;
     }
 
     public static User rehydrate(UUID id, String username, String email, String passwordHash,
                                  boolean active, Set<Role> roles) {
-        return rehydrate(id, username, email, passwordHash, active, false, null, roles);
+        return rehydrate(id, username, email, passwordHash, active, false, null, null, roles);
     }
 
     public static User rehydrate(UUID id, String username, String email, String passwordHash,
                                  boolean active, boolean systemUser, Set<Role> roles) {
-        return rehydrate(id, username, email, passwordHash, active, systemUser, null, roles);
+        return rehydrate(id, username, email, passwordHash, active, systemUser, null, null, roles);
     }
 
     public static User rehydrate(UUID id, String username, String email, String passwordHash,
                                  boolean active, boolean systemUser, UUID unidadAcademicaId, Set<Role> roles) {
+        return rehydrate(id, username, email, passwordHash, active, systemUser, unidadAcademicaId, null, roles);
+    }
+
+    public static User rehydrate(UUID id, String username, String email, String passwordHash,
+                                 boolean active, boolean systemUser,
+                                 UUID unidadAcademicaId, UUID departamentoAcademicoId,
+                                 Set<Role> roles) {
         if (roles == null) {
             throw new DomainValidationException("User roles are required");
         }
         User user = new User(id, username, email, passwordHash, systemUser);
         user.active = active;
         user.unidadAcademicaId = unidadAcademicaId;
+        user.departamentoAcademicoId = departamentoAcademicoId;
         for (Role role : roles) {
             if (role == null) {
                 throw new DomainValidationException("User roles cannot contain null values");
@@ -101,6 +116,14 @@ public final class User {
 
     public void assignUnidadAcademica(UUID unidadAcademicaId) {
         this.unidadAcademicaId = unidadAcademicaId;
+    }
+
+    public UUID getDepartamentoAcademicoId() {
+        return departamentoAcademicoId;
+    }
+
+    public void assignDepartamentoAcademico(UUID departamentoAcademicoId) {
+        this.departamentoAcademicoId = departamentoAcademicoId;
     }
 
     public Set<Role> getRoles() {

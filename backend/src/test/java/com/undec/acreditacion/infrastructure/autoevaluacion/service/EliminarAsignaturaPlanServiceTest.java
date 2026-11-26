@@ -215,14 +215,14 @@ class EliminarAsignaturaPlanServiceTest {
         asigAcademica.setPlanEstudio(plan);
         asigAcademica.setCodigo("101");
         asigAcademica.setNombre("Analisis 1");
-        asigAcademica.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+        asigAcademica.setEstadoDictado(EstadoDictadoActividad.ACTIVA);
 
         ActividadCurricularPlanJpaEntity asigHomonima = new ActividadCurricularPlanJpaEntity();
         asigHomonima.setId(otraId);
         asigHomonima.setPlanEstudio(plan);
         asigHomonima.setCodigo("ASIG-01");
         asigHomonima.setNombre("analisis 1");
-        asigHomonima.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+        asigHomonima.setEstadoDictado(EstadoDictadoActividad.ACTIVA);
 
         AmbitoPracticaJpaEntity campo = new AmbitoPracticaJpaEntity();
         campo.setId(UUID.randomUUID());
@@ -272,7 +272,7 @@ class EliminarAsignaturaPlanServiceTest {
         duplicada.setPlanEstudio(plan);
         duplicada.setCodigo("ASIG-01");
         duplicada.setNombre("física");
-        duplicada.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+        duplicada.setEstadoDictado(EstadoDictadoActividad.ACTIVA);
 
         AmbitoPracticaJpaEntity ambitoClon = new AmbitoPracticaJpaEntity();
         ambitoClon.setId(UUID.randomUUID());

@@ -10,6 +10,7 @@ public record CrearAsignaturaRequest(
         Integer horasReloj,
         Integer horasPresenciales,
         Integer horasNoPresenciales,
+        Integer horasSemanales,
         String correlativas,
         Boolean esObligatoria,
         Integer numeroOrden,
@@ -28,7 +29,25 @@ public record CrearAsignaturaRequest(
             Integer numeroOrden
     ) {
         this(codigo, nombre, grupo, subgrupo, horasReloj, horasPresenciales,
-                horasNoPresenciales, correlativas, esObligatoria, numeroOrden,
-                EstadoDictadoActividad.SE_DICTA);
+                horasNoPresenciales, null, correlativas, esObligatoria, numeroOrden,
+                EstadoDictadoActividad.ACTIVA);
+    }
+
+    public CrearAsignaturaRequest(
+            String codigo,
+            String nombre,
+            String grupo,
+            String subgrupo,
+            Integer horasReloj,
+            Integer horasPresenciales,
+            Integer horasNoPresenciales,
+            String correlativas,
+            Boolean esObligatoria,
+            Integer numeroOrden,
+            EstadoDictadoActividad estadoDictado
+    ) {
+        this(codigo, nombre, grupo, subgrupo, horasReloj, horasPresenciales,
+                horasNoPresenciales, null, correlativas, esObligatoria, numeroOrden,
+                estadoDictado);
     }
 }

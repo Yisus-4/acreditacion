@@ -109,6 +109,34 @@ class UserControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/users propagates departamentoAcademicoId and returns it in response")
+    void createUserWithDepartamentoAcademicoReturns201() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID deptoId = UUID.randomUUID();
+        Role role = Role.system(UUID.randomUUID(), "DIRECTOR_DEPARTAMENTO", "Director Departamento", "Desc");
+        User user = User.rehydrate(userId, "dir_depto", "depto@undec.edu.ar", "pwd", true, false, null, deptoId, Set.of(role));
+
+        when(createUserUseCase.createUser(any(CreateUserCommand.class))).thenReturn(user);
+
+        String json = """
+                {
+                    "username": "dir_depto",
+                    "email": "depto@undec.edu.ar",
+                    "password": "secretpassword",
+                    "roleCodes": ["DIRECTOR_DEPARTAMENTO"],
+                    "departamentoAcademicoId": "%s"
+                }
+                """.formatted(deptoId);
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.departamentoAcademicoId").value(deptoId.toString()))
+                .andExpect(jsonPath("$.roleCodes[0]").value("DIRECTOR_DEPARTAMENTO"));
+    }
+
+    @Test
     @DisplayName("PUT /api/users/{id} updates user and returns 200 OK")
     void updateUserReturns200() throws Exception {
         UUID userId = UUID.randomUUID();

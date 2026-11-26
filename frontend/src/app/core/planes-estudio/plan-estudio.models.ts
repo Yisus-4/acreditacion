@@ -1,4 +1,21 @@
-export type EstadoDictadoActividad = 'SE_DICTA' | 'NO_SE_DICTA';
+export type EstadoDictadoActividad =
+  | 'ACTIVA'
+  | 'SOLO_EXAMENES_FINALES'
+  | 'INACTIVA'
+  | 'SE_DICTA'
+  | 'NO_SE_DICTA';
+
+export function esAsignaturaInactiva(estado?: EstadoDictadoActividad | null): boolean {
+  return estado === 'INACTIVA' || estado === 'NO_SE_DICTA';
+}
+
+export function normalizarEstadoDictado(
+  estado?: EstadoDictadoActividad | null
+): 'ACTIVA' | 'SOLO_EXAMENES_FINALES' | 'INACTIVA' {
+  if (estado === 'INACTIVA' || estado === 'NO_SE_DICTA') return 'INACTIVA';
+  if (estado === 'SOLO_EXAMENES_FINALES') return 'SOLO_EXAMENES_FINALES';
+  return 'ACTIVA';
+}
 
 export interface ActividadCurricularPlan {
   id?: string;
@@ -11,6 +28,7 @@ export interface ActividadCurricularPlan {
   horasReloj: number;
   horasPresenciales?: number;
   horasNoPresenciales?: number;
+  horasSemanales?: number | null;
   correlativas?: string;
   esObligatoria?: boolean;
   estadoDictado?: EstadoDictadoActividad;
@@ -28,6 +46,7 @@ export interface CrearAsignaturaRequest {
   horasReloj: number;
   horasPresenciales?: number;
   horasNoPresenciales?: number;
+  horasSemanales?: number | null;
   correlativas?: string;
   esObligatoria?: boolean;
   numeroOrden?: number;
@@ -43,6 +62,7 @@ export interface ActualizarAsignaturaRequest {
   horasReloj?: number;
   horasPresenciales?: number;
   horasNoPresenciales?: number;
+  horasSemanales?: number | null;
   correlativas?: string;
   esObligatoria?: boolean;
   numeroOrden?: number;

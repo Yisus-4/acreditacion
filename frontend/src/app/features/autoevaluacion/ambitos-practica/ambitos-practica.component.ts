@@ -513,7 +513,7 @@ export class AmbitosPracticaComponent implements OnInit {
       next: (planes) => {
         if (planes && planes.length > 0 && planes[0].id) {
           this.planService.listarAsignaturas(planes[0].id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-            next: (asigs) => this.asignaturasDelPlan.set(asigs.filter((a) => a.estadoDictado !== 'NO_SE_DICTA')),
+            next: (asigs) => this.asignaturasDelPlan.set(asigs.filter((a) => a.estadoDictado !== 'INACTIVA' && a.estadoDictado !== 'NO_SE_DICTA')),
             error: () => this.asignaturasDelPlan.set([]),
           });
         } else {

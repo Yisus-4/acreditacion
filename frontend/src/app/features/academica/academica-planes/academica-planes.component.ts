@@ -13,6 +13,8 @@ import {
   ActualizarAsignaturaRequest,
   CrearAsignaturaRequest,
   EstadoDictadoActividad,
+  esAsignaturaInactiva,
+  normalizarEstadoDictado,
 } from '../../../core/planes-estudio/plan-estudio.models';
 import {
   DatosCentralesService,
@@ -66,14 +68,19 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
         <table class="tabla">
           <thead>
             <tr>
-              <th>Carrera</th><th>Plan</th><th>Estándar</th><th>Año</th><th>Actividades</th><th>Estado</th><th>Acciones</th>
+              <th>Carrera</th><th>Plan</th><th>Estándar</th><th>Año / Impl.</th><th>Actividades</th><th>Estado</th><th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             @for (p of planes(); track p.id) {
               <tr [class.sel]="planSeleccionado()?.id === p.id">
                 <td>{{ p.carreraNombre || 'Carrera' }}</td>
-                <td><strong>{{ p.nombrePlan }}</strong></td>
+                <td>
+                  <strong>{{ p.nombrePlan }}</strong>
+                  @if (p.codigoResolucion) {
+                    <div class="sub">{{ p.codigoResolucion }}</div>
+                  }
+                </td>
                 <td>
                   @if (p.estandarNombre) {
                     <span>{{ p.estandarNombre }}</span>
@@ -84,7 +91,12 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                     <span class="sub">Sin estándar</span>
                   }
                 </td>
-                <td>{{ p.anioAprobacion || '—' }}</td>
+                <td>
+                  {{ p.anioAprobacion || '—' }}
+                  @if (p.anioInicio && p.anioInicio !== p.anioAprobacion) {
+                    <span class="sub">(Impl. {{ p.anioInicio }})</span>
+                  }
+                </td>
                 <td>{{ p.cantidadAsignaturas ?? 0 }}</td>
                 <td>
                   <span class="badge" [class.vigente]="p.estadoVigencia === 'VIGENTE'" [class.no-vigente]="p.estadoVigencia !== 'VIGENTE'">
@@ -114,7 +126,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
             <div>
               <h3>Actividades Curriculares — {{ planSeleccionado()?.nombrePlan }} ({{ planSeleccionado()?.carreraNombre }})</h3>
               <p class="sub">
-                Total: {{ asignaturas().length }} · Se dictan: {{ countSeDicta() }}
+                Total: {{ asignaturas().length }} · Activas (Clases + Finales): {{ countActiva() }} · Solo Finales: {{ countSoloFinales() }} · Inactivas: {{ countInactiva() }}
                 @if (planSeleccionado()?.estandarNombre) {
                   · Estándar: <strong>{{ planSeleccionado()?.estandarNombre }}</strong>
                 }
@@ -134,7 +146,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
 
           <table class="tabla">
             <thead>
-              <tr><th>Ord.</th><th>Código</th><th>Nombre</th><th>Ciclo / Año</th><th>Horas</th><th>Dictado</th><th>Estándar (2.2 / 3)</th><th>Acciones</th></tr>
+              <tr><th>Ord.</th><th>Código</th><th>Nombre</th><th>Ciclo / Año</th><th>Carga Horaria</th><th>Situación (RN09)</th><th>Estándar (2.2 / 3)</th><th>Acciones</th></tr>
             </thead>
             <tbody>
               @for (a of asignaturas(); track a.id) {
@@ -148,11 +160,36 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                     }
                   </td>
                   <td>{{ a.grupo || '—' }} · {{ a.subgrupo || '—' }}</td>
-                  <td>{{ a.horasReloj }}h</td>
                   <td>
-                    <span class="badge" [class.vigente]="(a.estadoDictado || 'SE_DICTA') === 'SE_DICTA'" [class.no-vigente]="a.estadoDictado === 'NO_SE_DICTA'">
-                      {{ a.estadoDictado === 'NO_SE_DICTA' ? 'NO SE DICTA' : 'SE DICTA' }}
-                    </span>
+                    <div><strong>{{ a.horasReloj }} hs tot.</strong></div>
+                    @if (a.horasSemanales != null && a.horasSemanales > 0) {
+                      <div class="sub">{{ a.horasSemanales }} hs/sem</div>
+                    }
+                  </td>
+                  <td>
+                    @if (canEdit()) {
+                      <select
+                        class="sel-situacion"
+                        [class.vigente]="normalizarSituacion(a.estadoDictado) === 'ACTIVA'"
+                        [class.solo-finales]="normalizarSituacion(a.estadoDictado) === 'SOLO_EXAMENES_FINALES'"
+                        [class.no-vigente]="normalizarSituacion(a.estadoDictado) === 'INACTIVA'"
+                        [value]="normalizarSituacion(a.estadoDictado)"
+                        (change)="cambiarSituacion(a, $any($event.target).value)"
+                      >
+                        <option value="ACTIVA">Activa (Clases + Finales)</option>
+                        <option value="SOLO_EXAMENES_FINALES">Solo Exámenes Finales</option>
+                        <option value="INACTIVA">Inactiva</option>
+                      </select>
+                    } @else {
+                      <span
+                        class="badge"
+                        [class.vigente]="normalizarSituacion(a.estadoDictado) === 'ACTIVA'"
+                        [class.solo-finales]="normalizarSituacion(a.estadoDictado) === 'SOLO_EXAMENES_FINALES'"
+                        [class.no-vigente]="normalizarSituacion(a.estadoDictado) === 'INACTIVA'"
+                      >
+                        {{ etiquetaSituacion(a.estadoDictado) }}
+                      </span>
+                    }
                   </td>
                   <td>
                     <div style="display:flex; gap:4px; flex-wrap:wrap;">
@@ -169,9 +206,6 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                       <button type="button" class="btn-xs" (click)="abrirModalFicha(a)">Ficha Estándar</button>
                     }
                     @if (canEdit()) {
-                      <button type="button" class="btn-xs" (click)="toggleDictado(a)">
-                        {{ a.estadoDictado === 'NO_SE_DICTA' ? 'Marcar Se Dicta' : 'Marcar No Se Dicta' }}
-                      </button>
                       <button type="button" class="btn-sec" (click)="abrirModalAsignatura(a)">Editar</button>
                       <button type="button" class="btn-danger" (click)="eliminarAsignatura(a)">Eliminar</button>
                     }
@@ -226,8 +260,14 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                 }
               }
 
-              <label>Nombre Plan *<input type="text" formControlName="nombrePlan" placeholder="Plan 2026" /></label>
-              <label>Año *<input type="number" formControlName="anioAprobacion" /></label>
+              <div class="grid2">
+                <label>Nombre Plan *<input type="text" formControlName="nombrePlan" placeholder="Plan 2026" /></label>
+                <label>Resolución / Norma<input type="text" formControlName="codigoResolucion" placeholder="Ej: Ord. HCS 015/24" /></label>
+              </div>
+              <div class="grid2">
+                <label>Año de Aprobación *<input type="number" formControlName="anioAprobacion" /></label>
+                <label>Año de Implementación<input type="number" formControlName="anioInicio" /></label>
+              </div>
               <div class="grid2">
                 <label>Duración (años)<input type="number" formControlName="duracionAnios" /></label>
                 <label>Horas Totales<input type="number" formControlName="horasTotales" /></label>
@@ -253,18 +293,20 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
                 <label>Nombre *<input type="text" formControlName="nombre" /></label>
               </div>
               <div class="grid2">
-                <label>Ciclo (Grupo) *<input type="text" formControlName="grupo" placeholder="C.B.I. / T.B. / T.A." /></label>
+                <label>Área / Bloque (Grupo) *<input type="text" formControlName="grupo" placeholder="C.B.I. / T.B. / T.A." /></label>
                 <label>Año (Subgrupo) *<input type="text" formControlName="subgrupo" placeholder="1º / 2º / 3º" /></label>
               </div>
               <div class="grid2">
-                <label>Horas Reloj *<input type="number" formControlName="horasReloj" /></label>
-                <label>Estado de Dictado *
-                  <select formControlName="estadoDictado">
-                    <option value="SE_DICTA">Se dicta</option>
-                    <option value="NO_SE_DICTA">No se dicta</option>
-                  </select>
-                </label>
+                <label>Carga Horaria Total (Hs Reloj) *<input type="number" formControlName="horasReloj" min="0" /></label>
+                <label>Carga Horaria Semanal (Hs) (RF02.6)<input type="number" formControlName="horasSemanales" min="0" placeholder="Ej: 6" /></label>
               </div>
+              <label>Situación Curricular en el Plan (RN09) *
+                <select formControlName="estadoDictado">
+                  <option value="ACTIVA">Activa — Desarrolla clases y evalúa exámenes finales</option>
+                  <option value="SOLO_EXAMENES_FINALES">Solo Exámenes Finales — No dicta clases, sí toma finales</option>
+                  <option value="INACTIVA">Inactiva — No desarrolla clases ni evalúa finales</option>
+                </select>
+              </label>
               <div class="m-actions">
                 <button type="button" class="btn-sec" (click)="modalAsignatura.set(false)">Cancelar</button>
                 <button type="submit" class="btn-pri" [disabled]="asigForm.invalid">Guardar</button>
@@ -276,7 +318,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
     </div>
   `,
   styles: [`
-    .acad-wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .acad-wrap { max-width: 1240px; margin: 0 auto; padding: 24px; }
     .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
     .bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
     .filters { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -285,11 +327,16 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
     h3 { margin: 0; font-size: 17px; }
     .tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
     .tabla thead th { background: #f7f3f5; color: #5a4a53; font-weight: 600; font-size: 13px; border-bottom: 1px solid #e5dde1; padding: 10px 10px; text-align: left; }
-    .tabla td { padding: 9px 10px; border-bottom: 1px solid #f3f4f6; text-align: left; }
+    .tabla td { padding: 9px 10px; border-bottom: 1px solid #f3f4f6; text-align: left; vertical-align: middle; }
     .tabla tr.sel { background: #faf4f7; box-shadow: inset 3px 0 0 #6b4c5b; }
-    .badge { padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .badge { padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; display: inline-block; }
     .badge.vigente { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .badge.solo-finales { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
     .badge.no-vigente { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .sel-situacion { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .sel-situacion.vigente { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .sel-situacion.solo-finales { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .sel-situacion.no-vigente { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
     .acciones { display: flex; gap: 6px; flex-wrap: wrap; }
     .btn-pri { background: #6b4c5b; color: #ffffff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background-color 0.15s ease; }
     .btn-pri:hover { background: #553c48; }
@@ -304,7 +351,7 @@ import { SubnavAcademicaComponent } from '../subnav-academica/subnav-academica.c
     .alert.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
     .alert.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
     .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
-    .modal-box { background: #fff; border-radius: 10px; padding: 20px; width: 100%; max-width: 560px; }
+    .modal-box { background: #fff; border-radius: 10px; padding: 20px; width: 100%; max-width: 580px; }
     label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
     input, select { padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 400; }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -342,18 +389,25 @@ export class AcademicaPlanesComponent implements OnInit {
   readonly modalFichaActividadId = signal<string | null>(null);
   readonly cumplimientoRefreshTick = signal<number>(0);
 
-  readonly isAea = computed(() => this.auth.hasAnyRole('AEA'));
-  readonly canEdit = computed(() => {
-    const roles = this.auth.currentSession?.user?.roleCodes ?? [];
-    return roles.includes('AEA');
-  });
+  readonly isAea = computed(() => this.auth.hasAnyRole('AEA', 'SECRETARIA_ACADEMICA'));
+  readonly canEdit = computed(() => this.auth.hasAnyRole('AEA', 'SECRETARIA_ACADEMICA'));
 
-  readonly countSeDicta = computed(() => this.asignaturas().filter((a) => a.estadoDictado !== 'NO_SE_DICTA').length);
+  readonly countActiva = computed(
+    () => this.asignaturas().filter((a) => normalizarEstadoDictado(a.estadoDictado) === 'ACTIVA').length
+  );
+  readonly countSoloFinales = computed(
+    () => this.asignaturas().filter((a) => normalizarEstadoDictado(a.estadoDictado) === 'SOLO_EXAMENES_FINALES').length
+  );
+  readonly countInactiva = computed(
+    () => this.asignaturas().filter((a) => esAsignaturaInactiva(a.estadoDictado)).length
+  );
 
   readonly planForm = this.fb.group({
     carreraId: ['', Validators.required],
     nombrePlan: ['', [Validators.required, Validators.minLength(3)]],
+    codigoResolucion: [''],
     anioAprobacion: [new Date().getFullYear(), [Validators.required, Validators.min(1970)]],
+    anioInicio: [new Date().getFullYear(), [Validators.min(1970)]],
     duracionAnios: [5, [Validators.required, Validators.min(1)]],
     horasTotales: [3000, [Validators.required, Validators.min(100)]],
   });
@@ -364,12 +418,24 @@ export class AcademicaPlanesComponent implements OnInit {
     grupo: ['C.B.I.', Validators.required],
     subgrupo: ['1º', Validators.required],
     horasReloj: [64, [Validators.required, Validators.min(0)]],
-    estadoDictado: ['SE_DICTA' as EstadoDictadoActividad, Validators.required],
+    horasSemanales: [null as number | null, [Validators.min(0)]],
+    estadoDictado: ['ACTIVA' as EstadoDictadoActividad, Validators.required],
   });
 
   ngOnInit(): void {
     this.estructura.listarCarreras().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((cs) => this.carreras.set(cs));
     this.cargarPlanes();
+  }
+
+  normalizarSituacion(estado?: EstadoDictadoActividad | null): 'ACTIVA' | 'SOLO_EXAMENES_FINALES' | 'INACTIVA' {
+    return normalizarEstadoDictado(estado);
+  }
+
+  etiquetaSituacion(estado?: EstadoDictadoActividad | null): string {
+    const s = normalizarEstadoDictado(estado);
+    if (s === 'SOLO_EXAMENES_FINALES') return 'SOLO EXÁMENES FINALES';
+    if (s === 'INACTIVA') return 'INACTIVA';
+    return 'ACTIVA (CLASES + FINALES)';
   }
 
   cargarPlanes(): void {
@@ -394,10 +460,13 @@ export class AcademicaPlanesComponent implements OnInit {
     this.planError.set(null);
     this.planEditando.set(plan || null);
     const carreraInicial = plan?.carreraId || this.carreraId() || '';
+    const anioDefault = plan?.anioAprobacion || new Date().getFullYear();
     this.planForm.reset({
       carreraId: carreraInicial,
       nombrePlan: plan?.nombrePlan || '',
-      anioAprobacion: plan?.anioAprobacion || new Date().getFullYear(),
+      codigoResolucion: plan?.codigoResolucion || '',
+      anioAprobacion: anioDefault,
+      anioInicio: plan?.anioInicio || anioDefault,
       duracionAnios: plan?.duracionAnios || 5,
       horasTotales: plan?.horasTotales || 3000,
     });
@@ -463,27 +532,16 @@ export class AcademicaPlanesComponent implements OnInit {
     this.planError.set(null);
     if (this.planForm.invalid) {
       this.planForm.markAllAsTouched();
-      const c = this.planForm.controls;
-      if (c.carreraId.invalid) {
-        this.planError.set('Debe seleccionar una Carrera.');
-      } else if (c.nombrePlan.invalid) {
-        this.planError.set('El nombre del plan es obligatorio (mínimo 3 caracteres).');
-      } else if (c.anioAprobacion.invalid) {
-        this.planError.set('Ingrese un año válido (1970 o posterior).');
-      } else if (c.duracionAnios.invalid) {
-        this.planError.set('La duración debe ser al menos 1 año.');
-      } else if (c.horasTotales.invalid) {
-        this.planError.set('Las horas totales deben ser al menos 100.');
-      } else {
-        this.planError.set('Revise los campos obligatorios del formulario.');
-      }
+      this.planError.set('Revise los campos obligatorios del formulario.');
       return;
     }
     const v = this.planForm.value;
     const payload = {
       carreraId: v.carreraId!,
       nombrePlan: v.nombrePlan!,
+      codigoResolucion: v.codigoResolucion || undefined,
       anioAprobacion: Number(v.anioAprobacion),
+      anioInicio: v.anioInicio ? Number(v.anioInicio) : Number(v.anioAprobacion),
       duracionAnios: Number(v.duracionAnios),
       horasTotales: Number(v.horasTotales),
     };
@@ -498,13 +556,12 @@ export class AcademicaPlanesComponent implements OnInit {
         this.guardandoPlan.set(false);
         this.modalPlan.set(false);
         this.planEditando.set(null);
-        this.planForm.reset({ carreraId: '', nombrePlan: '', anioAprobacion: new Date().getFullYear(), duracionAnios: 5, horasTotales: 3000 });
         this.successMessage.set(editando ? 'Plan de estudio actualizado.' : 'Plan de estudio creado.');
         this.cargarPlanes();
       },
       error: (err) => {
         this.guardandoPlan.set(false);
-        const msg = err.error?.message || (err.status === 403 ? 'Solo usuarios con rol AEA pueden editar planes de estudio.' : err.message);
+        const msg = err.error?.message || (err.status === 403 ? 'Solo usuarios autorizados pueden editar planes de estudio.' : err.message);
         this.planError.set('Error al guardar plan: ' + msg);
       },
     });
@@ -527,7 +584,8 @@ export class AcademicaPlanesComponent implements OnInit {
       grupo: a?.grupo || 'C.B.I.',
       subgrupo: a?.subgrupo || '1º',
       horasReloj: a?.horasReloj ?? 64,
-      estadoDictado: a?.estadoDictado || 'SE_DICTA',
+      horasSemanales: a?.horasSemanales ?? null,
+      estadoDictado: normalizarEstadoDictado(a?.estadoDictado),
     });
     this.modalAsignatura.set(true);
   }
@@ -537,6 +595,9 @@ export class AcademicaPlanesComponent implements OnInit {
     if (!plan || this.asigForm.invalid) return;
     const v = this.asigForm.value;
     const edit = this.asigEditando();
+    const horasSem = v.horasSemanales !== null && v.horasSemanales !== undefined && String(v.horasSemanales) !== ''
+      ? Number(v.horasSemanales)
+      : null;
 
     const obs = edit?.id
       ? this.planService.actualizarAsignatura(plan.id, edit.id, {
@@ -546,6 +607,7 @@ export class AcademicaPlanesComponent implements OnInit {
           grupo: v.grupo!,
           subgrupo: v.subgrupo!,
           horasReloj: Number(v.horasReloj),
+          horasSemanales: horasSem,
           estadoDictado: v.estadoDictado as EstadoDictadoActividad,
         } as ActualizarAsignaturaRequest)
       : this.planService.crearAsignatura(plan.id, {
@@ -554,6 +616,7 @@ export class AcademicaPlanesComponent implements OnInit {
           grupo: v.grupo!,
           subgrupo: v.subgrupo!,
           horasReloj: Number(v.horasReloj),
+          horasSemanales: horasSem,
           estadoDictado: v.estadoDictado as EstadoDictadoActividad,
         } as CrearAsignaturaRequest);
 
@@ -564,21 +627,20 @@ export class AcademicaPlanesComponent implements OnInit {
         this.cargarAsignaturas(plan.id);
         this.cargarPlanes();
       },
-      error: (err) => this.errorMessage.set('Error al guardar actividad curricular: ' + (err.error?.message || err.message)),
+      error: (err) => this.errorMessage.set('Error al guardar actividad curricular: ' + (err.error?.error || err.error?.message || err.message)),
     });
   }
 
-  toggleDictado(a: ActividadCurricularPlan): void {
+  cambiarSituacion(a: ActividadCurricularPlan, nuevo: EstadoDictadoActividad): void {
     const plan = this.planSeleccionado();
     if (!plan || !a.id) return;
-    const nuevo: EstadoDictadoActividad = a.estadoDictado === 'NO_SE_DICTA' ? 'SE_DICTA' : 'NO_SE_DICTA';
     this.planService.cambiarEstadoDictado(plan.id, a.id, nuevo).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
-        this.successMessage.set(`Estado de "${a.nombre}" actualizado a ${nuevo === 'SE_DICTA' ? 'SE DICTA' : 'NO SE DICTA'}.`);
+        this.successMessage.set(`Situación de "${a.nombre}" actualizada a ${this.etiquetaSituacion(nuevo)}.`);
         this.cargarAsignaturas(plan.id);
         this.cumplimientoRefreshTick.update((n) => n + 1);
       },
-      error: (err) => this.errorMessage.set('Error al cambiar estado de dictado: ' + (err.error?.message || err.message)),
+      error: (err) => this.errorMessage.set('Error al cambiar situación de la asignatura: ' + (err.error?.error || err.error?.message || err.message)),
     });
   }
 
@@ -591,7 +653,7 @@ export class AcademicaPlanesComponent implements OnInit {
         this.cargarAsignaturas(plan.id);
         this.cargarPlanes();
       },
-      error: (err) => this.errorMessage.set('Error al eliminar actividad curricular: ' + (err.error?.message || err.message)),
+      error: (err) => this.errorMessage.set('Error al eliminar actividad curricular: ' + (err.error?.error || err.error?.message || err.message)),
     });
   }
 }

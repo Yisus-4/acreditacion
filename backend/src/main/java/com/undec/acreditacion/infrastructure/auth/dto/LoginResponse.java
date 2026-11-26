@@ -10,7 +10,11 @@ public record LoginResponse(UserSessionView user, String token, long issuedAt) {
             String email,
             String displayName,
             List<String> roleCodes,
-            UUID unidadAcademicaId
+            UUID unidadAcademicaId,
+            UUID departamentoAcademicoId
     ) {
+        public UserSessionView(UUID id, String email, String displayName, List<String> roleCodes, UUID unidadAcademicaId) {
+            this(id, email, displayName, roleCodes, unidadAcademicaId, null);
+        }
     }
 }

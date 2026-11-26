@@ -13,8 +13,14 @@ public record UserResponse(
         boolean active,
         boolean systemUser,
         List<String> roleCodes,
-        UUID unidadAcademicaId
+        UUID unidadAcademicaId,
+        UUID departamentoAcademicoId
 ) {
+    public UserResponse(UUID id, String username, String email, boolean active, boolean systemUser,
+                        List<String> roleCodes, UUID unidadAcademicaId) {
+        this(id, username, email, active, systemUser, roleCodes, unidadAcademicaId, null);
+    }
+
     public static UserResponse fromDomain(User user) {
         List<String> codes = user.getRoles() != null
                 ? user.getRoles().stream().map(Role::getCode).toList()
@@ -26,7 +32,8 @@ public record UserResponse(
                 user.isActive(),
                 user.isSystemUser(),
                 codes,
-                user.getUnidadAcademicaId()
+                user.getUnidadAcademicaId(),
+                user.getDepartamentoAcademicoId()
         );
     }
 }

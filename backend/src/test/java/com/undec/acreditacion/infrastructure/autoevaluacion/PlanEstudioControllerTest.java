@@ -351,7 +351,7 @@ class PlanEstudioControllerTest {
 
         ActividadCurricularPlanJpaEntity asig = new ActividadCurricularPlanJpaEntity();
         asig.setId(UUID.randomUUID());
-        asig.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+        asig.setEstadoDictado(EstadoDictadoActividad.ACTIVA);
         when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId)).thenReturn(List.of(asig));
 
         ActividadPlanTrabajo act83 = mock(ActividadPlanTrabajo.class);
@@ -409,9 +409,9 @@ class PlanEstudioControllerTest {
         when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
 
         ActividadCurricularPlanJpaEntity a1 = new ActividadCurricularPlanJpaEntity();
-        a1.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+        a1.setEstadoDictado(EstadoDictadoActividad.ACTIVA);
         ActividadCurricularPlanJpaEntity a2 = new ActividadCurricularPlanJpaEntity();
-        a2.setEstadoDictado(EstadoDictadoActividad.NO_SE_DICTA);
+        a2.setEstadoDictado(EstadoDictadoActividad.INACTIVA);
         when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId)).thenReturn(List.of(a1, a2));
 
         ActividadPlanTrabajo act83 = mock(ActividadPlanTrabajo.class);
@@ -462,7 +462,7 @@ class PlanEstudioControllerTest {
         asig.setGrupo("C.B.I.");
         asig.setSubgrupo("1º");
         asig.setHorasReloj(90);
-        asig.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+        asig.setEstadoDictado(EstadoDictadoActividad.ACTIVA);
         when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId)).thenReturn(List.of(asig));
 
         when(fichaService.guardarFicha(eq(planId), eq(asigId), any(GuardarFichaEstandarRequest.class)))
@@ -519,7 +519,7 @@ class PlanEstudioControllerTest {
         asig.setGrupo("C.B.I.");
         asig.setSubgrupo("1º");
         asig.setHorasReloj(90);
-        asig.setEstadoDictado(EstadoDictadoActividad.SE_DICTA);
+        asig.setEstadoDictado(EstadoDictadoActividad.ACTIVA);
         when(asignaturaRepository.findByPlanEstudioIdOrderByNumeroOrdenAsc(planId)).thenReturn(List.of(asig));
 
         when(fichaService.guardarFicha(eq(planId), eq(asigId), any(GuardarFichaEstandarRequest.class)))
@@ -540,5 +540,43 @@ class PlanEstudioControllerTest {
                 .andExpect(status().isOk());
 
         verify(planTrabajoRepository, never()).saveActividad(any());
+    }
+
+    @Test
+    @DisplayName("PATCH /estado-dictado acepta SOLO_EXAMENES_FINALES y alias legacy SE_DICTA, exponiendo horasSemanales")
+    void deberiaCambiarEstadoDictadoASoloExamenesFinalesYExponerHorasSemanales() throws Exception {
+        UUID planId = UUID.randomUUID();
+        UUID asigId = UUID.randomUUID();
+
+        PlanEstudioFt001JpaEntity plan = new PlanEstudioFt001JpaEntity();
+        plan.setId(planId);
+
+        ActividadCurricularPlanJpaEntity asig = new ActividadCurricularPlanJpaEntity();
+        asig.setId(asigId);
+        asig.setPlanEstudio(plan);
+        asig.setNumeroOrden(1);
+        asig.setCodigo("MAT-101");
+        asig.setNombre("Álgebra I");
+        asig.setGrupo("C.B.I.");
+        asig.setSubgrupo("1º");
+        asig.setHorasReloj(96);
+        asig.setHorasSemanales(6);
+        asig.setEstadoDictado(EstadoDictadoActividad.ACTIVA);
+
+        when(asignaturaRepository.findById(asigId)).thenReturn(Optional.of(asig));
+        when(asignaturaRepository.save(any(ActividadCurricularPlanJpaEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        mockMvc.perform(patch("/api/planes-estudio/{planId}/asignaturas/{asigId}/estado-dictado", planId, asigId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"estadoDictado\":\"SOLO_EXAMENES_FINALES\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estadoDictado", is("SOLO_EXAMENES_FINALES")))
+                .andExpect(jsonPath("$.horasSemanales", is(6)));
+
+        mockMvc.perform(patch("/api/planes-estudio/{planId}/asignaturas/{asigId}/estado-dictado", planId, asigId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"estadoDictado\":\"SE_DICTA\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estadoDictado", is("ACTIVA")));
     }
 }
